@@ -47,5 +47,9 @@
   "devDependencies": {
     "eslint": "^9",
     "eslint-config-next": "16.2.4"
+  },
+  "overrides": {
+    "dompurify": "^3.4.0",
+    "postcss": "^8.5.10"
   }
 }
