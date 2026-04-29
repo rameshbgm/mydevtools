@@ -244,3 +244,38 @@ pre {
 .ant-spin-dot-item {
   background-color: var(--primary);
 }
+
+/* Header search dropdown — wider rows, multi-line OK */
+.header-search-dropdown .ant-select-item-option-content {
+  white-space: normal !important;
+}
+
+.header-search-dropdown .ant-select-item {
+  padding: 6px 12px !important;
+}
+
+/* Sidebar menu — allow tool names to wrap to two lines without truncation */
+.ant-menu-inline .ant-menu-submenu .ant-menu-item {
+  height: auto !important;
+  min-height: 36px;
+  line-height: 1.4 !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  white-space: normal !important;
+}
+
+.ant-menu-inline .ant-menu-submenu .ant-menu-item .ant-menu-title-content {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* Mobile-friendly tweaks */
+@media (max-width: 575px) {
+  .ant-card .ant-card-body {
+    padding: 16px !important;
+  }
+  .ant-tabs-tab {
+    padding: 8px 12px !important;
+  }
+}

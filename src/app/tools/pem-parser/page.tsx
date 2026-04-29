@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Input, Typography, Card, Button, Space, message, Descriptions, Tag, Collapse, Divider } from "antd";
 import {
     FileTextOutlined,
@@ -27,6 +27,7 @@ export default function PEMParserPage() {
     const { darkMode } = useAppStore();
     const [input, setInput] = useState("");
     const [parsedBlocks, setParsedBlocks] = useState<PEMBlock[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const parsePEM = useCallback((pem: string): PEMBlock[] => {
         const blocks: PEMBlock[] = [];
@@ -95,8 +96,15 @@ export default function PEMParserPage() {
         reader.onload = (event) => {
             const content = event.target?.result as string;
             setInput(content);
+            message.success(`Loaded ${file.name}`);
+        };
+        reader.onerror = () => {
+            message.error("Failed to read file");
         };
         reader.readAsText(file);
+
+        // Reset so selecting the same file twice still triggers onChange
+        e.target.value = "";
     };
 
     const copyToClipboard = (text: string) => {
@@ -179,17 +187,20 @@ export default function PEMParserPage() {
                 <Card>
                     <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <Text strong>PEM Content</Text>
-                        <label>
-                            <input
-                                type="file"
-                                accept=".pem,.crt,.cer,.key,.p8,.pub"
-                                onChange={handleFileUpload}
-                                style={{ display: "none" }}
-                            />
-                            <Button icon={<UploadOutlined />} size="small">
-                                Upload File
-                            </Button>
-                        </label>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".pem,.crt,.cer,.key,.csr,.p8,.pub,.txt"
+                            onChange={handleFileUpload}
+                            style={{ display: "none" }}
+                        />
+                        <Button
+                            icon={<UploadOutlined />}
+                            size="small"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            Upload File
+                        </Button>
                     </div>
                     <TextArea
                         value={input}

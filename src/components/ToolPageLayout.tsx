@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { Typography, Breadcrumb, Collapse, Card } from "antd";
-import { HomeOutlined, RightOutlined, InfoCircleOutlined, QuestionCircleOutlined, BulbOutlined } from "@ant-design/icons";
+import { Typography, Breadcrumb, Collapse, Card, Alert, Tag } from "antd";
+import { HomeOutlined, RightOutlined, InfoCircleOutlined, QuestionCircleOutlined, BulbOutlined, ExperimentOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
@@ -15,6 +15,7 @@ interface ToolPageLayoutProps {
     icon: React.ReactNode;
     color: string;
     children: React.ReactNode;
+    alpha?: boolean;
     learnMore?: {
         whatIs?: string;
         whyUse?: string;
@@ -30,6 +31,7 @@ export default function ToolPageLayout({
     icon,
     color,
     children,
+    alpha,
     learnMore,
 }: Readonly<ToolPageLayoutProps>) {
     const { darkMode } = useAppStore();
@@ -110,17 +112,28 @@ export default function ToolPageLayout({
                     {icon}
                 </motion.div>
                 <div>
-                    <Title
-                        level={2}
-                        style={{
-                            margin: 0,
-                            fontWeight: 700,
-                            letterSpacing: "-0.5px",
-                            fontSize: 24,
-                        }}
-                    >
-                        {title}
-                    </Title>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <Title
+                            level={2}
+                            style={{
+                                margin: 0,
+                                fontWeight: 700,
+                                letterSpacing: "-0.5px",
+                                fontSize: "clamp(18px, 3vw, 24px)",
+                            }}
+                        >
+                            {title}
+                        </Title>
+                        {alpha && (
+                            <Tag
+                                color="purple"
+                                icon={<ExperimentOutlined />}
+                                style={{ margin: 0, fontWeight: 700, letterSpacing: 0.6 }}
+                            >
+                                ALPHA
+                            </Tag>
+                        )}
+                    </div>
                     <Text
                         style={{
                             color: darkMode ? "#737373" : "#737373",
