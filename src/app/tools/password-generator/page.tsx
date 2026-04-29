@@ -177,7 +177,7 @@ export default function PasswordGeneratorPage() {
 
                         {/* Character Options */}
                         <Title level={5}>Character Sets</Title>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                        <div className="tool-split-pane" style={{ gap: 16 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <Text>Lowercase (a-z)</Text>
                                 <Switch checked={options.lowercase} onChange={(v) => setOptions({ ...options, lowercase: v })} />

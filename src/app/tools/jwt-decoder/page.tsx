@@ -302,7 +302,7 @@ export default function JwtDecoderPage() {
                                         description="Editing header/payload and re-encoding produces a structurally valid JWT but the signature becomes invalid. You need the original secret key to produce a verifiable token."
                                         style={{ marginBottom: 16 }}
                                     />
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                                    <div className="tool-split-pane" style={{ gap: 16, marginBottom: 16 }}>
                                         <Card size="small" title={<><Tag color="blue">Header</Tag> Edit JSON</>} styles={{ body: { padding: 0 } }}>
                                             <CodeEditor
                                                 value={headerJson}

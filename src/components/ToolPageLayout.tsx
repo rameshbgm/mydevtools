@@ -85,33 +85,36 @@ export default function ToolPageLayout({
                 style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 16,
-                    marginBottom: 28,
-                    padding: "20px 24px",
+                    gap: 12,
+                    marginBottom: 24,
+                    padding: "clamp(12px, 2.5vw, 20px) clamp(14px, 2.5vw, 24px)",
                     borderRadius: 16,
                     background: darkMode
                         ? `linear-gradient(135deg, ${color}10, transparent)`
                         : `linear-gradient(135deg, ${color}08, transparent)`,
                     border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
+                    flexWrap: "wrap",
                 }}
             >
                 <motion.div
                     whileHover={{ scale: 1.05, rotate: 5 }}
                     transition={{ type: "spring", stiffness: 400 }}
                     style={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: 16,
+                        width: 48,
+                        height: 48,
+                        minWidth: 48,
+                        borderRadius: 14,
                         background: `${color}18`,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         boxShadow: `0 4px 12px ${color}20`,
+                        flexShrink: 0,
                     }}
                 >
                     {icon}
                 </motion.div>
-                <div>
+                <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <Title
                             level={2}
@@ -119,7 +122,8 @@ export default function ToolPageLayout({
                                 margin: 0,
                                 fontWeight: 700,
                                 letterSpacing: "-0.5px",
-                                fontSize: "clamp(18px, 3vw, 24px)",
+                                fontSize: "clamp(17px, 3.4vw, 24px)",
+                                lineHeight: 1.2,
                             }}
                         >
                             {title}
@@ -137,9 +141,10 @@ export default function ToolPageLayout({
                     <Text
                         style={{
                             color: darkMode ? "#737373" : "#737373",
-                            fontSize: 14,
+                            fontSize: "clamp(12px, 1.6vw, 14px)",
                             marginTop: 4,
                             display: "block",
+                            lineHeight: 1.4,
                         }}
                     >
                         {description}

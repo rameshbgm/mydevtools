@@ -46,7 +46,7 @@ export default function XmlDiffPage() {
             </Space>
 
             {!showDiff ? (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div className="tool-split-pane" style={{ gap: 16 }}>
                     <Card size="small" title="Original" styles={{ body: { padding: 0 } }}>
                         <CodeEditor value={left} onChange={setLeft} language="xml" height="500px" />
                     </Card>

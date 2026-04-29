@@ -1,11 +1,24 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAppStore } from "@/lib/store";
-import { Spin, Button, Tooltip, App } from "antd";
+import { Spin, Button, Tooltip } from "antd";
 import { CopyOutlined, CheckOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
+
+function useIsMobile(breakpoint = 768) {
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+        const update = () => setIsMobile(mq.matches);
+        update();
+        mq.addEventListener("change", update);
+        return () => mq.removeEventListener("change", update);
+    }, [breakpoint]);
+    return isMobile;
+}
 
 // Lazy load Monaco Editor for better performance
 const Editor = dynamic(() => import("@monaco-editor/react").then((m) => m.default), {
@@ -46,7 +59,14 @@ export function CodeEditor({
     copyLabel,
 }: CodeEditorProps) {
     const { darkMode } = useAppStore();
+    const isMobile = useIsMobile();
     const [copied, setCopied] = useState(false);
+
+    const responsiveHeight = isMobile
+        ? typeof height === "number"
+            ? Math.min(height, 320)
+            : "300px"
+        : height;
 
     const handleCopy = useCallback(() => {
         copyToClipboard(value, copyLabel);
@@ -77,7 +97,7 @@ export function CodeEditor({
                 </Tooltip>
             )}
             <Editor
-                height={height}
+                height={responsiveHeight}
                 language={language}
                 theme={darkMode ? "vs-dark" : "light"}
                 value={value}
@@ -85,8 +105,8 @@ export function CodeEditor({
                 loading={<Spin />}
                 options={{
                     minimap: { enabled: false },
-                    fontSize: 14,
-                    lineNumbers: "on",
+                    fontSize: isMobile ? 13 : 14,
+                    lineNumbers: isMobile ? "off" : "on",
                     wordWrap: "on",
                     readOnly,
                     scrollBeyondLastLine: false,
@@ -94,6 +114,10 @@ export function CodeEditor({
                     padding: { top: 12 },
                     roundedSelection: true,
                     renderLineHighlight: "gutter",
+                    folding: !isMobile,
+                    glyphMargin: false,
+                    lineDecorationsWidth: isMobile ? 4 : 10,
+                    lineNumbersMinChars: isMobile ? 0 : 3,
                 }}
             />
         </div>
@@ -116,8 +140,15 @@ export function CodeDiff({
     showCopy = true,
 }: CodeDiffProps) {
     const { darkMode } = useAppStore();
+    const isMobile = useIsMobile();
     const [copiedOrig, setCopiedOrig] = useState(false);
     const [copiedMod, setCopiedMod] = useState(false);
+
+    const responsiveHeight = isMobile
+        ? typeof height === "number"
+            ? Math.min(height, 360)
+            : "360px"
+        : height;
 
     const handleCopyOrig = useCallback(() => {
         copyToClipboard(original, "Original copied!");
@@ -160,7 +191,7 @@ export function CodeDiff({
                 </div>
             )}
             <DiffEditorComponent
-                height={height}
+                height={responsiveHeight}
                 language={language}
                 theme={darkMode ? "vs-dark" : "light"}
                 original={original}
@@ -168,12 +199,15 @@ export function CodeDiff({
                 loading={<Spin />}
                 options={{
                     minimap: { enabled: false },
-                    fontSize: 14,
+                    fontSize: isMobile ? 13 : 14,
                     readOnly: true,
                     scrollBeyondLastLine: false,
                     automaticLayout: true,
-                    renderSideBySide: true,
+                    renderSideBySide: !isMobile,
                     padding: { top: 12 },
+                    folding: !isMobile,
+                    glyphMargin: false,
+                    lineNumbersMinChars: isMobile ? 0 : 3,
                 }}
             />
         </div>

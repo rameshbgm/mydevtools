@@ -59,7 +59,7 @@ export default function RegexTesterPage() {
                 ]
             }}
         >
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="tool-split-pane" style={{ gap: 16 }}>
                 <div>
                     <Card
                         size="small"

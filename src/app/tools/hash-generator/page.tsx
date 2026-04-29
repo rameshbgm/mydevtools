@@ -97,7 +97,7 @@ export default function HashGeneratorPage() {
             {loading ? (
                 <div style={{ textAlign: "center", padding: 40 }}><Spin /></div>
             ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div className="tool-split-pane" style={{ gap: 12 }}>
                     {Object.entries(hashes).map(([algo, hash]) => (
                         <Card key={algo} size="small" title={algo} extra={
                             <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(hash, `${algo} copied!`)} />

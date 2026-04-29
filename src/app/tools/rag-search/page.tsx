@@ -98,7 +98,7 @@ export default function RagSearchPage() {
                 style={{ marginBottom: 16 }}
             />
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="tool-split-pane" style={{ gap: 16 }}>
                 <div>
                     <Card size="small" title="Documents" style={{ marginBottom: 12 }}>
                         <TextArea

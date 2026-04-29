@@ -57,7 +57,7 @@ export default function UrlEncoderPage() {
                 <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output)}>Copy</Button>
                 <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); }}>Clear</Button>
             </Space>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="tool-split-pane" style={{ gap: 16 }}>
                 <Card size="small" title="Input">
                     <TextArea rows={10} value={input} onChange={(e) => setInput(e.target.value)} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
                 </Card>

@@ -121,7 +121,7 @@ export default function YamlFormatterPage() {
                 <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setValidState(null); }}>Clear</Button>
             </Space>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="tool-split-pane" style={{ gap: 16 }}>
                 <Card size="small" title="Input" styles={{ body: { padding: 0 } }}>
                     <CodeEditor
                         value={input}

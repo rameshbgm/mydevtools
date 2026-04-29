@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
+import PwaRegister from "@/components/PwaRegister";
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/seo-content";
 import { toolsRegistry } from "@/lib/tools-registry";
 
@@ -91,7 +92,25 @@ export const metadata: Metadata = {
         },
     },
     icons: {
-        icon: "/favicon.ico",
+        icon: [
+            { url: "/favicon.ico" },
+            { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+            { url: "/icons/favicon-16.png", sizes: "16x16", type: "image/png" },
+        ],
+        apple: [
+            { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+        ],
+    },
+    manifest: "/manifest.webmanifest",
+    appleWebApp: {
+        capable: true,
+        title: SITE_NAME,
+        statusBarStyle: "black-translucent",
+    },
+    formatDetection: {
+        telephone: false,
+        email: false,
+        address: false,
     },
 };
 
@@ -167,6 +186,7 @@ export default function RootLayout({
                 />
             </head>
             <body className="min-h-full flex flex-col">
+                <PwaRegister />
                 <AppShell>{children}</AppShell>
             </body>
         </html>

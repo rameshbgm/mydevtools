@@ -118,7 +118,7 @@ export default function AesToolPage() {
                 />
             </Card>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="tool-split-pane" style={{ gap: 16 }}>
                 <Card size="small" title={mode === "Encrypt" ? "Plaintext" : "Ciphertext (Base64)"}>
                     <TextArea
                         rows={14}

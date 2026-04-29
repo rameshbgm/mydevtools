@@ -279,3 +279,139 @@ pre {
     padding: 8px 12px !important;
   }
 }
+
+/* =====================================================================
+   GLOBAL RESPONSIVE OVERRIDES
+   These override the inline grid / flex patterns used across all tool
+   pages, so individual tool files don't need editing.
+   ===================================================================== */
+
+/* Reusable split-pane class — input/output side-by-side on desktop,
+   stacked on tablet/mobile. Tools script-migrated from inline grids. */
+.tool-split-pane {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Collapse 2-column inline grids and split panes to single column */
+@media (max-width: 991px) {
+  .tool-split-pane,
+  [style*="grid-template-columns: 1fr 1fr"],
+  [style*="grid-template-columns:1fr 1fr"],
+  [style*="1fr 1fr"]:not([style*="1fr 1fr 1fr"]) {
+    grid-template-columns: 1fr !important;
+  }
+
+  [style*="grid-template-columns: 1fr 1fr 1fr"],
+  [style*="grid-template-columns:1fr 1fr 1fr"],
+  [style*="1fr 1fr 1fr"]:not([style*="1fr 1fr 1fr 1fr"]) {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 575px) {
+  [style*="grid-template-columns: 1fr 1fr 1fr"],
+  [style*="grid-template-columns:1fr 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Generic 4+ col grids → 1 col on phone */
+  [style*="grid-template-columns: repeat(4"],
+  [style*="grid-template-columns: repeat(3"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Tool-page layouts — tighten gaps and padding on mobile */
+@media (max-width: 575px) {
+  /* Ant Design Row gutter — relax to single col already via xs={24} */
+  .ant-row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Code editors — shorter on phones */
+  .monaco-editor,
+  [class*="monaco-editor"] {
+    min-height: 280px;
+  }
+
+  /* Wide tables / pre / code blocks — make horizontally scrollable */
+  pre,
+  table.ant-table {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  /* Long URL/text in cards */
+  .ant-card,
+  .ant-card-body {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  /* Ant Tabs become scrollable horizontally */
+  .ant-tabs-nav {
+    overflow-x: auto !important;
+  }
+  .ant-tabs-nav-list {
+    flex-shrink: 0;
+  }
+
+  /* Buttons in dense Spaces stay readable */
+  .ant-space-item .ant-btn {
+    flex-shrink: 0;
+  }
+
+  /* Forms — inputs full width */
+  .ant-input-number,
+  .ant-select,
+  .ant-picker {
+    width: 100% !important;
+  }
+
+  /* Tighter ToolPageLayout breadcrumb */
+  .ant-breadcrumb {
+    font-size: 12px;
+  }
+
+  /* Larger touch targets for icon buttons */
+  .ant-btn-icon-only {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+/* Tablet layout — preserve 2-col where it makes sense */
+@media (min-width: 576px) and (max-width: 991px) {
+  /* Ant Space horizontal — keep wrap */
+  .ant-space-horizontal {
+    flex-wrap: wrap;
+  }
+}
+
+/* Prevent any horizontal scroll on the body */
+html, body {
+  overflow-x: hidden;
+}
+
+/* Make ToolPageLayout content respect viewport width */
+.ant-layout-content > div {
+  max-width: 100%;
+}
+
+/* Sticky header should not eat content space on mobile */
+@media (max-width: 575px) {
+  .ant-layout-header {
+    padding: 0 12px !important;
+  }
+}
+
+/* PWA standalone mode — hide the address-bar gap */
+@media all and (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

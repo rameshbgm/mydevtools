@@ -109,7 +109,7 @@ export default function XmlFormatterPage() {
                 <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setValidState(null); }}>Clear</Button>
             </Space>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="tool-split-pane" style={{ gap: 16 }}>
                 <Card size="small" title="Input" styles={{ body: { padding: 0 } }}>
                     <CodeEditor value={input} onChange={(v) => { setInput(v); run(mode, v); }} language="xml" height="500px" />
                 </Card>

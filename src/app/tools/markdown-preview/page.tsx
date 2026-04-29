@@ -97,7 +97,7 @@ export default function MarkdownPreviewPage() {
                     Download .md
                 </Button>
             </Space>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="tool-split-pane" style={{ gap: 16 }}>
                 <Card size="small" title="Markdown" styles={{ body: { padding: 0 } }}>
                     <CodeEditor value={markdown} onChange={setMarkdown} language="markdown" height="600px" showCopy={false} />
                 </Card>

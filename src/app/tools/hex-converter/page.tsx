@@ -137,7 +137,7 @@ export default function HexConverterPage() {
                 <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); }}>Clear</Button>
             </Space>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="tool-split-pane" style={{ gap: 16 }}>
                 <Card size="small" title={mode === "Encode" ? "Text Input" : "Hex Input"}>
                     <TextArea
                         rows={14}

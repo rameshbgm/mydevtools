@@ -61,7 +61,7 @@ export default function Base64Page() {
                 <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); }}>Clear</Button>
             </Space>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="tool-split-pane" style={{ gap: 16 }}>
                 <Card size="small" title="Input">
                     <TextArea rows={16} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Enter text to encode/decode..." style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
                 </Card>
