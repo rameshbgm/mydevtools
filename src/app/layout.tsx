@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DevTools Hub — Your Personal Developer Portal",
+  title: "mydevtools — Your Personal Developer Portal",
   description: "A beautiful, all-in-one developer tools portal",
 };
 

@@ -25,7 +25,7 @@ Welcome to the **Markdown Preview** tool! 🎉
 - Code blocks with syntax highlighting
 
 \`\`\`javascript
-const greeting = "Hello, DevTools Hub!";
+const greeting = "Hello, mydevtools!";
 console.log(greeting);
 \`\`\`
 

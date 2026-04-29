@@ -135,7 +135,7 @@ export default function Dashboard() {
                         letterSpacing: "-1px",
                     }}
                 >
-                    DevTools Hub
+                    mydevtools
                 </Title>
 
                 <Paragraph
@@ -152,7 +152,7 @@ export default function Dashboard() {
                     all in one beautiful, private workspace.
                 </Paragraph>
 
-                <div style={{ maxWidth: 560, margin: "0 auto", padding: "0 12px" }}>
+                <div style={{ maxWidth: 560, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
                     <Input
                         size="large"
                         placeholder="Search tools by name, description, or tag..."

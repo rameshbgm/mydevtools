@@ -15,7 +15,7 @@ import { CodeEditor } from "@/components/CodeEditor";
 
 const { Text } = Typography;
 
-const SAMPLE = `{"name":"DevTools Hub","version":"1.0.0","features":["json-formatter","xml-formatter","diff-tools"],"config":{"theme":"dark","language":"en"}}`;
+const SAMPLE = `{"name":"mydevtools","version":"1.0.0","features":["json-formatter","xml-formatter","diff-tools"],"config":{"theme":"dark","language":"en"}}`;
 
 type Mode = "Prettify" | "Minify" | "Validate";
 

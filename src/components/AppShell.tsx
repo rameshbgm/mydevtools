@@ -378,7 +378,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 letterSpacing: "-0.5px",
                             }}
                         >
-                            DevTools Hub
+                            mydevtools
                         </Title>
                         <Text
                             style={{
@@ -476,7 +476,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             styles={{
                                 body: { padding: 0 },
                                 header: { display: "none" },
-                                content: {
+                                section: {
                                     background: darkMode
                                         ? "linear-gradient(180deg, #141414 0%, #0d0d0d 100%)"
                                         : "linear-gradient(180deg, #ffffff 0%, #fafafa 100%)",

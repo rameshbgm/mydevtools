@@ -29,7 +29,7 @@ async function computeHashes(input: string): Promise<Record<string, string>> {
 
 export default function HashGeneratorPage() {
     const { message } = App.useApp();
-    const [input, setInput] = useState("Hello, DevTools Hub!");
+    const [input, setInput] = useState("Hello, mydevtools!");
     const [hashes, setHashes] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
 

@@ -17,35 +17,15 @@ export default function AppFooter() {
         <footer
             style={{
                 position: "relative",
-                marginTop: 48,
-                padding: "32px 24px 28px",
+                marginTop: 32,
+                padding: "20px 24px 16px",
                 borderTop: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
                 background: darkMode
-                    ? "linear-gradient(180deg, transparent 0%, rgba(99, 102, 241, 0.04) 100%)"
-                    : "linear-gradient(180deg, transparent 0%, rgba(99, 102, 241, 0.03) 100%)",
+                    ? "linear-gradient(180deg, transparent 0%, rgba(99, 102, 241, 0.02) 100%)"
+                    : "linear-gradient(180deg, transparent 0%, rgba(99, 102, 241, 0.01) 100%)",
                 overflow: "hidden",
             }}
         >
-            {/* Subtle background gradient orb */}
-            <motion.div
-                aria-hidden
-                animate={{
-                    x: [0, 24, 0],
-                    opacity: [0.4, 0.6, 0.4],
-                }}
-                transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-                style={{
-                    position: "absolute",
-                    top: "-50%",
-                    left: "20%",
-                    width: 400,
-                    height: 200,
-                    borderRadius: "50%",
-                    background: "radial-gradient(circle, rgba(139,92,246,0.12), transparent 70%)",
-                    filter: "blur(40px)",
-                    pointerEvents: "none",
-                }}
-            />
 
             <div
                 style={{
@@ -54,43 +34,12 @@ export default function AppFooter() {
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    gap: 16,
+                    gap: 12,
                     position: "relative",
                     zIndex: 1,
                     textAlign: "center",
                 }}
             >
-                {/* Tagline pill */}
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5 }}
-                    style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "6px 16px",
-                        borderRadius: 24,
-                        background: darkMode
-                            ? "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.10))"
-                            : "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.05))",
-                        border: `1px solid ${darkMode ? "rgba(139,92,246,0.25)" : "rgba(99,102,241,0.18)"}`,
-                    }}
-                >
-                    <ThunderboltFilled style={{ color: "#8b5cf6", fontSize: 13 }} />
-                    <Text
-                        style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            letterSpacing: 0.4,
-                            color: darkMode ? "#c4b5fd" : "#7c3aed",
-                            textTransform: "uppercase",
-                        }}
-                    >
-                        One stop for all developer tools
-                    </Text>
-                </motion.div>
 
                 {/* Made with love */}
                 <div
@@ -200,7 +149,7 @@ export default function AppFooter() {
                     }}
                 >
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                        © {year} DevTools Hub
+                        © {year} mydevtools
                     </Text>
                     <span
                         style={{

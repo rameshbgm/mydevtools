@@ -9,7 +9,7 @@ import { CodeEditor } from "@/components/CodeEditor";
 const SAMPLE_SPEC = `{
   "openapi": "3.0.0",
   "info": {
-    "title": "DevTools Hub API",
+    "title": "mydevtools API",
     "version": "1.0.0",
     "description": "Sample API showing endpoints, schemas, and request/response examples"
   },

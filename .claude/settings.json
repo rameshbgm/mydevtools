@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/add-seo-metadata.js)",
+      "Bash(node scripts/fix-metadata-imports.js)",
+      "Bash(npm run *)",
+      "Bash(node scripts/create-tool-layouts.js)",
+      "Bash(node scripts/remove-page-metadata.js)",
+      "Bash(node scripts/fix-layout-metadata.js)",
+      "Bash(node scripts/rebrand-to-mydevtools.js)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}
