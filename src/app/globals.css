@@ -1,0 +1,225 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafafa;
+  --foreground: #171717;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-rgb: 79, 70, 229;
+  --card-bg: #ffffff;
+  --card-border: #e5e5e5;
+  --text-secondary: #525252;
+  --text-muted: #737373;
+  --scrollbar-thumb: #d4d4d4;
+  --scrollbar-thumb-hover: #a3a3a3;
+  --selection-bg: rgba(79, 70, 229, 0.18);
+  --elevation-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --elevation-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --elevation-lg: 0 20px 40px rgba(79, 70, 229, 0.12), 0 8px 16px rgba(15, 23, 42, 0.06);
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #e5e5e5;
+  --primary: #6366f1;
+  --primary-hover: #818cf8;
+  --primary-rgb: 99, 102, 241;
+  --card-bg: #1a1a1a;
+  --card-border: #262626;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
+  --scrollbar-thumb: #404040;
+  --scrollbar-thumb-hover: #525252;
+  --selection-bg: rgba(99, 102, 241, 0.3);
+  --elevation-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --elevation-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --elevation-lg: 0 20px 40px rgba(99, 102, 241, 0.2);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* Scrollbar — theme-aware */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Menu — driven by theme variables */
+.ant-menu-item-selected {
+  background: linear-gradient(135deg,
+      rgba(var(--primary-rgb), 0.14),
+      rgba(var(--primary-rgb), 0.08)) !important;
+}
+
+.ant-menu-submenu-title:hover,
+.ant-menu-item:hover {
+  background: rgba(var(--primary-rgb), 0.06) !important;
+}
+
+/* Tool card animations */
+.tool-card {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.25s ease;
+  cursor: pointer;
+  will-change: transform, box-shadow;
+}
+
+.tool-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--elevation-lg);
+}
+
+/* Light-mode card elevation — borders alone look flat against #fafafa */
+:root .ant-card {
+  box-shadow: var(--elevation-sm);
+}
+
+.dark .ant-card {
+  box-shadow: none;
+}
+
+/* Monaco Editor transparency */
+.monaco-editor .margin,
+.monaco-editor .monaco-editor-background {
+  background: transparent !important;
+}
+
+/* Smooth transitions for theme changes */
+body,
+.ant-layout,
+.ant-layout-sider,
+.ant-layout-header,
+.ant-layout-content,
+.ant-card,
+.ant-menu,
+.ant-btn,
+.ant-input,
+.ant-select,
+.ant-table {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Better focus styles */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Selection color — theme-aware */
+::selection {
+  background: var(--selection-bg);
+  color: inherit;
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+code,
+pre {
+  font-family: var(--font-geist-mono), "Fira Code", Monaco, Consolas, monospace;
+}
+
+/* Button hover glow — theme-aware */
+.ant-btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.35);
+}
+
+/* Card hover border — theme-aware */
+.ant-card:hover {
+  border-color: rgba(var(--primary-rgb), 0.3);
+}
+
+.ant-tag {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.ant-badge-count {
+  font-weight: 600;
+}
+
+/* Table row hover — theme-aware */
+.ant-table-tbody>tr:hover>td {
+  background: rgba(var(--primary-rgb), 0.05) !important;
+}
+
+/* Input focus glow — theme-aware */
+.ant-input:focus,
+.ant-input-focused,
+.ant-select-focused .ant-select-selector {
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15) !important;
+}
+
+.ant-segmented {
+  border-radius: 10px;
+}
+
+.ant-segmented-item-selected {
+  font-weight: 500;
+}
+
+.ant-modal-content {
+  border-radius: 16px;
+}
+
+.ant-tooltip-inner {
+  border-radius: 8px;
+}
+
+.ant-progress-inner {
+  border-radius: 100px;
+}
+
+.ant-spin-dot-item {
+  background-color: var(--primary);
+}
