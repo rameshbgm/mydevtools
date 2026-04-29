@@ -1,48 +1,22 @@
 import { Metadata } from "next";
 import { ReactNode } from "react";
+import { generateToolMetadata, generateToolStructuredData } from "@/lib/metadata-generator";
 
 export async function generateMetadata(): Promise<Metadata> {
-    const baseUrl = "https://devtools-hub.com";
-    const toolName = "JWE Encrypt & Decrypt";
-    const description = "Encrypt and decrypt data using JSON Web Encryption (JWE) with RSA and AES algorithms";
-    const toolId = "jwe-tool";
-    const category = "Cryptography";
-    const tags = ["jwe", "encrypt", "decrypt", "jose", "rsa", "aes", "gcm"];
-    const pageUrl = `${baseUrl}/tools/${toolId}`;
-    const ogImage = `${baseUrl}/og-image.png`;
-
-    return {
-        title: `${toolName} - mydevtools`,
-        description,
-        keywords: [toolName, category, ...tags, "developer tools", "open source"].join(", "),
-        alternates: {
-            canonical: pageUrl,
-        },
-        openGraph: {
-            title: `${toolName} - mydevtools`,
-            description,
-            url: pageUrl,
-            type: "website",
-            images: [{
-                url: ogImage,
-                width: 1200,
-                height: 630,
-                alt: toolName,
-            }],
-        },
-        twitter: {
-            card: "summary_large_image",
-            title: `${toolName} - mydevtools`,
-            description,
-            images: [ogImage],
-        },
-        robots: {
-            index: true,
-            follow: true,
-        },
-    };
+    return generateToolMetadata({ toolId: "jwe-tool" });
 }
 
 export default function Layout({ children }: { children: ReactNode }) {
-    return children;
+    const structuredData = generateToolStructuredData("jwe-tool");
+    return (
+        <>
+            {structuredData && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+                />
+            )}
+            {children}
+        </>
+    );
 }

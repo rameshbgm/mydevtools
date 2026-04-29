@@ -1,48 +1,22 @@
 import { Metadata } from "next";
 import { ReactNode } from "react";
+import { generateToolMetadata, generateToolStructuredData } from "@/lib/metadata-generator";
 
 export async function generateMetadata(): Promise<Metadata> {
-    const baseUrl = "https://devtools-hub.com";
-    const toolName = "Color Picker & Converter";
-    const description = "Pick colors and convert between HEX, RGB, HSL formats";
-    const toolId = "color-picker";
-    const category = "Text & Utilities";
-    const tags = ["color", "hex", "rgb", "hsl", "picker"];
-    const pageUrl = `${baseUrl}/tools/${toolId}`;
-    const ogImage = `${baseUrl}/og-image.png`;
-
-    return {
-        title: `${toolName} - mydevtools`,
-        description,
-        keywords: [toolName, category, ...tags, "developer tools", "open source"].join(", "),
-        alternates: {
-            canonical: pageUrl,
-        },
-        openGraph: {
-            title: `${toolName} - mydevtools`,
-            description,
-            url: pageUrl,
-            type: "website",
-            images: [{
-                url: ogImage,
-                width: 1200,
-                height: 630,
-                alt: toolName,
-            }],
-        },
-        twitter: {
-            card: "summary_large_image",
-            title: `${toolName} - mydevtools`,
-            description,
-            images: [ogImage],
-        },
-        robots: {
-            index: true,
-            follow: true,
-        },
-    };
+    return generateToolMetadata({ toolId: "color-picker" });
 }
 
 export default function Layout({ children }: { children: ReactNode }) {
-    return children;
+    const structuredData = generateToolStructuredData("color-picker");
+    return (
+        <>
+            {structuredData && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+                />
+            )}
+            {children}
+        </>
+    );
 }

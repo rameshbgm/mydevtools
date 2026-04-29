@@ -1,37 +1,174 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
+import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/seo-content";
+import { toolsRegistry } from "@/lib/tools-registry";
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+    variable: "--font-geist-sans",
+    subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+    variable: "--font-geist-mono",
+    subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+    themeColor: [
+        { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+        { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    ],
+    width: "device-width",
+    initialScale: 1,
+};
+
+const SITE_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}`;
+
 export const metadata: Metadata = {
-  title: "mydevtools — Your Personal Developer Portal",
-  description: "A beautiful, all-in-one developer tools portal",
+    metadataBase: new URL(SITE_URL),
+    title: {
+        default: SITE_TITLE,
+        template: `%s | ${SITE_NAME}`,
+    },
+    description: SITE_DESCRIPTION,
+    keywords: [
+        "developer tools",
+        "online developer tools",
+        "free developer tools",
+        "json formatter",
+        "regex tester",
+        "base64 encoder",
+        "jwt decoder",
+        "uuid generator",
+        "qr code generator",
+        "api tester",
+        "ssl checker",
+        "private developer tools",
+        "client-side developer tools",
+        "browser developer tools",
+        "no signup developer tools",
+    ].join(", "),
+    authors: [{ name: SITE_NAME }],
+    creator: SITE_NAME,
+    publisher: SITE_NAME,
+    applicationName: SITE_NAME,
+    category: "Developer Tools",
+    alternates: { canonical: SITE_URL },
+    openGraph: {
+        title: SITE_TITLE,
+        description: SITE_DESCRIPTION,
+        url: SITE_URL,
+        siteName: SITE_NAME,
+        type: "website",
+        locale: "en_US",
+        images: [
+            {
+                url: `${SITE_URL}/og-image.png`,
+                width: 1200,
+                height: 630,
+                alt: SITE_NAME,
+            },
+        ],
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: SITE_TITLE,
+        description: SITE_DESCRIPTION,
+        images: [`${SITE_URL}/og-image.png`],
+        creator: "@mydevtools",
+    },
+    robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+            index: true,
+            follow: true,
+            "max-video-preview": -1,
+            "max-image-preview": "large",
+            "max-snippet": -1,
+        },
+    },
+    icons: {
+        icon: "/favicon.ico",
+    },
+};
+
+const SITE_STRUCTURED_DATA = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: SITE_URL,
+    description: SITE_DESCRIPTION,
+    inLanguage: "en",
+    publisher: {
+        "@type": "Organization",
+        name: SITE_NAME,
+        url: SITE_URL,
+    },
+    potentialAction: {
+        "@type": "SearchAction",
+        target: `${SITE_URL}/?q={search_term_string}`,
+        "query-input": "required name=search_term_string",
+    },
+};
+
+const ORG_STRUCTURED_DATA = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: `${SITE_URL}/og-image.png`,
+    description: SITE_DESCRIPTION,
+    sameAs: [
+        "https://github.com/rameshbgm/mydevtools",
+    ],
+};
+
+const COLLECTION_STRUCTURED_DATA = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `${SITE_NAME} — All Developer Tools`,
+    url: SITE_URL,
+    description: SITE_DESCRIPTION,
+    hasPart: toolsRegistry.map((t) => ({
+        "@type": "SoftwareApplication",
+        name: t.name,
+        url: `${SITE_URL}/tools/${t.id}`,
+        applicationCategory: "DeveloperApplication",
+        applicationSubCategory: t.category,
+    })),
 };
 
 export default function RootLayout({
-  children,
+    children,
 }: Readonly<{
-  children: React.ReactNode;
+    children: React.ReactNode;
 }>) {
-  return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      suppressHydrationWarning
-    >
-      <body className="min-h-full flex flex-col">
-        <AppShell>{children}</AppShell>
-      </body>
-    </html>
-  );
+    return (
+        <html
+            lang="en"
+            className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+            suppressHydrationWarning
+        >
+            <head>
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(SITE_STRUCTURED_DATA) }}
+                />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(ORG_STRUCTURED_DATA) }}
+                />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(COLLECTION_STRUCTURED_DATA) }}
+                />
+            </head>
+            <body className="min-h-full flex flex-col">
+                <AppShell>{children}</AppShell>
+            </body>
+        </html>
+    );
 }
