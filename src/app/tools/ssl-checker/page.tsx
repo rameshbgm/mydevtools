@@ -157,7 +157,7 @@ export default function SSLCheckerPage() {
                 ],
             }}
         >
-            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                 <Card>
                     <Alert
                         message="Browser Limitation"
@@ -190,7 +190,7 @@ export default function SSLCheckerPage() {
 
                 {result && (
                     <Card>
-                        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                        <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                             {/* Status Header */}
                             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                                 {result.valid ? (

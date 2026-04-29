@@ -168,7 +168,7 @@ export default function JKSToolPage() {
                                 <span><InfoCircleOutlined /> Analyze JKS</span>
                             ),
                             children: (
-                                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                                     <Alert
                                         message="JKS File Analysis"
                                         description="Upload a Java KeyStore file to view its structure and entries. Full content extraction requires the keystore password and Java keytool."
@@ -236,7 +236,7 @@ export default function JKSToolPage() {
                                 <span><SwapOutlined /> Convert</span>
                             ),
                             children: (
-                                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                                     <Alert
                                         message="Convert PKCS#12 to JKS"
                                         description="Convert a PKCS#12 (.p12/.pfx) file to Java KeyStore format. The actual conversion is performed using Java keytool."

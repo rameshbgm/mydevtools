@@ -11,7 +11,6 @@ import {
     Space,
     Tabs,
     Table,
-    message,
     Tag,
     Tree,
     Collapse,
@@ -20,6 +19,7 @@ import {
     Empty,
     Divider,
 } from "antd";
+import { messageService as message } from "@/lib/messageService";
 import {
     CloudOutlined,
     LinkOutlined,

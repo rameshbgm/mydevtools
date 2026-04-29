@@ -160,7 +160,7 @@ export default function CertificateFingerprintPage() {
                 ],
             }}
         >
-            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                 <Card>
                     <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <Text strong>Certificate (PEM format)</Text>
@@ -199,7 +199,7 @@ MIICpDCCAYwCCQDU...
 
                 {result && (
                     <Card title={<><SafetyCertificateOutlined /> Fingerprints</>}>
-                        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                        <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
                             {result.subject && (
                                 <Alert
                                     message="Certificate Subject"

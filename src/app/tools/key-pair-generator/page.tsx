@@ -178,7 +178,7 @@ export default function KeyPairGeneratorPage() {
             }}
         >
             <Card>
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                         <div style={{ flex: 1, minWidth: 180 }}>
                             <Text strong style={{ display: "block", marginBottom: 8 }}>Algorithm</Text>

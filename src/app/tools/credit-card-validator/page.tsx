@@ -208,7 +208,7 @@ export default function CreditCardValidatorPage() {
                                             icon={validation.isValid ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
                                             message={validation.isValid ? "Valid Card Number" : "Invalid Card Number"}
                                             description={
-                                                <Space direction="vertical">
+                                                <Space orientation="vertical">
                                                     <Text>Formatted: <Text code>{validation.formatted}</Text></Text>
                                                     <Space wrap>
                                                         <Tag color={validation.isValidLuhn ? "green" : "red"}>

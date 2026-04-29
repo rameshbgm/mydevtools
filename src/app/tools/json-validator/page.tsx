@@ -136,7 +136,7 @@ export default function JsonValidatorPage() {
                                 icon={<CheckCircleOutlined />}
                                 message="Valid JSON"
                                 description={
-                                    <Space direction="vertical">
+                                    <Space orientation="vertical">
                                         <Text>The JSON is well-formed and valid.</Text>
                                         {stats && (
                                             <Space wrap>
@@ -156,7 +156,7 @@ export default function JsonValidatorPage() {
                                 icon={<CloseCircleOutlined />}
                                 message="Invalid JSON"
                                 description={
-                                    <Space direction="vertical">
+                                    <Space orientation="vertical">
                                         <Text>{result.error}</Text>
                                         {result.line && (
                                             <Text type="secondary">

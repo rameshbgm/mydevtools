@@ -154,7 +154,7 @@ export default function MimeTypesPage() {
             <Row gutter={[24, 24]}>
                 <Col xs={24}>
                     <Card>
-                        <Space direction="vertical" style={{ width: "100%" }}>
+                        <Space orientation="vertical" style={{ width: "100%" }}>
                             <Input
                                 size="large"
                                 placeholder="Search by MIME type or file extension..."

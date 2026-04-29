@@ -395,7 +395,7 @@ export default function JWEToolPage() {
                 </span>
             ),
             children: (
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <div style={{ display: "flex", gap: 16 }}>
                         <div style={{ flex: 1 }}>
                             <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
@@ -508,7 +508,7 @@ export default function JWEToolPage() {
                 </span>
             ),
             children: (
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <div>
                         <Text strong>JWE Token</Text>
                         <TextArea

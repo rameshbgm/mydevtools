@@ -862,7 +862,7 @@ export default function RFCStandardsPage() {
             }}
         >
             <Card>
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <Input
                         size="large"
                         placeholder="Search RFCs by number, title, or keyword (e.g., 'jwt', 'oauth', 'tls')..."
@@ -921,7 +921,7 @@ export default function RFCStandardsPage() {
 
                     <div style={{ padding: "16px 0" }}>
                         <Title level={5}>Quick Reference: Key RFC Families</Title>
-                        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                        <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
                             <Card size="small" title={<><KeyOutlined /> JOSE (JSON Object Signing and Encryption)</>}>
                                 <Text>
                                     <strong>RFC 7519</strong> (JWT) • <strong>RFC 7515</strong> (JWS) •

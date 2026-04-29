@@ -9,7 +9,6 @@ import {
     Row,
     Col,
     Space,
-    message,
     Tag,
     Alert,
     Descriptions,
@@ -20,6 +19,7 @@ import {
     Statistic,
     Table,
 } from "antd";
+import { messageService as message } from "@/lib/messageService";
 import {
     WifiOutlined,
     CopyOutlined,
@@ -670,7 +670,7 @@ export default function IPAddressToolsPage() {
                             <Row gutter={[16, 16]}>
                                 <Col xs={24} lg={16}>
                                     <Card size="small">
-                                        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                                        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                             <Input
                                                 size="large"
                                                 placeholder="Enter IPv4 (e.g., 192.168.1.1) or IPv6 (e.g., 2001:db8::1)"
@@ -754,7 +754,7 @@ export default function IPAddressToolsPage() {
 
                                             <Col xs={24} md={12}>
                                                 <Card title="Representations" size="small">
-                                                    <Space direction="vertical" style={{ width: "100%" }} size="small">
+                                                    <Space orientation="vertical" style={{ width: "100%" }} size="small">
                                                         {ipInfo.version === "IPv6" && ipInfo.compressed && (
                                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                                 <Text type="secondary">Compressed:</Text>
@@ -852,7 +852,7 @@ export default function IPAddressToolsPage() {
                             <Row gutter={[16, 16]}>
                                 <Col xs={24} lg={16}>
                                     <Card size="small">
-                                        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                                        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                             <Row gutter={16} align="middle">
                                                 <Col flex="auto">
                                                     <Input
@@ -1024,7 +1024,7 @@ export default function IPAddressToolsPage() {
                             <Row gutter={[16, 16]}>
                                 <Col xs={24}>
                                     <Card title="Convert to IPv4" size="small">
-                                        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                                        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                             <Row gutter={16}>
                                                 <Col xs={24} md={6}>
                                                     <Select

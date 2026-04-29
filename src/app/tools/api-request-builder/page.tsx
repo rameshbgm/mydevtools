@@ -12,7 +12,6 @@ import {
     Space,
     Tabs,
     Table,
-    message,
     Switch,
     Spin,
     Tag,
@@ -29,6 +28,7 @@ import {
     Segmented,
     Statistic,
 } from "antd";
+import { messageService as message } from "@/lib/messageService";
 import {
     SendOutlined,
     PlusOutlined,
@@ -960,7 +960,7 @@ Console.WriteLine(content);`;
                                             </Select>
 
                                             {auth.type === "basic" && (
-                                                <Space direction="vertical" style={{ width: "100%" }}>
+                                                <Space orientation="vertical" style={{ width: "100%" }}>
                                                     <Input
                                                         prefix={<Text type="secondary">Username:</Text>}
                                                         value={auth.basic?.username}
@@ -975,7 +975,7 @@ Console.WriteLine(content);`;
                                             )}
 
                                             {auth.type === "bearer" && (
-                                                <Space direction="vertical" style={{ width: "100%" }}>
+                                                <Space orientation="vertical" style={{ width: "100%" }}>
                                                     <Input
                                                         prefix={<Text type="secondary">Prefix:</Text>}
                                                         value={auth.bearer?.prefix}
@@ -992,7 +992,7 @@ Console.WriteLine(content);`;
                                             )}
 
                                             {auth.type === "api-key" && (
-                                                <Space direction="vertical" style={{ width: "100%" }}>
+                                                <Space orientation="vertical" style={{ width: "100%" }}>
                                                     <Space>
                                                         <Input
                                                             prefix={<Text type="secondary">Key:</Text>}
@@ -1018,7 +1018,7 @@ Console.WriteLine(content);`;
                                             )}
 
                                             {auth.type === "oauth2" && (
-                                                <Space direction="vertical" style={{ width: "100%" }}>
+                                                <Space orientation="vertical" style={{ width: "100%" }}>
                                                     <Input
                                                         prefix={<Text type="secondary">Token Type:</Text>}
                                                         value={auth.oauth2?.tokenType}
@@ -1057,7 +1057,7 @@ Console.WriteLine(content);`;
                                     key: "settings",
                                     label: <><SettingOutlined /> Settings</>,
                                     children: (
-                                        <Space direction="vertical" style={{ width: "100%" }}>
+                                        <Space orientation="vertical" style={{ width: "100%" }}>
                                             <div>
                                                 <Text>Timeout (ms):</Text>
                                                 <InputNumber

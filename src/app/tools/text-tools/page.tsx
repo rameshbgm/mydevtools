@@ -237,24 +237,28 @@ banana`);
                     </Card>
 
                     <Card title="Prefix / Suffix" style={{ marginTop: 16 }}>
-                        <Space direction="vertical" style={{ width: "100%" }}>
+                        <Space orientation="vertical" style={{ width: "100%" }}>
                             <div>
                                 <Text strong style={{ display: "block", marginBottom: 4 }}>Prefix</Text>
-                                <Input
-                                    value={prefix}
-                                    onChange={(e) => setPrefix(e.target.value)}
-                                    placeholder="e.g., - "
-                                    addonAfter={<Button size="small" onClick={() => applyOperation("prefix")}>Apply</Button>}
-                                />
+                                <Space.Compact style={{ width: "100%" }}>
+                                    <Input
+                                        value={prefix}
+                                        onChange={(e) => setPrefix(e.target.value)}
+                                        placeholder="e.g., - "
+                                    />
+                                    <Button onClick={() => applyOperation("prefix")}>Apply</Button>
+                                </Space.Compact>
                             </div>
                             <div>
                                 <Text strong style={{ display: "block", marginBottom: 4 }}>Suffix</Text>
-                                <Input
-                                    value={suffix}
-                                    onChange={(e) => setSuffix(e.target.value)}
-                                    placeholder="e.g., ;"
-                                    addonAfter={<Button size="small" onClick={() => applyOperation("suffix")}>Apply</Button>}
-                                />
+                                <Space.Compact style={{ width: "100%" }}>
+                                    <Input
+                                        value={suffix}
+                                        onChange={(e) => setSuffix(e.target.value)}
+                                        placeholder="e.g., ;"
+                                    />
+                                    <Button onClick={() => applyOperation("suffix")}>Apply</Button>
+                                </Space.Compact>
                             </div>
                         </Space>
                     </Card>

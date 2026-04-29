@@ -129,7 +129,7 @@ export default function PKCS12ToolPage() {
                                 <span><InfoCircleOutlined /> Analyze PKCS#12</span>
                             ),
                             children: (
-                                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                                     <Alert
                                         message="Note"
                                         description="Full PKCS#12 parsing and creation requires a cryptographic library. This tool demonstrates the workflow and basic structure detection."
@@ -206,7 +206,7 @@ export default function PKCS12ToolPage() {
                                 <span><LockOutlined /> Create PKCS#12</span>
                             ),
                             children: (
-                                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                                     <Alert
                                         message="Create PKCS#12 Bundle"
                                         description="Combine a certificate and private key into a password-protected PKCS#12 file"

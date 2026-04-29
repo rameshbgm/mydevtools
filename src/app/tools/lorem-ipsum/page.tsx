@@ -122,7 +122,7 @@ export default function LoremIpsumPage() {
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={8}>
                     <Card title="Options">
-                        <Space direction="vertical" style={{ width: "100%" }} size="large">
+                        <Space orientation="vertical" style={{ width: "100%" }} size="large">
                             <div>
                                 <Text strong style={{ display: "block", marginBottom: 8 }}>Type</Text>
                                 <Select

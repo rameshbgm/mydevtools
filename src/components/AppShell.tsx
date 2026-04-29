@@ -23,7 +23,7 @@ import {
     DownOutlined,
     UpOutlined,
 } from "@ant-design/icons";
-import { getToolsByCategory, CATEGORY_ICONS, CATEGORY_COLORS } from "@/lib/tools-registry";
+import { getToolsByCategory, CATEGORY_ICONS, CATEGORY_COLORS, toolsRegistry } from "@/lib/tools-registry";
 import type { ToolCategory } from "@/lib/tools-registry";
 import { useAppStore } from "@/lib/store";
 import { motion } from "framer-motion";
@@ -42,10 +42,21 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     const pathname = usePathname();
     const { darkMode, toggleDarkMode, sidebarCollapsed, toggleSidebar } =
         useAppStore();
-    const [mounted, setMounted] = useState(false);
-    const [openKeys, setOpenKeys] = useState<string[]>([]);
+    const activeCategory = useMemo(() => {
+        const match = pathname.match(/^\/tools\/([^/]+)/);
+        if (!match) return null;
+        return toolsRegistry.find((t) => t.id === match[1])?.category ?? null;
+    }, [pathname]);
 
-    useEffect(() => setMounted(true), []);
+    const [openKeys, setOpenKeys] = useState<string[]>(activeCategory ? [activeCategory] : []);
+    const [lastCategory, setLastCategory] = useState<string | null>(activeCategory);
+
+    if (activeCategory !== lastCategory) {
+        setLastCategory(activeCategory);
+        if (activeCategory && !openKeys.includes(activeCategory)) {
+            setOpenKeys([...openKeys, activeCategory]);
+        }
+    }
 
     useEffect(() => {
         const root = document.documentElement;
@@ -179,8 +190,6 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
             },
         },
     };
-
-    if (!mounted) return null;
 
     return (
         <ConfigProvider theme={darkMode ? darkTheme : lightTheme}>

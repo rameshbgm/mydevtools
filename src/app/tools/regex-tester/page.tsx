@@ -72,14 +72,14 @@ export default function RegexTesterPage() {
                         }
                     >
                         <Space.Compact style={{ width: "100%" }}>
+                            <Button disabled style={{ pointerEvents: "none" }}>/</Button>
                             <Input
-                                addonBefore="/"
                                 value={pattern}
                                 onChange={(e) => setPattern(e.target.value)}
                                 style={{ fontFamily: "var(--font-geist-mono)" }}
                             />
+                            <Button disabled style={{ pointerEvents: "none" }}>/</Button>
                             <Input
-                                addonBefore="/"
                                 value={flags}
                                 onChange={(e) => setFlags(e.target.value)}
                                 style={{ width: 80, fontFamily: "var(--font-geist-mono)" }}

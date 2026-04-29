@@ -931,7 +931,7 @@ export default function TodoListPage() {
                     title="Browser Not Supported"
                     subTitle={compatError || "Your browser does not support IndexedDB."}
                     extra={
-                        <Space direction="vertical">
+                        <Space orientation="vertical">
                             <Text>Please use a modern browser like:</Text>
                             <Text strong>Chrome, Firefox, Safari, or Edge</Text>
                             <Text type="secondary">If you are in private/incognito mode, try using a regular window.</Text>
@@ -1396,7 +1396,7 @@ export default function TodoListPage() {
                     size="default"
                 >
                     {settings && (
-                        <Space direction="vertical" style={{ width: "100%" }} size="large">
+                        <Space orientation="vertical" style={{ width: "100%" }} size="large">
                             <div>
                                 <Text strong>Default Category</Text>
                                 <Select
@@ -1537,7 +1537,7 @@ export default function TodoListPage() {
                         </Button>
                     ]}
                 >
-                    <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                    <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                         <Input
                             placeholder="Search emojis..."
                             prefix={<SearchOutlined />}

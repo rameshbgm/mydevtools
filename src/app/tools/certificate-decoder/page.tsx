@@ -386,7 +386,7 @@ export default function CertificateDecoderPage() {
             }}
         >
             <Card>
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <div>
                         <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Text strong>Certificate (PEM or Base64 DER)</Text>
@@ -479,7 +479,7 @@ export default function CertificateDecoderPage() {
                                     key: "subject",
                                     label: <Text strong>Subject & Issuer</Text>,
                                     children: (
-                                        <Space direction="vertical" style={{ width: "100%" }}>
+                                        <Space orientation="vertical" style={{ width: "100%" }}>
                                             <div>
                                                 <Text strong>Subject:</Text>
                                                 <pre style={{
@@ -511,7 +511,7 @@ export default function CertificateDecoderPage() {
                                     key: "extensions",
                                     label: <Text strong>Extensions</Text>,
                                     children: (
-                                        <Space direction="vertical" style={{ width: "100%" }}>
+                                        <Space orientation="vertical" style={{ width: "100%" }}>
                                             {certInfo.keyUsage && certInfo.keyUsage.length > 0 && (
                                                 <div>
                                                     <Text strong>Key Usage:</Text>

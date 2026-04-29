@@ -9,7 +9,6 @@ import {
     Col,
     Space,
     Table,
-    message,
     Tag,
     Alert,
     Divider,
@@ -19,6 +18,7 @@ import {
     Tooltip,
     Badge,
 } from "antd";
+import { messageService as message } from "@/lib/messageService";
 import {
     ApartmentOutlined,
     CheckCircleOutlined,

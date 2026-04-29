@@ -204,7 +204,7 @@ export default function CertificateChainValidatorPage() {
             }}
         >
             <Card>
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <div>
                         <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Text strong>Certificate Chain (PEM format)</Text>

@@ -135,7 +135,7 @@ export default function CaseConverterPage() {
                     </Card>
 
                     <Card title="Convert To" style={{ marginTop: 16 }}>
-                        <Space direction="vertical" style={{ width: "100%" }}>
+                        <Space orientation="vertical" style={{ width: "100%" }}>
                             <Select
                                 value={targetCase}
                                 onChange={setTargetCase}

@@ -570,13 +570,13 @@ ${sanEntries.join("\n")}
                         label: <span><SafetyCertificateOutlined /> Generate CSR</span>,
                         children: (
                             <Card>
-                                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                                     <Collapse defaultActiveKey={["subject", "key"]} items={[
                                         {
                                             key: "subject",
                                             label: <Text strong>Subject Information</Text>,
                                             children: (
-                                                <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                                                <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                                     <Row gutter={16}>
                                                         <Col xs={24} md={16}>
                                                             <Text strong style={{ display: "block", marginBottom: 4 }}>Common Name (CN) *</Text>
@@ -815,7 +815,7 @@ ${sanEntries.join("\n")}
                         label: <span><CodeOutlined /> OpenSSL Commands</span>,
                         children: (
                             <Card>
-                                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                                     <Alert
                                         type="info"
                                         message="Generate CSR using OpenSSL"

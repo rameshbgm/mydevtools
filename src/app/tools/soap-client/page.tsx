@@ -11,7 +11,6 @@ import {
     Space,
     Tabs,
     Table,
-    message,
     Spin,
     Tag,
     Select,
@@ -23,6 +22,7 @@ import {
     InputNumber,
     Collapse,
 } from "antd";
+import { messageService as message } from "@/lib/messageService";
 import {
     BlockOutlined,
     SendOutlined,
@@ -401,14 +401,16 @@ export default function SoapClientPage() {
                             </Col>
                             <Col>
                                 <Tooltip title={`Timeout: ${timeout}s`}>
-                                    <InputNumber
-                                        min={5}
-                                        max={120}
-                                        value={timeout}
-                                        onChange={(v) => setTimeout(v || 30)}
-                                        addonAfter="s"
-                                        style={{ width: 100 }}
-                                    />
+                                    <Space.Compact>
+                                        <InputNumber
+                                            min={5}
+                                            max={120}
+                                            value={timeout}
+                                            onChange={(v) => setTimeout(v || 30)}
+                                            style={{ width: 80 }}
+                                        />
+                                        <Button disabled style={{ pointerEvents: "none" }}>s</Button>
+                                    </Space.Compact>
                                 </Tooltip>
                             </Col>
                             <Col>
@@ -427,12 +429,14 @@ export default function SoapClientPage() {
 
                         {soapVersion === "1.1" && (
                             <div style={{ marginTop: 12 }}>
-                                <Input
-                                    placeholder="SOAPAction header (for SOAP 1.1)"
-                                    value={soapAction}
-                                    onChange={(e) => setSoapAction(e.target.value)}
-                                    addonBefore="SOAPAction"
-                                />
+                                <Space.Compact style={{ width: "100%" }}>
+                                    <Button disabled style={{ pointerEvents: "none" }}>SOAPAction</Button>
+                                    <Input
+                                        placeholder="SOAPAction header (for SOAP 1.1)"
+                                        value={soapAction}
+                                        onChange={(e) => setSoapAction(e.target.value)}
+                                    />
+                                </Space.Compact>
                             </div>
                         )}
                     </Card>

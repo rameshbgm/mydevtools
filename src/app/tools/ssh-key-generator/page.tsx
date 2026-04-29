@@ -212,7 +212,7 @@ export default function SSHKeyGeneratorPage() {
             }}
         >
             <Card>
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <Alert
                         type="info"
                         message="Browser-Generated SSH Keys"
@@ -395,7 +395,7 @@ export default function SSHKeyGeneratorPage() {
                                     key: "usage",
                                     label: <Text strong>Usage Instructions</Text>,
                                     children: (
-                                        <Space direction="vertical" style={{ width: "100%" }}>
+                                        <Space orientation="vertical" style={{ width: "100%" }}>
                                             <div>
                                                 <Text strong>1. Save the private key:</Text>
                                                 <pre style={{

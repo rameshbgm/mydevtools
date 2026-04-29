@@ -9,7 +9,6 @@ import {
     Row,
     Col,
     Space,
-    message,
     Tag,
     Alert,
     Descriptions,
@@ -20,6 +19,7 @@ import {
     Tooltip,
     Divider,
 } from "antd";
+import { messageService as message } from "@/lib/messageService";
 import {
     ClusterOutlined,
     CopyOutlined,
@@ -302,7 +302,7 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                         }
                         size="small"
                     >
-                        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                             <div>
                                 <Text strong style={{ display: "block", marginBottom: 8 }}>IP Address</Text>
                                 <Input
@@ -345,14 +345,16 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                                             }}
                                         />
                                         <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
-                                            <InputNumber
-                                                min={0}
-                                                max={32}
-                                                value={cidr}
-                                                onChange={(v) => handleCidrChange(v || 24)}
-                                                addonBefore="/"
-                                                style={{ width: 100 }}
-                                            />
+                                            <Space.Compact>
+                                                <Button disabled style={{ pointerEvents: "none" }}>/</Button>
+                                                <InputNumber
+                                                    min={0}
+                                                    max={32}
+                                                    value={cidr}
+                                                    onChange={(v) => handleCidrChange(v || 24)}
+                                                    style={{ width: 80 }}
+                                                />
+                                            </Space.Compact>
                                         </div>
                                     </div>
                                 ) : (

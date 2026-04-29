@@ -213,7 +213,7 @@ export default function HtmlValidatorPage() {
                                 }
                             />
                         ) : (
-                            <Space direction="vertical" style={{ width: "100%" }}>
+                            <Space orientation="vertical" style={{ width: "100%" }}>
                                 {errors.length > 0 && (
                                     <Alert
                                         type="error"
@@ -252,7 +252,7 @@ export default function HtmlValidatorPage() {
 
                 <Col xs={24} lg={8}>
                     <Card title="Document Structure">
-                        <Space direction="vertical" style={{ width: "100%" }}>
+                        <Space orientation="vertical" style={{ width: "100%" }}>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
                                 <Text>DOCTYPE</Text>
                                 {result.stats.hasDoctype ? <CheckCircleOutlined style={{ color: "#52c41a" }} /> : <CloseCircleOutlined style={{ color: "#f5222d" }} />}

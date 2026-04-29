@@ -9,7 +9,6 @@ import {
     Row,
     Col,
     Space,
-    message,
     Tag,
     Alert,
     Descriptions,
@@ -18,6 +17,7 @@ import {
     Table,
     Select,
 } from "antd";
+import { messageService as message } from "@/lib/messageService";
 import {
     WifiOutlined,
     CopyOutlined,
@@ -932,7 +932,7 @@ export default function MACAddressToolsPage() {
                             <Row gutter={[16, 16]}>
                                 <Col xs={24} lg={16}>
                                     <Card size="small">
-                                        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                                        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                             <Input
                                                 size="large"
                                                 placeholder="Enter MAC address (e.g., 00:1C:B3:00:00:01, 001CB3000001)"
@@ -1006,7 +1006,7 @@ export default function MACAddressToolsPage() {
 
                                             <Col xs={24} md={12}>
                                                 <Card title="Formats" size="small">
-                                                    <Space direction="vertical" style={{ width: "100%" }} size="small">
+                                                    <Space orientation="vertical" style={{ width: "100%" }} size="small">
                                                         {Object.entries(macInfo.formats).map(([format, value]) => (
                                                             <div key={format} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                                 <Text type="secondary" style={{ textTransform: "capitalize" }}>{format}:</Text>
@@ -1068,7 +1068,7 @@ export default function MACAddressToolsPage() {
                             <Row gutter={[16, 16]}>
                                 <Col xs={24} lg={16}>
                                     <Card title="Generate MAC Addresses" size="small">
-                                        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                                        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                             <Row gutter={16} align="middle">
                                                 <Col xs={24} md={6}>
                                                     <Text type="secondary">Count:</Text>
@@ -1161,7 +1161,7 @@ export default function MACAddressToolsPage() {
 
                                 <Col xs={24} lg={8}>
                                     <Card title="Common OUI Prefixes" size="small">
-                                        <Space direction="vertical" style={{ width: "100%" }} size="small">
+                                        <Space orientation="vertical" style={{ width: "100%" }} size="small">
                                             <Button size="small" block onClick={() => setGeneratePrefix("00:50:56")}>
                                                 00:50:56 - VMware
                                             </Button>
@@ -1204,7 +1204,7 @@ export default function MACAddressToolsPage() {
                             <Row gutter={[16, 16]}>
                                 <Col xs={24}>
                                     <Card title="Search Vendor Database" size="small">
-                                        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                                        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                             <Input
                                                 size="large"
                                                 placeholder="Search by OUI (e.g., 00:1C:B3) or vendor name (e.g., Apple)"

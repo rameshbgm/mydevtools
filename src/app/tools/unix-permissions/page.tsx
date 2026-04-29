@@ -271,7 +271,7 @@ export default function UnixPermissionsPage() {
 
                     {/* Command Preview */}
                     <Card title="Command Preview" style={{ marginTop: 24 }}>
-                        <Space direction="vertical" style={{ width: "100%" }}>
+                        <Space orientation="vertical" style={{ width: "100%" }}>
                             <div
                                 style={{
                                     padding: 12,

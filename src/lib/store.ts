@@ -10,15 +10,10 @@ interface AppState {
     addRecentTool: (id: string) => void;
 }
 
-const getInitialDarkMode = (): boolean => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
-};
-
 export const useAppStore = create<AppState>()(
     persist(
         (set) => ({
-            darkMode: getInitialDarkMode(),
+            darkMode: true,
             sidebarCollapsed: false,
             recentTools: [],
             toggleDarkMode: () => set((s) => ({ darkMode: !s.darkMode })),

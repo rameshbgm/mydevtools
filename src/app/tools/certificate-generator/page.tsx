@@ -344,13 +344,13 @@ export default function CertificateGeneratorPage() {
             }}
         >
             <Card>
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <Collapse defaultActiveKey={["subject", "key", "validity"]} items={[
                         {
                             key: "subject",
                             label: <Text strong>Subject Information</Text>,
                             children: (
-                                <Space direction="vertical" style={{ width: "100%" }}>
+                                <Space orientation="vertical" style={{ width: "100%" }}>
                                     <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                                         <div style={{ flex: 2, minWidth: 200 }}>
                                             <Text strong style={{ display: "block", marginBottom: 4 }}>Common Name (CN) *</Text>
@@ -429,7 +429,7 @@ export default function CertificateGeneratorPage() {
                             key: "key",
                             label: <Text strong>Key Settings</Text>,
                             children: (
-                                <Space direction="vertical" style={{ width: "100%" }}>
+                                <Space orientation="vertical" style={{ width: "100%" }}>
                                     <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                                         <div style={{ flex: 1, minWidth: 150 }}>
                                             <Text strong style={{ display: "block", marginBottom: 4 }}>Algorithm</Text>
@@ -480,7 +480,7 @@ export default function CertificateGeneratorPage() {
                             key: "validity",
                             label: <Text strong>Validity & Extensions</Text>,
                             children: (
-                                <Space direction="vertical" style={{ width: "100%" }}>
+                                <Space orientation="vertical" style={{ width: "100%" }}>
                                     <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "end" }}>
                                         <div>
                                             <Text strong style={{ display: "block", marginBottom: 4 }}>Validity Period (days)</Text>

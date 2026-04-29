@@ -175,7 +175,7 @@ export default function PEMParserPage() {
                 ],
             }}
         >
-            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                 <Card>
                     <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <Text strong>PEM Content</Text>
@@ -227,7 +227,7 @@ MIIEvgIBADANBgkq...
                                     </Space>
                                 ),
                                 children: (
-                                    <Space direction="vertical" style={{ width: "100%" }}>
+                                    <Space orientation="vertical" style={{ width: "100%" }}>
                                         <Descriptions bordered size="small" column={1}>
                                             <Descriptions.Item label="Type">
                                                 <Tag color={getBlockColor(block.type)}>{block.type}</Tag>

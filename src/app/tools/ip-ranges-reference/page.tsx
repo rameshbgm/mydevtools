@@ -463,7 +463,7 @@ export default function IPRangesReferencePage() {
                             expandable={{
                                 expandedRowRender: (record) => (
                                     <div style={{ padding: "12px 0" }}>
-                                        <Space direction="vertical" style={{ width: "100%" }}>
+                                        <Space orientation="vertical" style={{ width: "100%" }}>
                                             <div>
                                                 <Text strong>Range: </Text>
                                                 <Text code>{record.range}</Text>
@@ -491,7 +491,7 @@ export default function IPRangesReferencePage() {
                                 size="small"
                                 style={{ height: "100%" }}
                             >
-                                <Space direction="vertical" style={{ width: "100%" }}>
+                                <Space orientation="vertical" style={{ width: "100%" }}>
                                     <div>
                                         <Text code>10.0.0.0/8</Text>
                                         <Text type="secondary"> — 16M hosts, enterprise/cloud</Text>
@@ -513,7 +513,7 @@ export default function IPRangesReferencePage() {
                                 size="small"
                                 style={{ height: "100%" }}
                             >
-                                <Space direction="vertical" style={{ width: "100%" }}>
+                                <Space orientation="vertical" style={{ width: "100%" }}>
                                     <Alert
                                         type="info"
                                         message="Safe for examples"
@@ -541,7 +541,7 @@ export default function IPRangesReferencePage() {
                                 size="small"
                                 style={{ height: "100%" }}
                             >
-                                <Space direction="vertical" style={{ width: "100%" }}>
+                                <Space orientation="vertical" style={{ width: "100%" }}>
                                     <div>
                                         <Text code>127.0.0.1</Text>
                                         <Text type="secondary"> — localhost (IPv4)</Text>

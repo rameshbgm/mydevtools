@@ -319,7 +319,7 @@ function WifiGenerator({ onGenerate }: { onGenerate: (content: string) => void }
     };
 
     return (
-        <Space direction="vertical" style={{ width: "100%" }} size="small">
+        <Space orientation="vertical" style={{ width: "100%" }} size="small">
             <Input
                 placeholder="Network Name (SSID)"
                 value={ssid}

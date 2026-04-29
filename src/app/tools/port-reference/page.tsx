@@ -382,19 +382,19 @@ export default function PortReferencePage() {
                     <Card title="Port Number Ranges" size="small">
                         <Descriptions column={{ xs: 1, sm: 3 }} size="small" bordered>
                             <Descriptions.Item label="Well-Known Ports">
-                                <Space direction="vertical">
+                                <Space orientation="vertical">
                                     <Text code>0 - 1023</Text>
                                     <Text type="secondary">System/root ports. Require elevated privileges.</Text>
                                 </Space>
                             </Descriptions.Item>
                             <Descriptions.Item label="Registered Ports">
-                                <Space direction="vertical">
+                                <Space orientation="vertical">
                                     <Text code>1024 - 49151</Text>
                                     <Text type="secondary">User/application ports. IANA registered services.</Text>
                                 </Space>
                             </Descriptions.Item>
                             <Descriptions.Item label="Dynamic/Ephemeral">
-                                <Space direction="vertical">
+                                <Space orientation="vertical">
                                     <Text code>49152 - 65535</Text>
                                     <Text type="secondary">Private/temporary ports. Client-side connections.</Text>
                                 </Space>

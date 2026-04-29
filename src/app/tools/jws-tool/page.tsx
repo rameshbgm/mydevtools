@@ -278,7 +278,7 @@ export default function JWSToolPage() {
                 </span>
             ),
             children: (
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <div>
                         <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Text strong>Algorithm</Text>
@@ -372,7 +372,7 @@ export default function JWSToolPage() {
                 </span>
             ),
             children: (
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <div>
                         <Text strong>JWS Token</Text>
                         <TextArea

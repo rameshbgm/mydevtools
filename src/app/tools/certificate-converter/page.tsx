@@ -262,7 +262,7 @@ export default function CertificateConverterPage() {
             }}
         >
             <Card>
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     {/* Format descriptions */}
                     <Collapse items={[{
                         key: "formats",
@@ -271,7 +271,7 @@ export default function CertificateConverterPage() {
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
                                 {Object.entries(FORMATS).map(([key, info]) => (
                                     <Card key={key} size="small" style={{ background: darkMode ? "#1f1f1f" : "#fafafa" }}>
-                                        <Space direction="vertical" size="small">
+                                        <Space orientation="vertical" size="small">
                                             <Space>
                                                 <Text strong>{key}</Text>
                                                 <Tag>{info.extension}</Tag>

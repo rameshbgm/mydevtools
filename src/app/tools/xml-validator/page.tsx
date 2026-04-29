@@ -130,7 +130,7 @@ export default function XmlValidatorPage() {
                                 icon={<CheckCircleOutlined />}
                                 message="Valid XML"
                                 description={
-                                    <Space direction="vertical">
+                                    <Space orientation="vertical">
                                         <Text>The XML is well-formed and valid.</Text>
                                         <Space wrap>
                                             <Tag color="green">Elements: {result.elements}</Tag>
@@ -146,7 +146,7 @@ export default function XmlValidatorPage() {
                                 icon={<CloseCircleOutlined />}
                                 message="Invalid XML"
                                 description={
-                                    <Space direction="vertical">
+                                    <Space orientation="vertical">
                                         <Text style={{ whiteSpace: "pre-wrap" }}>{result.error}</Text>
                                         {result.line && (
                                             <Text type="secondary">
