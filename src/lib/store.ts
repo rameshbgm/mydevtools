@@ -5,9 +5,12 @@ interface AppState {
     darkMode: boolean;
     sidebarCollapsed: boolean;
     recentTools: string[];
+    isNavigating: boolean;
+    navTargetId: string | null;
     toggleDarkMode: () => void;
     toggleSidebar: () => void;
     addRecentTool: (id: string) => void;
+    setNavigating: (value: boolean, targetId?: string | null) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -16,12 +19,16 @@ export const useAppStore = create<AppState>()(
             darkMode: true,
             sidebarCollapsed: false,
             recentTools: [],
+            isNavigating: false,
+            navTargetId: null,
             toggleDarkMode: () => set((s) => ({ darkMode: !s.darkMode })),
             toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
             addRecentTool: (id: string) =>
                 set((s) => ({
                     recentTools: [id, ...s.recentTools.filter((t) => t !== id)].slice(0, 10),
                 })),
+            setNavigating: (value: boolean, targetId: string | null = null) =>
+                set(() => ({ isNavigating: value, navTargetId: value ? targetId : null })),
         }),
         {
             name: "devtools-hub-storage",

@@ -51,7 +51,7 @@ const fadeIn = {
 
 export default function Dashboard() {
     const router = useRouter();
-    const { darkMode, recentTools, addRecentTool } = useAppStore();
+    const { darkMode, recentTools, addRecentTool, setNavigating } = useAppStore();
     const [search, setSearch] = useState("");
 
     const allCategorized = useMemo(() => getToolsByCategory(), []);
@@ -80,6 +80,7 @@ export default function Dashboard() {
 
     const handleToolClick = (id: string) => {
         addRecentTool(id);
+        setNavigating(true, id);
         router.push(`/tools/${id}`);
     };
 

@@ -38,6 +38,7 @@ import type { ToolCategory } from "@/lib/tools-registry";
 import { useAppStore } from "@/lib/store";
 import { motion } from "framer-motion";
 import AppFooter from "./AppFooter";
+import NavigationLoader from "./NavigationLoader";
 
 const { Sider, Content, Header } = Layout;
 const { Title, Text } = Typography;
@@ -149,7 +150,18 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     const screens = useBreakpoint();
     const isMobile = !screens.lg;
 
-    const { darkMode, toggleDarkMode, sidebarCollapsed, toggleSidebar } = useAppStore();
+    const { darkMode, toggleDarkMode, sidebarCollapsed, toggleSidebar, setNavigating } = useAppStore();
+
+    const navigate = React.useCallback(
+        (path: string) => {
+            if (path === pathname) return;
+            const match = path.match(/^\/tools\/([^/]+)/);
+            const targetId = match ? match[1] : null;
+            setNavigating(true, targetId);
+            router.push(path);
+        },
+        [pathname, router, setNavigating]
+    );
     const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
     const [searchValue, setSearchValue] = useState("");
 
@@ -328,7 +340,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
 
     const handleSearchSelect = (toolId: string) => {
         setSearchValue("");
-        router.push(`/tools/${toolId}`);
+        navigate(`/tools/${toolId}`);
     };
 
     const sidebarContent = (
@@ -358,7 +370,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                         boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)",
                         cursor: "pointer",
                     }}
-                    onClick={() => router.push("/")}
+                    onClick={() => navigate("/")}
                 >
                     <CodeOutlined style={{ color: "#fff", fontSize: 20 }} />
                 </motion.div>
@@ -401,7 +413,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                 onOpenChange={handleOpenChange}
                 items={menuItems}
                 onClick={({ key }) => {
-                    if (key.startsWith("/")) router.push(key);
+                    if (key.startsWith("/")) navigate(key);
                 }}
                 style={{
                     border: "none",
@@ -441,6 +453,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
         <ConfigProvider theme={darkMode ? darkTheme : lightTheme}>
             <App>
                 <MessageBridge />
+                <NavigationLoader />
                 <Layout style={{ minHeight: "100vh" }}>
                     {!isMobile && (
                         <Sider

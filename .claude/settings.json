@@ -8,7 +8,9 @@
       "Bash(node scripts/remove-page-metadata.js)",
       "Bash(node scripts/fix-layout-metadata.js)",
       "Bash(node scripts/rebrand-to-mydevtools.js)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git remote *)",
+      "Bash(grep -E '\\\\.\\(toml|js|json\\)$|next|netlify')"
     ]
   }
 }
