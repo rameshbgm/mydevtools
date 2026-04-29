@@ -16,6 +16,8 @@
   --elevation-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
   --elevation-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
   --elevation-lg: 0 20px 40px rgba(79, 70, 229, 0.12), 0 8px 16px rgba(15, 23, 42, 0.06);
+  --gradient-brand: linear-gradient(135deg, #4f46e5, #7c3aed, #8b5cf6);
+  --gradient-brand-soft: linear-gradient(135deg, #6366f1, #a78bfa);
 }
 
 .dark {
@@ -34,6 +36,25 @@
   --elevation-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --elevation-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --elevation-lg: 0 20px 40px rgba(99, 102, 241, 0.2);
+  --gradient-brand: linear-gradient(135deg, #818cf8, #a78bfa, #c4b5fd);
+  --gradient-brand-soft: linear-gradient(135deg, #6366f1, #a78bfa);
+}
+
+/* Gradient text utility — keeps background-clip stable across re-renders */
+.gradient-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.gradient-text-soft {
+  background: var(--gradient-brand-soft);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 
 @theme inline {

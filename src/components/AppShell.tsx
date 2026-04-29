@@ -245,11 +245,9 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 >
                                     <Title
                                         level={4}
+                                        className="gradient-text-soft"
                                         style={{
                                             margin: 0,
-                                            background: "linear-gradient(135deg, #6366f1, #a78bfa)",
-                                            WebkitBackgroundClip: "text",
-                                            WebkitTextFillColor: "transparent",
                                             whiteSpace: "nowrap",
                                             fontWeight: 700,
                                             letterSpacing: "-0.5px",

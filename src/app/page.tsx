@@ -110,12 +110,8 @@ export default function Dashboard() {
                 {/* Title */}
                 <Title
                     level={1}
+                    className="gradient-text"
                     style={{
-                        background: darkMode
-                            ? "linear-gradient(135deg, #818cf8, #a78bfa, #c4b5fd)"
-                            : "linear-gradient(135deg, #4f46e5, #7c3aed, #8b5cf6)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
                         fontSize: "clamp(32px, 5vw, 52px)",
                         fontWeight: 800,
                         marginBottom: 12,
