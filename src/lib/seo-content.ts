@@ -1212,6 +1212,131 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "tls rfc",
         ],
     },
+
+    // ===== Newly added tools =====
+    "yaml-formatter": {
+        title: "YAML Formatter & Validator — Format YAML Online (Free)",
+        description:
+            "Format, validate and beautify YAML documents online. Custom indentation, error detection, anchors and aliases preserved. Free, instant and 100% client-side.",
+        keywords: [
+            "yaml formatter",
+            "yaml validator",
+            "yaml beautifier",
+            "format yaml online",
+            "yaml prettifier",
+            "yaml linter",
+            "online yaml editor",
+            "kubernetes yaml formatter",
+            "docker compose yaml",
+        ],
+    },
+    "email-validator": {
+        title: "Email Validator — Check Email Address Format & Validity Online",
+        description:
+            "Validate email addresses with RFC 5322 syntax checking, disposable email detection, role-based account flags, and bulk validation. Free email checker.",
+        keywords: [
+            "email validator",
+            "email address validator",
+            "validate email online",
+            "email syntax checker",
+            "disposable email checker",
+            "rfc 5322 email validator",
+            "bulk email validator",
+            "check email format",
+        ],
+    },
+    "json-to-csv": {
+        title: "JSON to CSV Converter — Convert JSON Arrays to CSV Online",
+        description:
+            "Convert JSON arrays and nested objects to CSV with custom delimiters, header detection and flatten options. Export Excel-compatible CSV. Free.",
+        keywords: [
+            "json to csv",
+            "convert json to csv",
+            "json csv converter",
+            "json to spreadsheet",
+            "json to excel",
+            "json2csv",
+            "online json to csv",
+            "flatten json to csv",
+        ],
+    },
+    "hex-converter": {
+        title: "Hex Encoder & Decoder — Convert Text to Hex and Back (UTF-8)",
+        description:
+            "Encode text to hexadecimal and decode hex strings back to text. Supports UTF-8, ASCII, with/without prefixes (0x, \\x). Free hex converter tool.",
+        keywords: [
+            "hex encoder",
+            "hex decoder",
+            "text to hex",
+            "hex to text",
+            "hexadecimal converter",
+            "utf-8 hex",
+            "ascii to hex",
+            "hex to ascii",
+            "online hex tool",
+        ],
+    },
+    "bcrypt-tool": {
+        title: "BCrypt Hash Generator & Verifier — Hash Passwords Online",
+        description:
+            "Generate BCrypt password hashes with configurable salt rounds (4–15). Verify plain-text passwords against BCrypt hashes. Free, runs entirely in browser.",
+        keywords: [
+            "bcrypt hash generator",
+            "bcrypt password hash",
+            "bcrypt online",
+            "bcrypt verify",
+            "bcrypt password checker",
+            "bcrypt salt rounds",
+            "password hash generator",
+            "bcrypt encoder",
+        ],
+    },
+    "aes-tool": {
+        title: "AES Encrypt & Decrypt Online — AES-128/192/256 with Passphrase",
+        description:
+            "Encrypt and decrypt text using AES-128, AES-192 or AES-256 with a passphrase. CBC mode, PBKDF2 key derivation. Free AES tool that runs in your browser.",
+        keywords: [
+            "aes encrypt",
+            "aes decrypt",
+            "aes online tool",
+            "aes-256 encrypt",
+            "aes-128 encrypt",
+            "encrypt text online",
+            "decrypt aes",
+            "symmetric encryption tool",
+            "passphrase encryption",
+        ],
+    },
+    "slug-generator": {
+        title: "Slug Generator — Create SEO-Friendly URL Slugs from Text",
+        description:
+            "Generate clean, SEO-friendly URL slugs from any text. Unicode transliteration, custom separators, lowercase, max length. Free permalink generator.",
+        keywords: [
+            "slug generator",
+            "url slug generator",
+            "permalink generator",
+            "seo slug",
+            "kebab case generator",
+            "create url slug",
+            "slugify online",
+            "wordpress slug generator",
+        ],
+    },
+    "color-contrast-checker": {
+        title: "Color Contrast Checker — WCAG AA / AAA Ratio Calculator",
+        description:
+            "Check WCAG color contrast ratios between text and background. Get AA / AAA pass/fail for normal and large text. Free accessibility (a11y) checker.",
+        keywords: [
+            "color contrast checker",
+            "wcag contrast checker",
+            "accessibility contrast",
+            "a11y contrast",
+            "contrast ratio calculator",
+            "wcag aa aaa",
+            "color accessibility checker",
+            "text background contrast",
+        ],
+    },
 };
 
 export function getSeoContent(toolId: string): ToolSeoContent | undefined {

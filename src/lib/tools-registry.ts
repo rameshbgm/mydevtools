@@ -208,6 +208,15 @@ export const toolsRegistry: ToolDefinition[] = [
         tags: ["css", "beautify", "minify", "format", "stylesheet"],
         color: "#264de4",
     },
+    {
+        id: "yaml-formatter",
+        name: "YAML Formatter",
+        description: "Format, validate and beautify YAML documents with indent control",
+        icon: FileTextOutlined,
+        category: "Formatters",
+        tags: ["yaml", "format", "prettify", "validate", "config"],
+        color: "#cb171e",
+    },
 
     // ===== Validators =====
     {
@@ -272,6 +281,15 @@ export const toolsRegistry: ToolDefinition[] = [
         category: "Validators",
         tags: ["xpath", "xml", "query", "test", "expression"],
         color: "#722ed1",
+    },
+    {
+        id: "email-validator",
+        name: "Email Validator",
+        description: "Validate email addresses with RFC-compliant syntax and disposable detection",
+        icon: CheckCircleOutlined,
+        category: "Validators",
+        tags: ["email", "validate", "syntax", "rfc", "disposable", "address"],
+        color: "#1677ff",
     },
 
     // ===== Diff & Compare =====
@@ -358,6 +376,15 @@ export const toolsRegistry: ToolDefinition[] = [
         tags: ["xslt", "xml", "transform", "stylesheet"],
         color: "#722ed1",
     },
+    {
+        id: "json-to-csv",
+        name: "JSON to CSV Converter",
+        description: "Convert JSON arrays and objects to CSV with custom delimiters and headers",
+        icon: FileExcelOutlined,
+        category: "Data Converters",
+        tags: ["json", "csv", "convert", "transform", "spreadsheet", "excel"],
+        color: "#52c41a",
+    },
 
     // ===== Encoding & Decoding =====
     {
@@ -414,6 +441,15 @@ export const toolsRegistry: ToolDefinition[] = [
         tags: ["escape", "unescape", "json", "xml", "html", "javascript", "sql", "csv"],
         color: "#eb2f96",
     },
+    {
+        id: "hex-converter",
+        name: "Hex Encoder / Decoder",
+        description: "Encode text to hexadecimal and decode hex strings back to text (UTF-8)",
+        icon: NumberOutlined,
+        category: "Encoding & Decoding",
+        tags: ["hex", "hexadecimal", "encode", "decode", "utf-8", "binary"],
+        color: "#fa8c16",
+    },
 
     // ===== Cryptography =====
     {
@@ -469,6 +505,24 @@ export const toolsRegistry: ToolDefinition[] = [
         category: "Cryptography",
         tags: ["jwk", "key", "generate", "jose", "rsa", "ec", "symmetric"],
         color: "#fa8c16",
+    },
+    {
+        id: "bcrypt-tool",
+        name: "BCrypt Hash & Verify",
+        description: "Generate BCrypt hashes for passwords and verify passwords against existing hashes",
+        icon: LockOutlined,
+        category: "Cryptography",
+        tags: ["bcrypt", "password", "hash", "verify", "salt", "rounds", "auth"],
+        color: "#722ed1",
+    },
+    {
+        id: "aes-tool",
+        name: "AES Encrypt & Decrypt",
+        description: "Encrypt and decrypt text using AES-128/192/256 with passphrase or key",
+        icon: SafetyOutlined,
+        category: "Cryptography",
+        tags: ["aes", "encrypt", "decrypt", "cipher", "symmetric", "crypto", "security"],
+        color: "#13c2c2",
     },
 
     // ===== Certificates & Keys =====
@@ -729,6 +783,24 @@ export const toolsRegistry: ToolDefinition[] = [
         category: "Generators",
         tags: ["json", "typescript", "interface", "type", "convert", "ts"],
         color: "#1677ff",
+    },
+    {
+        id: "slug-generator",
+        name: "Slug Generator",
+        description: "Generate URL-safe slugs from any text — supports unicode, custom separators",
+        icon: LinkOutlined,
+        category: "Generators",
+        tags: ["slug", "url", "permalink", "seo", "kebab", "generator"],
+        color: "#fa541c",
+    },
+    {
+        id: "color-contrast-checker",
+        name: "Color Contrast Checker",
+        description: "Check WCAG contrast ratios between foreground and background colors",
+        icon: BgColorsOutlined,
+        category: "Generators",
+        tags: ["color", "contrast", "wcag", "accessibility", "a11y", "checker", "aa", "aaa"],
+        color: "#52c41a",
     },
 
     // ===== Text & Utilities =====
