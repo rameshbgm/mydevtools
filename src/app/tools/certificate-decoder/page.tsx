@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Input, Typography, Card, Button, Space, message, Descriptions, Tag, Collapse, Alert, Divider, Tabs } from "antd";
 import {
     SafetyCertificateOutlined,
@@ -65,6 +65,7 @@ export default function CertificateDecoderPage() {
     const [certInfo, setCertInfo] = useState<CertificateInfo | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Parse ASN.1 DER encoded certificate
     const parseCertificate = useCallback((pemOrDer: string): CertificateInfo | null => {
@@ -323,8 +324,11 @@ export default function CertificateDecoderPage() {
         reader.onload = (event) => {
             const content = event.target?.result as string;
             setCertInput(content);
+            message.success(`Loaded ${file.name}`);
         };
+        reader.onerror = () => message.error("Failed to read file");
         reader.readAsText(file);
+        e.target.value = "";
     };
 
     const copyToClipboard = (text: string) => {
@@ -390,17 +394,21 @@ export default function CertificateDecoderPage() {
                     <div>
                         <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Text strong>Certificate (PEM or Base64 DER)</Text>
-                            <label>
-                                <input
-                                    type="file"
-                                    accept=".pem,.crt,.cer,.der"
-                                    onChange={handleFileUpload}
-                                    style={{ display: "none" }}
-                                />
-                                <Button icon={<UploadOutlined />} size="small">
-                                    Upload File
-                                </Button>
-                            </label>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".pem,.crt,.cer,.der"
+                                onChange={handleFileUpload}
+                                aria-label="Upload certificate file"
+                                style={{ display: "none" }}
+                            />
+                            <Button
+                                icon={<UploadOutlined />}
+                                size="small"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                Upload File
+                            </Button>
                         </div>
                         <TextArea
                             value={certInput}

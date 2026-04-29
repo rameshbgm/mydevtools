@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Input, Typography, Card, Button, Space, Select, message, Divider, Collapse, Tag, Tabs, Alert, Row, Col } from "antd";
 import {
     FileProtectOutlined,
@@ -14,6 +14,7 @@ import {
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
+import { showErrorModal } from "@/lib/errorModal";
 
 const { TextArea } = Input;
 const { Text, Paragraph } = Typography;
@@ -255,6 +256,7 @@ export default function CSRGeneratorPage() {
     const [csr, setCSR] = useState("");
     const [privateKey, setPrivateKey] = useState("");
     const [opensslCommand, setOpensslCommand] = useState("");
+    const outputRef = useRef<HTMLDivElement>(null);
 
     const base64Encode = (buffer: ArrayBuffer): string => {
         return btoa(String.fromCharCode(...new Uint8Array(buffer)));
@@ -323,8 +325,44 @@ ${sanEntries.join("\n")}
     }, [commonName, organization, organizationalUnit, locality, state, country, email, sanInput, keyAlgorithm, rsaKeySize, ecCurve, hashAlgorithm]);
 
     const handleGenerate = useCallback(async () => {
+        // ── Input validation with specific guidance ────────────────────────
         if (!commonName.trim()) {
-            message.warning("Common Name (CN) is required");
+            showErrorModal({
+                title: "Common Name (CN) is required",
+                error: new Error("CN field is empty"),
+                context: "Every CSR must include a Common Name — it identifies the domain or entity the certificate is issued for.",
+                cause: "You haven't filled in the Common Name field.",
+                recommendations: [
+                    "Enter a fully-qualified domain (e.g., example.com)",
+                    "For wildcards, use *.example.com",
+                    "For non-public certs, any identifying string works (e.g., internal-api)",
+                ],
+            });
+            return;
+        }
+        if (country && !/^[A-Z]{2}$/.test(country)) {
+            showErrorModal({
+                title: "Invalid country code",
+                error: new Error(`'${country}' is not a valid ISO 3166-1 alpha-2 country code`),
+                cause: "Country must be exactly 2 uppercase letters.",
+                recommendations: [
+                    "Pick a country from the dropdown — it auto-formats correctly.",
+                    "Examples: US, GB, IN, DE, JP.",
+                ],
+            });
+            return;
+        }
+        if (typeof crypto === "undefined" || !crypto.subtle) {
+            showErrorModal({
+                title: "Web Crypto API unavailable",
+                error: new Error("crypto.subtle is undefined"),
+                context: "CSR generation requires the browser's Web Crypto API.",
+                cause: "Web Crypto requires a secure origin (HTTPS or localhost).",
+                recommendations: [
+                    "Open this app over https:// or http://localhost.",
+                    "Use a modern browser (Chrome, Firefox, Safari, Edge — all current versions).",
+                ],
+            });
             return;
         }
 
@@ -361,8 +399,7 @@ ${sanEntries.join("\n")}
                 );
                 signAlgorithm = { name: "ECDSA", hash: hashAlgorithm.replace("-", "") };
             } else {
-                // Ed25519 - Web Crypto doesn't support Ed25519 directly in all browsers
-                // Fall back to ECDSA P-256 with a note
+                // Ed25519 isn't reliably available in Web Crypto across browsers — fall back to ECDSA P-256
                 keyPair = await crypto.subtle.generateKey(
                     {
                         name: "ECDSA",
@@ -483,10 +520,30 @@ ${sanEntries.join("\n")}
                 else sigAlgOID = [1, 2, 840, 10045, 4, 3, 4];
             }
 
-            const sigAlg = encodeSequence([...encodeOID(sigAlgOID), 0x05, 0x00]);
+            // RSA: sigAlgorithm parameters are NULL. ECDSA: parameters MUST be absent (RFC 5758).
+            const sigAlg = keyAlgorithm === "RSA"
+                ? encodeSequence([...encodeOID(sigAlgOID), 0x05, 0x00])
+                : encodeSequence([...encodeOID(sigAlgOID)]);
 
-            // Bit string for signature
-            const sigBytes = new Uint8Array(signature);
+            // ECDSA needs DER-wrapped ECDSA-Sig-Value { r, s } — Web Crypto returns raw IEEE-P1363 (r||s)
+            const encodeAsnInteger = (bytes: Uint8Array): number[] => {
+                let start = 0;
+                while (start < bytes.length - 1 && bytes[start] === 0) start++;
+                let intBytes = Array.from(bytes.slice(start));
+                if ((intBytes[0] ?? 0) & 0x80) intBytes = [0x00, ...intBytes];
+                return [0x02, ...encodeLength(intBytes.length), ...intBytes];
+            };
+
+            const rawSig = new Uint8Array(signature);
+            const sigBytes = (() => {
+                if (keyAlgorithm !== "ECDSA" && keyAlgorithm !== "Ed25519") return rawSig;
+                const half = rawSig.length / 2;
+                const r = rawSig.slice(0, half);
+                const s = rawSig.slice(half);
+                return new Uint8Array(encodeSequence([...encodeAsnInteger(r), ...encodeAsnInteger(s)]));
+            })();
+
+            // BIT STRING wrapping (with 0 unused bits prefix)
             const bitString = [0x03, ...encodeLength(sigBytes.length + 1), 0x00, ...sigBytes];
 
             // Complete CSR
@@ -498,9 +555,23 @@ ${sanEntries.join("\n")}
             setOpensslCommand(generateOpensslCommand());
 
             message.success("CSR and private key generated successfully!");
+
+            // Scroll to output so user sees it
+            setTimeout(() => outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
         } catch (error) {
             console.error("CSR generation error:", error);
-            message.error(`Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+            showErrorModal({
+                title: "CSR generation failed",
+                error,
+                context: `Tried to generate a ${keyAlgorithm}${
+                    keyAlgorithm === "RSA" ? ` ${rsaKeySize}-bit` : keyAlgorithm === "ECDSA" ? ` ${ecCurve}` : ""
+                } CSR for "${commonName}".`,
+                recommendations: [
+                    "Try a smaller / more standard key size (RSA 2048 or ECDSA P-256).",
+                    "Switch to the OpenSSL Commands tab — those commands will work even if Web Crypto can't.",
+                    "Check the browser console for more details.",
+                ],
+            });
         } finally {
             setIsGenerating(false);
         }
@@ -740,13 +811,14 @@ ${sanEntries.join("\n")}
                                     </Button>
 
                                     {csr && privateKey && (
-                                        <>
+                                        <div ref={outputRef}>
                                             <Divider />
                                             <Alert
                                                 type="warning"
                                                 message="Important Security Notice"
                                                 description="Keep your private key secure and never share it. Only submit the CSR to the Certificate Authority. The private key is required to install and use the issued certificate."
                                                 showIcon
+                                                style={{ marginBottom: 16 }}
                                             />
                                             <Collapse defaultActiveKey={["csr", "key"]} items={[
                                                 {
@@ -804,7 +876,7 @@ ${sanEntries.join("\n")}
                                                     ),
                                                 },
                                             ]} />
-                                        </>
+                                        </div>
                                     )}
                                 </Space>
                             </Card>

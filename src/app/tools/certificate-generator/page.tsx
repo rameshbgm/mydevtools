@@ -10,6 +10,7 @@ import {
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
+import { showErrorModal } from "@/lib/errorModal";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -233,7 +234,17 @@ export default function CertificateGeneratorPage() {
             message.success("Certificate generated successfully!");
 
         } catch (error) {
-            message.error(`Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+            console.error("Certificate generation error:", error);
+            showErrorModal({
+                title: "Certificate generation failed",
+                error,
+                context: "Tried to generate a self-signed X.509 certificate in the browser.",
+                recommendations: [
+                    "Use the OpenSSL command shown alongside — it always works and produces a fully valid cert.",
+                    "Try a smaller key size (RSA 2048 or ECDSA P-256) — Web Crypto sometimes rejects oversized keys.",
+                    "Make sure CN and at least one SAN are filled — modern browsers reject certs without SANs.",
+                ],
+            });
         } finally {
             setIsGenerating(false);
         }

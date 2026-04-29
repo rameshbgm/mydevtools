@@ -37,6 +37,7 @@ import {
 import type { ToolCategory } from "@/lib/tools-registry";
 import { useAppStore } from "@/lib/store";
 import { motion } from "framer-motion";
+import AppFooter from "./AppFooter";
 
 const { Sider, Content, Header } = Layout;
 const { Title, Text } = Typography;
@@ -586,6 +587,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 {children}
                             </motion.div>
                         </Content>
+                        <AppFooter />
                     </Layout>
                 </Layout>
             </App>

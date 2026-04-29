@@ -10,6 +10,7 @@ import {
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
+import { showErrorModal } from "@/lib/errorModal";
 
 const { TextArea } = Input;
 const { Text, Title } = Typography;
@@ -153,7 +154,19 @@ export default function JWKGeneratorPage() {
 
             message.success("JWK generated successfully!");
         } catch (error) {
-            message.error(`Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+            console.error("JWK generation error:", error);
+            showErrorModal({
+                title: "JWK generation failed",
+                error,
+                context: `Tried to generate a ${keyType} JWK${
+                    keyType === "RSA" ? ` (${rsaKeySize}-bit)` : keyType === "EC" ? ` (${ecCurve})` : ` (${symmetricKeySize}-bit symmetric)`
+                }.`,
+                recommendations: [
+                    "Use a standard size: RSA 2048 / 3072 / 4096, EC P-256 / P-384 / P-521.",
+                    "Symmetric keys should be 128, 192, or 256 bits — anything else is rejected by Web Crypto.",
+                    "If your browser blocks an algorithm, generate the key with `openssl` and import the JWK from a tool like `jose` CLI.",
+                ],
+            });
         } finally {
             setIsGenerating(false);
         }

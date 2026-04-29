@@ -11,6 +11,7 @@ import {
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
+import { showErrorModal } from "@/lib/errorModal";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -156,7 +157,19 @@ export default function SSHKeyGeneratorPage() {
             message.success("SSH key pair generated successfully!");
 
         } catch (error) {
-            message.error(`Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+            console.error("SSH key generation error:", error);
+            showErrorModal({
+                title: "SSH key generation failed",
+                error,
+                context: `Tried to generate a ${keyType} SSH key pair${
+                    keyType === "RSA" ? ` (${rsaKeySize}-bit)` : keyType === "ECDSA" ? ` (${ecCurve})` : ""
+                }.`,
+                recommendations: [
+                    "Try ed25519 (default) or rsa 4096 — the most widely accepted by SSH servers.",
+                    "If you need passphrase protection in-browser, switch to OpenSSH format and re-encrypt with `ssh-keygen -p` after download.",
+                    "If your browser blocks Ed25519, fall back to RSA 4096.",
+                ],
+            });
         } finally {
             setIsGenerating(false);
         }

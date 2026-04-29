@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Input, Typography, Card, Button, Space, message, Alert, Tabs, Form, Descriptions, Tag, Table, Divider } from "antd";
 import {
     DatabaseOutlined,
@@ -30,6 +30,8 @@ export default function JKSToolPage() {
     const [pkcs12File, setPkcs12File] = useState<ArrayBuffer | null>(null);
     const [pkcs12Name, setPkcs12Name] = useState("");
     const [convertPassword, setConvertPassword] = useState("");
+    const jksInputRef = useRef<HTMLInputElement>(null);
+    const pkcs12InputRef = useRef<HTMLInputElement>(null);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: "jks" | "pkcs12") => {
         const file = e.target.files?.[0];
@@ -44,8 +46,11 @@ export default function JKSToolPage() {
                 setPkcs12File(event.target?.result as ArrayBuffer);
                 setPkcs12Name(file.name);
             }
+            message.success(`Loaded ${file.name}`);
         };
+        reader.onerror = () => message.error("Failed to read file");
         reader.readAsArrayBuffer(file);
+        e.target.value = "";
     };
 
     const handleAnalyze = useCallback(async () => {
@@ -179,17 +184,20 @@ export default function JKSToolPage() {
                                     <div>
                                         <Text strong style={{ display: "block", marginBottom: 8 }}>Upload JKS File</Text>
                                         <Space>
-                                            <label>
-                                                <input
-                                                    type="file"
-                                                    accept=".jks,.keystore"
-                                                    onChange={(e) => handleFileUpload(e, "jks")}
-                                                    style={{ display: "none" }}
-                                                />
-                                                <Button icon={<UploadOutlined />}>
-                                                    Select File
-                                                </Button>
-                                            </label>
+                                            <input
+                                                ref={jksInputRef}
+                                                type="file"
+                                                accept=".jks,.keystore"
+                                                onChange={(e) => handleFileUpload(e, "jks")}
+                                                aria-label="Upload JKS file"
+                                                style={{ display: "none" }}
+                                            />
+                                            <Button
+                                                icon={<UploadOutlined />}
+                                                onClick={() => jksInputRef.current?.click()}
+                                            >
+                                                Select File
+                                            </Button>
                                             {fileName && <Tag color="blue">{fileName}</Tag>}
                                         </Space>
                                     </div>
@@ -247,17 +255,20 @@ export default function JKSToolPage() {
                                     <div>
                                         <Text strong style={{ display: "block", marginBottom: 8 }}>Upload PKCS#12 File</Text>
                                         <Space>
-                                            <label>
-                                                <input
-                                                    type="file"
-                                                    accept=".p12,.pfx"
-                                                    onChange={(e) => handleFileUpload(e, "pkcs12")}
-                                                    style={{ display: "none" }}
-                                                />
-                                                <Button icon={<UploadOutlined />}>
-                                                    Select PKCS#12
-                                                </Button>
-                                            </label>
+                                            <input
+                                                ref={pkcs12InputRef}
+                                                type="file"
+                                                accept=".p12,.pfx"
+                                                onChange={(e) => handleFileUpload(e, "pkcs12")}
+                                                aria-label="Upload PKCS#12 file"
+                                                style={{ display: "none" }}
+                                            />
+                                            <Button
+                                                icon={<UploadOutlined />}
+                                                onClick={() => pkcs12InputRef.current?.click()}
+                                            >
+                                                Select PKCS#12
+                                            </Button>
                                             {pkcs12Name && <Tag color="green">{pkcs12Name}</Tag>}
                                         </Space>
                                     </div>

@@ -192,6 +192,7 @@ export default function PEMParserPage() {
                             type="file"
                             accept=".pem,.crt,.cer,.key,.csr,.p8,.pub,.txt"
                             onChange={handleFileUpload}
+                            aria-label="Upload PEM file"
                             style={{ display: "none" }}
                         />
                         <Button

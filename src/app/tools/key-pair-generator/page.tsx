@@ -11,6 +11,7 @@ import {
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
+import { showErrorModal } from "@/lib/errorModal";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -122,7 +123,19 @@ export default function KeyPairGeneratorPage() {
             message.success("Key pair generated successfully!");
 
         } catch (error) {
-            message.error(`Generation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+            console.error("Key pair generation error:", error);
+            showErrorModal({
+                title: "Key pair generation failed",
+                error,
+                context: `Tried to generate a ${algorithm} key pair${
+                    algorithm === "RSA" ? ` (${rsaKeySize}-bit)` : ` (${ecCurve})`
+                } in ${outputFormat} format.`,
+                recommendations: [
+                    "Try RSA 2048 or ECDSA P-256 — the most widely supported across browsers.",
+                    "Ed25519 needs Chrome 113+ / Firefox 130+ / Safari 17+ — older browsers reject it.",
+                    "If RSA 4096+ is failing, your browser may be capping key sizes — drop to 2048 or 3072.",
+                ],
+            });
         } finally {
             setIsGenerating(false);
         }

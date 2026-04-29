@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Input, Typography, Card, Button, Space, message, Alert, Tabs, Form, Descriptions, Tag, Divider } from "antd";
 import {
     LockOutlined,
@@ -28,20 +28,26 @@ export default function PKCS12ToolPage() {
     const [fileData, setFileData] = useState<ArrayBuffer | null>(null);
     const [fileName, setFileName] = useState("");
     const [pemCert, setPemCert] = useState("");
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [pemKey, setPemKey] = useState("");
     const [exportPassword, setExportPassword] = useState("");
     const [contents, setContents] = useState<PKCS12Contents | null>(null);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file) {
+            return;
+        }
 
         setFileName(file.name);
         const reader = new FileReader();
         reader.onload = (event) => {
             setFileData(event.target?.result as ArrayBuffer);
+            message.success(`Loaded ${file.name}`);
         };
+        reader.onerror = () => message.error("Failed to read file");
         reader.readAsArrayBuffer(file);
+        e.target.value = "";
     };
 
     const handleAnalyze = useCallback(async () => {
@@ -140,17 +146,20 @@ export default function PKCS12ToolPage() {
                                     <div>
                                         <Text strong style={{ display: "block", marginBottom: 8 }}>Upload PKCS#12/PFX File</Text>
                                         <Space>
-                                            <label>
-                                                <input
-                                                    type="file"
-                                                    accept=".p12,.pfx"
-                                                    onChange={handleFileUpload}
-                                                    style={{ display: "none" }}
-                                                />
-                                                <Button icon={<UploadOutlined />}>
-                                                    Select File
-                                                </Button>
-                                            </label>
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept=".p12,.pfx"
+                                                onChange={handleFileUpload}
+                                                aria-label="Upload PKCS#12/PFX file"
+                                                style={{ display: "none" }}
+                                            />
+                                            <Button
+                                                icon={<UploadOutlined />}
+                                                onClick={() => fileInputRef.current?.click()}
+                                            >
+                                                Select File
+                                            </Button>
                                             {fileName && <Tag color="blue">{fileName}</Tag>}
                                         </Space>
                                     </div>

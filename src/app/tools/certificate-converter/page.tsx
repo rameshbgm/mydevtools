@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Input, Typography, Card, Button, Space, message, Select, Tabs, Divider, Alert, Collapse, Tag } from "antd";
 import {
     SwapOutlined,
@@ -79,6 +79,7 @@ export default function CertificateConverterPage() {
     const [privateKey, setPrivateKey] = useState("");
     const [password, setPassword] = useState("");
     const [isConverting, setIsConverting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const base64ToBytes = (base64: string): Uint8Array => {
         const cleaned = base64.replace(/[\s-]/g, "").replace(/_/g, "/").replace(/-/g, "+");
@@ -202,6 +203,9 @@ export default function CertificateConverterPage() {
         else if (ext === "p7b" || ext === "p7c") setInputFormat("P7B");
         else if (ext === "crt") setInputFormat("CRT");
         else if (ext === "cer") setInputFormat("CER");
+
+        message.success(`Loaded ${file.name}`);
+        e.target.value = "";
     };
 
     const copyToClipboard = (text: string) => {
@@ -315,17 +319,21 @@ export default function CertificateConverterPage() {
                     <div>
                         <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Text strong>Input Certificate</Text>
-                            <label>
-                                <input
-                                    type="file"
-                                    accept=".pem,.der,.pfx,.p12,.p7b,.p7c,.crt,.cer"
-                                    onChange={handleFileUpload}
-                                    style={{ display: "none" }}
-                                />
-                                <Button icon={<UploadOutlined />} size="small">
-                                    Upload File
-                                </Button>
-                            </label>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".pem,.der,.pfx,.p12,.p7b,.p7c,.crt,.cer"
+                                onChange={handleFileUpload}
+                                aria-label="Upload certificate file"
+                                style={{ display: "none" }}
+                            />
+                            <Button
+                                icon={<UploadOutlined />}
+                                size="small"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                Upload File
+                            </Button>
                         </div>
                         <TextArea
                             value={inputContent}

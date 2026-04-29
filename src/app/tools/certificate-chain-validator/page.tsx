@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Input, Typography, Card, Button, Space, message, Alert, Divider, Steps, Tag, Descriptions } from "antd";
 import {
     AuditOutlined,
@@ -39,6 +39,7 @@ export default function CertificateChainValidatorPage() {
     const [chainInput, setChainInput] = useState("");
     const [isValidating, setIsValidating] = useState(false);
     const [result, setResult] = useState<ValidationResult | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const parseCertificates = (pem: string): string[] => {
         const certs: string[] = [];
@@ -168,8 +169,11 @@ export default function CertificateChainValidatorPage() {
         const reader = new FileReader();
         reader.onload = (event) => {
             setChainInput(event.target?.result as string);
+            message.success(`Loaded ${file.name}`);
         };
+        reader.onerror = () => message.error("Failed to read file");
         reader.readAsText(file);
+        e.target.value = "";
     };
 
     return (
@@ -208,17 +212,21 @@ export default function CertificateChainValidatorPage() {
                     <div>
                         <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Text strong>Certificate Chain (PEM format)</Text>
-                            <label>
-                                <input
-                                    type="file"
-                                    accept=".pem,.crt,.cer"
-                                    onChange={handleFileUpload}
-                                    style={{ display: "none" }}
-                                />
-                                <Button icon={<UploadOutlined />} size="small">
-                                    Upload File
-                                </Button>
-                            </label>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".pem,.crt,.cer"
+                                onChange={handleFileUpload}
+                                aria-label="Upload certificate chain file"
+                                style={{ display: "none" }}
+                            />
+                            <Button
+                                icon={<UploadOutlined />}
+                                size="small"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                Upload File
+                            </Button>
                         </div>
                         <TextArea
                             value={chainInput}
