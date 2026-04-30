@@ -552,7 +552,6 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                     alignItems: "center",
                                     justifyContent: "center",
                                     minWidth: 0,
-                                    height: "100%",
                                 }}
                             >
                                 {!isDashboard && headerSearch}
