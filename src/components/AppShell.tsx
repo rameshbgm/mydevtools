@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
     Layout,
@@ -11,8 +11,6 @@ import {
     Typography,
     Tooltip,
     App,
-    AutoComplete,
-    Input,
     Tag,
     Drawer,
     Grid,
@@ -36,7 +34,7 @@ import {
 } from "@/lib/tools-registry";
 import type { ToolCategory } from "@/lib/tools-registry";
 import { useAppStore } from "@/lib/store";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import AppFooter from "./AppFooter";
 import NavigationLoader from "./NavigationLoader";
 
@@ -73,76 +71,415 @@ function AlphaTag() {
     );
 }
 
-interface SearchOption {
-    value: string;
-    label: React.ReactNode;
-    keywords: string;
-    category: ToolCategory;
+// ─── Command Palette ─────────────────────────────────────────────────────────
+
+interface CommandPaletteProps {
+    onClose: () => void;
+    darkMode: boolean;
 }
 
-function buildSearchOptions(): SearchOption[] {
-    return toolsRegistry.map((t) => {
-        const Icon = t.icon;
-        const isAlpha = ALPHA_CATEGORIES.includes(t.category);
-        return {
-            value: t.id,
-            keywords: `${t.name} ${t.description} ${t.tags.join(" ")} ${t.category}`.toLowerCase(),
-            category: t.category,
-            label: (
+function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
+    const router = useRouter();
+    const { recentTools, addRecentTool, setNavigating } = useAppStore();
+    const [query, setQuery] = useState("");
+    const [activeIdx, setActiveIdx] = useState(0);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setTimeout(() => inputRef.current?.focus(), 40);
+    }, []);
+
+    const recentDefs = useMemo(
+        () =>
+            recentTools
+                .slice(0, 8)
+                .map((id) => toolsRegistry.find((t) => t.id === id))
+                .filter(Boolean) as typeof toolsRegistry,
+        [recentTools]
+    );
+
+    const searchResults = useMemo(() => {
+        const q = query.toLowerCase().trim();
+        if (!q) return [];
+        return toolsRegistry
+            .filter(
+                (t) =>
+                    t.name.toLowerCase().includes(q) ||
+                    t.description.toLowerCase().includes(q) ||
+                    t.category.toLowerCase().includes(q) ||
+                    t.tags.some((tag) => tag.toLowerCase().includes(q))
+            )
+            .slice(0, 18);
+    }, [query]);
+
+    const grouped = useMemo(() => {
+        const map = new Map<string, typeof searchResults>();
+        for (const t of searchResults) {
+            const arr = map.get(t.category) ?? [];
+            arr.push(t);
+            map.set(t.category, arr);
+        }
+        return map;
+    }, [searchResults]);
+
+    const flatList = query.trim() ? searchResults : recentDefs;
+
+    useEffect(() => setActiveIdx(0), [query]);
+
+    // Scroll active item into view
+    useEffect(() => {
+        const el = listRef.current?.querySelector<HTMLElement>("[data-active='true']");
+        el?.scrollIntoView({ block: "nearest" });
+    }, [activeIdx]);
+
+    const navigate = useCallback(
+        (id: string) => {
+            addRecentTool(id);
+            setNavigating(true, id);
+            onClose();
+            router.push(`/tools/${id}`);
+        },
+        [addRecentTool, setNavigating, onClose, router]
+    );
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        switch (e.key) {
+            case "Escape":
+                onClose();
+                break;
+            case "ArrowDown":
+                e.preventDefault();
+                setActiveIdx((i) => Math.min(i + 1, flatList.length - 1));
+                break;
+            case "ArrowUp":
+                e.preventDefault();
+                setActiveIdx((i) => Math.max(i - 1, 0));
+                break;
+            case "Enter":
+                if (flatList[activeIdx]) navigate(flatList[activeIdx].id);
+                break;
+        }
+    };
+
+    // Theme tokens
+    const bg         = darkMode ? "#161616" : "#ffffff";
+    const border      = darkMode ? "#2a2a2a" : "#e8e8e8";
+    const divider     = darkMode ? "#1f1f1f" : "#f2f2f2";
+    const textPrimary = darkMode ? "#e5e5e5" : "#171717";
+    const textMuted   = darkMode ? "#737373" : "#9a9a9a";
+    const activeBg    = darkMode ? "rgba(99,102,241,0.16)" : "rgba(79,70,229,0.08)";
+    const activeAccent = darkMode ? "#6366f1" : "#4f46e5";
+    const kbdBg       = darkMode ? "#222" : "#f4f4f4";
+    const kbdBorder   = darkMode ? "#333" : "#ddd";
+
+    const renderItem = (tool: (typeof toolsRegistry)[0], idx: number) => {
+        const isActive = idx === activeIdx;
+        const Icon = tool.icon;
+        return (
+            <div
+                key={tool.id}
+                data-active={isActive ? "true" : undefined}
+                onClick={() => navigate(tool.id)}
+                onMouseEnter={() => setActiveIdx(idx)}
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "8px 20px",
+                    cursor: "pointer",
+                    background: isActive ? activeBg : "transparent",
+                    borderLeft: `3px solid ${isActive ? activeAccent : "transparent"}`,
+                    transition: "background 0.08s",
+                }}
+            >
+                <span
+                    style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 10,
+                        background: `${tool.color}22`,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                    }}
+                >
+                    <Icon style={{ fontSize: 16, color: tool.color }} />
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                    <span
+                        style={{
+                            display: "block",
+                            fontWeight: 500,
+                            fontSize: 13.5,
+                            color: textPrimary,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                        }}
+                    >
+                        {tool.name}
+                    </span>
+                    <span
+                        style={{
+                            display: "block",
+                            fontSize: 11.5,
+                            color: textMuted,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                        }}
+                    >
+                        {tool.description}
+                    </span>
+                </span>
+                {isActive && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={activeAccent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 9999,
+                background: "rgba(0,0,0,0.55)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "center",
+                padding: "clamp(48px, 12vh, 110px) 16px 16px",
+            }}
+            onClick={onClose}
+        >
+            <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: -14 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: -14 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                    width: "100%",
+                    maxWidth: 660,
+                    borderRadius: 18,
+                    overflow: "hidden",
+                    background: bg,
+                    border: `1px solid ${border}`,
+                    boxShadow: darkMode
+                        ? "0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(99,102,241,0.12), inset 0 1px 0 rgba(255,255,255,0.04)"
+                        : "0 40px 100px rgba(0,0,0,0.14), 0 0 0 1px rgba(99,102,241,0.06)",
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* ── Search input row ── */}
                 <div
                     style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 10,
-                        padding: "2px 0",
+                        gap: 12,
+                        padding: "16px 20px",
+                        borderBottom: `1px solid ${divider}`,
                     }}
                 >
-                    <span
+                    <SearchOutlined
                         style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: 7,
-                            background: `${t.color}1f`,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
+                            fontSize: 19,
+                            color: activeAccent,
+                            flexShrink: 0,
+                        }}
+                    />
+                    <input
+                        ref={inputRef}
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Search tools, categories, tags…"
+                        autoComplete="off"
+                        spellCheck={false}
+                        style={{
+                            flex: 1,
+                            border: "none",
+                            outline: "none",
+                            background: "transparent",
+                            fontSize: 16,
+                            fontWeight: 400,
+                            color: textPrimary,
+                            fontFamily: "inherit",
+                        }}
+                    />
+                    {query && (
+                        <button
+                            type="button"
+                            onClick={() => { setQuery(""); inputRef.current?.focus(); }}
+                            style={{
+                                width: 22,
+                                height: 22,
+                                borderRadius: 6,
+                                border: "none",
+                                cursor: "pointer",
+                                background: darkMode ? "#2a2a2a" : "#efefef",
+                                color: textMuted,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 14,
+                                fontWeight: 700,
+                                flexShrink: 0,
+                                lineHeight: 1,
+                            }}
+                        >
+                            ×
+                        </button>
+                    )}
+                    <kbd
+                        style={{
+                            padding: "3px 8px",
+                            borderRadius: 6,
+                            fontSize: 11,
+                            background: kbdBg,
+                            color: textMuted,
+                            border: `1px solid ${kbdBorder}`,
+                            fontFamily: "inherit",
+                            lineHeight: "16px",
                             flexShrink: 0,
                         }}
                     >
-                        <Icon style={{ color: t.color, fontSize: 14 }} />
-                    </span>
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                        <span
+                        esc
+                    </kbd>
+                </div>
+
+                {/* ── Results area ── */}
+                <div
+                    ref={listRef}
+                    style={{ maxHeight: 420, overflowY: "auto", overflowX: "hidden" }}
+                >
+                    {/* Section label */}
+                    {flatList.length > 0 && (
+                        <div
                             style={{
-                                display: "block",
-                                fontWeight: 500,
-                                fontSize: 13,
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
+                                padding: "10px 20px 5px",
+                                fontSize: 10.5,
+                                fontWeight: 700,
+                                letterSpacing: "0.07em",
+                                textTransform: "uppercase",
+                                color: textMuted,
                             }}
                         >
-                            {t.name}
-                            {isAlpha && <AlphaTag />}
-                        </span>
-                        <span
+                            {query.trim()
+                                ? `${searchResults.length} result${searchResults.length !== 1 ? "s" : ""}`
+                                : "Recently used"}
+                        </div>
+                    )}
+
+                    {/* Grouped results when searching */}
+                    {query.trim() &&
+                        Array.from(grouped.entries()).map(([category, tools]) => (
+                            <div key={category}>
+                                <div
+                                    style={{
+                                        padding: "8px 20px 3px",
+                                        fontSize: 10,
+                                        fontWeight: 700,
+                                        letterSpacing: "0.08em",
+                                        textTransform: "uppercase",
+                                        color: CATEGORY_COLORS[category as ToolCategory] ?? textMuted,
+                                        opacity: 0.85,
+                                    }}
+                                >
+                                    {category}
+                                </div>
+                                {tools.map((tool) => renderItem(tool, flatList.indexOf(tool)))}
+                            </div>
+                        ))}
+
+                    {/* Recent tools flat list */}
+                    {!query.trim() && recentDefs.map((tool, idx) => renderItem(tool, idx))}
+
+                    {/* Empty states */}
+                    {query.trim() && searchResults.length === 0 && (
+                        <div
                             style={{
-                                display: "block",
-                                fontSize: 11,
-                                opacity: 0.6,
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
+                                padding: "40px 20px",
+                                textAlign: "center",
+                                color: textMuted,
+                                fontSize: 14,
                             }}
                         >
-                            {t.category}
+                            No tools match &ldquo;{query}&rdquo;
+                        </div>
+                    )}
+                    {!query.trim() && recentDefs.length === 0 && (
+                        <div
+                            style={{
+                                padding: "40px 20px",
+                                textAlign: "center",
+                                color: textMuted,
+                                fontSize: 14,
+                            }}
+                        >
+                            Start typing to search {toolsRegistry.length} tools
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Footer ── */}
+                <div
+                    style={{
+                        padding: "9px 20px",
+                        borderTop: `1px solid ${divider}`,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 16,
+                        fontSize: 11.5,
+                        color: textMuted,
+                    }}
+                >
+                    {(
+                        [
+                            ["↑↓", "navigate"],
+                            ["↵", "open"],
+                            ["esc", "close"],
+                        ] as [string, string][]
+                    ).map(([key, label]) => (
+                        <span
+                            key={key}
+                            style={{ display: "flex", alignItems: "center", gap: 5 }}
+                        >
+                            <kbd
+                                style={{
+                                    padding: "2px 6px",
+                                    borderRadius: 5,
+                                    fontSize: 11,
+                                    background: kbdBg,
+                                    border: `1px solid ${kbdBorder}`,
+                                    fontFamily: "inherit",
+                                }}
+                            >
+                                {key}
+                            </kbd>
+                            {label}
                         </span>
+                    ))}
+                    <span style={{ marginLeft: "auto", opacity: 0.6 }}>
+                        {toolsRegistry.length} tools
                     </span>
                 </div>
-            ),
-        };
-    });
+            </motion.div>
+        </motion.div>
+    );
 }
+
+// ─── App Shell ───────────────────────────────────────────────────────────────
 
 export default function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {
     const router = useRouter();
@@ -151,6 +488,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     const isMobile = !screens.lg;
 
     const { darkMode, toggleDarkMode, sidebarCollapsed, toggleSidebar, setNavigating } = useAppStore();
+    const [commandOpen, setCommandOpen] = useState(false);
 
     const navigate = React.useCallback(
         (path: string) => {
@@ -162,8 +500,20 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
         },
         [pathname, router, setNavigating]
     );
+
     const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-    const [searchValue, setSearchValue] = useState("");
+
+    // ⌘K / Ctrl+K global shortcut
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+                e.preventDefault();
+                setCommandOpen((v) => !v);
+            }
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, []);
 
     const activeCategory = useMemo(() => {
         const match = pathname.match(/^\/tools\/([^/]+)/);
@@ -171,7 +521,6 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
         return toolsRegistry.find((t) => t.id === match[1])?.category ?? null;
     }, [pathname]);
 
-    // Accordion: only ONE category open at a time
     const [openKey, setOpenKey] = useState<string | null>(activeCategory);
     const [lastCategory, setLastCategory] = useState<string | null>(activeCategory);
 
@@ -185,7 +534,6 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     const openKeys = openKey ? [openKey] : [];
 
     const handleOpenChange = (keys: string[]) => {
-        // Pick the newly-opened key (the one not in current openKeys); collapse all others
         const newlyOpened = keys.find((k) => k !== openKey);
         setOpenKey(newlyOpened ?? null);
     };
@@ -196,22 +544,11 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
         root.style.colorScheme = darkMode ? "dark" : "light";
     }, [darkMode]);
 
-    // Close mobile drawer on navigation
     useEffect(() => {
         setMobileDrawerOpen(false);
     }, [pathname]);
 
     const categorized = useMemo(() => getToolsByCategory(), []);
-    const searchOptions = useMemo(buildSearchOptions, []);
-
-    const filteredOptions = useMemo(() => {
-        if (!searchValue.trim()) return [];
-        const q = searchValue.toLowerCase();
-        return searchOptions.filter((o) => o.keywords.includes(q)).slice(0, 12);
-    }, [searchValue, searchOptions]);
-
-    const isDashboard = pathname === "/";
-
 
     const menuItems = useMemo(
         () => [
@@ -338,11 +675,6 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
         },
     };
 
-    const handleSearchSelect = (toolId: string) => {
-        setSearchValue("");
-        navigate(`/tools/${toolId}`);
-    };
-
     const sidebarContent = (
         <>
             <div
@@ -424,29 +756,68 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
         </>
     );
 
-    const headerSearch = (
-        <AutoComplete
-            value={searchValue}
-            options={filteredOptions}
-            onChange={setSearchValue}
-            onSelect={handleSearchSelect}
-            popupMatchSelectWidth={420}
-            style={{ width: "100%", maxWidth: 480 }}
-            classNames={{ popup: { root: "header-search-dropdown" } }}
-            allowClear
-            open={searchValue.trim().length > 0 && filteredOptions.length > 0}
-            notFoundContent={null}
+    // ── Command palette trigger button ──────────────────────────────────────
+    const triggerBorder = darkMode ? "#2a2a2a" : "#e2e2e2";
+    const triggerBg     = darkMode ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.025)";
+    const triggerText   = darkMode ? "#555" : "#aaa";
+    const kbdBg         = darkMode ? "#1e1e1e" : "#f2f2f2";
+    const kbdBorder     = darkMode ? "#333" : "#ddd";
+
+    const searchTrigger = (
+        <button
+            type="button"
+            onClick={() => setCommandOpen(true)}
+            aria-label="Search tools (⌘K)"
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "0 14px",
+                height: 40,
+                borderRadius: 10,
+                border: `1px solid ${triggerBorder}`,
+                background: triggerBg,
+                cursor: "pointer",
+                fontSize: 13.5,
+                color: triggerText,
+                minWidth: isMobile ? 40 : 200,
+                maxWidth: 400,
+                width: isMobile ? 40 : "clamp(200px, 35vw, 380px)",
+                transition: "border-color 0.15s, background 0.15s",
+                outline: "none",
+                justifyContent: isMobile ? "center" : "flex-start",
+            }}
+            onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = darkMode ? "#6366f1" : "#4f46e5";
+                (e.currentTarget as HTMLButtonElement).style.background = darkMode ? "rgba(99,102,241,0.08)" : "rgba(79,70,229,0.04)";
+            }}
+            onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = triggerBorder;
+                (e.currentTarget as HTMLButtonElement).style.background = triggerBg;
+            }}
         >
-            <Input
-                size="middle"
-                prefix={<SearchOutlined style={{ color: darkMode ? "#737373" : "#a3a3a3" }} />}
-                placeholder={`Search ${toolsRegistry.length} tools…`}
-                style={{
-                    borderRadius: 10,
-                    height: 40,
-                }}
-            />
-        </AutoComplete>
+            <SearchOutlined style={{ fontSize: 15, flexShrink: 0 }} />
+            {!isMobile && (
+                <>
+                    <span style={{ flex: 1, textAlign: "left" }}>Search tools…</span>
+                    <kbd
+                        style={{
+                            padding: "2px 7px",
+                            borderRadius: 6,
+                            fontSize: 11,
+                            background: kbdBg,
+                            border: `1px solid ${kbdBorder}`,
+                            color: triggerText,
+                            fontFamily: "inherit",
+                            lineHeight: "16px",
+                            flexShrink: 0,
+                        }}
+                    >
+                        ⌘K
+                    </kbd>
+                </>
+            )}
+        </button>
     );
 
     return (
@@ -454,6 +825,18 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
             <App>
                 <MessageBridge />
                 <NavigationLoader />
+
+                {/* Global command palette */}
+                <AnimatePresence>
+                    {commandOpen && (
+                        <CommandPalette
+                            key="cmd-palette"
+                            onClose={() => setCommandOpen(false)}
+                            darkMode={darkMode}
+                        />
+                    )}
+                </AnimatePresence>
+
                 <Layout style={{ minHeight: "100vh" }}>
                     {!isMobile && (
                         <Sider
@@ -525,7 +908,15 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 height: 60,
                             }}
                         >
-                            <Tooltip title={isMobile ? "Open menu" : sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+                            <Tooltip
+                                title={
+                                    isMobile
+                                        ? "Open menu"
+                                        : sidebarCollapsed
+                                        ? "Expand sidebar"
+                                        : "Collapse sidebar"
+                                }
+                            >
                                 <Button
                                     type="text"
                                     icon={
@@ -545,6 +936,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 />
                             </Tooltip>
 
+                            {/* Center: search trigger */}
                             <div
                                 style={{
                                     flex: 1,
@@ -554,7 +946,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                     minWidth: 0,
                                 }}
                             >
-                                {!isDashboard && headerSearch}
+                                {searchTrigger}
                             </div>
 
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>

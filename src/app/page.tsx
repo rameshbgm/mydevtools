@@ -4,7 +4,6 @@ import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     Card,
-    Input,
     Tag,
     Typography,
     Row,
@@ -53,6 +52,7 @@ export default function Dashboard() {
     const router = useRouter();
     const { darkMode, recentTools, addRecentTool, setNavigating } = useAppStore();
     const [search, setSearch] = useState("");
+    const [searchFocused, setSearchFocused] = useState(false);
 
     const allCategorized = useMemo(() => getToolsByCategory(), []);
 
@@ -153,42 +153,98 @@ export default function Dashboard() {
                     all in one beautiful, private workspace.
                 </Paragraph>
 
-                <div style={{ maxWidth: 560, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
-                    <Input
-                        size="large"
-                        placeholder="Search tools by name, description, or tag..."
-                        prefix={
-                            <SearchOutlined
-                                style={{
-                                    color: darkMode ? "#737373" : "#a3a3a3",
-                                    fontSize: 18,
-                                }}
-                            />
-                        }
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        allowClear
-                        style={{
-                            borderRadius: 14,
-                            height: 52,
-                            fontSize: 15,
-                            boxShadow: darkMode
-                                ? "0 4px 20px rgba(0,0,0,0.3)"
-                                : "0 4px 20px rgba(0,0,0,0.08)",
-                        }}
-                    />
-                    {search.trim() && (
-                        <Text
-                            type="secondary"
+                <div style={{ maxWidth: 580, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
+                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                        <span
                             style={{
-                                display: "block",
+                                position: "absolute",
+                                left: 18,
+                                display: "flex",
+                                alignItems: "center",
+                                color: searchFocused
+                                    ? darkMode ? "#6366f1" : "#4f46e5"
+                                    : darkMode ? "#555" : "#aaa",
+                                pointerEvents: "none",
+                                zIndex: 1,
+                                transition: "color 0.15s",
+                            }}
+                        >
+                            <SearchOutlined style={{ fontSize: 17 }} />
+                        </span>
+                        <input
+                            type="text"
+                            placeholder={`Search ${stats.total} tools by name, tag, or category…`}
+                            value={search}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                            onFocus={() => setSearchFocused(true)}
+                            onBlur={() => setSearchFocused(false)}
+                            style={{
+                                width: "100%",
+                                height: 54,
+                                paddingLeft: 50,
+                                paddingRight: search ? 44 : 20,
+                                borderRadius: 14,
+                                border: `1.5px solid ${
+                                    searchFocused
+                                        ? darkMode ? "#6366f1" : "#4f46e5"
+                                        : darkMode ? "#2a2a2a" : "#e0e0e0"
+                                }`,
+                                background: darkMode ? "#141414" : "#ffffff",
+                                fontSize: 15,
+                                color: darkMode ? "#e5e5e5" : "#171717",
+                                outline: "none",
+                                boxShadow: searchFocused
+                                    ? darkMode
+                                        ? "0 0 0 3px rgba(99,102,241,0.2)"
+                                        : "0 0 0 3px rgba(79,70,229,0.12)"
+                                    : darkMode
+                                        ? "0 4px 20px rgba(0,0,0,0.3)"
+                                        : "0 4px 20px rgba(0,0,0,0.06)",
+                                transition: "border-color 0.15s, box-shadow 0.15s",
+                                fontFamily: "inherit",
+                            }}
+                        />
+                        {search && (
+                            <button
+                                type="button"
+                                onClick={() => setSearch("")}
+                                style={{
+                                    position: "absolute",
+                                    right: 14,
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: 7,
+                                    border: "none",
+                                    cursor: "pointer",
+                                    background: darkMode ? "#2a2a2a" : "#efefef",
+                                    color: darkMode ? "#737373" : "#aaa",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 15,
+                                    fontWeight: 700,
+                                    lineHeight: 1,
+                                }}
+                            >
+                                ×
+                            </button>
+                        )}
+                    </div>
+                    {search.trim() && (
+                        <p
+                            style={{
                                 marginTop: 10,
+                                marginBottom: 0,
                                 fontSize: 13,
+                                textAlign: "center",
+                                color: darkMode ? "#737373" : "#aaa",
                             }}
                         >
                             {matchCount} {matchCount === 1 ? "tool" : "tools"} matching{" "}
-                            <strong>&ldquo;{search}&rdquo;</strong>
-                        </Text>
+                            <strong style={{ color: darkMode ? "#a78bfa" : "#4f46e5" }}>
+                                &ldquo;{search}&rdquo;
+                            </strong>
+                        </p>
                     )}
                 </div>
             </motion.div>
