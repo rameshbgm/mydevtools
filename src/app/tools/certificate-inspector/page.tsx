@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { Suspense, useState, useCallback } from "react";
 import {
     Card,
     Input,
@@ -918,7 +918,7 @@ function PemParserTab({ input }: { input: string }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function CertificateInspectorPage() {
+function CertificateInspectorPageContent() {
     const { message } = App.useApp();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -1099,5 +1099,13 @@ export default function CertificateInspectorPage() {
                 ]}
             />
         </ToolPageLayout>
+    );
+}
+
+export default function CertificateInspectorPage() {
+    return (
+        <Suspense fallback={null}>
+            <CertificateInspectorPageContent />
+        </Suspense>
     );
 }

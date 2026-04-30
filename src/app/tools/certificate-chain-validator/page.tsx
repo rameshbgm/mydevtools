@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { Suspense, useState, useCallback } from "react";
 import {
     Card,
     Input,
@@ -481,7 +481,7 @@ function ChainValidatorTab() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function CertificateChainValidatorPage() {
+function CertificateChainValidatorContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const initialTab = searchParams.get("tab") ?? "live";
@@ -537,5 +537,13 @@ export default function CertificateChainValidatorPage() {
                 ]}
             />
         </ToolPageLayout>
+    );
+}
+
+export default function CertificateChainValidatorPage() {
+    return (
+        <Suspense fallback={null}>
+            <CertificateChainValidatorContent />
+        </Suspense>
     );
 }
