@@ -1,324 +1,239 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { Input, Typography, Card, Button, Space, message, Alert, Tabs, Form, Descriptions, Tag, Table, Divider } from "antd";
-import {
-    DatabaseOutlined,
-    UploadOutlined,
-    DownloadOutlined,
-    SafetyCertificateOutlined,
-    KeyOutlined,
-    InfoCircleOutlined,
-    SwapOutlined,
-} from "@ant-design/icons";
+import React, { useState } from "react";
+import { Card, Input, Button, Space, App, Alert, Tabs, Typography, Tag, Upload } from "antd";
+import { DatabaseOutlined, UploadOutlined, CopyOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { copyToClipboard } from "@/lib/clipboard";
+import forge from "node-forge";
 
-const { Text } = Typography;
+const { TextArea } = Input;
+const { Text, Paragraph } = Typography;
 
-interface KeystoreEntry {
-    alias: string;
-    type: "certificate" | "privateKey" | "secretKey";
-    creationDate: string;
+export default function JksToolPage() {
+    return (
+        <ToolPageLayout
+            title="Java KeyStore (JKS) Tool"
+            description="Convert between JKS and PKCS#12, generate keytool commands"
+            icon={<DatabaseOutlined style={{ fontSize: 24, color: "#fa541c" }} />}
+            color="#fa541c"
+            learnMore={{
+                whatIs:
+                    "JKS (Java KeyStore) is a proprietary keystore format from Sun/Oracle. JCEKS is its slightly stronger variant. Since Java 9, the default keystore is the more standard PKCS#12 (.p12). JKS is still encountered in legacy enterprise Java apps, Tomcat configs, and older Spring/JBoss deployments.",
+                whyUse:
+                    "JKS is a Java-only binary format that requires the JVM (or a Java-compatible decoder) to read. Browsers can't natively parse JKS — but they CAN create PKCS#12 files which Java can convert. This tool generates the exact keytool commands you need, AND lets you produce a PKCS#12 to feed into them.",
+                howToUse: [
+                    "Convert tab: paste cert + key PEMs, generate a .p12, then use the keytool command shown to convert to .jks",
+                    "Inspect tab: paste PEM input — see information and exact keytool commands",
+                ],
+                tips: [
+                    "Modern Java (≥9) reads .p12 keystores natively — JKS is rarely needed",
+                    "JCEKS uses stronger crypto than JKS but is still proprietary",
+                    "Always include the -storetype JKS flag to avoid ambiguity",
+                ],
+                useCases: [
+                    "Migrating a legacy Tomcat keystore to PKCS#12",
+                    "Setting up a Spring Boot SSL keystore",
+                    "Generating keytool import/export commands without Googling",
+                ],
+            }}
+        >
+            <Alert
+                type="info"
+                showIcon
+                message="JKS parsing requires Java"
+                description={
+                    <span>
+                        JKS is a proprietary Java format that cannot be safely parsed in a browser. This tool helps you{" "}
+                        <Text strong>create a PKCS#12 file from PEM</Text> (which Java understands), then{" "}
+                        <Text strong>generates the exact keytool commands</Text> to convert it to JKS.
+                    </span>
+                }
+                style={{ marginBottom: 16 }}
+            />
+
+            <Tabs
+                size="large"
+                items={[
+                    { key: "convert", label: "Convert PEM → JKS", children: <ConvertTab /> },
+                    { key: "commands", label: "keytool Commands", children: <CommandsTab /> },
+                ]}
+            />
+        </ToolPageLayout>
+    );
 }
 
-export default function JKSToolPage() {
-    const [activeTab, setActiveTab] = useState("info");
+function ConvertTab() {
+    const { message } = App.useApp();
+    const [certPem, setCertPem] = useState("");
+    const [keyPem, setKeyPem] = useState("");
+    const [chainPem, setChainPem] = useState("");
     const [password, setPassword] = useState("");
-    const [fileData, setFileData] = useState<ArrayBuffer | null>(null);
-    const [fileName, setFileName] = useState("");
-    const [entries, setEntries] = useState<KeystoreEntry[]>([]);
-    const [pkcs12File, setPkcs12File] = useState<ArrayBuffer | null>(null);
-    const [pkcs12Name, setPkcs12Name] = useState("");
-    const [convertPassword, setConvertPassword] = useState("");
-    const jksInputRef = useRef<HTMLInputElement>(null);
-    const pkcs12InputRef = useRef<HTMLInputElement>(null);
+    const [alias, setAlias] = useState("mykey");
+    const [loading, setLoading] = useState(false);
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: "jks" | "pkcs12") => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            if (type === "jks") {
-                setFileData(event.target?.result as ArrayBuffer);
-                setFileName(file.name);
-            } else {
-                setPkcs12File(event.target?.result as ArrayBuffer);
-                setPkcs12Name(file.name);
-            }
-            message.success(`Loaded ${file.name}`);
-        };
-        reader.onerror = () => message.error("Failed to read file");
-        reader.readAsArrayBuffer(file);
-        e.target.value = "";
+    const buildAndDownload = () => {
+        if (!certPem.trim() || !keyPem.trim()) {
+            message.warning("Provide both certificate and private key (PEM)");
+            return;
+        }
+        if (!password) {
+            message.warning("Set a keystore password");
+            return;
+        }
+        setLoading(true);
+        try {
+            const cert = forge.pki.certificateFromPem(certPem);
+            const key = forge.pki.privateKeyFromPem(keyPem);
+            const chain = chainPem.trim()
+                ? chainPem.split(/(?=-----BEGIN)/g).map((s) => s.trim()).filter(Boolean).map((p) => forge.pki.certificateFromPem(p))
+                : [];
+            const p12Asn1 = forge.pkcs12.toPkcs12Asn1(key, [cert, ...chain], password, {
+                friendlyName: alias,
+                algorithm: "3des",
+            });
+            const der = forge.asn1.toDer(p12Asn1).getBytes();
+            const bytes = new Uint8Array(forge.util.binary.raw.decode(der));
+            const blob = new Blob([new Uint8Array(bytes)], { type: "application/x-pkcs12" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${alias}.p12`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            message.success("Downloaded .p12 — now run the keytool command below");
+        } catch (e) {
+            message.error(e instanceof Error ? e.message : "Failed to build keystore");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleAnalyze = useCallback(async () => {
-        if (!fileData) {
-            message.warning("Please upload a JKS file first");
-            return;
-        }
+    const keytoolCmd = `# After downloading ${alias}.p12, run:
+keytool -importkeystore \\
+    -srckeystore ${alias}.p12 \\
+    -srcstoretype PKCS12 \\
+    -srcstorepass '${password || "<your-password>"}' \\
+    -destkeystore ${alias}.jks \\
+    -deststoretype JKS \\
+    -deststorepass '${password || "<your-password>"}' \\
+    -alias ${alias}`;
 
-        try {
-            const bytes = new Uint8Array(fileData);
+    return (
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <Card size="small" title="Step 1: Provide PEM inputs">
+                <div className="tool-split-pane" style={{ gap: 16 }}>
+                    <div>
+                        <Text strong>Certificate (PEM)</Text>
+                        <TextArea rows={6} value={certPem} onChange={(e) => setCertPem(e.target.value)} placeholder="-----BEGIN CERTIFICATE-----…" style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, marginTop: 4 }} />
+                    </div>
+                    <div>
+                        <Text strong>Private Key (PEM)</Text>
+                        <TextArea rows={6} value={keyPem} onChange={(e) => setKeyPem(e.target.value)} placeholder="-----BEGIN RSA PRIVATE KEY-----…" style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, marginTop: 4 }} />
+                    </div>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                    <Text strong>Chain certificates (optional)</Text>
+                    <TextArea rows={3} value={chainPem} onChange={(e) => setChainPem(e.target.value)} placeholder="Concatenated intermediate CAs and root" style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, marginTop: 4 }} />
+                </div>
+                <div className="tool-split-pane" style={{ gap: 16, marginTop: 12 }}>
+                    <div>
+                        <Text strong>Alias</Text>
+                        <Input value={alias} onChange={(e) => setAlias(e.target.value)} style={{ marginTop: 4 }} />
+                    </div>
+                    <div>
+                        <Text strong>Password</Text>
+                        <Input.Password value={password} onChange={(e) => setPassword(e.target.value)} style={{ marginTop: 4 }} />
+                    </div>
+                </div>
+            </Card>
 
-            // Check for JKS magic number: 0xFEEDFEED
-            if (bytes[0] === 0xFE && bytes[1] === 0xED && bytes[2] === 0xFE && bytes[3] === 0xED) {
-                // JKS format detected
-                const version = (bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7];
-                const entryCount = (bytes[8] << 24) | (bytes[9] << 16) | (bytes[10] << 8) | bytes[11];
+            <Card size="small" title="Step 2: Generate PKCS#12">
+                <Button type="primary" size="large" loading={loading} onClick={buildAndDownload}>
+                    Download {alias}.p12
+                </Button>
+            </Card>
 
-                // Create placeholder entries (full parsing requires password)
-                const placeholderEntries: KeystoreEntry[] = [];
-                for (let i = 0; i < Math.min(entryCount, 10); i++) {
-                    placeholderEntries.push({
-                        alias: `entry_${i + 1}`,
-                        type: i === 0 ? "privateKey" : "certificate",
-                        creationDate: new Date().toISOString().split("T")[0],
-                    });
-                }
+            <Card
+                size="small"
+                title="Step 3: Convert to JKS with keytool"
+                extra={<Button size="small" icon={<CopyOutlined />} onClick={() => { copyToClipboard(keytoolCmd, "Command copied"); message.success("Copied"); }}>Copy</Button>}
+            >
+                <pre style={{ background: "rgba(0,0,0,0.04)", padding: 12, borderRadius: 6, fontSize: 12, overflowX: "auto" }}>{keytoolCmd}</pre>
+                <Tag color="warning">Requires Java JDK with keytool installed</Tag>
+            </Card>
+        </Space>
+    );
+}
 
-                setEntries(placeholderEntries);
-                message.success(`JKS file detected: version ${version}, ${entryCount} entries`);
-            } else if (bytes[0] === 0x30) {
-                // Might be PKCS#12 or other ASN.1 format
-                message.warning("This appears to be a PKCS#12 file, not JKS. Use the conversion tab.");
-            } else {
-                throw new Error("Not a valid JKS file");
-            }
-        } catch (error) {
-            message.error(error instanceof Error ? error.message : "Failed to analyze file");
-        }
-    }, [fileData]);
+function CommandsTab() {
+    const { message } = App.useApp();
+    const [keystore, setKeystore] = useState("server.jks");
+    const [alias, setAlias] = useState("server");
 
-    const handleConvert = useCallback(async () => {
-        if (!pkcs12File) {
-            message.warning("Please upload a PKCS#12 file to convert");
-            return;
-        }
-        if (!convertPassword) {
-            message.warning("Please provide the keystore password");
-            return;
-        }
-
-        // Note: Actual conversion requires keytool or BouncyCastle
-        message.info("JKS conversion requires Java keytool or a cryptographic library. Run: keytool -importkeystore -srckeystore input.p12 -srcstoretype PKCS12 -destkeystore output.jks -deststoretype JKS");
-    }, [pkcs12File, convertPassword]);
-
-    const entryColumns = [
+    const cmds: { title: string; cmd: string; note?: string }[] = [
         {
-            title: "Alias",
-            dataIndex: "alias",
-            key: "alias",
+            title: "List all entries",
+            cmd: `keytool -list -keystore ${keystore} -storepass <password>`,
         },
         {
-            title: "Type",
-            dataIndex: "type",
-            key: "type",
-            render: (type: string) => {
-                const config = {
-                    privateKey: { color: "red", icon: <KeyOutlined />, text: "Private Key Entry" },
-                    certificate: { color: "green", icon: <SafetyCertificateOutlined />, text: "Trusted Certificate" },
-                    secretKey: { color: "blue", icon: <KeyOutlined />, text: "Secret Key" },
-                };
-                const cfg = config[type as keyof typeof config];
-                return <Tag icon={cfg.icon} color={cfg.color}>{cfg.text}</Tag>;
-            },
+            title: "List with details (-v)",
+            cmd: `keytool -list -v -keystore ${keystore} -storepass <password>`,
         },
         {
-            title: "Creation Date",
-            dataIndex: "creationDate",
-            key: "creationDate",
+            title: "Export a certificate",
+            cmd: `keytool -export -keystore ${keystore} -alias ${alias} -file ${alias}.crt -storepass <password>`,
+        },
+        {
+            title: "Import a trusted certificate",
+            cmd: `keytool -import -keystore ${keystore} -alias ${alias} -file ${alias}.crt -storepass <password>`,
+        },
+        {
+            title: "Generate a new keypair (self-signed)",
+            cmd: `keytool -genkeypair -keystore ${keystore} -alias ${alias} -keyalg RSA -keysize 2048 -validity 365 -storepass <password> -dname "CN=${alias}, O=mydevtools, C=US"`,
+        },
+        {
+            title: "Convert JKS → PKCS#12",
+            cmd: `keytool -importkeystore -srckeystore ${keystore} -srcstoretype JKS -destkeystore ${alias}.p12 -deststoretype PKCS12 -srcstorepass <password> -deststorepass <password>`,
+            note: "Use this to read your JKS in this site's PKCS#12 tool",
+        },
+        {
+            title: "Change a keystore password",
+            cmd: `keytool -storepasswd -keystore ${keystore} -storepass <old-password> -new <new-password>`,
+        },
+        {
+            title: "Delete an entry",
+            cmd: `keytool -delete -keystore ${keystore} -alias ${alias} -storepass <password>`,
         },
     ];
 
     return (
-        <ToolPageLayout
-            title="JKS Tool"
-            description="Work with Java KeyStore files"
-            icon={<DatabaseOutlined style={{ fontSize: 24 }} />}
-            color="#fa8c16"
-            learnMore={{
-                whatIs: "Java KeyStore (JKS) is a Java-specific format for storing cryptographic keys and certificates. It's used by Java applications for SSL/TLS, code signing, and other security operations. JKS files are password-protected binary files.",
-                whyUse: "JKS is required for Java applications, application servers like Tomcat, and Android development. Many enterprise applications use JKS for secure key storage.",
-                howToUse: [
-                    "Upload a JKS file to view its structure",
-                    "Enter the keystore password to access contents",
-                    "Convert between JKS and PKCS#12 formats",
-                    "View certificate and key entries",
-                ],
-                tips: [
-                    "JKS is being replaced by PKCS#12 in modern Java",
-                    "Use 'keytool' command-line tool for JKS operations",
-                    "Each entry can have its own password",
-                    "JKS magic bytes: 0xFEEDFEED",
-                    "JCEKS (Java Cryptography Extension KeyStore) supports secret keys",
-                ],
-                useCases: [
-                    "Configuring SSL/TLS in Java applications",
-                    "Managing certificates for Tomcat, JBoss, etc.",
-                    "Android app signing",
-                    "Converting keystores for different platforms",
-                ],
-            }}
-        >
-            <Card>
-                <Tabs
-                    activeKey={activeTab}
-                    onChange={setActiveTab}
-                    items={[
-                        {
-                            key: "info",
-                            label: (
-                                <span><InfoCircleOutlined /> Analyze JKS</span>
-                            ),
-                            children: (
-                                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-                                    <Alert
-                                        message="JKS File Analysis"
-                                        description="Upload a Java KeyStore file to view its structure and entries. Full content extraction requires the keystore password and Java keytool."
-                                        type="info"
-                                        showIcon
-                                    />
-
-                                    <div>
-                                        <Text strong style={{ display: "block", marginBottom: 8 }}>Upload JKS File</Text>
-                                        <Space>
-                                            <input
-                                                ref={jksInputRef}
-                                                type="file"
-                                                accept=".jks,.keystore"
-                                                onChange={(e) => handleFileUpload(e, "jks")}
-                                                aria-label="Upload JKS file"
-                                                style={{ display: "none" }}
-                                            />
-                                            <Button
-                                                icon={<UploadOutlined />}
-                                                onClick={() => jksInputRef.current?.click()}
-                                            >
-                                                Select File
-                                            </Button>
-                                            {fileName && <Tag color="blue">{fileName}</Tag>}
-                                        </Space>
-                                    </div>
-
-                                    <Form layout="vertical">
-                                        <Form.Item label="Keystore Password">
-                                            <Input.Password
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
-                                                placeholder="Enter keystore password"
-                                            />
-                                        </Form.Item>
-                                    </Form>
-
-                                    <Button
-                                        type="primary"
-                                        icon={<DatabaseOutlined />}
-                                        onClick={handleAnalyze}
-                                        disabled={!fileData}
-                                        block
-                                    >
-                                        Analyze Keystore
-                                    </Button>
-
-                                    {entries.length > 0 && (
-                                        <>
-                                            <Divider />
-                                            <Text strong>Keystore Entries</Text>
-                                            <Table
-                                                dataSource={entries}
-                                                columns={entryColumns}
-                                                rowKey="alias"
-                                                pagination={false}
-                                                size="small"
-                                            />
-                                        </>
-                                    )}
-                                </Space>
-                            ),
-                        },
-                        {
-                            key: "convert",
-                            label: (
-                                <span><SwapOutlined /> Convert</span>
-                            ),
-                            children: (
-                                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-                                    <Alert
-                                        message="Convert PKCS#12 to JKS"
-                                        description="Convert a PKCS#12 (.p12/.pfx) file to Java KeyStore format. The actual conversion is performed using Java keytool."
-                                        type="info"
-                                        showIcon
-                                    />
-
-                                    <div>
-                                        <Text strong style={{ display: "block", marginBottom: 8 }}>Upload PKCS#12 File</Text>
-                                        <Space>
-                                            <input
-                                                ref={pkcs12InputRef}
-                                                type="file"
-                                                accept=".p12,.pfx"
-                                                onChange={(e) => handleFileUpload(e, "pkcs12")}
-                                                aria-label="Upload PKCS#12 file"
-                                                style={{ display: "none" }}
-                                            />
-                                            <Button
-                                                icon={<UploadOutlined />}
-                                                onClick={() => pkcs12InputRef.current?.click()}
-                                            >
-                                                Select PKCS#12
-                                            </Button>
-                                            {pkcs12Name && <Tag color="green">{pkcs12Name}</Tag>}
-                                        </Space>
-                                    </div>
-
-                                    <Form layout="vertical">
-                                        <Form.Item label="Password">
-                                            <Input.Password
-                                                value={convertPassword}
-                                                onChange={(e) => setConvertPassword(e.target.value)}
-                                                placeholder="Keystore password"
-                                            />
-                                        </Form.Item>
-                                    </Form>
-
-                                    <Button
-                                        type="primary"
-                                        icon={<SwapOutlined />}
-                                        onClick={handleConvert}
-                                        disabled={!pkcs12File}
-                                        block
-                                    >
-                                        Convert to JKS
-                                    </Button>
-
-                                    <Divider />
-
-                                    <Alert
-                                        message="Command Line Alternative"
-                                        description={
-                                            <pre style={{ margin: 0, fontSize: 12 }}>
-                                                {`# PKCS#12 to JKS
-keytool -importkeystore \\
-  -srckeystore input.p12 -srcstoretype PKCS12 \\
-  -destkeystore output.jks -deststoretype JKS
-
-# JKS to PKCS#12
-keytool -importkeystore \\
-  -srckeystore input.jks -srcstoretype JKS \\
-  -destkeystore output.p12 -deststoretype PKCS12`}
-                                            </pre>
-                                        }
-                                        type="warning"
-                                        showIcon
-                                    />
-                                </Space>
-                            ),
-                        },
-                    ]}
-                />
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <Card size="small">
+                <div className="tool-split-pane" style={{ gap: 16 }}>
+                    <div>
+                        <Text strong>Keystore filename</Text>
+                        <Input value={keystore} onChange={(e) => setKeystore(e.target.value)} style={{ marginTop: 4 }} />
+                    </div>
+                    <div>
+                        <Text strong>Alias</Text>
+                        <Input value={alias} onChange={(e) => setAlias(e.target.value)} style={{ marginTop: 4 }} />
+                    </div>
+                </div>
             </Card>
-        </ToolPageLayout>
+            {cmds.map((c, i) => (
+                <Card
+                    key={i}
+                    size="small"
+                    title={c.title}
+                    extra={<Button size="small" icon={<CopyOutlined />} onClick={() => { copyToClipboard(c.cmd, "Command copied"); message.success("Copied"); }}>Copy</Button>}
+                >
+                    <pre style={{ background: "rgba(0,0,0,0.04)", padding: 10, borderRadius: 6, fontSize: 12, overflowX: "auto", margin: 0 }}>{c.cmd}</pre>
+                    {c.note && <Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0, fontSize: 12 }}>{c.note}</Paragraph>}
+                </Card>
+            ))}
+        </Space>
     );
 }

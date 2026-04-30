@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
     Card,
-    Input,
     Tag,
     Typography,
     Row,
@@ -13,7 +12,7 @@ import {
     Badge,
     Empty,
 } from "antd";
-import { SearchOutlined, ThunderboltOutlined, ClockCircleOutlined } from "@ant-design/icons";
+import { SearchOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     toolsRegistry,
@@ -27,7 +26,29 @@ import {
 } from "@/lib/tools-registry";
 import { useAppStore } from "@/lib/store";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
+
+interface DeveloperStory {
+    text: string;
+}
+
+// Story cards rotate randomly every 20 seconds.
+const DEVELOPER_STORIES = [
+    { text: "API incident debug: JSON Formatter and JSON Validator clean incoming payloads, then JSON Diff shows exactly what changed between stable and failing responses." },
+    { text: "Authentication flow check: JWT Decoder verifies claims, JWS Sign & Verify confirms signatures, and HMAC Generator reproduces backend signing logic." },
+    { text: "Certificate troubleshooting: Certificate Inspector reveals metadata while Certificate Chain & SSL pinpoints missing intermediate certificates." },
+    { text: "Data conversion workflow: XML to JSON Converter and JSON to XML Converter keep partner payloads aligned across services." },
+    { text: "Gateway validation: Base64 Encode / Decode and URL Encode / Decode help verify header transforms before production rollout." },
+    { text: "Reporting cleanup: CSV to JSON Converter plus SQL Formatter standardize analytics inputs for repeatable exports." },
+    { text: "Input hardening: Email Validator, Credit Card Validator, and Regex Tester block malformed values before database writes." },
+    { text: "Legacy integration support: WSDL Parser and SOAP Client reproduce enterprise requests and validate envelopes quickly." },
+    { text: "Developer docs update: Markdown Table Generator and Markdown Preview keep release notes consistent and readable." },
+    { text: "Release QA pass: XML Validator and Text Diff compare final outputs to ensure only intended changes are shipped." },
+] satisfies DeveloperStory[];
+
+const FONT_STYLES = [
+    "matrix-style",
+];
 
 const container = {
     hidden: {},
@@ -49,10 +70,139 @@ const fadeIn = {
     show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
+const TOOL_NAMES = [
+    "JSON Formatter",
+    "JSON Validator",
+    "Regex Tester",
+    "JSON Diff",
+    "URL Parser",
+    "API Request Builder",
+    "Swagger / OpenAPI Viewer",
+    "HTTP Status Codes Reference",
+    "JWT Decoder",
+    "JWS Sign & Verify",
+    "HMAC Generator",
+    "JWE Encrypt & Decrypt",
+    "JWK Generator",
+    "AES Encrypt & Decrypt",
+    "Certificate Inspector",
+    "Certificate Chain & SSL",
+    "Certificate & CSR Generator",
+    "PKCS#12 / PFX Tool",
+    "XML to JSON Converter",
+    "JSON to XML Converter",
+    "YAML ↔ JSON Converter",
+    "CSV to JSON Converter",
+    "JSON to CSV Converter",
+    "SQL Formatter",
+    "Timestamp Converter",
+    "Email Validator",
+    "Credit Card Validator",
+    "XSD Schema Validator",
+    "Text Diff",
+    "XML Diff",
+    "XPath Tester",
+    "IP Address Tools",
+    "Subnet Calculator",
+    "Port Number Reference",
+    "UUID Generator",
+    "Password Generator",
+    "Unix Permissions Calculator",
+    "String Case Converter",
+    "Text Manipulation Tools",
+    "String Escape / Unescape",
+    "Base64 Encode / Decode",
+    "URL Encode / Decode",
+    "WSDL Parser",
+    "SOAP Client",
+    "MIME Types Reference",
+    "Markdown Table Generator",
+    "Markdown Preview",
+    "Code Explainer",
+    "Slug Generator",
+    "Unicode Converter",
+    "Number Base Converter",
+    "RFC Standards Reference",
+    "Cron Expression Parser",
+    "JSONPath Tester",
+    "Java POJO Generator",
+    "JSON to TypeScript",
+    "CSV to XML Converter",
+    "XML Formatter",
+    "Gzip Compress / Decompress",
+    "SSH Key Generator",
+    "Key Pair Generator",
+    "Lorem Ipsum Generator",
+    "Text Summarizer",
+    "MAC Address Tools",
+    "IP Ranges Reference",
+    "RAG Document Q&A",
+    "BCrypt Hash & Verify",
+    "YAML Formatter",
+    "HTML Formatter",
+    "XML Validator",
+];
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const TOOL_PATTERN = new RegExp(
+    `(${[...TOOL_NAMES].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|")})`,
+    "gi"
+);
+
+const renderStoryWithHighlights = (story: string) => {
+    const parts = story.split(TOOL_PATTERN);
+    if (parts.length === 1) return story;
+
+    return parts.map((part, index) =>
+        index % 2 === 1 ? (
+            <span key={`tool-${part}-${index}`} className="tool-mention">
+                {part}
+            </span>
+        ) : (
+            part
+        )
+    );
+};
+
+const pickNextRandomIndex = (length: number, currentIndex: number) => {
+    if (length <= 1) return 0;
+    let next = currentIndex;
+    while (next === currentIndex) {
+        next = Math.floor(Math.random() * length);
+    }
+    return next;
+};
+
 export default function Dashboard() {
     const router = useRouter();
-    const { darkMode, recentTools, addRecentTool, setNavigating } = useAppStore();
+    const { darkMode, recentTools, addRecentTool, clearRecentTools, setNavigating } = useAppStore();
     const [search, setSearch] = useState("");
+    const [searchFocused, setSearchFocused] = useState(false);
+    const [storyIndex, setStoryIndex] = useState(0);
+    const [fontStyle, setFontStyle] = useState("matrix-style");
+
+    // Initialize with random story on mount
+    useEffect(() => {
+        const randomIdx = Math.floor(Math.random() * DEVELOPER_STORIES.length);
+        const randomFont = FONT_STYLES[Math.floor(Math.random() * FONT_STYLES.length)];
+        setStoryIndex(randomIdx);
+        setFontStyle(randomFont);
+    }, []);
+
+    // Change story every 20 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const randomIdx = pickNextRandomIndex(DEVELOPER_STORIES.length, storyIndex);
+            const currentFontIndex = FONT_STYLES.indexOf(fontStyle);
+            const nextFontIndex = pickNextRandomIndex(FONT_STYLES.length, currentFontIndex);
+            const randomFont = FONT_STYLES[nextFontIndex];
+            setStoryIndex(randomIdx);
+            setFontStyle(randomFont);
+        }, 20000);
+
+        return () => clearInterval(interval);
+    }, [storyIndex, fontStyle]);
 
     const allCategorized = useMemo(() => getToolsByCategory(), []);
 
@@ -88,6 +238,7 @@ export default function Dashboard() {
         total: toolsRegistry.length,
         categories: allCategorized.size,
     };
+    const currentStory = DEVELOPER_STORIES[storyIndex];
 
     return (
         <div style={{ width: "100%" }}>
@@ -96,99 +247,162 @@ export default function Dashboard() {
                 variants={fadeIn}
                 initial="hidden"
                 animate="show"
-                style={{ textAlign: "center", marginBottom: 48 }}
+                style={{ textAlign: "center", marginBottom: 56 }}
             >
+                {/* Privacy badge row */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+                    {[
+                        { icon: "⚡", label: `${stats.total} tools`, color: "#8b5cf6" },
+                        { icon: "🔒", label: "100% Private", color: "#10b981" },
+                        { icon: "🌐", label: "Works Offline", color: "#3b82f6" },
+                        { icon: "🚫", label: "No Tracking", color: "#f59e0b" },
+                    ].map(({ icon, label, color }) => (
+                        <motion.span
+                            key={label}
+                            whileHover={{ scale: 1.05 }}
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 5,
+                                padding: "5px 12px",
+                                borderRadius: 20,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                background: darkMode ? `${color}18` : `${color}12`,
+                                border: `1px solid ${color}40`,
+                                color: color,
+                                letterSpacing: "0.2px",
+                                cursor: "default",
+                            }}
+                        >
+                            <span>{icon}</span>
+                            {label}
+                        </motion.span>
+                    ))}
+                </div>
+
                 <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "8px 18px",
-                        borderRadius: 24,
-                        background: darkMode
-                            ? "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.15))"
-                            : "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08))",
-                        border: `1px solid ${darkMode ? "rgba(139,92,246,0.3)" : "rgba(99,102,241,0.2)"}`,
-                        marginBottom: 20,
-                    }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    style={{ textAlign: "center", marginBottom: 48 }}
                 >
-                    <ThunderboltOutlined style={{ color: "#8b5cf6", fontSize: 16 }} />
-                    <Text
+                    <h1 className="neon-text">My Dev Tools</h1>
+
+                    <motion.div
+                        key={storyIndex}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ delay: 0.25, duration: 0.5 }}
+                        className={`animated-tagline ${fontStyle}`}
                         style={{
-                            color: darkMode ? "#c4b5fd" : "#7c3aed",
-                            fontSize: 13,
+                            fontSize: "clamp(12px, 0.92vw, 14px)",
+                            color: darkMode ? "#a7f3d0" : "#166534",
+                            maxWidth: "82vw",
+                            margin: "40px auto 10px",
+                            padding: 0,
                             fontWeight: 500,
-                            letterSpacing: "0.3px",
+                            lineHeight: 1.35,
+                            textAlign: "center",
                         }}
                     >
-                        {stats.total} tools across {stats.categories} categories
-                    </Text>
+                        {renderStoryWithHighlights(currentStory.text)}
+                    </motion.div>
                 </motion.div>
 
-                <Title
-                    level={1}
-                    className="gradient-text"
-                    style={{
-                        fontSize: "clamp(28px, 5vw, 52px)",
-                        fontWeight: 800,
-                        marginBottom: 12,
-                        letterSpacing: "-1px",
-                    }}
-                >
-                    mydevtools
-                </Title>
-
-                <Paragraph
-                    style={{
-                        fontSize: "clamp(14px, 1.5vw, 18px)",
-                        color: darkMode ? "#a3a3a3" : "#525252",
-                        maxWidth: 620,
-                        margin: "0 auto 28px",
-                        lineHeight: 1.6,
-                        padding: "0 12px",
-                    }}
-                >
-                    Your personal developer toolkit. Format, diff, decode, generate —
-                    all in one beautiful, private workspace.
-                </Paragraph>
-
-                <div style={{ maxWidth: 560, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
-                    <Input
-                        size="large"
-                        placeholder="Search tools by name, description, or tag..."
-                        prefix={
-                            <SearchOutlined
-                                style={{
-                                    color: darkMode ? "#737373" : "#a3a3a3",
-                                    fontSize: 18,
-                                }}
-                            />
-                        }
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        allowClear
-                        style={{
-                            borderRadius: 14,
-                            height: 52,
-                            fontSize: 15,
-                            boxShadow: darkMode
-                                ? "0 4px 20px rgba(0,0,0,0.3)"
-                                : "0 4px 20px rgba(0,0,0,0.08)",
-                        }}
-                    />
-                    {search.trim() && (
-                        <Text
-                            type="secondary"
+                <div style={{ maxWidth: 580, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
+                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                        <span
                             style={{
-                                display: "block",
+                                position: "absolute",
+                                left: 18,
+                                display: "flex",
+                                alignItems: "center",
+                                color: searchFocused
+                                    ? darkMode ? "#6366f1" : "#4f46e5"
+                                    : darkMode ? "#555" : "#aaa",
+                                pointerEvents: "none",
+                                zIndex: 1,
+                                transition: "color 0.15s",
+                            }}
+                        >
+                            <SearchOutlined style={{ fontSize: 17 }} />
+                        </span>
+                        <input
+                            type="text"
+                            placeholder={`Search ${stats.total} tools by name, tag, or category…`}
+                            value={search}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                            onFocus={() => setSearchFocused(true)}
+                            onBlur={() => setSearchFocused(false)}
+                            style={{
+                                width: "100%",
+                                height: 54,
+                                paddingLeft: 50,
+                                paddingRight: search ? 44 : 20,
+                                borderRadius: 14,
+                                border: `1.5px solid ${
+                                    searchFocused
+                                        ? darkMode ? "#6366f1" : "#4f46e5"
+                                        : darkMode ? "#2a2a2a" : "#e0e0e0"
+                                }`,
+                                background: darkMode ? "#141414" : "#ffffff",
+                                fontSize: 15,
+                                color: darkMode ? "#e5e5e5" : "#171717",
+                                outline: "none",
+                                boxShadow: searchFocused
+                                    ? darkMode
+                                        ? "0 0 0 3px rgba(99,102,241,0.2)"
+                                        : "0 0 0 3px rgba(79,70,229,0.12)"
+                                    : darkMode
+                                        ? "0 4px 20px rgba(0,0,0,0.3)"
+                                        : "0 4px 20px rgba(0,0,0,0.06)",
+                                transition: "border-color 0.15s, box-shadow 0.15s",
+                                fontFamily: "inherit",
+                            }}
+                        />
+                        {search && (
+                            <button
+                                type="button"
+                                onClick={() => setSearch("")}
+                                style={{
+                                    position: "absolute",
+                                    right: 14,
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: 7,
+                                    border: "none",
+                                    cursor: "pointer",
+                                    background: darkMode ? "#2a2a2a" : "#efefef",
+                                    color: darkMode ? "#737373" : "#aaa",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 15,
+                                    fontWeight: 700,
+                                    lineHeight: 1,
+                                }}
+                            >
+                                ×
+                            </button>
+                        )}
+                    </div>
+                    {search.trim() && (
+                        <p
+                            style={{
                                 marginTop: 10,
+                                marginBottom: 0,
                                 fontSize: 13,
+                                textAlign: "center",
+                                color: darkMode ? "#737373" : "#aaa",
                             }}
                         >
                             {matchCount} {matchCount === 1 ? "tool" : "tools"} matching{" "}
-                            <strong>&ldquo;{search}&rdquo;</strong>
-                        </Text>
+                            <strong style={{ color: darkMode ? "#a78bfa" : "#4f46e5" }}>
+                                &ldquo;{search}&rdquo;
+                            </strong>
+                        </p>
                     )}
                 </div>
             </motion.div>
@@ -222,10 +436,31 @@ export default function Dashboard() {
                                     margin: 0,
                                     color: darkMode ? "#737373" : "#525252",
                                     fontWeight: 500,
+                                    flex: 1,
                                 }}
                             >
                                 Recently Used
                             </Title>
+                            <button
+                                type="button"
+                                onClick={clearRecentTools}
+                                style={{
+                                    border: "none",
+                                    background: "none",
+                                    cursor: "pointer",
+                                    fontSize: 12,
+                                    color: darkMode ? "#555" : "#bbb",
+                                    padding: "2px 8px",
+                                    borderRadius: 6,
+                                    fontFamily: "inherit",
+                                    fontWeight: 500,
+                                    transition: "color 0.15s",
+                                }}
+                                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = darkMode ? "#a78bfa" : "#4f46e5"; }}
+                                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = darkMode ? "#555" : "#bbb"; }}
+                            >
+                                Clear all
+                            </button>
                         </div>
                         <Space wrap size={[8, 8]}>
                             {recentTools.slice(0, 8).map((id) => {

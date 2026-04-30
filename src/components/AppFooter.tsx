@@ -149,7 +149,7 @@ export default function AppFooter() {
                     }}
                 >
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                        © {year} mydevtools
+                        © {year} My Dev Tools
                     </Text>
                     <span
                         style={{

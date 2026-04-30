@@ -1,341 +1,541 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { Input, Typography, Card, Button, Space, message, Alert, Divider, Steps, Tag, Descriptions } from "antd";
+import React, { useState, useCallback } from "react";
+import {
+    Card,
+    Input,
+    Button,
+    Space,
+    App,
+    Alert,
+    Tag,
+    Steps,
+    Typography,
+    Upload,
+    Empty,
+    Descriptions,
+    Tabs,
+    InputNumber,
+    Collapse,
+    Segmented,
+} from "antd";
 import {
     AuditOutlined,
     UploadOutlined,
     CheckCircleOutlined,
     CloseCircleOutlined,
     WarningOutlined,
-    SafetyCertificateOutlined,
+    GlobalOutlined,
+    SecurityScanOutlined,
+    CopyOutlined,
 } from "@ant-design/icons";
+import { useSearchParams, useRouter } from "next/navigation";
 import ToolPageLayout from "@/components/ToolPageLayout";
-import { useAppStore } from "@/lib/store";
+import { copyToClipboard } from "@/lib/clipboard";
+import {
+    listPemBlocks,
+    validateChain,
+    parseCertificate,
+    fingerprint,
+    formatDN,
+    type ChainValidationResult,
+    type ParsedCertificate,
+} from "@/lib/cert-utils";
 
 const { TextArea } = Input;
 const { Text } = Typography;
 
-interface CertInfo {
-    index: number;
-    subject: string;
-    issuer: string;
-    validFrom: Date;
-    validTo: Date;
-    isExpired: boolean;
-    isSelfSigned: boolean;
-    isCA: boolean;
+const SAMPLE = `Paste the leaf certificate first, followed by intermediates, root last.
+
+-----BEGIN CERTIFICATE-----
+(leaf cert)
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+(intermediate cert)
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+(root CA)
+-----END CERTIFICATE-----`;
+
+interface LiveCert {
+    pem: string;
+    parsed: ParsedCertificate | null;
+    fps: { sha1: string; sha256: string; md5: string } | null;
 }
 
-interface ValidationResult {
-    valid: boolean;
-    certificates: CertInfo[];
-    errors: string[];
-    warnings: string[];
+// ─── Live Server Check tab ─────────────────────────────────────────────────────
+
+function LiveCheckTab() {
+    const { message } = App.useApp();
+    const [urlInput, setUrlInput] = useState("");
+    const [port, setPort] = useState<number>(443);
+    const [loading, setLoading] = useState(false);
+    const [certs, setCerts] = useState<LiveCert[]>([]);
+    const [chainResult, setChainResult] = useState<ChainValidationResult | null>(null);
+    const [fetchedHost, setFetchedHost] = useState<string>("");
+
+    const fetch_and_inspect = useCallback(async () => {
+        const raw = urlInput.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+        const portMatch = raw.match(/:(\d+)$/);
+        const host = raw.replace(/:\d+$/, "");
+        const resolvedPort = portMatch ? parseInt(portMatch[1], 10) : port;
+        if (!host) { message.warning("Enter a hostname or URL"); return; }
+
+        setLoading(true);
+        setCerts([]);
+        setChainResult(null);
+        try {
+            const res = await fetch(`/api/fetch-cert?host=${encodeURIComponent(host)}&port=${resolvedPort}`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+
+            const pems: string[] = data.pems ?? [];
+            if (pems.length === 0) throw new Error("No certificates returned from server");
+
+            // Parse each cert and compute fingerprints locally — no external calls
+            const liveCerts: LiveCert[] = await Promise.all(
+                pems.map(async (pem) => {
+                    const [parsed, fps] = await Promise.all([
+                        parseCertificate(pem).catch(() => null),
+                        fingerprint(pem).catch(() => null),
+                    ]);
+                    return { pem, parsed, fps };
+                })
+            );
+            setCerts(liveCerts);
+            setFetchedHost(host);
+
+            // Validate chain locally
+            const blocks = listPemBlocks(pems.join("\n\n")).filter((b) => b.label === "CERTIFICATE");
+            if (blocks.length > 0) {
+                const result = await validateChain(blocks.map((b) => b.body)).catch(() => null);
+                setChainResult(result);
+            }
+            message.success(`Fetched ${pems.length} certificate${pems.length === 1 ? "" : "s"} from ${host}:${resolvedPort}`);
+        } catch (e) {
+            message.error(e instanceof Error ? e.message : "Fetch failed");
+        } finally {
+            setLoading(false);
+        }
+    }, [urlInput, port, message]);
+
+    const copy = (text: string, label: string) => { copyToClipboard(text, label); message.success(label); };
+
+    return (
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <Card size="small" title="Enter URL or Hostname">
+                <Space.Compact style={{ width: "100%" }}>
+                    <Input
+                        size="large"
+                        prefix={<GlobalOutlined />}
+                        placeholder="example.com or https://example.com"
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        onPressEnter={fetch_and_inspect}
+                        style={{ flex: 1 }}
+                    />
+                    <InputNumber
+                        value={port}
+                        onChange={(v) => setPort(v ?? 443)}
+                        min={1}
+                        max={65535}
+                        style={{ width: 90 }}
+                        placeholder="Port"
+                    />
+                    <Button size="large" type="primary" icon={<SecurityScanOutlined />} loading={loading} onClick={fetch_and_inspect}>
+                        Inspect
+                    </Button>
+                </Space.Compact>
+                <Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
+                    Fetches the full certificate chain directly from the server — leaf + all intermediates + root CA.
+                    Everything is processed locally; no external services involved.
+                </Text>
+            </Card>
+
+            {certs.length === 0 && !loading && (
+                <Card size="small"><Empty description="Enter a URL to inspect its certificate chain" /></Card>
+            )}
+
+            {chainResult && (
+                <Alert
+                    type={chainResult.valid ? "success" : "warning"}
+                    icon={chainResult.valid ? <CheckCircleOutlined /> : <WarningOutlined />}
+                    showIcon
+                    message={
+                        chainResult.valid
+                            ? `Chain is valid — ${certs.length} certificate${certs.length === 1 ? "" : "s"} from ${fetchedHost}`
+                            : `${chainResult.issues.length} issue${chainResult.issues.length === 1 ? "" : "s"} found in chain`
+                    }
+                    description={
+                        !chainResult.valid && chainResult.issues.length > 0 && (
+                            <ul style={{ margin: "8px 0 0 0", paddingLeft: 20 }}>
+                                {chainResult.issues.map((i, idx) => <li key={idx}>{i}</li>)}
+                            </ul>
+                        )
+                    }
+                />
+            )}
+
+            {certs.map((cert, idx) => {
+                const role = idx === 0 ? "Leaf" : idx === certs.length - 1 ? (cert.parsed?.isSelfSigned ? "Root CA" : "Top of chain") : "Intermediate";
+                const roleColor = idx === 0 ? "blue" : idx === certs.length - 1 ? "purple" : "orange";
+                const p = cert.parsed;
+
+                return (
+                    <Collapse
+                        key={idx}
+                        defaultActiveKey={idx === 0 ? ["detail"] : []}
+                        items={[{
+                            key: "detail",
+                            label: (
+                                <Space wrap>
+                                    <Tag color={roleColor}>{role}</Tag>
+                                    <Text strong>{p?.subject.CN ?? `Certificate ${idx + 1}`}</Text>
+                                    {p?.isExpired && <Tag color="error" icon={<CloseCircleOutlined />}>EXPIRED</Tag>}
+                                    {p && !p.isExpired && p.daysUntilExpiry < 30 && (
+                                        <Tag color="warning" icon={<WarningOutlined />}>Expires in {p.daysUntilExpiry}d</Tag>
+                                    )}
+                                    {p && !p.isExpired && p.daysUntilExpiry >= 30 && (
+                                        <Tag color="success" icon={<CheckCircleOutlined />}>Valid</Tag>
+                                    )}
+                                </Space>
+                            ),
+                            children: p ? (
+                                <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                                    {/* ── Summary ── */}
+                                    <Descriptions bordered size="small" column={{ xs: 1, md: 2 }} labelStyle={{ width: 160 }}>
+                                        <Descriptions.Item label="Common Name" span={2}>{p.subject.CN ?? "—"}</Descriptions.Item>
+                                        <Descriptions.Item label="Issuer">{formatDN(p.issuer)}</Descriptions.Item>
+                                        <Descriptions.Item label="Serial">
+                                            <Text code style={{ fontSize: 11 }}>{p.serialNumber}</Text>
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="Algorithm">{p.signatureAlgorithm}</Descriptions.Item>
+                                        <Descriptions.Item label="Public Key">{p.publicKeyAlgorithm} {p.publicKeySize ? `${p.publicKeySize} bits` : ""}</Descriptions.Item>
+                                        <Descriptions.Item label="Valid From">{p.notBefore.toUTCString()}</Descriptions.Item>
+                                        <Descriptions.Item label="Valid Until">
+                                            <Space>
+                                                {p.notAfter.toUTCString()}
+                                                {p.isExpired
+                                                    ? <Tag color="error">EXPIRED</Tag>
+                                                    : p.daysUntilExpiry < 30
+                                                        ? <Tag color="warning">{p.daysUntilExpiry}d left</Tag>
+                                                        : <Tag color="success">{p.daysUntilExpiry}d left</Tag>
+                                                }
+                                            </Space>
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="Self-Signed">{p.isSelfSigned ? <Tag color="purple">Yes</Tag> : <Tag>No</Tag>}</Descriptions.Item>
+                                        {p.basicConstraints && (
+                                            <Descriptions.Item label="CA">
+                                                {p.basicConstraints.ca ? <Tag color="orange">CA: TRUE</Tag> : <Tag>CA: FALSE</Tag>}
+                                            </Descriptions.Item>
+                                        )}
+                                    </Descriptions>
+
+                                    {/* ── SANs ── */}
+                                    {p.sans.length > 0 && (
+                                        <Card size="small" title={`Subject Alternative Names (${p.sans.length})`}>
+                                            <Space wrap size={4}>
+                                                {p.sans.map((san, i) => (
+                                                    <Tag key={i} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}>{san}</Tag>
+                                                ))}
+                                            </Space>
+                                        </Card>
+                                    )}
+
+                                    {/* ── Key Usage ── */}
+                                    {(p.keyUsage.length > 0 || p.extendedKeyUsage.length > 0) && (
+                                        <Card size="small" title="Key Usage">
+                                            <Space direction="vertical" size={4}>
+                                                {p.keyUsage.length > 0 && (
+                                                    <div>
+                                                        <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>Key Usage:</Text>
+                                                        {p.keyUsage.map((u, i) => <Tag key={i} color="blue">{u}</Tag>)}
+                                                    </div>
+                                                )}
+                                                {p.extendedKeyUsage.length > 0 && (
+                                                    <div>
+                                                        <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>Extended:</Text>
+                                                        {p.extendedKeyUsage.map((u, i) => <Tag key={i} color="cyan">{u}</Tag>)}
+                                                    </div>
+                                                )}
+                                            </Space>
+                                        </Card>
+                                    )}
+
+                                    {/* ── Fingerprints ── */}
+                                    {cert.fps && (
+                                        <Card size="small" title="Fingerprints">
+                                            <Descriptions bordered size="small" column={1} labelStyle={{ width: 90 }}>
+                                                <Descriptions.Item label={<Space>SHA-256 <Tag color="success" style={{ fontSize: 10 }}>recommended</Tag></Space>}>
+                                                    <Space>
+                                                        <Text code style={{ fontSize: 11, wordBreak: "break-all" }}>{cert.fps.sha256}</Text>
+                                                        <Button size="small" icon={<CopyOutlined />} onClick={() => copy(cert.fps!.sha256, "SHA-256 copied")} />
+                                                    </Space>
+                                                </Descriptions.Item>
+                                                <Descriptions.Item label="SHA-1">
+                                                    <Space>
+                                                        <Text code style={{ fontSize: 11, wordBreak: "break-all" }}>{cert.fps.sha1}</Text>
+                                                        <Button size="small" icon={<CopyOutlined />} onClick={() => copy(cert.fps!.sha1, "SHA-1 copied")} />
+                                                    </Space>
+                                                </Descriptions.Item>
+                                                <Descriptions.Item label={<Space>MD5 <Tag color="warning" style={{ fontSize: 10 }}>legacy</Tag></Space>}>
+                                                    <Space>
+                                                        <Text code style={{ fontSize: 11, wordBreak: "break-all" }}>{cert.fps.md5}</Text>
+                                                        <Button size="small" icon={<CopyOutlined />} onClick={() => copy(cert.fps!.md5, "MD5 copied")} />
+                                                    </Space>
+                                                </Descriptions.Item>
+                                            </Descriptions>
+                                        </Card>
+                                    )}
+
+                                    {/* ── Raw PEM ── */}
+                                    <Card
+                                        size="small"
+                                        title="PEM"
+                                        extra={
+                                            <Button size="small" icon={<CopyOutlined />} onClick={() => copy(cert.pem, "PEM copied")}>Copy</Button>
+                                        }
+                                    >
+                                        <TextArea
+                                            rows={6}
+                                            value={cert.pem}
+                                            readOnly
+                                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
+                                        />
+                                    </Card>
+                                </Space>
+                            ) : (
+                                <Alert type="warning" message="Could not parse this certificate" showIcon />
+                            ),
+                        }]}
+                    />
+                );
+            })}
+        </Space>
+    );
 }
+
+// ─── Chain Validator tab (paste / upload) ─────────────────────────────────────
+
+function ChainValidatorTab() {
+    const { message } = App.useApp();
+    const [input, setInput] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState<ChainValidationResult | null>(null);
+    const [fetchHost, setFetchHost] = useState("");
+    const [fetchPort, setFetchPort] = useState<number>(443);
+    const [fetchLoading, setFetchLoading] = useState(false);
+
+    const validate = async () => {
+        if (!input.trim()) { message.warning("Paste at least one certificate"); return; }
+        const blocks = listPemBlocks(input).filter((b) => b.label === "CERTIFICATE");
+        if (blocks.length === 0) { message.error("No CERTIFICATE PEM blocks found"); return; }
+        setLoading(true);
+        try {
+            const r = await validateChain(blocks.map((b) => b.body));
+            setResult(r);
+            if (r.valid) message.success("Chain is valid");
+            else message.warning(`Found ${r.issues.length} issue${r.issues.length === 1 ? "" : "s"}`);
+        } catch (e) {
+            message.error(e instanceof Error ? e.message : "Validation failed");
+            setResult(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpload = (file: File) => {
+        const reader = new FileReader();
+        reader.onload = (e) => setInput((e.target?.result as string) ?? "");
+        reader.readAsText(file);
+        return false;
+    };
+
+    const handleFetch = async () => {
+        const raw = fetchHost.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+        const portMatch = raw.match(/:(\d+)$/);
+        const host = raw.replace(/:\d+$/, "");
+        const resolvedPort = portMatch ? parseInt(portMatch[1], 10) : fetchPort;
+        if (!host) { message.warning("Enter a hostname"); return; }
+        setFetchLoading(true);
+        try {
+            const res = await fetch(`/api/fetch-cert?host=${encodeURIComponent(host)}&port=${resolvedPort}`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+            const pems: string[] = data.pems ?? [];
+            if (pems.length === 0) throw new Error("No certificates returned");
+            setInput(pems.join("\n\n"));
+            message.success(`Fetched ${pems.length} cert${pems.length === 1 ? "" : "s"} from ${host}:${resolvedPort}`);
+        } catch (e) {
+            message.error(e instanceof Error ? e.message : "Fetch failed");
+        } finally {
+            setFetchLoading(false);
+        }
+    };
+
+    return (
+        <Space direction="vertical" style={{ width: "100%" }}>
+            <Card size="small" title="Fetch from URL">
+                <Space.Compact style={{ width: "100%" }}>
+                    <Input
+                        prefix={<GlobalOutlined />}
+                        placeholder="example.com"
+                        value={fetchHost}
+                        onChange={(e) => setFetchHost(e.target.value)}
+                        onPressEnter={handleFetch}
+                        style={{ flex: 1 }}
+                    />
+                    <InputNumber
+                        value={fetchPort}
+                        onChange={(v) => setFetchPort(v ?? 443)}
+                        min={1} max={65535}
+                        style={{ width: 90 }}
+                        placeholder="443"
+                    />
+                    <Button type="primary" loading={fetchLoading} onClick={handleFetch}>Fetch</Button>
+                </Space.Compact>
+                <Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
+                    Fetches the live certificate chain and populates the textarea below for validation.
+                </Text>
+            </Card>
+
+            <Card
+                size="small"
+                title="Certificate Chain (PEM, leaf first)"
+                extra={
+                    <Space size={4}>
+                        <Upload accept=".pem,.crt,.cer,.txt" beforeUpload={handleUpload} showUploadList={false}>
+                            <Button size="small" icon={<UploadOutlined />}>Upload</Button>
+                        </Upload>
+                        <Button size="small" onClick={() => setInput(SAMPLE)}>Sample</Button>
+                        <Button size="small" onClick={() => { setInput(""); setResult(null); }}>Clear</Button>
+                    </Space>
+                }
+            >
+                <TextArea
+                    rows={14}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Concatenated PEM certificates"
+                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
+                />
+                <div style={{ marginTop: 12 }}>
+                    <Button type="primary" icon={<AuditOutlined />} loading={loading} onClick={validate}>Validate Chain</Button>
+                </div>
+            </Card>
+
+            {!result ? (
+                <Card size="small"><Empty description="Validate a chain to see results" /></Card>
+            ) : (
+                <Space direction="vertical" style={{ width: "100%" }}>
+                    <Alert
+                        type={result.valid ? "success" : "error"}
+                        icon={result.valid ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+                        showIcon
+                        message={result.valid ? "Chain is valid" : `${result.issues.length} issue${result.issues.length === 1 ? "" : "s"} found`}
+                        description={
+                            !result.valid && (
+                                <ul style={{ margin: "8px 0 0 0", paddingLeft: 20 }}>
+                                    {result.issues.map((i, idx) => <li key={idx}>{i}</li>)}
+                                </ul>
+                            )
+                        }
+                    />
+                    <Card size="small" title={`Chain (${result.chain.length} certificate${result.chain.length === 1 ? "" : "s"})`}>
+                        <Steps
+                            direction="vertical"
+                            size="small"
+                            items={result.chain.map((c, i) => {
+                                const role = i === 0 ? "Leaf" : i === result.chain.length - 1 ? (c.isSelfSigned ? "Root CA" : "Top of chain") : "Intermediate";
+                                return {
+                                    title: (
+                                        <Space>
+                                            <Tag color="blue">{role}</Tag>
+                                            <Text strong>{c.subject.CN ?? formatDN(c.subject)}</Text>
+                                            {c.isExpired && <Tag color="error" icon={<WarningOutlined />}>EXPIRED</Tag>}
+                                            {!c.isExpired && c.daysUntilExpiry < 30 && (
+                                                <Tag color="warning" icon={<WarningOutlined />}>Expires in {c.daysUntilExpiry}d</Tag>
+                                            )}
+                                        </Space>
+                                    ),
+                                    description: (
+                                        <Descriptions size="small" column={1} style={{ marginTop: 8 }}>
+                                            <Descriptions.Item label="Issued by">{formatDN(c.issuer)}</Descriptions.Item>
+                                            <Descriptions.Item label="Public key">{c.publicKeyAlgorithm} {c.publicKeySize} bits</Descriptions.Item>
+                                            <Descriptions.Item label="Valid until">{c.notAfter.toUTCString()}</Descriptions.Item>
+                                            <Descriptions.Item label="SHA-256">
+                                                <Text code style={{ fontSize: 10, wordBreak: "break-all" }}>{c.fingerprintSha256}</Text>
+                                            </Descriptions.Item>
+                                        </Descriptions>
+                                    ),
+                                    status: c.isExpired ? "error" : "finish",
+                                };
+                            })}
+                        />
+                    </Card>
+                </Space>
+            )}
+        </Space>
+    );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CertificateChainValidatorPage() {
-    const { darkMode } = useAppStore();
-    const [chainInput, setChainInput] = useState("");
-    const [isValidating, setIsValidating] = useState(false);
-    const [result, setResult] = useState<ValidationResult | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const initialTab = searchParams.get("tab") ?? "live";
 
-    const parseCertificates = (pem: string): string[] => {
-        const certs: string[] = [];
-        const regex = /-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g;
-        let match;
-        while ((match = regex.exec(pem)) !== null) {
-            certs.push(match[0]);
-        }
-        return certs;
-    };
-
-    const extractCertInfo = (certPem: string, index: number): CertInfo => {
-        const base64 = certPem
-            .replace(/-----BEGIN CERTIFICATE-----/, "")
-            .replace(/-----END CERTIFICATE-----/, "")
-            .replaceAll(/\s/g, "");
-
-        const bytes = Uint8Array.from(atob(base64), c => c.codePointAt(0) || 0);
-        const str = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
-
-        // Extract common name patterns
-        const cnMatch = str.match(/[\x00-\x1f]([a-zA-Z0-9*.-]+\.[a-zA-Z]{2,})/);
-        const subject = cnMatch ? cnMatch[1] : `Certificate ${index + 1}`;
-
-        // Try to find issuer - usually follows subject
-        const issuer = subject; // Simplified
-
-        // Find dates
-        const now = new Date();
-        const validFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
-        const validTo = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year ahead
-
-        return {
-            index,
-            subject,
-            issuer,
-            validFrom,
-            validTo,
-            isExpired: validTo < now,
-            isSelfSigned: subject === issuer,
-            isCA: index > 0, // Assume non-leaf certs are CAs
-        };
-    };
-
-    const handleValidate = useCallback(async () => {
-        setIsValidating(true);
-        setResult(null);
-
-        try {
-            if (!chainInput.trim()) {
-                throw new Error("Please provide certificate chain");
-            }
-
-            const certPems = parseCertificates(chainInput);
-
-            if (certPems.length === 0) {
-                throw new Error("No valid certificates found in input");
-            }
-
-            const certificates: CertInfo[] = [];
-            const errors: string[] = [];
-            const warnings: string[] = [];
-
-            // Parse each certificate
-            for (let i = 0; i < certPems.length; i++) {
-                try {
-                    const certInfo = extractCertInfo(certPems[i], i);
-                    certificates.push(certInfo);
-
-                    if (certInfo.isExpired) {
-                        errors.push(`Certificate ${i + 1} (${certInfo.subject}) is expired`);
-                    }
-                } catch {
-                    errors.push(`Failed to parse certificate ${i + 1}`);
-                }
-            }
-
-            // Validate chain order
-            if (certificates.length >= 2) {
-                // Check if first cert is leaf (not CA)
-                if (certificates[0].isCA) {
-                    warnings.push("First certificate appears to be a CA certificate, not a leaf certificate");
-                }
-
-                // Check if last cert is root (self-signed)
-                const lastCert = certificates[certificates.length - 1];
-                if (!lastCert.isSelfSigned) {
-                    warnings.push("Chain may be incomplete - last certificate is not self-signed (root)");
-                }
-            }
-
-            // Check for single certificate
-            if (certificates.length === 1) {
-                warnings.push("Only one certificate provided - cannot validate chain");
-            }
-
-            const valid = errors.length === 0;
-
-            setResult({
-                valid,
-                certificates,
-                errors,
-                warnings,
-            });
-
-            if (valid) {
-                message.success("Certificate chain is valid!");
-            } else {
-                message.error("Certificate chain validation failed");
-            }
-        } catch (error) {
-            setResult({
-                valid: false,
-                certificates: [],
-                errors: [error instanceof Error ? error.message : "Unknown error"],
-                warnings: [],
-            });
-        } finally {
-            setIsValidating(false);
-        }
-    }, [chainInput]);
-
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            setChainInput(event.target?.result as string);
-            message.success(`Loaded ${file.name}`);
-        };
-        reader.onerror = () => message.error("Failed to read file");
-        reader.readAsText(file);
-        e.target.value = "";
+    const handleTabChange = (key: string) => {
+        router.replace(`?tab=${key}`, { scroll: false });
     };
 
     return (
         <ToolPageLayout
-            title="Certificate Chain Validator"
-            description="Validate certificate chains and verify trust hierarchy"
-            icon={<AuditOutlined style={{ fontSize: 24 }} />}
+            title="Certificate Chain & SSL"
+            description="Inspect live server certificates, validate chains, and verify trust hierarchy — all locally"
+            icon={<AuditOutlined style={{ fontSize: 24, color: "#13c2c2" }} />}
             color="#13c2c2"
             learnMore={{
-                whatIs: "A certificate chain (or chain of trust) is a sequence of certificates where each certificate is signed by the next one in the chain, ending with a root CA certificate. Validation ensures the chain is complete and all certificates are valid.",
-                whyUse: "Validating certificate chains is essential for SSL/TLS security. An invalid chain can cause browser warnings, connection failures, or security vulnerabilities. This tool helps debug certificate installation issues.",
+                whatIs:
+                    "A certificate chain (trust path) links a leaf certificate to a trusted root CA via intermediates. This tool fetches the live certificate chain from any server using a direct TLS connection — no external services — then decodes every cert's fields, SANs, key usage, fingerprints, and validates the chain signature.",
+                whyUse:
+                    "Everything runs locally: the server-side Route Handler opens a raw TLS socket, retrieves the chain, and your browser parses it with node-forge. No third-party requests. Misconfigured chains are the #1 cause of TLS errors; enter a URL and diagnose instantly.",
                 howToUse: [
-                    "Paste your certificate chain in PEM format",
-                    "Include all certificates: leaf, intermediate(s), and optionally root",
-                    "Click Validate to check the chain",
-                    "Review any errors or warnings",
-                    "Fix issues like missing intermediates or expired certificates",
+                    "Live Check: enter any URL or hostname to fetch and inspect the full certificate chain",
+                    "Chain Validator: paste PEM certificates manually or fetch then validate",
+                    "See decoded fields, SANs, fingerprints, expiry, and chain trust for every cert",
                 ],
                 tips: [
-                    "Order matters: leaf certificate first, root last",
-                    "Most chains need 2-4 certificates",
-                    "Missing intermediate certificates is the most common issue",
-                    "Root CA certificates are optional - browsers have their own trust stores",
-                    "Check certificate dates to ensure none are expired",
+                    "The leaf certificate is the server's own cert; intermediates link it to the root CA",
+                    "A self-signed root at the end is expected — browsers have their own root trust stores",
+                    "Check all SANs: the domain you're connecting to must match at least one SAN",
+                    "SHA-256 fingerprint uniquely identifies a certificate for pinning",
                 ],
                 useCases: [
-                    "Debugging SSL/TLS installation issues",
-                    "Verifying certificate chain before deployment",
-                    "Diagnosing 'certificate not trusted' errors",
-                    "Ensuring complete certificate chains for servers",
+                    "Debugging 'untrusted certificate' browser errors",
+                    "Verifying nginx/Apache sends the full chain (not just leaf)",
+                    "Auditing certificate expiry, SANs, and key strength",
+                    "SSL pinning — get the exact SHA-256 fingerprint",
                 ],
             }}
         >
-            <Card>
-                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-                    <div>
-                        <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <Text strong>Certificate Chain (PEM format)</Text>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".pem,.crt,.cer"
-                                onChange={handleFileUpload}
-                                aria-label="Upload certificate chain file"
-                                style={{ display: "none" }}
-                            />
-                            <Button
-                                icon={<UploadOutlined />}
-                                size="small"
-                                onClick={() => fileInputRef.current?.click()}
-                            >
-                                Upload File
-                            </Button>
-                        </div>
-                        <TextArea
-                            value={chainInput}
-                            onChange={(e) => setChainInput(e.target.value)}
-                            rows={12}
-                            style={{ fontFamily: "monospace" }}
-                            placeholder={`-----BEGIN CERTIFICATE-----
-(Leaf/Server certificate)
------END CERTIFICATE-----
------BEGIN CERTIFICATE-----
-(Intermediate CA certificate)
------END CERTIFICATE-----
------BEGIN CERTIFICATE-----
-(Root CA certificate - optional)
------END CERTIFICATE-----`}
-                        />
-                    </div>
-
-                    <Button
-                        type="primary"
-                        icon={<AuditOutlined />}
-                        onClick={handleValidate}
-                        loading={isValidating}
-                        size="large"
-                        block
-                    >
-                        Validate Chain
-                    </Button>
-
-                    {result && (
-                        <>
-                            <Divider />
-
-                            <Alert
-                                type={result.valid ? "success" : "error"}
-                                message={result.valid ? "Chain Valid" : "Chain Invalid"}
-                                description={
-                                    result.valid
-                                        ? `Successfully validated chain with ${result.certificates.length} certificate(s)`
-                                        : `Found ${result.errors.length} error(s) in the certificate chain`
-                                }
-                                showIcon
-                                icon={result.valid ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-                            />
-
-                            {result.errors.length > 0 && (
-                                <Alert
-                                    type="error"
-                                    message="Errors"
-                                    description={
-                                        <ul style={{ margin: 0, paddingLeft: 20 }}>
-                                            {result.errors.map((err, i) => (
-                                                <li key={i}>{err}</li>
-                                            ))}
-                                        </ul>
-                                    }
-                                    showIcon
-                                />
-                            )}
-
-                            {result.warnings.length > 0 && (
-                                <Alert
-                                    type="warning"
-                                    message="Warnings"
-                                    description={
-                                        <ul style={{ margin: 0, paddingLeft: 20 }}>
-                                            {result.warnings.map((warn, i) => (
-                                                <li key={i}>{warn}</li>
-                                            ))}
-                                        </ul>
-                                    }
-                                    showIcon
-                                />
-                            )}
-
-                            {result.certificates.length > 0 && (
-                                <div>
-                                    <Text strong style={{ display: "block", marginBottom: 12 }}>Certificate Chain</Text>
-                                    <Steps
-                                        direction="vertical"
-                                        current={-1}
-                                        items={result.certificates.map((cert, i) => ({
-                                            title: (
-                                                <Space>
-                                                    <Text strong>{cert.subject}</Text>
-                                                    {i === 0 && <Tag color="blue">Leaf</Tag>}
-                                                    {cert.isCA && <Tag color="purple">CA</Tag>}
-                                                    {cert.isSelfSigned && <Tag color="orange">Self-Signed</Tag>}
-                                                    {cert.isExpired && <Tag color="red">Expired</Tag>}
-                                                </Space>
-                                            ),
-                                            description: (
-                                                <Descriptions size="small" column={1}>
-                                                    <Descriptions.Item label="Issuer">{cert.issuer}</Descriptions.Item>
-                                                    <Descriptions.Item label="Valid">
-                                                        {cert.validFrom.toLocaleDateString()} - {cert.validTo.toLocaleDateString()}
-                                                    </Descriptions.Item>
-                                                </Descriptions>
-                                            ),
-                                            status: cert.isExpired ? "error" : "finish",
-                                            icon: cert.isExpired ? <CloseCircleOutlined /> : <SafetyCertificateOutlined />,
-                                        }))}
-                                    />
-                                </div>
-                            )}
-                        </>
-                    )}
-                </Space>
-            </Card>
+            <Tabs
+                activeKey={initialTab}
+                onChange={handleTabChange}
+                items={[
+                    {
+                        key: "live",
+                        label: <span><SecurityScanOutlined /> Live Server Check</span>,
+                        children: <LiveCheckTab />,
+                    },
+                    {
+                        key: "chain",
+                        label: <span><AuditOutlined /> Chain Validator</span>,
+                        children: <ChainValidatorTab />,
+                    },
+                ]}
+            />
         </ToolPageLayout>
     );
 }

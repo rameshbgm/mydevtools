@@ -472,7 +472,7 @@ export default function ApiRequestBuilderPage() {
         setTestResults(results);
     }, [testScript]);
 
-    // Send request
+    // Send request — all traffic is routed through /api/proxy to bypass CORS and TLS issues
     const sendRequest = async () => {
         setLoading(true);
         setResponse(null);
@@ -481,91 +481,82 @@ export default function ApiRequestBuilderPage() {
         setResponseSize(null);
         setTestResults([]);
 
-        const startTime = performance.now();
-
         try {
             const finalUrl = buildUrl();
             const headerObj = buildHeaders();
             const requestBody = buildBody();
 
-            // Don't set Content-Type for FormData (browser sets it with boundary)
-            if (bodyType === "form-data") {
-                delete headerObj["Content-Type"];
-            }
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), settings.timeout);
-
-            const options: RequestInit = {
-                method,
-                headers: headerObj,
-                signal: controller.signal,
-                redirect: settings.followRedirects ? "follow" : "manual",
-            };
+            // Serialize the body for the proxy.
+            // FormData is serialized to bytes via Response so the multipart boundary is preserved.
+            let proxyBody: string | null = null;
+            let bodyIsBase64 = false;
 
             if (requestBody !== null) {
-                options.body = requestBody as BodyInit;
-            }
-
-            const res = await fetch(finalUrl, options);
-            clearTimeout(timeoutId);
-
-            const endTime = performance.now();
-            const time = Math.round(endTime - startTime);
-            setResponseTime(time);
-            setStatus(res.status);
-
-            const respHeaders: Record<string, string> = {};
-            res.headers.forEach((value, key) => {
-                respHeaders[key] = value;
-            });
-            setResponseHeaders(respHeaders);
-
-            const contentType = res.headers.get("content-type") || "";
-            let data: string;
-
-            const blob = await res.blob();
-            setResponseSize(blob.size);
-
-            if (contentType.includes("application/json")) {
-                const text = await blob.text();
-                try {
-                    const json = JSON.parse(text);
-                    data = JSON.stringify(json, null, 2);
-                } catch {
-                    data = text;
+                if (requestBody instanceof FormData) {
+                    // Let the browser serialize FormData (adds Content-Type with boundary)
+                    const serialized = new Response(requestBody);
+                    const contentType = serialized.headers.get("content-type");
+                    if (contentType) headerObj["Content-Type"] = contentType;
+                    const buf = await serialized.arrayBuffer();
+                    proxyBody = btoa(String.fromCharCode(...new Uint8Array(buf)));
+                    bodyIsBase64 = true;
+                } else {
+                    proxyBody = requestBody as string;
+                    bodyIsBase64 = false;
                 }
-            } else if (contentType.includes("xml") || contentType.includes("html")) {
-                data = await blob.text();
-            } else {
-                data = await blob.text();
             }
 
-            setResponse(data);
+            const proxyReq = {
+                url: finalUrl,
+                method,
+                headers: headerObj,
+                body: proxyBody,
+                bodyIsBase64,
+                timeout: settings.timeout,
+                followRedirects: settings.followRedirects,
+            };
 
-            // Add to history
+            const proxyRes = await fetch("/api/proxy", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(proxyReq),
+            });
+
+            const data = await proxyRes.json();
+
+            if (!proxyRes.ok && data.error) {
+                throw new Error(data.error);
+            }
+
+            setResponseTime(data.timing ?? 0);
+            setStatus(data.status ?? 0);
+            setResponseHeaders(data.headers ?? {});
+            setResponseSize(data.size ?? 0);
+
+            // Pretty-print JSON if applicable
+            const contentType: string = data.headers?.["content-type"] ?? "";
+            let bodyText: string = data.body ?? "";
+            if (!data.bodyIsBase64 && contentType.includes("application/json")) {
+                try {
+                    bodyText = JSON.stringify(JSON.parse(bodyText), null, 2);
+                } catch { /* leave as-is */ }
+            }
+            setResponse(bodyText);
+
             const historyItem: HistoryItem = {
                 id: generateId(),
                 method,
                 url: finalUrl,
-                status: res.status,
-                time,
+                status: data.status ?? 0,
+                time: data.timing ?? 0,
                 timestamp: new Date().toISOString(),
             };
             persistHistory([historyItem, ...history]);
 
-            // Run tests
-            runTestScript(data, res.status, respHeaders, time);
+            runTestScript(bodyText, data.status ?? 0, data.headers ?? {}, data.timing ?? 0);
 
         } catch (err: any) {
-            const endTime = performance.now();
-            setResponseTime(Math.round(endTime - startTime));
-
-            if (err.name === "AbortError") {
-                setResponse(`Error: Request timeout after ${settings.timeout}ms`);
-            } else {
-                setResponse(`Error: ${err.message}`);
-            }
+            setResponse(`Error: ${err.message}`);
             setStatus(0);
         } finally {
             setLoading(false);

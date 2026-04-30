@@ -1,272 +1,274 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { Input, Typography, Card, Button, Space, message, Alert, Tabs, Form, Descriptions, Tag, Divider } from "antd";
+import React, { useState } from "react";
+import { Card, Tabs, Input, Button, Space, App, Upload, Alert, Typography, Tag, Descriptions } from "antd";
 import {
     LockOutlined,
-    UnlockOutlined,
     UploadOutlined,
     DownloadOutlined,
-    SafetyCertificateOutlined,
     KeyOutlined,
-    InfoCircleOutlined,
+    SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { copyToClipboard } from "@/lib/clipboard";
+import {
+    readPkcs12,
+    createPkcs12,
+    formatDN,
+    downloadBytes,
+    type Pkcs12Bundle,
+} from "@/lib/cert-utils";
 
 const { TextArea } = Input;
 const { Text } = Typography;
 
-interface PKCS12Contents {
-    certificates: string[];
-    privateKey: string | null;
-    friendlyName: string | null;
-}
-
-export default function PKCS12ToolPage() {
-    const [activeTab, setActiveTab] = useState("info");
-    const [password, setPassword] = useState("");
-    const [fileData, setFileData] = useState<ArrayBuffer | null>(null);
-    const [fileName, setFileName] = useState("");
-    const [pemCert, setPemCert] = useState("");
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [pemKey, setPemKey] = useState("");
-    const [exportPassword, setExportPassword] = useState("");
-    const [contents, setContents] = useState<PKCS12Contents | null>(null);
-
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) {
-            return;
-        }
-
-        setFileName(file.name);
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            setFileData(event.target?.result as ArrayBuffer);
-            message.success(`Loaded ${file.name}`);
-        };
-        reader.onerror = () => message.error("Failed to read file");
-        reader.readAsArrayBuffer(file);
-        e.target.value = "";
-    };
-
-    const handleAnalyze = useCallback(async () => {
-        if (!fileData) {
-            message.warning("Please upload a PKCS#12 file first");
-            return;
-        }
-
-        // Note: Full PKCS#12 parsing requires ASN.1 library
-        // This is a simplified implementation showing the structure
-        try {
-            const bytes = new Uint8Array(fileData);
-
-            // Check for PKCS#12 signature (ASN.1 SEQUENCE)
-            if (bytes[0] !== 0x30) {
-                throw new Error("Invalid PKCS#12 file format");
-            }
-
-            // Simplified analysis - in production use forge or similar
-            setContents({
-                certificates: ["Certificate detected (full parsing requires password)"],
-                privateKey: "Private key present (encrypted)",
-                friendlyName: fileName.replace(/\.(p12|pfx)$/i, ""),
-            });
-
-            message.info("PKCS#12 file structure detected. Full parsing requires a crypto library.");
-        } catch (error) {
-            message.error(error instanceof Error ? error.message : "Failed to analyze file");
-        }
-    }, [fileData, fileName]);
-
-    const handleCreatePKCS12 = useCallback(async () => {
-        if (!pemCert.trim()) {
-            message.warning("Please provide a certificate");
-            return;
-        }
-        if (!exportPassword) {
-            message.warning("Please provide a password for the PKCS#12 file");
-            return;
-        }
-
-        // Note: Creating PKCS#12 requires forge or similar library
-        // This shows the UI flow - actual implementation needs crypto lib
-        message.info("PKCS#12 creation requires a cryptographic library like node-forge");
-    }, [pemCert, pemKey, exportPassword]);
-
+export default function Pkcs12Page() {
     return (
         <ToolPageLayout
-            title="PKCS#12 Tool"
-            description="Work with PKCS#12/PFX certificate bundles"
-            icon={<LockOutlined style={{ fontSize: 24 }} />}
-            color="#eb2f96"
+            title="PKCS#12 / PFX Tool"
+            description="Read, create and convert PKCS#12 (.pfx / .p12) keystores"
+            icon={<LockOutlined style={{ fontSize: 24, color: "#f5222d" }} />}
+            color="#f5222d"
             learnMore={{
-                whatIs: "PKCS#12 (also known as PFX) is a binary format for storing a certificate chain and private key in a single encrypted file. It's protected by a password and commonly used for certificate transport and backup.",
-                whyUse: "PKCS#12 files are the standard way to export/import certificates with their private keys. They're used for code signing, SSL/TLS certificate deployment, email certificates (S/MIME), and certificate backup.",
+                whatIs:
+                    "PKCS#12 (.pfx / .p12) is a password-protected binary keystore that bundles a certificate, its private key, and any intermediate CA certs into a single file. It's the standard format for distributing TLS server identities to Windows IIS, Java applications (after conversion to JKS), and many cloud platforms.",
+                whyUse:
+                    "Generate a .p12 from PEM files, extract the private key + certs from a customer-supplied .p12, or inspect what's inside one before deploying. All processing happens locally in your browser — passwords never leave your machine.",
                 howToUse: [
-                    "Upload a .p12 or .pfx file to analyze its contents",
-                    "Enter the password to decrypt and extract contents",
-                    "Or create a new PKCS#12 from PEM certificate and key",
-                    "Download the bundled certificate file",
+                    "Read tab: upload a .p12/.pfx, enter password, see all bundled certs and keys",
+                    "Create tab: paste a certificate PEM and private key PEM, set a password, download the .p12",
                 ],
                 tips: [
-                    "Always use strong passwords for PKCS#12 files",
-                    "Keep backup copies of important certificates",
-                    "Some systems use .p12, others use .pfx - they're the same format",
-                    "Windows Certificate Manager can import/export PKCS#12",
-                    "Java keytool can convert between JKS and PKCS#12",
+                    "PKCS#12 supports SHA1, 3DES, AES — node-forge uses 3DES for max compatibility",
+                    "Lost the password? It cannot be recovered — start over with a new keystore",
+                    "Java's keytool reads modern .p12 files since Java 9",
                 ],
                 useCases: [
-                    "Exporting certificates from one server to another",
-                    "Backing up SSL/TLS certificates with private keys",
-                    "Importing code signing certificates",
-                    "Converting between certificate formats",
+                    "Importing a TLS cert into Windows IIS",
+                    "Splitting a vendor-supplied .pfx into separate .crt and .key files",
+                    "Creating a portable client-auth keystore",
                 ],
             }}
         >
-            <Card>
-                <Tabs
-                    activeKey={activeTab}
-                    onChange={setActiveTab}
-                    items={[
-                        {
-                            key: "info",
-                            label: (
-                                <span><InfoCircleOutlined /> Analyze PKCS#12</span>
-                            ),
-                            children: (
-                                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-                                    <Alert
-                                        message="Note"
-                                        description="Full PKCS#12 parsing and creation requires a cryptographic library. This tool demonstrates the workflow and basic structure detection."
-                                        type="info"
-                                        showIcon
-                                    />
-
-                                    <div>
-                                        <Text strong style={{ display: "block", marginBottom: 8 }}>Upload PKCS#12/PFX File</Text>
-                                        <Space>
-                                            <input
-                                                ref={fileInputRef}
-                                                type="file"
-                                                accept=".p12,.pfx"
-                                                onChange={handleFileUpload}
-                                                aria-label="Upload PKCS#12/PFX file"
-                                                style={{ display: "none" }}
-                                            />
-                                            <Button
-                                                icon={<UploadOutlined />}
-                                                onClick={() => fileInputRef.current?.click()}
-                                            >
-                                                Select File
-                                            </Button>
-                                            {fileName && <Tag color="blue">{fileName}</Tag>}
-                                        </Space>
-                                    </div>
-
-                                    <Form layout="vertical">
-                                        <Form.Item label="Password">
-                                            <Input.Password
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
-                                                placeholder="Enter PKCS#12 password"
-                                            />
-                                        </Form.Item>
-                                    </Form>
-
-                                    <Button
-                                        type="primary"
-                                        icon={<UnlockOutlined />}
-                                        onClick={handleAnalyze}
-                                        disabled={!fileData}
-                                        block
-                                    >
-                                        Analyze File
-                                    </Button>
-
-                                    {contents && (
-                                        <>
-                                            <Divider />
-                                            <Descriptions bordered column={1} title="File Contents">
-                                                <Descriptions.Item label={<><SafetyCertificateOutlined /> Certificates</>}>
-                                                    {contents.certificates.map((cert, i) => (
-                                                        <Tag key={i} color="green">{cert}</Tag>
-                                                    ))}
-                                                </Descriptions.Item>
-                                                <Descriptions.Item label={<><KeyOutlined /> Private Key</>}>
-                                                    {contents.privateKey ? (
-                                                        <Tag color="red">{contents.privateKey}</Tag>
-                                                    ) : (
-                                                        <Tag>None</Tag>
-                                                    )}
-                                                </Descriptions.Item>
-                                                <Descriptions.Item label="Friendly Name">
-                                                    {contents.friendlyName || "N/A"}
-                                                </Descriptions.Item>
-                                            </Descriptions>
-                                        </>
-                                    )}
-                                </Space>
-                            ),
-                        },
-                        {
-                            key: "create",
-                            label: (
-                                <span><LockOutlined /> Create PKCS#12</span>
-                            ),
-                            children: (
-                                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-                                    <Alert
-                                        message="Create PKCS#12 Bundle"
-                                        description="Combine a certificate and private key into a password-protected PKCS#12 file"
-                                        type="info"
-                                        showIcon
-                                    />
-
-                                    <Form layout="vertical">
-                                        <Form.Item label="Certificate (PEM format)" required>
-                                            <TextArea
-                                                value={pemCert}
-                                                onChange={(e) => setPemCert(e.target.value)}
-                                                rows={6}
-                                                style={{ fontFamily: "monospace" }}
-                                                placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
-                                            />
-                                        </Form.Item>
-
-                                        <Form.Item label="Private Key (PEM format)">
-                                            <TextArea
-                                                value={pemKey}
-                                                onChange={(e) => setPemKey(e.target.value)}
-                                                rows={6}
-                                                style={{ fontFamily: "monospace" }}
-                                                placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"
-                                            />
-                                        </Form.Item>
-
-                                        <Form.Item label="Export Password" required>
-                                            <Input.Password
-                                                value={exportPassword}
-                                                onChange={(e) => setExportPassword(e.target.value)}
-                                                placeholder="Password to protect the PKCS#12 file"
-                                            />
-                                        </Form.Item>
-                                    </Form>
-
-                                    <Button
-                                        type="primary"
-                                        icon={<DownloadOutlined />}
-                                        onClick={handleCreatePKCS12}
-                                        block
-                                    >
-                                        Create PKCS#12 File
-                                    </Button>
-                                </Space>
-                            ),
-                        },
-                    ]}
-                />
-            </Card>
+            <Tabs
+                size="large"
+                items={[
+                    { key: "read", label: "Read PKCS#12", children: <ReadPkcs12 /> },
+                    { key: "create", label: "Create PKCS#12", children: <CreatePkcs12 /> },
+                ]}
+            />
         </ToolPageLayout>
+    );
+}
+
+function ReadPkcs12() {
+    const { message } = App.useApp();
+    const [bytes, setBytes] = useState<Uint8Array | null>(null);
+    const [filename, setFilename] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [bundle, setBundle] = useState<Pkcs12Bundle | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleUpload = (file: File) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const buf = e.target?.result as ArrayBuffer;
+            setBytes(new Uint8Array(buf));
+            setFilename(file.name);
+            setBundle(null);
+            setError(null);
+        };
+        reader.readAsArrayBuffer(file);
+        return false;
+    };
+
+    const handleRead = async () => {
+        if (!bytes) {
+            message.warning("Upload a .p12 / .pfx file first");
+            return;
+        }
+        setLoading(true);
+        setError(null);
+        try {
+            const result = await readPkcs12(bytes, password);
+            setBundle(result);
+            message.success("PKCS#12 unlocked");
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : "Failed to read keystore";
+            setError(msg.includes("MAC") || msg.toLowerCase().includes("password") ? "Wrong password" : msg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Card>
+            <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                <Upload accept=".p12,.pfx" beforeUpload={handleUpload} showUploadList={false} maxCount={1}>
+                    <Button icon={<UploadOutlined />} size="large">{filename || "Upload .p12 or .pfx"}</Button>
+                </Upload>
+                <Input.Password
+                    placeholder="Keystore password (empty if none)"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                />
+                <Button type="primary" icon={<LockOutlined />} onClick={handleRead} loading={loading} disabled={!bytes}>
+                    Unlock & Inspect
+                </Button>
+                {error && <Alert type="error" message={error} showIcon />}
+                {bundle && <Pkcs12Result bundle={bundle} />}
+            </Space>
+        </Card>
+    );
+}
+
+function Pkcs12Result({ bundle }: { bundle: Pkcs12Bundle }) {
+    const { message } = App.useApp();
+    const copy = (text: string, label: string) => { copyToClipboard(text, label); message.success(label); };
+
+    return (
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <Alert
+                type="success"
+                message={
+                    <Space wrap>
+                        {bundle.certificate ? <Tag icon={<SafetyCertificateOutlined />} color="success">Cert: {bundle.certificate.subject.CN ?? "?"}</Tag> : null}
+                        {bundle.privateKeyPem && <Tag icon={<KeyOutlined />} color="processing">Private key</Tag>}
+                        <Tag color="default">Chain: {bundle.chain.length} cert{bundle.chain.length === 1 ? "" : "s"}</Tag>
+                        {bundle.friendlyName && <Tag>Friendly: {bundle.friendlyName}</Tag>}
+                    </Space>
+                }
+            />
+            {bundle.certificate && (
+                <Card size="small" title="Leaf Certificate">
+                    <Descriptions bordered size="small" column={1}>
+                        <Descriptions.Item label="Subject">{formatDN(bundle.certificate.subject)}</Descriptions.Item>
+                        <Descriptions.Item label="Issuer">{formatDN(bundle.certificate.issuer)}</Descriptions.Item>
+                        <Descriptions.Item label="Valid From">{bundle.certificate.notBefore.toUTCString()}</Descriptions.Item>
+                        <Descriptions.Item label="Valid Until">{bundle.certificate.notAfter.toUTCString()}</Descriptions.Item>
+                        <Descriptions.Item label="Public Key">{bundle.certificate.publicKeyAlgorithm} {bundle.certificate.publicKeySize} bits</Descriptions.Item>
+                        <Descriptions.Item label="SHA-256 Fingerprint">
+                            <Text code style={{ fontSize: 10, wordBreak: "break-all" }}>{bundle.certificate.fingerprintSha256}</Text>
+                        </Descriptions.Item>
+                    </Descriptions>
+                    <div style={{ marginTop: 12 }}>
+                        <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadBytes(new TextEncoder().encode(bundle.certificate!.pem), `${bundle.certificate!.subject.CN ?? "cert"}.pem`, "application/x-pem-file")}>
+                            Download cert PEM
+                        </Button>
+                    </div>
+                </Card>
+            )}
+            {bundle.privateKeyPem && (
+                <Card size="small" title="Private Key" extra={<Tag color="warning">⚠ keep secret</Tag>}>
+                    <TextArea rows={6} value={bundle.privateKeyPem} readOnly style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }} />
+                    <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+                        <Button size="small" onClick={() => copy(bundle.privateKeyPem!, "Private key copied")}>Copy</Button>
+                        <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadBytes(new TextEncoder().encode(bundle.privateKeyPem!), "private.key", "application/x-pem-file")}>Download .key</Button>
+                    </div>
+                </Card>
+            )}
+            {bundle.chain.length > 0 && (
+                <Card size="small" title={`Chain (${bundle.chain.length})`}>
+                    {bundle.chain.map((c, i) => (
+                        <div key={i} style={{ marginBottom: 8, padding: 8, background: "rgba(0,0,0,0.04)", borderRadius: 6 }}>
+                            <Text strong>{c.subject.CN ?? `Chain cert #${i + 1}`}</Text> — issued by {c.issuer.CN ?? "?"}
+                        </div>
+                    ))}
+                </Card>
+            )}
+        </Space>
+    );
+}
+
+function CreatePkcs12() {
+    const { message } = App.useApp();
+    const [certPem, setCertPem] = useState("");
+    const [keyPem, setKeyPem] = useState("");
+    const [chainPem, setChainPem] = useState("");
+    const [password, setPassword] = useState("");
+    const [name, setName] = useState("mydevtools");
+    const [loading, setLoading] = useState(false);
+
+    const handleCreate = () => {
+        if (!certPem.trim() || !keyPem.trim()) {
+            message.warning("Provide both a certificate and a private key");
+            return;
+        }
+        if (!password) {
+            message.warning("Set a keystore password");
+            return;
+        }
+        setLoading(true);
+        try {
+            const chainPems = chainPem.trim()
+                ? chainPem.split(/(?=-----BEGIN)/g).map((s) => s.trim()).filter(Boolean)
+                : [];
+            const bytes = createPkcs12({
+                certificatePem: certPem,
+                privateKeyPem: keyPem,
+                chainPems,
+                password,
+                friendlyName: name,
+            });
+            downloadBytes(bytes, `${name}.p12`, "application/x-pkcs12");
+            message.success(`Generated ${name}.p12`);
+        } catch (e) {
+            message.error(e instanceof Error ? e.message : "Failed to create PKCS#12");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Card>
+            <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                <div className="tool-split-pane" style={{ gap: 16 }}>
+                    <div>
+                        <Text strong>Certificate (PEM)</Text>
+                        <TextArea
+                            rows={8}
+                            value={certPem}
+                            onChange={(e) => setCertPem(e.target.value)}
+                            placeholder="-----BEGIN CERTIFICATE-----…"
+                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, marginTop: 4 }}
+                        />
+                    </div>
+                    <div>
+                        <Text strong>Private Key (PEM)</Text>
+                        <TextArea
+                            rows={8}
+                            value={keyPem}
+                            onChange={(e) => setKeyPem(e.target.value)}
+                            placeholder="-----BEGIN RSA PRIVATE KEY----- (or PRIVATE KEY)"
+                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, marginTop: 4 }}
+                        />
+                    </div>
+                </div>
+                <div>
+                    <Text strong>Chain Certificates (optional, PEM, can be multiple concatenated)</Text>
+                    <TextArea
+                        rows={4}
+                        value={chainPem}
+                        onChange={(e) => setChainPem(e.target.value)}
+                        placeholder="Intermediate CAs and root CA, in order"
+                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, marginTop: 4 }}
+                    />
+                </div>
+                <div className="tool-split-pane" style={{ gap: 16 }}>
+                    <div>
+                        <Text strong>Friendly Name</Text>
+                        <Input value={name} onChange={(e) => setName(e.target.value)} style={{ marginTop: 4 }} />
+                    </div>
+                    <div>
+                        <Text strong>Password</Text>
+                        <Input.Password value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Keystore password" style={{ marginTop: 4 }} />
+                    </div>
+                </div>
+                <Button type="primary" size="large" icon={<DownloadOutlined />} onClick={handleCreate} loading={loading}>
+                    Create & Download .p12
+                </Button>
+            </Space>
+        </Card>
     );
 }
