@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Input, Typography, Card, Button, Space, App, Select, InputNumber, Divider, Collapse, Tag, Form, Checkbox, Tabs, Alert, Row, Col } from "antd";
 import {
     BuildOutlined,
@@ -1206,7 +1207,19 @@ ${sanEntries.join("\n")}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function CertificateGeneratorPage() {
+const VALID_TABS = ["self-signed", "csr"] as const;
+type TabKey = typeof VALID_TABS[number];
+
+function CertificateGeneratorPageContent() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const tabParam = searchParams.get("tab");
+    const activeTab: TabKey = VALID_TABS.includes(tabParam as TabKey) ? (tabParam as TabKey) : "self-signed";
+
+    const handleTabChange = (key: string) => {
+        router.replace(`?tab=${key}`, { scroll: false });
+    };
+
     return (
         <ToolPageLayout
             title="Certificate & CSR Generator"
@@ -1237,7 +1250,8 @@ export default function CertificateGeneratorPage() {
             }}
         >
             <Tabs
-                defaultActiveKey="self-signed"
+                activeKey={activeTab}
+                onChange={handleTabChange}
                 items={[
                     {
                         key: "self-signed",
@@ -1252,5 +1266,13 @@ export default function CertificateGeneratorPage() {
                 ]}
             />
         </ToolPageLayout>
+    );
+}
+
+export default function CertificateGeneratorPage() {
+    return (
+        <Suspense>
+            <CertificateGeneratorPageContent />
+        </Suspense>
     );
 }

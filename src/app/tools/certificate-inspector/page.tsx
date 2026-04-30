@@ -1030,24 +1030,25 @@ export default function CertificateInspectorPage() {
                 />
 
                 {/* URL fetch row */}
-                <Space.Compact style={{ width: "100%" }}>
+                <div style={{ display: "flex", gap: 0 }}>
                     <Input
                         prefix={<GlobalOutlined style={{ color: "#8c8c8c" }} />}
                         placeholder="example.com or https://example.com"
                         value={urlInput}
                         onChange={(e) => setUrlInput(e.target.value)}
                         onPressEnter={handleFetch}
-                        style={{ flex: 1 }}
+                        style={{ flex: 1, borderRadius: "6px 0 0 6px" }}
                     />
                     <Button
                         type="primary"
                         icon={<GlobalOutlined />}
                         loading={fetchLoading}
                         onClick={handleFetch}
+                        style={{ borderRadius: "0 6px 6px 0" }}
                     >
                         Fetch
                     </Button>
-                </Space.Compact>
+                </div>
             </Card>
 
             {/* ── Tabbed Actions ── */}

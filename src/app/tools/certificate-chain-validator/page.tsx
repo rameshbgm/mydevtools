@@ -75,17 +75,17 @@ function LiveCheckTab() {
     const [fetchedHost, setFetchedHost] = useState<string>("");
 
     const fetch_and_inspect = useCallback(async () => {
-        const host = urlInput.trim()
-            .replace(/^https?:\/\//, "")
-            .replace(/\/.*$/, "")
-            .replace(/:\d+$/, "");
+        const raw = urlInput.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+        const portMatch = raw.match(/:(\d+)$/);
+        const host = raw.replace(/:\d+$/, "");
+        const resolvedPort = portMatch ? parseInt(portMatch[1], 10) : port;
         if (!host) { message.warning("Enter a hostname or URL"); return; }
 
         setLoading(true);
         setCerts([]);
         setChainResult(null);
         try {
-            const res = await fetch(`/api/fetch-cert?host=${encodeURIComponent(host)}&port=${port}`);
+            const res = await fetch(`/api/fetch-cert?host=${encodeURIComponent(host)}&port=${resolvedPort}`);
             const data = await res.json();
             if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
 
@@ -111,7 +111,7 @@ function LiveCheckTab() {
                 const result = await validateChain(blocks.map((b) => b.body)).catch(() => null);
                 setChainResult(result);
             }
-            message.success(`Fetched ${pems.length} certificate${pems.length === 1 ? "" : "s"} from ${host}:${port}`);
+            message.success(`Fetched ${pems.length} certificate${pems.length === 1 ? "" : "s"} from ${host}:${resolvedPort}`);
         } catch (e) {
             message.error(e instanceof Error ? e.message : "Fetch failed");
         } finally {
@@ -352,17 +352,20 @@ function ChainValidatorTab() {
     };
 
     const handleFetch = async () => {
-        const host = fetchHost.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/:\d+$/, "");
+        const raw = fetchHost.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+        const portMatch = raw.match(/:(\d+)$/);
+        const host = raw.replace(/:\d+$/, "");
+        const resolvedPort = portMatch ? parseInt(portMatch[1], 10) : fetchPort;
         if (!host) { message.warning("Enter a hostname"); return; }
         setFetchLoading(true);
         try {
-            const res = await fetch(`/api/fetch-cert?host=${encodeURIComponent(host)}&port=${fetchPort}`);
+            const res = await fetch(`/api/fetch-cert?host=${encodeURIComponent(host)}&port=${resolvedPort}`);
             const data = await res.json();
             if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
             const pems: string[] = data.pems ?? [];
             if (pems.length === 0) throw new Error("No certificates returned");
             setInput(pems.join("\n\n"));
-            message.success(`Fetched ${pems.length} cert${pems.length === 1 ? "" : "s"} from ${host}:${fetchPort}`);
+            message.success(`Fetched ${pems.length} cert${pems.length === 1 ? "" : "s"} from ${host}:${resolvedPort}`);
         } catch (e) {
             message.error(e instanceof Error ? e.message : "Fetch failed");
         } finally {
