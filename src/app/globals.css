@@ -143,6 +143,162 @@
 .animated-tagline {
   /* Animation handled by Framer Motion */
   animation: none;
+  transition: all 0.3s ease;
+}
+
+.webgl-title-wrap {
+  width: min(1000px, 94vw);
+  height: clamp(96px, 13vw, 150px);
+  margin: 0 auto -10px;
+  position: relative;
+}
+
+.webgl-title-wrap::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: 10px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0));
+  filter: blur(18px);
+}
+
+.webgl-title-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.neon-text {
+  margin: 0 0 -10px;
+  font-size: clamp(42px, 8.5vw, 110px);
+  line-height: 1.04;
+  letter-spacing: 0.02em;
+  font-weight: 800;
+  text-align: center;
+  color: #ffffff;
+  font-family: "Segoe UI", "Arial Black", sans-serif;
+  text-shadow:
+    0 0 5px #ff005e,
+    0 0 10px #ff005e,
+    0 0 20px #ff005e,
+    0 0 40px #ff005e,
+    0 0 80px #ff005e;
+  animation: neon-glow 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes neon-glow {
+  0% {
+    text-shadow:
+      0 0 5px #ff005e,
+      0 0 10px #ff005e,
+      0 0 20px #ff005e,
+      0 0 40px #ff005e,
+      0 0 80px #ff005e;
+  }
+  100% {
+    text-shadow:
+      0 0 10px #00d4ff,
+      0 0 20px #00d4ff,
+      0 0 40px #00d4ff,
+      0 0 80px #00d4ff,
+      0 0 160px #00d4ff;
+  }
+}
+
+.story-card-redesign {
+  max-width: min(940px, 92vw);
+  margin: 0 auto;
+  text-align: left;
+  border-radius: 18px;
+  padding: clamp(16px, 2.6vw, 24px);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, 0.82), rgba(19, 29, 58, 0.75));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 38px rgba(0, 0, 0, 0.28);
+}
+
+.story-headline {
+  margin: 0 0 8px;
+  font-size: clamp(17px, 1.7vw, 24px);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #e5e7eb;
+}
+
+.story-body {
+  margin: 0 0 12px;
+  font-size: clamp(13px, 1.1vw, 15px);
+  line-height: 1.68;
+  color: #cbd5e1;
+}
+
+.story-points {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 7px;
+}
+
+.story-points li {
+  font-size: clamp(12px, 1.03vw, 14px);
+  line-height: 1.65;
+  color: #d1d5db;
+}
+
+/* Matrix Style - Monospace, Cyberpunk terminal look */
+.matrix-style {
+  font-family: "Courier New", "Lucida Console", "Consolas", monospace;
+  letter-spacing: 0.015em;
+  font-weight: 600;
+  text-shadow:
+    0 0 8px rgba(34, 197, 94, 0.35),
+    0 0 14px rgba(74, 222, 128, 0.26);
+  color: #bbf7d0;
+}
+
+/* Sci-Fi Style 1 - Futuristic geometric */
+.sci-fi-style-1 {
+  font-family: "Menlo", "Consolas", "SFMono-Regular", "Liberation Mono", monospace;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+  color: #dbeafe;
+}
+
+/* Sci-Fi Style 2 - Tech minimal */
+.sci-fi-style-2 {
+  font-family: "Monaco", "Menlo", "Andale Mono", "Courier New", monospace;
+  letter-spacing: 0.03em;
+  font-weight: 400;
+  color: #f5d0fe;
+}
+
+/* Tech Style 1 - Modern tech */
+.tech-style-1 {
+  font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0.01em;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+/* Tech Style 2 - Clean modern */
+.tech-style-2 {
+  font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+  color: #f8fafc;
+}
+
+/* Futuristic Style */
+.futuristic-style {
+  font-family: "Gill Sans", "Trebuchet MS", "Segoe UI", sans-serif;
+  letter-spacing: 0.075em;
+  font-weight: 700;
+  font-size: 0.96em;
+  text-transform: uppercase;
+  color: #fef3c7;
 }
 
 .tool-mention {
@@ -153,12 +309,12 @@
   font-weight: 600;
   position: relative;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: inline-block;
+  display: inline;
+  font-style: italic;
 }
 
 .tool-mention:hover {
   filter: brightness(1.3);
-  text-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
 }
 
 @theme inline {

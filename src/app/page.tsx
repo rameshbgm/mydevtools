@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
     Card,
@@ -26,7 +26,29 @@ import {
 } from "@/lib/tools-registry";
 import { useAppStore } from "@/lib/store";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
+
+interface DeveloperStory {
+    text: string;
+}
+
+// Story cards rotate randomly every 20 seconds.
+const DEVELOPER_STORIES = [
+    { text: "API incident debug: JSON Formatter and JSON Validator clean incoming payloads, then JSON Diff shows exactly what changed between stable and failing responses." },
+    { text: "Authentication flow check: JWT Decoder verifies claims, JWS Sign & Verify confirms signatures, and HMAC Generator reproduces backend signing logic." },
+    { text: "Certificate troubleshooting: Certificate Inspector reveals metadata while Certificate Chain & SSL pinpoints missing intermediate certificates." },
+    { text: "Data conversion workflow: XML to JSON Converter and JSON to XML Converter keep partner payloads aligned across services." },
+    { text: "Gateway validation: Base64 Encode / Decode and URL Encode / Decode help verify header transforms before production rollout." },
+    { text: "Reporting cleanup: CSV to JSON Converter plus SQL Formatter standardize analytics inputs for repeatable exports." },
+    { text: "Input hardening: Email Validator, Credit Card Validator, and Regex Tester block malformed values before database writes." },
+    { text: "Legacy integration support: WSDL Parser and SOAP Client reproduce enterprise requests and validate envelopes quickly." },
+    { text: "Developer docs update: Markdown Table Generator and Markdown Preview keep release notes consistent and readable." },
+    { text: "Release QA pass: XML Validator and Text Diff compare final outputs to ensure only intended changes are shipped." },
+] satisfies DeveloperStory[];
+
+const FONT_STYLES = [
+    "matrix-style",
+];
 
 const container = {
     hidden: {},
@@ -48,11 +70,139 @@ const fadeIn = {
     show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
+const TOOL_NAMES = [
+    "JSON Formatter",
+    "JSON Validator",
+    "Regex Tester",
+    "JSON Diff",
+    "URL Parser",
+    "API Request Builder",
+    "Swagger / OpenAPI Viewer",
+    "HTTP Status Codes Reference",
+    "JWT Decoder",
+    "JWS Sign & Verify",
+    "HMAC Generator",
+    "JWE Encrypt & Decrypt",
+    "JWK Generator",
+    "AES Encrypt & Decrypt",
+    "Certificate Inspector",
+    "Certificate Chain & SSL",
+    "Certificate & CSR Generator",
+    "PKCS#12 / PFX Tool",
+    "XML to JSON Converter",
+    "JSON to XML Converter",
+    "YAML ↔ JSON Converter",
+    "CSV to JSON Converter",
+    "JSON to CSV Converter",
+    "SQL Formatter",
+    "Timestamp Converter",
+    "Email Validator",
+    "Credit Card Validator",
+    "XSD Schema Validator",
+    "Text Diff",
+    "XML Diff",
+    "XPath Tester",
+    "IP Address Tools",
+    "Subnet Calculator",
+    "Port Number Reference",
+    "UUID Generator",
+    "Password Generator",
+    "Unix Permissions Calculator",
+    "String Case Converter",
+    "Text Manipulation Tools",
+    "String Escape / Unescape",
+    "Base64 Encode / Decode",
+    "URL Encode / Decode",
+    "WSDL Parser",
+    "SOAP Client",
+    "MIME Types Reference",
+    "Markdown Table Generator",
+    "Markdown Preview",
+    "Code Explainer",
+    "Slug Generator",
+    "Unicode Converter",
+    "Number Base Converter",
+    "RFC Standards Reference",
+    "Cron Expression Parser",
+    "JSONPath Tester",
+    "Java POJO Generator",
+    "JSON to TypeScript",
+    "CSV to XML Converter",
+    "XML Formatter",
+    "Gzip Compress / Decompress",
+    "SSH Key Generator",
+    "Key Pair Generator",
+    "Lorem Ipsum Generator",
+    "Text Summarizer",
+    "MAC Address Tools",
+    "IP Ranges Reference",
+    "RAG Document Q&A",
+    "BCrypt Hash & Verify",
+    "YAML Formatter",
+    "HTML Formatter",
+    "XML Validator",
+];
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const TOOL_PATTERN = new RegExp(
+    `(${[...TOOL_NAMES].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|")})`,
+    "gi"
+);
+
+const renderStoryWithHighlights = (story: string) => {
+    const parts = story.split(TOOL_PATTERN);
+    if (parts.length === 1) return story;
+
+    return parts.map((part, index) =>
+        index % 2 === 1 ? (
+            <span key={`tool-${part}-${index}`} className="tool-mention">
+                {part}
+            </span>
+        ) : (
+            part
+        )
+    );
+};
+
+const pickNextRandomIndex = (length: number, currentIndex: number) => {
+    if (length <= 1) return 0;
+    let next = currentIndex;
+    while (next === currentIndex) {
+        next = Math.floor(Math.random() * length);
+    }
+    return next;
+};
+
 export default function Dashboard() {
     const router = useRouter();
     const { darkMode, recentTools, addRecentTool, clearRecentTools, setNavigating } = useAppStore();
     const [search, setSearch] = useState("");
     const [searchFocused, setSearchFocused] = useState(false);
+    const [storyIndex, setStoryIndex] = useState(0);
+    const [fontStyle, setFontStyle] = useState("matrix-style");
+
+    // Initialize with random story on mount
+    useEffect(() => {
+        const randomIdx = Math.floor(Math.random() * DEVELOPER_STORIES.length);
+        const randomFont = FONT_STYLES[Math.floor(Math.random() * FONT_STYLES.length)];
+        setStoryIndex(randomIdx);
+        setFontStyle(randomFont);
+    }, []);
+
+    // Change story every 20 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const randomIdx = pickNextRandomIndex(DEVELOPER_STORIES.length, storyIndex);
+            const currentFontIndex = FONT_STYLES.indexOf(fontStyle);
+            const nextFontIndex = pickNextRandomIndex(FONT_STYLES.length, currentFontIndex);
+            const randomFont = FONT_STYLES[nextFontIndex];
+            setStoryIndex(randomIdx);
+            setFontStyle(randomFont);
+        }, 20000);
+
+        return () => clearInterval(interval);
+    }, [storyIndex, fontStyle]);
 
     const allCategorized = useMemo(() => getToolsByCategory(), []);
 
@@ -88,6 +238,7 @@ export default function Dashboard() {
         total: toolsRegistry.length,
         categories: allCategorized.size,
     };
+    const currentStory = DEVELOPER_STORIES[storyIndex];
 
     return (
         <div style={{ width: "100%" }}>
@@ -96,10 +247,10 @@ export default function Dashboard() {
                 variants={fadeIn}
                 initial="hidden"
                 animate="show"
-                style={{ textAlign: "center", marginBottom: 48 }}
+                style={{ textAlign: "center", marginBottom: 56 }}
             >
                 {/* Privacy badge row */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
                     {[
                         { icon: "⚡", label: `${stats.total} tools`, color: "#8b5cf6" },
                         { icon: "🔒", label: "100% Private", color: "#10b981" },
@@ -136,74 +287,27 @@ export default function Dashboard() {
                     transition={{ duration: 0.8, ease: "easeOut" }}
                     style={{ textAlign: "center", marginBottom: 48 }}
                 >
-                    <Title
-                        level={1}
-                        className="gradient-text"
-                        style={{
-                            fontSize: "clamp(48px, 12vw, 96px)",
-                            fontWeight: 900,
-                            marginBottom: 24,
-                            lineHeight: 1.05,
-                            maxWidth: "90%",
-                            margin: "0 auto 24px",
-                        }}
-                    >
-                        My Dev Tools
-                    </Title>
+                    <h1 className="neon-text">My Dev Tools</h1>
 
                     <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.3, duration: 0.6 }}
-                        style={{
-                            maxWidth: "86vw",
-                            margin: "0 auto 40px",
-                            padding: "0 3vw",
-                        }}
-                    >
-                        <Paragraph
-                            style={{
-                                fontSize: "clamp(13px, 1.2vw, 15px)",
-                                color: darkMode ? "#555" : "#9a9a9a",
-                                margin: 0,
-                                lineHeight: 1.6,
-                            }}
-                        >
-                            100% private · Zero data sent · Works offline
-                        </Paragraph>
-                    </motion.div>
-
-                    <motion.div
+                        key={storyIndex}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5, duration: 0.6 }}
-                        className="animated-tagline"
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ delay: 0.25, duration: 0.5 }}
+                        className={`animated-tagline ${fontStyle}`}
                         style={{
-                            fontSize: "clamp(15px, 1.5vw, 18px)",
-                            color: darkMode ? "#a3a3a3" : "#525252",
-                            maxWidth: "86vw",
-                            margin: "0 auto 10px",
-                            padding: "0 3vw",
-                            fontWeight: 400,
-                            lineHeight: 1.75,
+                            fontSize: "clamp(12px, 0.92vw, 14px)",
+                            color: darkMode ? "#a7f3d0" : "#166534",
+                            maxWidth: "82vw",
+                            margin: "40px auto 10px",
+                            padding: 0,
+                            fontWeight: 500,
+                            lineHeight: 1.35,
+                            textAlign: "center",
                         }}
                     >
-                        Paste your <span className="tool-mention">JSON API response</span>, extract the{" "}
-                        <span className="tool-mention">JWT token</span>, validate with{" "}
-                        <span className="tool-mention">regex</span>, <span className="tool-mention">decode</span> the payload,{" "}
-                        <span className="tool-mention">hash</span> passwords for storage, generate a{" "}
-                        <span className="tool-mention">UUID</span> for sessions,{" "}
-                        <span className="tool-mention">encode base64</span> for databases,{" "}
-                        <span className="tool-mention">diff</span> versions, check your{" "}
-                        <span className="tool-mention">SSL certificate</span>, convert to{" "}
-                        <span className="tool-mention">XML</span>, create a{" "}
-                        <span className="tool-mention">QR code</span>, analyze{" "}
-                        <span className="tool-mention">colors</span>, format{" "}
-                        <span className="tool-mention">SQL queries</span>, and compress everything — all{" "}
-                        <span style={{ color: darkMode ? "#a78bfa" : "#6d28d9", fontWeight: 600 }}>
-                            running privately in your browser
-                        </span>
-                        .
+                        {renderStoryWithHighlights(currentStory.text)}
                     </motion.div>
                 </motion.div>
 
