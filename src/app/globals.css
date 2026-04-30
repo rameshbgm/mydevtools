@@ -173,36 +173,33 @@
   margin: 0 0 -10px;
   font-size: clamp(42px, 8.5vw, 110px);
   line-height: 1.04;
-  letter-spacing: 0.02em;
-  font-weight: 800;
+  letter-spacing: 0.035em;
+  font-weight: 700;
   text-align: center;
   color: #ffffff;
-  font-family: "Segoe UI", "Arial Black", sans-serif;
+  font-family: "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
   text-shadow:
-    0 0 5px #ff005e,
-    0 0 10px #ff005e,
-    0 0 20px #ff005e,
-    0 0 40px #ff005e,
-    0 0 80px #ff005e;
+    0 0 3px rgba(255, 0, 94, 0.9),
+    0 0 7px rgba(255, 0, 94, 0.75),
+    0 0 14px rgba(255, 0, 94, 0.6),
+    0 0 24px rgba(255, 0, 94, 0.45);
   animation: neon-glow 1.5s infinite alternate ease-in-out;
 }
 
 @keyframes neon-glow {
   0% {
     text-shadow:
-      0 0 5px #ff005e,
-      0 0 10px #ff005e,
-      0 0 20px #ff005e,
-      0 0 40px #ff005e,
-      0 0 80px #ff005e;
+      0 0 3px rgba(255, 0, 94, 0.9),
+      0 0 7px rgba(255, 0, 94, 0.75),
+      0 0 14px rgba(255, 0, 94, 0.6),
+      0 0 24px rgba(255, 0, 94, 0.45);
   }
   100% {
     text-shadow:
-      0 0 10px #00d4ff,
-      0 0 20px #00d4ff,
-      0 0 40px #00d4ff,
-      0 0 80px #00d4ff,
-      0 0 160px #00d4ff;
+      0 0 5px rgba(0, 212, 255, 0.9),
+      0 0 10px rgba(0, 212, 255, 0.75),
+      0 0 20px rgba(0, 212, 255, 0.55),
+      0 0 34px rgba(0, 212, 255, 0.4);
   }
 }
 
@@ -250,13 +247,12 @@
 
 /* Matrix Style - Monospace, Cyberpunk terminal look */
 .matrix-style {
-  font-family: "Courier New", "Lucida Console", "Consolas", monospace;
-  letter-spacing: 0.015em;
-  font-weight: 600;
+  font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0.02em;
+  font-weight: 500;
   text-shadow:
-    0 0 8px rgba(34, 197, 94, 0.35),
-    0 0 14px rgba(74, 222, 128, 0.26);
-  color: #bbf7d0;
+    0 0 4px rgba(34, 197, 94, 0.16);
+  color: #d1fae5;
 }
 
 /* Sci-Fi Style 1 - Futuristic geometric */
