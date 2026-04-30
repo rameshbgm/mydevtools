@@ -17,6 +17,10 @@
 /.next/
 /out/
 
+# Monaco editor — auto-copied by `npm run copy-monaco` (postinstall hook).
+# Self-hosted to avoid cdn.jsdelivr.net runtime fetch.
+/public/monaco/
+
 # production
 /build
 

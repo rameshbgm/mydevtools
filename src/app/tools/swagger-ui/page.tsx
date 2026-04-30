@@ -1,10 +1,21 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { Button, Card, App, Upload } from "antd";
+import React, { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
+import { Button, Card, App, Upload, Spin } from "antd";
 import { ApiOutlined, UploadOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import "swagger-ui-react/swagger-ui.css";
+
+const SwaggerUI = dynamic(() => import("swagger-ui-react"), {
+    ssr: false,
+    loading: () => (
+        <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
+            <Spin size="large" />
+        </div>
+    ),
+});
 
 const SAMPLE_SPEC = `{
   "openapi": "3.0.0",
@@ -109,78 +120,40 @@ const SAMPLE_SPEC = `{
 }`;
 
 function SwaggerViewer({ spec, onBack }: { spec: string; onBack: () => void }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [srcdoc, setSrcdoc] = useState("");
+    // Parse the spec once; pass the parsed object directly to swagger-ui-react.
+    // Using `spec` (not `url`) prop keeps everything offline — no fetch.
+    const parsedSpec = useMemo(() => {
+        try {
+            return JSON.parse(spec);
+        } catch {
+            return null;
+        }
+    }, [spec]);
 
-  useEffect(() => {
-    let encodedSpec: string;
-    try {
-      encodedSpec = JSON.stringify(JSON.parse(spec));
-    } catch {
-      encodedSpec = "{}";
-    }
-
-    // Use srcdoc + base href so all unpkg asset paths resolve correctly.
-    // StandaloneLayout is omitted intentionally — BaseLayout renders all
-    // endpoints, schemas, "Try it out" and the full request/response cycle
-    // without needing the standalone preset's extra chrome.
-    setSrcdoc(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <base href="https://unpkg.com/swagger-ui-dist@5.17.14/" />
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css" />
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; background: #fafafa; font-family: sans-serif; }
-    .swagger-ui .topbar { display: none !important; }
-    .swagger-ui .information-container { padding: 20px 20px 0; }
-    .swagger-ui .wrapper { padding: 0 20px 20px; }
-  </style>
-</head>
-<body>
-  <div id="swagger-ui"></div>
-  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js" crossorigin></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      var spec = ${encodedSpec};
-      SwaggerUIBundle({
-        spec: spec,
-        dom_id: '#swagger-ui',
-        presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
-        plugins: [SwaggerUIBundle.plugins.DownloadUrl],
-        layout: 'BaseLayout',
-        tryItOutEnabled: true,
-        displayRequestDuration: true,
-        defaultModelsExpandDepth: 2,
-        defaultModelExpandDepth: 2,
-        docExpansion: 'list',
-        filter: true,
-        showExtensions: true,
-        showCommonExtensions: true,
-        deepLinking: true,
-        supportedSubmitMethods: ['get','post','put','delete','patch','head','options','trace'],
-      });
-    });
-  </script>
-</body>
-</html>`);
-  }, [spec]);
-
-  return (
-    <>
-      <Button style={{ marginBottom: 16 }} onClick={onBack}>← Back to Editor</Button>
-      <Card styles={{ body: { padding: 0, overflow: "hidden", borderRadius: 8 } }}>
-        <iframe
-          ref={iframeRef}
-          srcDoc={srcdoc}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
-          style={{ width: "100%", height: 780, border: "none", borderRadius: 8, display: "block" }}
-          title="Swagger UI"
-        />
-      </Card>
-    </>
-  );
+    return (
+        <>
+            <Button style={{ marginBottom: 16 }} onClick={onBack}>← Back to Editor</Button>
+            <Card styles={{ body: { padding: 0, overflow: "hidden", borderRadius: 8 } }}>
+                <div style={{ padding: 8 }}>
+                    {parsedSpec ? (
+                        <SwaggerUI
+                            spec={parsedSpec}
+                            tryItOutEnabled
+                            displayRequestDuration
+                            defaultModelsExpandDepth={2}
+                            defaultModelExpandDepth={2}
+                            docExpansion="list"
+                            filter
+                            deepLinking
+                            supportedSubmitMethods={["get", "post", "put", "delete", "patch", "head", "options", "trace"]}
+                        />
+                    ) : (
+                        <div style={{ padding: 40, textAlign: "center" }}>Invalid spec</div>
+                    )}
+                </div>
+            </Card>
+        </>
+    );
 }
 
 export default function SwaggerPage() {

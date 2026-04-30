@@ -2,10 +2,19 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { loader } from "@monaco-editor/react";
 import { useAppStore } from "@/lib/store";
 import { Spin, Button, Tooltip } from "antd";
 import { CopyOutlined, CheckOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
+
+// Self-host Monaco editor — by default @monaco-editor/react loads core from
+// cdn.jsdelivr.net which leaks user IP/UA on every tool open. We ship the
+// monaco-editor/min/vs directory in /public/monaco/vs so everything stays
+// in-browser and offline-friendly.
+if (typeof window !== "undefined") {
+    loader.config({ paths: { vs: "/monaco/vs" } });
+}
 
 function useIsMobile(breakpoint = 768) {
     const [isMobile, setIsMobile] = useState(false);
