@@ -538,7 +538,7 @@ export const toolsRegistry: ToolDefinition[] = [
     {
         id: "certificate-chain-validator",
         name: "Certificate Chain & SSL",
-        description: "Validate certificate chains and trust hierarchy; search Certificate Transparency logs by domain",
+        description: "Inspect live server certificate chains, validate trust hierarchy, and decode every cert field — all locally via direct TLS connection",
         icon: AuditOutlined,
         category: "Certificates & Keys",
         tags: ["certificate", "chain", "validate", "trust", "ca", "root", "intermediate", "ssl", "tls", "ct", "crt.sh", "domain"],

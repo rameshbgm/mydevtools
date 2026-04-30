@@ -1,7 +1,24 @@
 "use client";
 
-import React, { useState } from "react";
-import { Card, Input, Button, Space, App, Alert, Tag, Steps, Typography, Upload, Empty, Descriptions, Table, InputNumber, Tabs } from "antd";
+import React, { useState, useCallback } from "react";
+import {
+    Card,
+    Input,
+    Button,
+    Space,
+    App,
+    Alert,
+    Tag,
+    Steps,
+    Typography,
+    Upload,
+    Empty,
+    Descriptions,
+    Tabs,
+    InputNumber,
+    Collapse,
+    Segmented,
+} from "antd";
 import {
     AuditOutlined,
     UploadOutlined,
@@ -10,9 +27,20 @@ import {
     WarningOutlined,
     GlobalOutlined,
     SecurityScanOutlined,
+    CopyOutlined,
 } from "@ant-design/icons";
+import { useSearchParams, useRouter } from "next/navigation";
 import ToolPageLayout from "@/components/ToolPageLayout";
-import { listPemBlocks, validateChain, formatDN, type ChainValidationResult } from "@/lib/cert-utils";
+import { copyToClipboard } from "@/lib/clipboard";
+import {
+    listPemBlocks,
+    validateChain,
+    parseCertificate,
+    fingerprint,
+    formatDN,
+    type ChainValidationResult,
+    type ParsedCertificate,
+} from "@/lib/cert-utils";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -29,47 +57,279 @@ const SAMPLE = `Paste the leaf certificate first, followed by intermediates, roo
 (root CA)
 -----END CERTIFICATE-----`;
 
-interface CrtShEntry {
-    issuer_ca_id: number;
-    issuer_name: string;
-    common_name: string;
-    name_value: string;
-    id: number;
-    entry_timestamp: string;
-    not_before: string;
-    not_after: string;
-    serial_number: string;
+interface LiveCert {
+    pem: string;
+    parsed: ParsedCertificate | null;
+    fps: { sha1: string; sha256: string; md5: string } | null;
 }
 
-export default function CertificateChainValidatorPage() {
-    const { message } = App.useApp();
+// ─── Live Server Check tab ─────────────────────────────────────────────────────
 
-    // Chain Validator state
+function LiveCheckTab() {
+    const { message } = App.useApp();
+    const [urlInput, setUrlInput] = useState("");
+    const [port, setPort] = useState<number>(443);
+    const [loading, setLoading] = useState(false);
+    const [certs, setCerts] = useState<LiveCert[]>([]);
+    const [chainResult, setChainResult] = useState<ChainValidationResult | null>(null);
+    const [fetchedHost, setFetchedHost] = useState<string>("");
+
+    const fetch_and_inspect = useCallback(async () => {
+        const host = urlInput.trim()
+            .replace(/^https?:\/\//, "")
+            .replace(/\/.*$/, "")
+            .replace(/:\d+$/, "");
+        if (!host) { message.warning("Enter a hostname or URL"); return; }
+
+        setLoading(true);
+        setCerts([]);
+        setChainResult(null);
+        try {
+            const res = await fetch(`/api/fetch-cert?host=${encodeURIComponent(host)}&port=${port}`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+
+            const pems: string[] = data.pems ?? [];
+            if (pems.length === 0) throw new Error("No certificates returned from server");
+
+            // Parse each cert and compute fingerprints locally — no external calls
+            const liveCerts: LiveCert[] = await Promise.all(
+                pems.map(async (pem) => {
+                    const [parsed, fps] = await Promise.all([
+                        parseCertificate(pem).catch(() => null),
+                        fingerprint(pem).catch(() => null),
+                    ]);
+                    return { pem, parsed, fps };
+                })
+            );
+            setCerts(liveCerts);
+            setFetchedHost(host);
+
+            // Validate chain locally
+            const blocks = listPemBlocks(pems.join("\n\n")).filter((b) => b.label === "CERTIFICATE");
+            if (blocks.length > 0) {
+                const result = await validateChain(blocks.map((b) => b.body)).catch(() => null);
+                setChainResult(result);
+            }
+            message.success(`Fetched ${pems.length} certificate${pems.length === 1 ? "" : "s"} from ${host}:${port}`);
+        } catch (e) {
+            message.error(e instanceof Error ? e.message : "Fetch failed");
+        } finally {
+            setLoading(false);
+        }
+    }, [urlInput, port, message]);
+
+    const copy = (text: string, label: string) => { copyToClipboard(text, label); message.success(label); };
+
+    return (
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <Card size="small" title="Enter URL or Hostname">
+                <Space.Compact style={{ width: "100%" }}>
+                    <Input
+                        size="large"
+                        prefix={<GlobalOutlined />}
+                        placeholder="example.com or https://example.com"
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        onPressEnter={fetch_and_inspect}
+                        style={{ flex: 1 }}
+                    />
+                    <InputNumber
+                        value={port}
+                        onChange={(v) => setPort(v ?? 443)}
+                        min={1}
+                        max={65535}
+                        style={{ width: 90 }}
+                        placeholder="Port"
+                    />
+                    <Button size="large" type="primary" icon={<SecurityScanOutlined />} loading={loading} onClick={fetch_and_inspect}>
+                        Inspect
+                    </Button>
+                </Space.Compact>
+                <Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
+                    Fetches the full certificate chain directly from the server — leaf + all intermediates + root CA.
+                    Everything is processed locally; no external services involved.
+                </Text>
+            </Card>
+
+            {certs.length === 0 && !loading && (
+                <Card size="small"><Empty description="Enter a URL to inspect its certificate chain" /></Card>
+            )}
+
+            {chainResult && (
+                <Alert
+                    type={chainResult.valid ? "success" : "warning"}
+                    icon={chainResult.valid ? <CheckCircleOutlined /> : <WarningOutlined />}
+                    showIcon
+                    message={
+                        chainResult.valid
+                            ? `Chain is valid — ${certs.length} certificate${certs.length === 1 ? "" : "s"} from ${fetchedHost}`
+                            : `${chainResult.issues.length} issue${chainResult.issues.length === 1 ? "" : "s"} found in chain`
+                    }
+                    description={
+                        !chainResult.valid && chainResult.issues.length > 0 && (
+                            <ul style={{ margin: "8px 0 0 0", paddingLeft: 20 }}>
+                                {chainResult.issues.map((i, idx) => <li key={idx}>{i}</li>)}
+                            </ul>
+                        )
+                    }
+                />
+            )}
+
+            {certs.map((cert, idx) => {
+                const role = idx === 0 ? "Leaf" : idx === certs.length - 1 ? (cert.parsed?.isSelfSigned ? "Root CA" : "Top of chain") : "Intermediate";
+                const roleColor = idx === 0 ? "blue" : idx === certs.length - 1 ? "purple" : "orange";
+                const p = cert.parsed;
+
+                return (
+                    <Collapse
+                        key={idx}
+                        defaultActiveKey={idx === 0 ? ["detail"] : []}
+                        items={[{
+                            key: "detail",
+                            label: (
+                                <Space wrap>
+                                    <Tag color={roleColor}>{role}</Tag>
+                                    <Text strong>{p?.subject.CN ?? `Certificate ${idx + 1}`}</Text>
+                                    {p?.isExpired && <Tag color="error" icon={<CloseCircleOutlined />}>EXPIRED</Tag>}
+                                    {p && !p.isExpired && p.daysUntilExpiry < 30 && (
+                                        <Tag color="warning" icon={<WarningOutlined />}>Expires in {p.daysUntilExpiry}d</Tag>
+                                    )}
+                                    {p && !p.isExpired && p.daysUntilExpiry >= 30 && (
+                                        <Tag color="success" icon={<CheckCircleOutlined />}>Valid</Tag>
+                                    )}
+                                </Space>
+                            ),
+                            children: p ? (
+                                <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                                    {/* ── Summary ── */}
+                                    <Descriptions bordered size="small" column={{ xs: 1, md: 2 }} labelStyle={{ width: 160 }}>
+                                        <Descriptions.Item label="Common Name" span={2}>{p.subject.CN ?? "—"}</Descriptions.Item>
+                                        <Descriptions.Item label="Issuer">{formatDN(p.issuer)}</Descriptions.Item>
+                                        <Descriptions.Item label="Serial">
+                                            <Text code style={{ fontSize: 11 }}>{p.serialNumber}</Text>
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="Algorithm">{p.signatureAlgorithm}</Descriptions.Item>
+                                        <Descriptions.Item label="Public Key">{p.publicKeyAlgorithm} {p.publicKeySize ? `${p.publicKeySize} bits` : ""}</Descriptions.Item>
+                                        <Descriptions.Item label="Valid From">{p.notBefore.toUTCString()}</Descriptions.Item>
+                                        <Descriptions.Item label="Valid Until">
+                                            <Space>
+                                                {p.notAfter.toUTCString()}
+                                                {p.isExpired
+                                                    ? <Tag color="error">EXPIRED</Tag>
+                                                    : p.daysUntilExpiry < 30
+                                                        ? <Tag color="warning">{p.daysUntilExpiry}d left</Tag>
+                                                        : <Tag color="success">{p.daysUntilExpiry}d left</Tag>
+                                                }
+                                            </Space>
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="Self-Signed">{p.isSelfSigned ? <Tag color="purple">Yes</Tag> : <Tag>No</Tag>}</Descriptions.Item>
+                                        {p.basicConstraints && (
+                                            <Descriptions.Item label="CA">
+                                                {p.basicConstraints.ca ? <Tag color="orange">CA: TRUE</Tag> : <Tag>CA: FALSE</Tag>}
+                                            </Descriptions.Item>
+                                        )}
+                                    </Descriptions>
+
+                                    {/* ── SANs ── */}
+                                    {p.sans.length > 0 && (
+                                        <Card size="small" title={`Subject Alternative Names (${p.sans.length})`}>
+                                            <Space wrap size={4}>
+                                                {p.sans.map((san, i) => (
+                                                    <Tag key={i} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}>{san}</Tag>
+                                                ))}
+                                            </Space>
+                                        </Card>
+                                    )}
+
+                                    {/* ── Key Usage ── */}
+                                    {(p.keyUsage.length > 0 || p.extendedKeyUsage.length > 0) && (
+                                        <Card size="small" title="Key Usage">
+                                            <Space direction="vertical" size={4}>
+                                                {p.keyUsage.length > 0 && (
+                                                    <div>
+                                                        <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>Key Usage:</Text>
+                                                        {p.keyUsage.map((u, i) => <Tag key={i} color="blue">{u}</Tag>)}
+                                                    </div>
+                                                )}
+                                                {p.extendedKeyUsage.length > 0 && (
+                                                    <div>
+                                                        <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>Extended:</Text>
+                                                        {p.extendedKeyUsage.map((u, i) => <Tag key={i} color="cyan">{u}</Tag>)}
+                                                    </div>
+                                                )}
+                                            </Space>
+                                        </Card>
+                                    )}
+
+                                    {/* ── Fingerprints ── */}
+                                    {cert.fps && (
+                                        <Card size="small" title="Fingerprints">
+                                            <Descriptions bordered size="small" column={1} labelStyle={{ width: 90 }}>
+                                                <Descriptions.Item label={<Space>SHA-256 <Tag color="success" style={{ fontSize: 10 }}>recommended</Tag></Space>}>
+                                                    <Space>
+                                                        <Text code style={{ fontSize: 11, wordBreak: "break-all" }}>{cert.fps.sha256}</Text>
+                                                        <Button size="small" icon={<CopyOutlined />} onClick={() => copy(cert.fps!.sha256, "SHA-256 copied")} />
+                                                    </Space>
+                                                </Descriptions.Item>
+                                                <Descriptions.Item label="SHA-1">
+                                                    <Space>
+                                                        <Text code style={{ fontSize: 11, wordBreak: "break-all" }}>{cert.fps.sha1}</Text>
+                                                        <Button size="small" icon={<CopyOutlined />} onClick={() => copy(cert.fps!.sha1, "SHA-1 copied")} />
+                                                    </Space>
+                                                </Descriptions.Item>
+                                                <Descriptions.Item label={<Space>MD5 <Tag color="warning" style={{ fontSize: 10 }}>legacy</Tag></Space>}>
+                                                    <Space>
+                                                        <Text code style={{ fontSize: 11, wordBreak: "break-all" }}>{cert.fps.md5}</Text>
+                                                        <Button size="small" icon={<CopyOutlined />} onClick={() => copy(cert.fps!.md5, "MD5 copied")} />
+                                                    </Space>
+                                                </Descriptions.Item>
+                                            </Descriptions>
+                                        </Card>
+                                    )}
+
+                                    {/* ── Raw PEM ── */}
+                                    <Card
+                                        size="small"
+                                        title="PEM"
+                                        extra={
+                                            <Button size="small" icon={<CopyOutlined />} onClick={() => copy(cert.pem, "PEM copied")}>Copy</Button>
+                                        }
+                                    >
+                                        <TextArea
+                                            rows={6}
+                                            value={cert.pem}
+                                            readOnly
+                                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
+                                        />
+                                    </Card>
+                                </Space>
+                            ) : (
+                                <Alert type="warning" message="Could not parse this certificate" showIcon />
+                            ),
+                        }]}
+                    />
+                );
+            })}
+        </Space>
+    );
+}
+
+// ─── Chain Validator tab (paste / upload) ─────────────────────────────────────
+
+function ChainValidatorTab() {
+    const { message } = App.useApp();
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<ChainValidationResult | null>(null);
-
-    // Fetch from URL state
     const [fetchHost, setFetchHost] = useState("");
     const [fetchPort, setFetchPort] = useState<number>(443);
     const [fetchLoading, setFetchLoading] = useState(false);
 
-    // CT Log Search state
-    const [domain, setDomain] = useState("");
-    const [ctLoading, setCtLoading] = useState(false);
-    const [ctResults, setCtResults] = useState<CrtShEntry[] | null>(null);
-    const [ctError, setCtError] = useState<string | null>(null);
-
     const validate = async () => {
-        if (!input.trim()) {
-            message.warning("Paste at least one certificate");
-            return;
-        }
+        if (!input.trim()) { message.warning("Paste at least one certificate"); return; }
         const blocks = listPemBlocks(input).filter((b) => b.label === "CERTIFICATE");
-        if (blocks.length === 0) {
-            message.error("No CERTIFICATE PEM blocks found");
-            return;
-        }
+        if (blocks.length === 0) { message.error("No CERTIFICATE PEM blocks found"); return; }
         setLoading(true);
         try {
             const r = await validateChain(blocks.map((b) => b.body));
@@ -92,23 +352,17 @@ export default function CertificateChainValidatorPage() {
     };
 
     const handleFetch = async () => {
-        const host = fetchHost.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-        if (!host) {
-            message.warning("Enter a hostname");
-            return;
-        }
+        const host = fetchHost.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/:\d+$/, "");
+        if (!host) { message.warning("Enter a hostname"); return; }
         setFetchLoading(true);
         try {
             const res = await fetch(`/api/fetch-cert?host=${encodeURIComponent(host)}&port=${fetchPort}`);
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-                throw new Error(err.error ?? `HTTP ${res.status}`);
-            }
             const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
             const pems: string[] = data.pems ?? [];
             if (pems.length === 0) throw new Error("No certificates returned");
             setInput(pems.join("\n\n"));
-            message.success(`Fetched ${pems.length} certificate${pems.length === 1 ? "" : "s"} from ${host}:${fetchPort}`);
+            message.success(`Fetched ${pems.length} cert${pems.length === 1 ? "" : "s"} from ${host}:${fetchPort}`);
         } catch (e) {
             message.error(e instanceof Error ? e.message : "Fetch failed");
         } finally {
@@ -116,288 +370,166 @@ export default function CertificateChainValidatorPage() {
         }
     };
 
-    const ctLookup = async () => {
-        const cleaned = domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-        if (!cleaned) {
-            message.warning("Enter a domain");
-            return;
-        }
-        setCtLoading(true);
-        setCtError(null);
-        setCtResults(null);
-        try {
-            const url = `https://crt.sh/?q=${encodeURIComponent("%." + cleaned)}&output=json`;
-            const res = await fetch(url, { headers: { Accept: "application/json" } });
-            if (!res.ok) throw new Error(`crt.sh returned ${res.status}`);
-            const data: CrtShEntry[] = await res.json();
-            const seen = new Set<string>();
-            const dedup = data.filter((e) => {
-                const k = `${e.serial_number}-${e.common_name}`;
-                if (seen.has(k)) return false;
-                seen.add(k);
-                return true;
-            });
-            dedup.sort((a, b) => new Date(b.not_before).getTime() - new Date(a.not_before).getTime());
-            setCtResults(dedup);
-            message.success(`Found ${dedup.length} certificate${dedup.length === 1 ? "" : "s"}`);
-        } catch (e) {
-            setCtError(e instanceof Error ? e.message : "Lookup failed — crt.sh may be down or rate-limiting");
-        } finally {
-            setCtLoading(false);
-        }
+    return (
+        <Space direction="vertical" style={{ width: "100%" }}>
+            <Card size="small" title="Fetch from URL">
+                <Space.Compact style={{ width: "100%" }}>
+                    <Input
+                        prefix={<GlobalOutlined />}
+                        placeholder="example.com"
+                        value={fetchHost}
+                        onChange={(e) => setFetchHost(e.target.value)}
+                        onPressEnter={handleFetch}
+                        style={{ flex: 1 }}
+                    />
+                    <InputNumber
+                        value={fetchPort}
+                        onChange={(v) => setFetchPort(v ?? 443)}
+                        min={1} max={65535}
+                        style={{ width: 90 }}
+                        placeholder="443"
+                    />
+                    <Button type="primary" loading={fetchLoading} onClick={handleFetch}>Fetch</Button>
+                </Space.Compact>
+                <Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
+                    Fetches the live certificate chain and populates the textarea below for validation.
+                </Text>
+            </Card>
+
+            <Card
+                size="small"
+                title="Certificate Chain (PEM, leaf first)"
+                extra={
+                    <Space size={4}>
+                        <Upload accept=".pem,.crt,.cer,.txt" beforeUpload={handleUpload} showUploadList={false}>
+                            <Button size="small" icon={<UploadOutlined />}>Upload</Button>
+                        </Upload>
+                        <Button size="small" onClick={() => setInput(SAMPLE)}>Sample</Button>
+                        <Button size="small" onClick={() => { setInput(""); setResult(null); }}>Clear</Button>
+                    </Space>
+                }
+            >
+                <TextArea
+                    rows={14}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Concatenated PEM certificates"
+                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
+                />
+                <div style={{ marginTop: 12 }}>
+                    <Button type="primary" icon={<AuditOutlined />} loading={loading} onClick={validate}>Validate Chain</Button>
+                </div>
+            </Card>
+
+            {!result ? (
+                <Card size="small"><Empty description="Validate a chain to see results" /></Card>
+            ) : (
+                <Space direction="vertical" style={{ width: "100%" }}>
+                    <Alert
+                        type={result.valid ? "success" : "error"}
+                        icon={result.valid ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+                        showIcon
+                        message={result.valid ? "Chain is valid" : `${result.issues.length} issue${result.issues.length === 1 ? "" : "s"} found`}
+                        description={
+                            !result.valid && (
+                                <ul style={{ margin: "8px 0 0 0", paddingLeft: 20 }}>
+                                    {result.issues.map((i, idx) => <li key={idx}>{i}</li>)}
+                                </ul>
+                            )
+                        }
+                    />
+                    <Card size="small" title={`Chain (${result.chain.length} certificate${result.chain.length === 1 ? "" : "s"})`}>
+                        <Steps
+                            direction="vertical"
+                            size="small"
+                            items={result.chain.map((c, i) => {
+                                const role = i === 0 ? "Leaf" : i === result.chain.length - 1 ? (c.isSelfSigned ? "Root CA" : "Top of chain") : "Intermediate";
+                                return {
+                                    title: (
+                                        <Space>
+                                            <Tag color="blue">{role}</Tag>
+                                            <Text strong>{c.subject.CN ?? formatDN(c.subject)}</Text>
+                                            {c.isExpired && <Tag color="error" icon={<WarningOutlined />}>EXPIRED</Tag>}
+                                            {!c.isExpired && c.daysUntilExpiry < 30 && (
+                                                <Tag color="warning" icon={<WarningOutlined />}>Expires in {c.daysUntilExpiry}d</Tag>
+                                            )}
+                                        </Space>
+                                    ),
+                                    description: (
+                                        <Descriptions size="small" column={1} style={{ marginTop: 8 }}>
+                                            <Descriptions.Item label="Issued by">{formatDN(c.issuer)}</Descriptions.Item>
+                                            <Descriptions.Item label="Public key">{c.publicKeyAlgorithm} {c.publicKeySize} bits</Descriptions.Item>
+                                            <Descriptions.Item label="Valid until">{c.notAfter.toUTCString()}</Descriptions.Item>
+                                            <Descriptions.Item label="SHA-256">
+                                                <Text code style={{ fontSize: 10, wordBreak: "break-all" }}>{c.fingerprintSha256}</Text>
+                                            </Descriptions.Item>
+                                        </Descriptions>
+                                    ),
+                                    status: c.isExpired ? "error" : "finish",
+                                };
+                            })}
+                        />
+                    </Card>
+                </Space>
+            )}
+        </Space>
+    );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function CertificateChainValidatorPage() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const initialTab = searchParams.get("tab") ?? "live";
+
+    const handleTabChange = (key: string) => {
+        router.replace(`?tab=${key}`, { scroll: false });
     };
 
     return (
         <ToolPageLayout
             title="Certificate Chain & SSL"
-            description="Validate certificate chains, verify trust hierarchy, and search Certificate Transparency logs"
+            description="Inspect live server certificates, validate chains, and verify trust hierarchy — all locally"
             icon={<AuditOutlined style={{ fontSize: 24, color: "#13c2c2" }} />}
             color="#13c2c2"
             learnMore={{
                 whatIs:
-                    "A certificate chain (or trust path) is the sequence of certificates that links a leaf certificate (your server) to a trusted root CA, via zero or more intermediate CAs. Each certificate must be signed by the next one in the chain. Certificate Transparency (CT) logs are public, append-only ledgers that record every TLS certificate issued by participating CAs.",
+                    "A certificate chain (trust path) links a leaf certificate to a trusted root CA via intermediates. This tool fetches the live certificate chain from any server using a direct TLS connection — no external services — then decodes every cert's fields, SANs, key usage, fingerprints, and validates the chain signature.",
                 whyUse:
-                    "Misconfigured chains are the #1 cause of mysterious TLS errors. This tool verifies that each cert is signed by the next, that the chain ends at a self-signed root, and that nothing is expired. The CT log search lets you audit all certificates ever issued for your domain.",
+                    "Everything runs locally: the server-side Route Handler opens a raw TLS socket, retrieves the chain, and your browser parses it with node-forge. No third-party requests. Misconfigured chains are the #1 cause of TLS errors; enter a URL and diagnose instantly.",
                 howToUse: [
-                    "Chain Validator: Paste all certificates in order (leaf first, root last) or fetch directly from a URL",
-                    "Click Validate — see the full chain with pass/fail per link",
-                    "CT Log Search: Enter a domain to find all certificates ever issued for it",
+                    "Live Check: enter any URL or hostname to fetch and inspect the full certificate chain",
+                    "Chain Validator: paste PEM certificates manually or fetch then validate",
+                    "See decoded fields, SANs, fingerprints, expiry, and chain trust for every cert",
                 ],
                 tips: [
-                    "openssl s_client -connect host:443 -showcerts gives you the chain",
-                    "Always include intermediates — don't rely on AIA fetching",
-                    "A self-signed root at the end is normal; only client trust stores need it",
-                    "CT log search shows both current and expired certificates",
+                    "The leaf certificate is the server's own cert; intermediates link it to the root CA",
+                    "A self-signed root at the end is expected — browsers have their own root trust stores",
+                    "Check all SANs: the domain you're connecting to must match at least one SAN",
+                    "SHA-256 fingerprint uniquely identifies a certificate for pinning",
                 ],
                 useCases: [
                     "Debugging 'untrusted certificate' browser errors",
-                    "Verifying that your nginx/Apache config sends the full chain",
-                    "Auditing certificate expiry across a pipeline",
-                    "Spotting unauthorized certificate issuance for your domain",
+                    "Verifying nginx/Apache sends the full chain (not just leaf)",
+                    "Auditing certificate expiry, SANs, and key strength",
+                    "SSL pinning — get the exact SHA-256 fingerprint",
                 ],
             }}
         >
             <Tabs
-                defaultActiveKey="chain"
+                activeKey={initialTab}
+                onChange={handleTabChange}
                 items={[
+                    {
+                        key: "live",
+                        label: <span><SecurityScanOutlined /> Live Server Check</span>,
+                        children: <LiveCheckTab />,
+                    },
                     {
                         key: "chain",
                         label: <span><AuditOutlined /> Chain Validator</span>,
-                        children: (
-                            <Space direction="vertical" style={{ width: "100%" }}>
-                                <Card size="small" title="Fetch from URL">
-                                    <Space.Compact style={{ width: "100%" }}>
-                                        <Input
-                                            prefix={<GlobalOutlined />}
-                                            placeholder="example.com"
-                                            value={fetchHost}
-                                            onChange={(e) => setFetchHost(e.target.value)}
-                                            onPressEnter={handleFetch}
-                                            style={{ flex: 1 }}
-                                        />
-                                        <InputNumber
-                                            value={fetchPort}
-                                            onChange={(v) => setFetchPort(v ?? 443)}
-                                            min={1}
-                                            max={65535}
-                                            style={{ width: 90 }}
-                                            placeholder="443"
-                                        />
-                                        <Button type="primary" loading={fetchLoading} onClick={handleFetch}>
-                                            Fetch
-                                        </Button>
-                                    </Space.Compact>
-                                    <Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
-                                        Fetches the certificate chain directly from the host and populates the textarea below.
-                                    </Text>
-                                </Card>
-
-                                <Card
-                                    size="small"
-                                    title="Certificate Chain (PEM, leaf first)"
-                                    extra={
-                                        <Space size={4}>
-                                            <Upload accept=".pem,.crt,.cer,.txt" beforeUpload={handleUpload} showUploadList={false}>
-                                                <Button size="small" icon={<UploadOutlined />}>Upload</Button>
-                                            </Upload>
-                                            <Button size="small" onClick={() => setInput(SAMPLE)}>Sample</Button>
-                                            <Button size="small" onClick={() => { setInput(""); setResult(null); }}>Clear</Button>
-                                        </Space>
-                                    }
-                                >
-                                    <TextArea
-                                        rows={14}
-                                        value={input}
-                                        onChange={(e) => setInput(e.target.value)}
-                                        placeholder="Concatenated PEM certificates"
-                                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
-                                    />
-                                    <div style={{ marginTop: 12 }}>
-                                        <Button type="primary" icon={<AuditOutlined />} loading={loading} onClick={validate}>Validate Chain</Button>
-                                    </div>
-                                </Card>
-
-                                {!result ? (
-                                    <Card size="small"><Empty description="Validate a chain to see results" /></Card>
-                                ) : (
-                                    <Space direction="vertical" style={{ width: "100%" }}>
-                                        <Alert
-                                            type={result.valid ? "success" : "error"}
-                                            icon={result.valid ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-                                            showIcon
-                                            message={result.valid ? "Chain is valid" : `${result.issues.length} issue${result.issues.length === 1 ? "" : "s"} found`}
-                                            description={
-                                                !result.valid && (
-                                                    <ul style={{ margin: "8px 0 0 0", paddingLeft: 20 }}>
-                                                        {result.issues.map((i, idx) => <li key={idx}>{i}</li>)}
-                                                    </ul>
-                                                )
-                                            }
-                                        />
-
-                                        <Card size="small" title={`Chain (${result.chain.length} certificate${result.chain.length === 1 ? "" : "s"})`}>
-                                            <Steps
-                                                direction="vertical"
-                                                size="small"
-                                                items={result.chain.map((c, i) => {
-                                                    const role = i === 0 ? "Leaf" : i === result.chain.length - 1 ? (c.isSelfSigned ? "Root CA" : "Top of chain") : "Intermediate";
-                                                    const status = c.isExpired ? "error" : "finish";
-                                                    return {
-                                                        title: (
-                                                            <Space>
-                                                                <Tag color="blue">{role}</Tag>
-                                                                <Text strong>{c.subject.CN ?? formatDN(c.subject)}</Text>
-                                                                {c.isExpired && <Tag color="error" icon={<WarningOutlined />}>EXPIRED</Tag>}
-                                                                {!c.isExpired && c.daysUntilExpiry < 30 && (
-                                                                    <Tag color="warning" icon={<WarningOutlined />}>
-                                                                        Expires in {c.daysUntilExpiry}d
-                                                                    </Tag>
-                                                                )}
-                                                            </Space>
-                                                        ),
-                                                        description: (
-                                                            <Descriptions size="small" column={1} style={{ marginTop: 8 }}>
-                                                                <Descriptions.Item label="Issued by">{formatDN(c.issuer)}</Descriptions.Item>
-                                                                <Descriptions.Item label="Public key">{c.publicKeyAlgorithm} {c.publicKeySize} bits</Descriptions.Item>
-                                                                <Descriptions.Item label="Valid until">{c.notAfter.toUTCString()}</Descriptions.Item>
-                                                                <Descriptions.Item label="SHA-256">
-                                                                    <Text code style={{ fontSize: 10, wordBreak: "break-all" }}>{c.fingerprintSha256}</Text>
-                                                                </Descriptions.Item>
-                                                            </Descriptions>
-                                                        ),
-                                                        status,
-                                                    };
-                                                })}
-                                            />
-                                        </Card>
-                                    </Space>
-                                )}
-                            </Space>
-                        ),
-                    },
-                    {
-                        key: "ct-logs",
-                        label: <span><SecurityScanOutlined /> CT Log Search</span>,
-                        children: (
-                            <Space direction="vertical" style={{ width: "100%" }}>
-                                <Alert
-                                    type="info"
-                                    showIcon
-                                    message="How this works"
-                                    description="This tool queries crt.sh — the public Certificate Transparency log — over HTTPS from your browser. No data passes through any backend we control. crt.sh sees your IP and the domain you searched."
-                                />
-
-                                <Card size="small" title="Search by Domain">
-                                    <Space.Compact style={{ width: "100%" }}>
-                                        <Input
-                                            size="large"
-                                            prefix={<GlobalOutlined />}
-                                            placeholder="example.com"
-                                            value={domain}
-                                            onChange={(e) => setDomain(e.target.value)}
-                                            onPressEnter={ctLookup}
-                                        />
-                                        <Button size="large" type="primary" loading={ctLoading} onClick={ctLookup}>Search</Button>
-                                    </Space.Compact>
-                                    <Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
-                                        Tip: shows all certs ever issued for *.{domain || "example.com"} — including expired and current.
-                                    </Text>
-                                </Card>
-
-                                {ctError && <Alert type="error" message={ctError} showIcon />}
-
-                                {ctResults && (
-                                    <Card size="small" title={`Results (${ctResults.length})`}>
-                                        {ctResults.length === 0 ? (
-                                            <Empty description="No certificates found in CT logs" />
-                                        ) : (
-                                            <Table
-                                                size="small"
-                                                dataSource={ctResults}
-                                                rowKey={(r) => `${r.id}-${r.serial_number}`}
-                                                pagination={{ pageSize: 20, showSizeChanger: true }}
-                                                scroll={{ x: 720 }}
-                                                columns={[
-                                                    {
-                                                        title: "Common Name",
-                                                        dataIndex: "common_name",
-                                                        key: "cn",
-                                                        width: 220,
-                                                        ellipsis: true,
-                                                    },
-                                                    {
-                                                        title: "Issuer",
-                                                        dataIndex: "issuer_name",
-                                                        key: "issuer",
-                                                        ellipsis: true,
-                                                        render: (val: string) => {
-                                                            const o = val.match(/O=([^,]+)/)?.[1] ?? val;
-                                                            return <Text style={{ fontSize: 12 }}>{o}</Text>;
-                                                        },
-                                                    },
-                                                    {
-                                                        title: "Issued",
-                                                        dataIndex: "not_before",
-                                                        key: "issued",
-                                                        width: 110,
-                                                        render: (v: string) => new Date(v).toLocaleDateString(),
-                                                    },
-                                                    {
-                                                        title: "Expires",
-                                                        dataIndex: "not_after",
-                                                        key: "expires",
-                                                        width: 110,
-                                                        render: (v: string) => {
-                                                            const d = new Date(v);
-                                                            const expired = d.getTime() < Date.now();
-                                                            return (
-                                                                <Tag color={expired ? "default" : "success"}>
-                                                                    {d.toLocaleDateString()}
-                                                                </Tag>
-                                                            );
-                                                        },
-                                                    },
-                                                    {
-                                                        title: "SANs",
-                                                        dataIndex: "name_value",
-                                                        key: "sans",
-                                                        render: (v: string) => {
-                                                            const sans = v.split("\n").slice(0, 3);
-                                                            return (
-                                                                <Space size={4} wrap>
-                                                                    {sans.map((s, i) => <Tag key={i} style={{ fontSize: 11 }}>{s}</Tag>)}
-                                                                    {v.split("\n").length > 3 && <Tag>+{v.split("\n").length - 3}</Tag>}
-                                                                </Space>
-                                                            );
-                                                        },
-                                                    },
-                                                ]}
-                                            />
-                                        )}
-                                    </Card>
-                                )}
-                            </Space>
-                        ),
+                        children: <ChainValidatorTab />,
                     },
                 ]}
             />
