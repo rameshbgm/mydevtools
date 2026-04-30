@@ -838,7 +838,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                     )}
                 </AnimatePresence>
 
-                <Layout style={{ minHeight: "100vh" }}>
+                <Layout style={{ minHeight: "100vh" }} suppressHydrationWarning>
                     {!isMobile && (
                         <Sider
                             collapsible
@@ -890,6 +890,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             transition: "margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
                             background: darkMode ? "#0a0a0a" : "#fafafa",
                         }}
+                        suppressHydrationWarning
                     >
                         <Header
                             style={{
@@ -908,6 +909,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 zIndex: 50,
                                 height: 60,
                             }}
+                            suppressHydrationWarning
                         >
                             <Tooltip
                                 title={
@@ -1000,6 +1002,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 minHeight: "calc(100vh - 60px)",
                                 background: darkMode ? "#0a0a0a" : "#fafafa",
                             }}
+                            suppressHydrationWarning
                         >
                             <motion.div
                                 initial={{ opacity: 0 }}
