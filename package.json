@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NEXT_TELEMETRY_DISABLED=1 next dev",
-    "build": "NEXT_TELEMETRY_DISABLED=1 npm run copy-monaco && next build",
-    "start": "NEXT_TELEMETRY_DISABLED=1 next start",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "lint": "eslint",
     "copy-monaco": "rm -rf public/monaco && mkdir -p public/monaco && cp -R node_modules/monaco-editor/min/vs public/monaco/vs",
     "postinstall": "npm run copy-monaco"
