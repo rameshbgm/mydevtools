@@ -238,7 +238,7 @@ export default function NotFound() {
                     ) : (
                         <>
                             The path <code style={{ background: darkMode ? "#1f1f1f" : "#f5f5f5", padding: "2px 8px", borderRadius: 6, fontSize: "0.9em" }}>{pathname}</code>{" "}
-                            isn't part of mydevtools.
+                            isn't part of My Dev Tools.
                         </>
                     )}
                 </Paragraph>

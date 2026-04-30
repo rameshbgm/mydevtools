@@ -10,6 +10,7 @@ interface AppState {
     toggleDarkMode: () => void;
     toggleSidebar: () => void;
     addRecentTool: (id: string) => void;
+    clearRecentTools: () => void;
     setNavigating: (value: boolean, targetId?: string | null) => void;
 }
 
@@ -27,6 +28,7 @@ export const useAppStore = create<AppState>()(
                 set((s) => ({
                     recentTools: [id, ...s.recentTools.filter((t) => t !== id)].slice(0, 10),
                 })),
+            clearRecentTools: () => set(() => ({ recentTools: [] as string[] })),
             setNavigating: (value: boolean, targetId: string | null = null) =>
                 set(() => ({ isNavigating: value, navTargetId: value ? targetId : null })),
         }),

@@ -24,6 +24,7 @@ import {
     MoonOutlined,
     CodeOutlined,
     SearchOutlined,
+    DatabaseOutlined,
 } from "@ant-design/icons";
 import {
     getToolsByCategory,
@@ -722,7 +723,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 letterSpacing: "-0.5px",
                             }}
                         >
-                            mydevtools
+                            My Dev Tools
                         </Title>
                         <Text
                             style={{
@@ -732,7 +733,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 textTransform: "uppercase",
                             }}
                         >
-                            Developer Portal
+                            Developer Toolkit
                         </Text>
                     </motion.div>
                 )}
@@ -950,6 +951,23 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             </div>
 
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                <Tooltip title="Memory & Storage Manager">
+                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                        <Button
+                                            type="text"
+                                            icon={<DatabaseOutlined style={{ fontSize: 17, color: darkMode ? "#6366f1" : "#4f46e5" }} />}
+                                            onClick={() => navigate("/memory")}
+                                            style={{
+                                                width: 40,
+                                                height: 40,
+                                                borderRadius: 10,
+                                                background: darkMode
+                                                    ? "rgba(99, 102, 241, 0.1)"
+                                                    : "rgba(79, 70, 229, 0.08)",
+                                            }}
+                                        />
+                                    </motion.div>
+                                </Tooltip>
                                 <Tooltip title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                         <Button

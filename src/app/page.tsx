@@ -12,7 +12,7 @@ import {
     Badge,
     Empty,
 } from "antd";
-import { SearchOutlined, ThunderboltOutlined, ClockCircleOutlined } from "@ant-design/icons";
+import { SearchOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     toolsRegistry,
@@ -50,7 +50,7 @@ const fadeIn = {
 
 export default function Dashboard() {
     const router = useRouter();
-    const { darkMode, recentTools, addRecentTool, setNavigating } = useAppStore();
+    const { darkMode, recentTools, addRecentTool, clearRecentTools, setNavigating } = useAppStore();
     const [search, setSearch] = useState("");
     const [searchFocused, setSearchFocused] = useState(false);
 
@@ -98,59 +98,81 @@ export default function Dashboard() {
                 animate="show"
                 style={{ textAlign: "center", marginBottom: 48 }}
             >
-                <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "8px 18px",
-                        borderRadius: 24,
-                        background: darkMode
-                            ? "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.15))"
-                            : "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08))",
-                        border: `1px solid ${darkMode ? "rgba(139,92,246,0.3)" : "rgba(99,102,241,0.2)"}`,
-                        marginBottom: 20,
-                    }}
-                >
-                    <ThunderboltOutlined style={{ color: "#8b5cf6", fontSize: 16 }} />
-                    <Text
-                        style={{
-                            color: darkMode ? "#c4b5fd" : "#7c3aed",
-                            fontSize: 13,
-                            fontWeight: 500,
-                            letterSpacing: "0.3px",
-                        }}
-                    >
-                        {stats.total} tools across {stats.categories} categories
-                    </Text>
-                </motion.div>
+                {/* Privacy badge row */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+                    {[
+                        { icon: "⚡", label: `${stats.total} tools`, color: "#8b5cf6" },
+                        { icon: "🔒", label: "100% Private", color: "#10b981" },
+                        { icon: "🌐", label: "Works Offline", color: "#3b82f6" },
+                        { icon: "🚫", label: "No Tracking", color: "#f59e0b" },
+                    ].map(({ icon, label, color }) => (
+                        <motion.span
+                            key={label}
+                            whileHover={{ scale: 1.05 }}
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 5,
+                                padding: "5px 12px",
+                                borderRadius: 20,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                background: darkMode ? `${color}18` : `${color}12`,
+                                border: `1px solid ${color}40`,
+                                color: color,
+                                letterSpacing: "0.2px",
+                                cursor: "default",
+                            }}
+                        >
+                            <span>{icon}</span>
+                            {label}
+                        </motion.span>
+                    ))}
+                </div>
 
                 <Title
                     level={1}
                     className="gradient-text"
                     style={{
-                        fontSize: "clamp(28px, 5vw, 52px)",
-                        fontWeight: 800,
-                        marginBottom: 12,
-                        letterSpacing: "-1px",
+                        fontSize: "clamp(32px, 5.5vw, 58px)",
+                        fontWeight: 900,
+                        marginBottom: 16,
+                        letterSpacing: "-2px",
+                        lineHeight: 1.1,
                     }}
                 >
-                    mydevtools
+                    My Dev Tools
                 </Title>
 
                 <Paragraph
                     style={{
-                        fontSize: "clamp(14px, 1.5vw, 18px)",
+                        fontSize: "clamp(15px, 1.6vw, 19px)",
                         color: darkMode ? "#a3a3a3" : "#525252",
-                        maxWidth: 620,
+                        maxWidth: 640,
+                        margin: "0 auto 10px",
+                        lineHeight: 1.65,
+                        padding: "0 12px",
+                        fontWeight: 400,
+                    }}
+                >
+                    Everything a developer needs — nothing they don&apos;t.
+                    Format, decode, diff, hash, inspect, and generate — all{" "}
+                    <span style={{ color: darkMode ? "#a78bfa" : "#6d28d9", fontWeight: 500 }}>
+                        running privately in your browser
+                    </span>
+                    , with zero data sent anywhere.
+                </Paragraph>
+                <Paragraph
+                    style={{
+                        fontSize: "clamp(13px, 1.2vw, 15px)",
+                        color: darkMode ? "#555" : "#9a9a9a",
+                        maxWidth: 520,
                         margin: "0 auto 28px",
                         lineHeight: 1.6,
                         padding: "0 12px",
                     }}
                 >
-                    Your personal developer toolkit. Format, diff, decode, generate —
-                    all in one beautiful, private workspace.
+                    {stats.categories} categories · JWT, SSL certs, regex, UUID, hashing, color, network &amp; more
                 </Paragraph>
 
                 <div style={{ maxWidth: 580, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
@@ -278,10 +300,31 @@ export default function Dashboard() {
                                     margin: 0,
                                     color: darkMode ? "#737373" : "#525252",
                                     fontWeight: 500,
+                                    flex: 1,
                                 }}
                             >
                                 Recently Used
                             </Title>
+                            <button
+                                type="button"
+                                onClick={clearRecentTools}
+                                style={{
+                                    border: "none",
+                                    background: "none",
+                                    cursor: "pointer",
+                                    fontSize: 12,
+                                    color: darkMode ? "#555" : "#bbb",
+                                    padding: "2px 8px",
+                                    borderRadius: 6,
+                                    fontFamily: "inherit",
+                                    fontWeight: 500,
+                                    transition: "color 0.15s",
+                                }}
+                                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = darkMode ? "#a78bfa" : "#4f46e5"; }}
+                                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = darkMode ? "#555" : "#bbb"; }}
+                            >
+                                Clear all
+                            </button>
                         </div>
                         <Space wrap size={[8, 8]}>
                             {recentTools.slice(0, 8).map((id) => {
