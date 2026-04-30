@@ -1,21 +1,27 @@
-# DevTools Hub
+# mydevtools
 
-A private, offline-first developer tools portal — **79 utilities** across **13 categories**, all in one place. Built with Next.js 16, React 19, Ant Design 6, Monaco Editor, and Framer Motion.
+A private, offline-first developer tools portal — **87 utilities** across **13 categories**, all in one place. Built with Next.js 16, React 19, Ant Design 6, Monaco Editor, and Framer Motion.
 
-> Stop context-switching between dozens of single-purpose websites. Format, diff, decode, generate, validate, parse, calculate — all from one workspace.
+> Stop context-switching between dozens of single-purpose websites. Format, diff, decode, generate, validate, parse, calculate — all from one workspace, in your browser.
+
+🌐 **Live:** [mydevtools.com](https://mydevtools.com)
+📦 **Source:** [github.com/rameshbgm/mydevtools](https://github.com/rameshbgm/mydevtools)
 
 ---
 
 ## Highlights
 
-- **79 tools** organised into 13 logical categories
+- **87 tools** organised into 13 logical categories
+- **Installable PWA** — works as an app on iOS, Android, Mac and Windows
+- **Mobile-first responsive** — every tool adapts to phone, tablet and desktop
 - **Header search** with autocomplete — jump to any tool in two keystrokes
 - **Accordion sidebar** that auto-expands the active tool's category
 - **Dark / Light themes** with persistent preference
-- **Keyboard-first**, responsive, mobile-friendly
-- **Fully client-side** — no server roundtrips, no telemetry, no data leaves your browser
-- **Static export** — deploy to any CDN (Vercel, Netlify, Cloudflare Pages, S3, GitHub Pages)
-- Production build: **83 static routes pre-rendered**
+- **Navigation loader** with friendly messages and 60-second safety timeout
+- **Privacy-first**: 100% client-side, no analytics, no telemetry, zero third-party runtime requests
+- **Static export** — every page is pre-rendered to HTML; deploy to any static host
+- **Production build:** 91 static routes pre-rendered (87 tools + dashboard + 404 + sitemap + robots)
+- **MIT licensed** — fork it, modify it, ship it
 
 ---
 
@@ -23,36 +29,35 @@ A private, offline-first developer tools portal — **79 utilities** across **13
 
 | # | Category | Count | Examples |
 |---|----------|------:|----------|
-| 1 | Formatters | 6 | JSON, XML, SQL, HTML, JS, CSS |
-| 2 | Validators | 7 | JSON, XML, HTML, XSD, XPath, Regex, Credit Card |
+| 1 | Formatters | 7 | JSON, XML, SQL, HTML, JS, CSS, **YAML** |
+| 2 | Validators | 8 | JSON, XML, HTML, XSD, XPath, Regex, Credit Card, **Email** |
 | 3 | Diff & Compare | 3 | JSON Diff, XML Diff, Text Diff |
-| 4 | Data Converters | 6 | XML↔JSON, CSV→JSON, CSV→XML, YAML↔JSON, XSLT |
-| 5 | Encoding & Decoding | 6 | Base64, URL, HTML Entities, Unicode, Gzip, String Escape |
-| 6 | Cryptography | 6 | Hash, HMAC, JWT, JWS, JWE, JWK |
+| 4 | Data Converters | 7 | XML↔JSON, CSV→JSON, CSV→XML, YAML↔JSON, XSLT, **JSON→CSV** |
+| 5 | Encoding & Decoding | 7 | Base64, URL, HTML Entities, Unicode, Gzip, String Escape, **Hex** |
+| 6 | Cryptography | 8 | Hash, HMAC, JWT, JWS, JWE, JWK, **BCrypt**, **AES** |
 | 7 | Certificates & Keys | 12 | X.509 decoder/generator/CSR/converter, PEM, PKCS#12, JKS, SSH keys, SSL checker, fingerprints |
 | 8 | API & Web Services | 6 | Swagger/OpenAPI viewer, REST request builder, JSONPath, URL parser, WSDL, SOAP client |
 | 9 | Network | 3 | IP tools, Subnet calculator, MAC address tools |
-| 10 | Generators | 7 | UUID, Password, Lorem Ipsum, QR code, Markdown table, Java POJO, JSON→TypeScript |
+| 10 | Generators | 9 | UUID, Password, Lorem Ipsum, QR code, Markdown table, Java POJO, JSON→TypeScript, **Slug**, **Color Contrast Checker** |
 | 11 | Text & Utilities | 9 | Text manipulation, Markdown preview, Case converter, Timestamp, Color, Number base, Unix permissions, Cron parser, Todo list |
 | 12 | **AI Alpha Tools** | 3 | RAG Doc Q&A, Text Summarizer, Code Explainer (early access — may change) |
 | 13 | Reference | 5 | HTTP status codes, MIME types, Port numbers, IP ranges, RFC standards |
+
+**New in latest release:** YAML Formatter · Email Validator · JSON→CSV · Hex Encoder/Decoder · BCrypt Hash & Verify · AES Encrypt/Decrypt · Slug Generator · Color Contrast Checker (WCAG AA/AAA)
 
 ---
 
 ## Quick Start
 
 ```bash
-# install
+# install (postinstall copies Monaco editor into public/monaco)
 npm install
 
 # dev (http://localhost:3000)
 npm run dev
 
-# production build
+# production build → out/ directory
 npm run build
-
-# run production build locally
-npm start
 
 # lint
 npm run lint
@@ -69,11 +74,50 @@ Requires **Node.js ≥ 20**.
 | Framework | **Next.js 16** (App Router, Turbopack) | Latest static-export friendly framework |
 | UI | **React 19.2** + **Ant Design 6** | Stable component library with deep token theming |
 | State | **Zustand** with `persist` | Lightweight client state, IndexedDB / localStorage persistence |
-| Editor | **Monaco** | Same engine as VS Code |
+| Editor | **Monaco** (self-hosted) | Same engine as VS Code — copied locally to avoid CDN |
 | Animation | **Framer Motion** | Smooth page and card transitions |
 | Styling | **Tailwind v4** + CSS variables | Theme-aware tokens (`--primary-rgb`, etc.) |
-| Crypto | **Web Crypto API** + `crypto-js` | Hashing, JWT/JWS/JWE, key generation |
+| Crypto | **Web Crypto API** + `crypto-js` + `bcryptjs` | Hashing, AES, JWT/JWS/JWE, key gen, BCrypt |
 | Parsing | `fast-xml-parser`, `yaml`, `jsonpath-plus`, `diff` | Pure-JS, no native deps |
+| PWA | Native Web Manifest + custom service worker | Installable, offline-capable |
+
+---
+
+## Privacy & Data Handling
+
+This app is built around the principle that **your data should never leave your browser**.
+
+| Concern | Status | Detail |
+|---|---|---|
+| Server-side runtime | ❌ None | `output: "export"` — all 87 tools pre-rendered to static HTML |
+| API routes | ❌ None | `src/app/api/` is empty |
+| Analytics packages | ❌ None | No GA, Plausible, Sentry, Hotjar, Mixpanel, Segment, etc. |
+| Auto-fetch on mount | ❌ None | No tool calls anything when you open it |
+| Third-party CDNs at runtime | ❌ None | Monaco self-hosted; Swagger UI bundled via `swagger-ui-react` |
+| Next.js build telemetry | ❌ Disabled | `NEXT_TELEMETRY_DISABLED=1` in all npm scripts |
+| Cookies | ❌ None | All preferences live in `localStorage` |
+| Tracking pixels | ❌ None | No third-party `<img>` or `<script>` tags anywhere |
+
+**User-typed URL fetches** (in API Request Builder, SOAP Client, WSDL Parser) are explicit user actions — pressing "Send" sends YOUR request from YOUR browser to the URL YOU typed. That's the tool's purpose, not tracking. No metadata is collected about it.
+
+**Local storage:**
+- Theme & sidebar preference — `localStorage`
+- Recently used tools — `localStorage`
+- Todo list — IndexedDB
+- API Request Builder history — `localStorage` (your device only)
+
+---
+
+## PWA — Installable on All Devices
+
+mydevtools is a Progressive Web App: install it as a real app on iOS, Android, macOS, Windows or Linux.
+
+- **iOS Safari:** Share → Add to Home Screen
+- **Android Chrome:** Menu → Install app
+- **Desktop Chrome / Edge:** install icon in the address bar
+- **Manifest:** `/manifest.webmanifest` with shortcuts to JSON Formatter, JWT Decoder, UUID Generator, Regex Tester
+- **Service worker:** caches static assets and HTML for offline use (network-first for HTML, cache-first for hashed assets, stale-while-revalidate fallback)
+- **Icons:** 192, 512, maskable-512, apple-touch-180, favicon-16, favicon-32 — generated from a single SVG
 
 ---
 
@@ -83,17 +127,35 @@ Requires **Node.js ≥ 20**.
 src/
 ├── app/
 │   ├── page.tsx              # Dashboard (categorised tool grid + recents)
-│   ├── layout.tsx            # Root layout — wraps everything in AppShell
-│   ├── globals.css           # Theme variables, scrollbar, search dropdown overrides
-│   └── tools/[id]/page.tsx   # One folder per tool (79 of them)
+│   ├── layout.tsx            # Root layout — site-wide metadata + JSON-LD
+│   ├── error.tsx             # Global error boundary
+│   ├── manifest.ts           # PWA manifest (Next.js metadata route)
+│   ├── sitemap.ts            # Auto-generated sitemap.xml
+│   ├── robots.ts             # robots.txt
+│   ├── globals.css           # Theme variables + global responsive overrides
+│   └── tools/[id]/
+│       ├── page.tsx          # Tool implementation (87 of them)
+│       └── layout.tsx        # Per-tool SEO metadata + JSON-LD schema
 ├── components/
 │   ├── AppShell.tsx          # Layout: sidebar (accordion), header (search + theme)
-│   └── ToolPageLayout.tsx    # Shared tool page wrapper: breadcrumb, header card, "Learn More" collapse
-└── lib/
-    ├── tools-registry.ts     # Single source of truth for tools, categories, colours, icons
-    ├── store.ts              # Zustand: darkMode, sidebarCollapsed, recentTools
-    ├── messageService.ts     # Theme-aware antd message bridge (replaces deprecated static `message.*`)
-    └── clipboard.ts          # Cross-browser clipboard helper
+│   ├── AppFooter.tsx         # Compact footer with social links & tool count
+│   ├── ToolPageLayout.tsx    # Tool page wrapper: breadcrumb, header card, learn-more
+│   ├── CodeEditor.tsx        # Monaco wrapper with mobile-adaptive height/options
+│   ├── NavigationLoader.tsx  # Animated loading overlay (60s safety timeout)
+│   └── PwaRegister.tsx       # Service-worker registration (production only)
+├── lib/
+│   ├── tools-registry.ts     # Single source of truth: tools, categories, colors, icons
+│   ├── seo-content.ts        # Hand-crafted SEO metadata (title/desc/keywords) per tool
+│   ├── metadata-generator.ts # Builds Next.js Metadata + JSON-LD from registry+seo
+│   ├── store.ts              # Zustand: darkMode, sidebar, recentTools, isNavigating
+│   ├── messageService.ts     # Theme-aware antd message bridge
+│   ├── todo-db.ts            # IndexedDB helpers for the Todo List tool
+│   └── clipboard.ts          # Cross-browser clipboard helper
+public/
+├── icons/                    # PWA icons (192, 512, maskable-512, apple-touch, favicons)
+├── monaco/                   # Monaco editor (auto-copied by postinstall, gitignored)
+├── sw.js                     # Service worker
+└── .htaccess                 # Hostinger Apache: clean URLs, gzip, security headers
 ```
 
 ### Adding a new tool
@@ -103,17 +165,32 @@ src/
    {
      id: "my-tool",
      name: "My Tool",
-     description: "...",
+     description: "Short pitch shown on dashboard",
      icon: SomeIcon,
      category: "Generators",
      tags: ["...", "..."],
      color: "#1677ff",
    }
    ```
-2. Create `src/app/tools/my-tool/page.tsx` and wrap your UI in `<ToolPageLayout>`.
-3. Run `npm run dev` — the sidebar and dashboard pick it up automatically.
+2. Add an SEO entry to `src/lib/seo-content.ts` (title, description, keywords).
+3. Create `src/app/tools/my-tool/page.tsx` and wrap your UI in `<ToolPageLayout>`.
+4. Create `src/app/tools/my-tool/layout.tsx` (call `generateToolMetadata({ toolId: "my-tool" })`).
+5. Run `npm run dev` — sidebar, dashboard and search pick it up automatically.
 
 The tool's category determines its sidebar group, dashboard section, search keywords, and breadcrumb. AI categories automatically get an **ALPHA** tag.
+
+### Adding mobile-friendly two-pane layouts
+
+For typical input/output side-by-side tools, use the `tool-split-pane` class instead of inline grid:
+
+```tsx
+<div className="tool-split-pane" style={{ gap: 16 }}>
+  <Card title="Input">...</Card>
+  <Card title="Output">...</Card>
+</div>
+```
+
+It auto-collapses to a single column on tablet/mobile (≤991px).
 
 ---
 
@@ -129,73 +206,63 @@ To tweak colours, edit `:root { ... }` and `.dark { ... }` in `src/app/globals.c
 
 ---
 
-## Privacy & Data Handling
-
-- Every tool runs **entirely in your browser**. There is no backend.
-- The Todo List uses **IndexedDB** (your machine only).
-- AI Alpha tools require an API key (entered locally, kept in browser storage; never sent to anything except the upstream LLM provider you chose).
-- Recently used tools and theme preference live in **localStorage**.
-- No analytics, no cookies, no tracking pixels.
-
----
-
 ## Deployment
 
-This app builds to a fully static bundle. You can deploy it anywhere that serves files.
+This app builds to a fully static `out/` directory. Deploy anywhere that serves files.
 
-### Vercel (one-click)
+### Hostinger (Apache shared hosting)
 
-```bash
-npx vercel --prod
-```
-
-### Netlify
+`public/.htaccess` is configured for clean URLs, gzip, long-term caching of hashed assets, and basic security headers.
 
 ```bash
-npx netlify deploy --prod --dir=.next
+npm run build              # produces out/
+# Upload contents of out/ (including .htaccess) to Hostinger public_html/
 ```
 
-### Cloudflare Pages / S3 / GitHub Pages
+In your FTP client, **enable "show hidden files"** so `.htaccess` is uploaded.
 
-Set `output: "export"` in `next.config.ts` if you want a fully-static `out/` directory:
+### Vercel / Netlify / Cloudflare Pages
 
-```ts
-const nextConfig = { output: "export" };
-export default nextConfig;
-```
+Build command: `npm run build` · Publish directory: `out`
 
-Then `npm run build` and upload `out/`.
+### GitHub Pages / S3 / any static host
 
-### Docker
+Run `npm run build` and upload `out/`. The site is fully self-contained.
+
+### Docker (Node runtime — not required, but supported)
 
 ```dockerfile
-FROM node:20-alpine AS deps
+FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
-
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./package.json
-EXPOSE 3000
-CMD ["npm", "start"]
+FROM nginx:alpine AS runner
+COPY --from=build /app/out /usr/share/nginx/html
+EXPOSE 80
 ```
+
+---
+
+## SEO
+
+Every tool ships with hand-crafted SEO content:
+
+- **Unique titles** (50–65 chars, keyword-rich)
+- **Unique meta descriptions** (145–160 chars)
+- **Long-tail keyword arrays** targeting search intent
+- **Open Graph + Twitter Card** tags
+- **JSON-LD `SoftwareApplication`** structured data per tool
+- Site-wide `WebSite`, `Organization`, `CollectionPage` JSON-LD
+- Auto-generated `sitemap.xml` and `robots.txt`
 
 ---
 
 ## Browser Support
 
-Modern evergreen browsers. The crypto tooling uses Web Crypto API (Chromium ≥ 60, Firefox ≥ 57, Safari ≥ 11).
+Modern evergreen browsers. The crypto tooling uses Web Crypto API (Chromium ≥ 60, Firefox ≥ 57, Safari ≥ 11). PWA install works on iOS Safari ≥ 16.4, Android Chrome, and all desktop Chromium-based browsers.
 
 ---
 
@@ -210,10 +277,12 @@ Modern evergreen browsers. The crypto tooling uses Web Crypto API (Chromium ≥ 
 
 ## License
 
-Private project. Ship it where you want, modify it freely.
+[MIT](LICENSE) — fork it, modify it, ship it. Attribution appreciated but not required.
 
 ---
 
 ## Acknowledgements
 
 Built with [Next.js](https://nextjs.org), [Ant Design](https://ant.design), [Monaco Editor](https://microsoft.github.io/monaco-editor/), [Framer Motion](https://www.framer.com/motion/), and a long list of small focused libraries listed in `package.json`.
+
+Made with 💜 by [Ramesh Maharaddi](https://www.linkedin.com/in/rameshbgm/).
