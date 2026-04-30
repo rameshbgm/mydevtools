@@ -130,50 +130,82 @@ export default function Dashboard() {
                     ))}
                 </div>
 
-                <Title
-                    level={1}
-                    className="gradient-text"
-                    style={{
-                        fontSize: "clamp(32px, 5.5vw, 58px)",
-                        fontWeight: 900,
-                        marginBottom: 16,
-                        letterSpacing: "-2px",
-                        lineHeight: 1.1,
-                    }}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    style={{ textAlign: "center", marginBottom: 48 }}
                 >
-                    My Dev Tools
-                </Title>
+                    <Title
+                        level={1}
+                        className="gradient-text"
+                        style={{
+                            fontSize: "clamp(48px, 12vw, 96px)",
+                            fontWeight: 900,
+                            marginBottom: 24,
+                            lineHeight: 1.05,
+                            maxWidth: "90%",
+                            margin: "0 auto 24px",
+                        }}
+                    >
+                        My Dev Tools
+                    </Title>
 
-                <Paragraph
-                    style={{
-                        fontSize: "clamp(15px, 1.6vw, 19px)",
-                        color: darkMode ? "#a3a3a3" : "#525252",
-                        maxWidth: 640,
-                        margin: "0 auto 10px",
-                        lineHeight: 1.65,
-                        padding: "0 12px",
-                        fontWeight: 400,
-                    }}
-                >
-                    Everything a developer needs — nothing they don&apos;t.
-                    Format, decode, diff, hash, inspect, and generate — all{" "}
-                    <span style={{ color: darkMode ? "#a78bfa" : "#6d28d9", fontWeight: 500 }}>
-                        running privately in your browser
-                    </span>
-                    , with zero data sent anywhere.
-                </Paragraph>
-                <Paragraph
-                    style={{
-                        fontSize: "clamp(13px, 1.2vw, 15px)",
-                        color: darkMode ? "#555" : "#9a9a9a",
-                        maxWidth: 520,
-                        margin: "0 auto 28px",
-                        lineHeight: 1.6,
-                        padding: "0 12px",
-                    }}
-                >
-                    {stats.categories} categories · JWT, SSL certs, regex, UUID, hashing, color, network &amp; more
-                </Paragraph>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3, duration: 0.6 }}
+                        style={{
+                            maxWidth: "86vw",
+                            margin: "0 auto 40px",
+                            padding: "0 3vw",
+                        }}
+                    >
+                        <Paragraph
+                            style={{
+                                fontSize: "clamp(13px, 1.2vw, 15px)",
+                                color: darkMode ? "#555" : "#9a9a9a",
+                                margin: 0,
+                                lineHeight: 1.6,
+                            }}
+                        >
+                            100% private · Zero data sent · Works offline
+                        </Paragraph>
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5, duration: 0.6 }}
+                        className="animated-tagline"
+                        style={{
+                            fontSize: "clamp(15px, 1.5vw, 18px)",
+                            color: darkMode ? "#a3a3a3" : "#525252",
+                            maxWidth: "86vw",
+                            margin: "0 auto 10px",
+                            padding: "0 3vw",
+                            fontWeight: 400,
+                            lineHeight: 1.75,
+                        }}
+                    >
+                        Paste your <span className="tool-mention">JSON API response</span>, extract the{" "}
+                        <span className="tool-mention">JWT token</span>, validate with{" "}
+                        <span className="tool-mention">regex</span>, <span className="tool-mention">decode</span> the payload,{" "}
+                        <span className="tool-mention">hash</span> passwords for storage, generate a{" "}
+                        <span className="tool-mention">UUID</span> for sessions,{" "}
+                        <span className="tool-mention">encode base64</span> for databases,{" "}
+                        <span className="tool-mention">diff</span> versions, check your{" "}
+                        <span className="tool-mention">SSL certificate</span>, convert to{" "}
+                        <span className="tool-mention">XML</span>, create a{" "}
+                        <span className="tool-mention">QR code</span>, analyze{" "}
+                        <span className="tool-mention">colors</span>, format{" "}
+                        <span className="tool-mention">SQL queries</span>, and compress everything — all{" "}
+                        <span style={{ color: darkMode ? "#a78bfa" : "#6d28d9", fontWeight: 600 }}>
+                            running privately in your browser
+                        </span>
+                        .
+                    </motion.div>
+                </motion.div>
 
                 <div style={{ maxWidth: 580, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
                     <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
