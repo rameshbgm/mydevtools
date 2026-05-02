@@ -62,7 +62,7 @@ export default function AppFooter() {
                     </motion.span>
                     <Text style={{ color: darkMode ? "#a3a3a3" : "#525252" }}>by</Text>
                     <a
-                        href="https://www.linkedin.com/in/rameshbgm/"
+                        href="https://rameshsnotebook.com/"
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{

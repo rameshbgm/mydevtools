@@ -46,10 +46,6 @@ const DEVELOPER_STORIES = [
     { text: "Release QA pass: XML Validator and Text Diff compare final outputs to ensure only intended changes are shipped." },
 ] satisfies DeveloperStory[];
 
-const FONT_STYLES = [
-    "matrix-style",
-];
-
 const container = {
     hidden: {},
     show: { transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
@@ -180,29 +176,50 @@ export default function Dashboard() {
     const [search, setSearch] = useState("");
     const [searchFocused, setSearchFocused] = useState(false);
     const [storyIndex, setStoryIndex] = useState(0);
-    const [fontStyle, setFontStyle] = useState("matrix-style");
+    // null = settled (render with tool-name highlights); string = scrambling (render plain)
+    const [scrambledText, setScrambledText] = useState<string | null>(null);
 
-    // Initialize with random story on mount
-    useEffect(() => {
-        const randomIdx = Math.floor(Math.random() * DEVELOPER_STORIES.length);
-        const randomFont = FONT_STYLES[Math.floor(Math.random() * FONT_STYLES.length)];
-        setStoryIndex(randomIdx);
-        setFontStyle(randomFont);
-    }, []);
-
-    // Change story every 20 seconds
+    // ── Cycle to next story every 15s ───────────────────────────────────────
     useEffect(() => {
         const interval = setInterval(() => {
-            const randomIdx = pickNextRandomIndex(DEVELOPER_STORIES.length, storyIndex);
-            const currentFontIndex = FONT_STYLES.indexOf(fontStyle);
-            const nextFontIndex = pickNextRandomIndex(FONT_STYLES.length, currentFontIndex);
-            const randomFont = FONT_STYLES[nextFontIndex];
-            setStoryIndex(randomIdx);
-            setFontStyle(randomFont);
-        }, 20000);
-
+            setStoryIndex((i) => pickNextRandomIndex(DEVELOPER_STORIES.length, i));
+        }, 15000);
         return () => clearInterval(interval);
-    }, [storyIndex, fontStyle]);
+    }, []);
+
+    // ── Matrix-style scramble-decode animation on story change ──────────────
+    useEffect(() => {
+        const target = DEVELOPER_STORIES[storyIndex].text;
+        const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789{}[]<>/=+-*&^%$#@!?";
+        const FPS = 30;
+        const DURATION_MS = 1400;
+        const totalFrames = Math.floor((DURATION_MS / 1000) * FPS);
+        // Each character "locks in" at a position-staggered frame for the wave reveal
+        const lockFrames = target.split("").map((_, i) =>
+            Math.floor((i / Math.max(target.length, 1)) * totalFrames * 0.7)
+        );
+
+        let frame = 0;
+        const id = setInterval(() => {
+            const next = target
+                .split("")
+                .map((char, i) => {
+                    // Preserve whitespace and punctuation so the layout stays stable
+                    if (/[\s.,:;/&()'"-]/.test(char)) return char;
+                    if (frame >= lockFrames[i]) return char;
+                    return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+                })
+                .join("");
+            setScrambledText(next);
+            frame++;
+            if (frame > totalFrames) {
+                setScrambledText(null);
+                clearInterval(id);
+            }
+        }, 1000 / FPS);
+
+        return () => clearInterval(id);
+    }, [storyIndex]);
 
     const allCategorized = useMemo(() => getToolsByCategory(), []);
 
@@ -290,12 +307,7 @@ export default function Dashboard() {
                     <h1 className="neon-text">My Dev Tools</h1>
 
                     <motion.div
-                        key={storyIndex}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ delay: 0.25, duration: 0.5 }}
-                        className={`animated-tagline ${fontStyle}`}
+                        className="animated-tagline matrix-style"
                         style={{
                             fontSize: "clamp(12px, 0.92vw, 14px)",
                             color: darkMode ? "#a7f3d0" : "#166534",
@@ -305,9 +317,15 @@ export default function Dashboard() {
                             fontWeight: 500,
                             lineHeight: 1.35,
                             textAlign: "center",
+                            minHeight: "1.6em",
+                            fontVariantNumeric: "tabular-nums",
                         }}
+                        aria-live="polite"
                     >
-                        {renderStoryWithHighlights(currentStory.text)}
+                        <span style={{ opacity: 0.5, marginRight: 6 }}>&gt;</span>
+                        {scrambledText !== null
+                            ? scrambledText
+                            : renderStoryWithHighlights(currentStory.text)}
                     </motion.div>
                 </motion.div>
 
@@ -336,6 +354,7 @@ export default function Dashboard() {
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
                             onFocus={() => setSearchFocused(true)}
                             onBlur={() => setSearchFocused(false)}
+                            suppressHydrationWarning
                             style={{
                                 width: "100%",
                                 height: 54,
