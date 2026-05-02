@@ -1,225 +1,61 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+/* Dashboard — "Press" edition.
+ * Editorial index: a masthead + categorized list of tools rendered as
+ * numbered entries (think table of contents). Search filters the index.
+ * No glass, no gradients, no neon, no springy motion.
+ * Functionality preserved: search, recents, click navigates, clear-recents.
+ */
+
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-    Card,
-    Tag,
-    Typography,
-    Row,
-    Col,
-    Space,
-    Badge,
-    Empty,
-} from "antd";
-import { SearchOutlined, ClockCircleOutlined } from "@ant-design/icons";
-import { motion, AnimatePresence } from "framer-motion";
 import {
     toolsRegistry,
     getToolsByCategory,
-    CATEGORY_COLORS,
-    CATEGORY_ICONS,
-    CATEGORY_DESCRIPTIONS,
-    ALPHA_CATEGORIES,
     type ToolCategory,
     type ToolDefinition,
 } from "@/lib/tools-registry";
 import { useAppStore } from "@/lib/store";
 
-const { Title, Text } = Typography;
+const LEDE =
+    "Eighty-eight tools, one tab. No accounts, no uploads — every byte stays in your browser.";
 
-interface DeveloperStory {
-    text: string;
-}
-
-// Story cards rotate randomly every 20 seconds.
-const DEVELOPER_STORIES = [
-    { text: "API incident debug: JSON Formatter and JSON Validator clean incoming payloads, then JSON Diff shows exactly what changed between stable and failing responses." },
-    { text: "Authentication flow check: JWT Decoder verifies claims, JWS Sign & Verify confirms signatures, and HMAC Generator reproduces backend signing logic." },
-    { text: "Certificate troubleshooting: Certificate Inspector reveals metadata while Certificate Chain & SSL pinpoints missing intermediate certificates." },
-    { text: "Data conversion workflow: XML to JSON Converter and JSON to XML Converter keep partner payloads aligned across services." },
-    { text: "Gateway validation: Base64 Encode / Decode and URL Encode / Decode help verify header transforms before production rollout." },
-    { text: "Reporting cleanup: CSV to JSON Converter plus SQL Formatter standardize analytics inputs for repeatable exports." },
-    { text: "Input hardening: Email Validator, Credit Card Validator, and Regex Tester block malformed values before database writes." },
-    { text: "Legacy integration support: WSDL Parser and SOAP Client reproduce enterprise requests and validate envelopes quickly." },
-    { text: "Developer docs update: Markdown Table Generator and Markdown Preview keep release notes consistent and readable." },
-    { text: "Release QA pass: XML Validator and Text Diff compare final outputs to ensure only intended changes are shipped." },
-] satisfies DeveloperStory[];
-
-const container = {
-    hidden: {},
-    show: { transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
-};
-
-const item = {
-    hidden: { opacity: 0, y: 24, scale: 0.96 },
-    show: {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        transition: { duration: 0.4 },
-    },
-};
-
-const fadeIn = {
-    hidden: { opacity: 0, y: -16 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-};
-
-const TOOL_NAMES = [
-    "JSON Formatter",
-    "JSON Validator",
-    "Regex Tester",
-    "JSON Diff",
-    "URL Parser",
-    "API Request Builder",
-    "Swagger / OpenAPI Viewer",
-    "HTTP Status Codes Reference",
-    "JWT Decoder",
-    "JWS Sign & Verify",
-    "HMAC Generator",
-    "JWE Encrypt & Decrypt",
-    "JWK Generator",
-    "AES Encrypt & Decrypt",
-    "Certificate Inspector",
-    "Certificate Chain & SSL",
-    "Certificate & CSR Generator",
-    "PKCS#12 / PFX Tool",
-    "XML to JSON Converter",
-    "JSON to XML Converter",
-    "YAML ↔ JSON Converter",
-    "CSV to JSON Converter",
-    "JSON to CSV Converter",
-    "SQL Formatter",
-    "Timestamp Converter",
-    "Email Validator",
-    "Credit Card Validator",
-    "XSD Schema Validator",
-    "Text Diff",
-    "XML Diff",
-    "XPath Tester",
-    "IP Address Tools",
-    "Subnet Calculator",
-    "Port Number Reference",
-    "UUID Generator",
-    "Password Generator",
-    "Unix Permissions Calculator",
-    "String Case Converter",
-    "Text Manipulation Tools",
-    "String Escape / Unescape",
-    "Base64 Encode / Decode",
-    "URL Encode / Decode",
-    "WSDL Parser",
-    "SOAP Client",
-    "MIME Types Reference",
-    "Markdown Table Generator",
-    "Markdown Preview",
-    "Code Explainer",
-    "Slug Generator",
-    "Unicode Converter",
-    "Number Base Converter",
-    "RFC Standards Reference",
-    "Cron Expression Parser",
-    "JSONPath Tester",
-    "Java POJO Generator",
-    "JSON to TypeScript",
-    "CSV to XML Converter",
-    "XML Formatter",
-    "Gzip Compress / Decompress",
-    "SSH Key Generator",
-    "Key Pair Generator",
-    "Lorem Ipsum Generator",
-    "Text Summarizer",
-    "MAC Address Tools",
-    "IP Ranges Reference",
-    "RAG Document Q&A",
-    "BCrypt Hash & Verify",
-    "YAML Formatter",
-    "HTML Formatter",
-    "XML Validator",
-];
-
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const TOOL_PATTERN = new RegExp(
-    `(${[...TOOL_NAMES].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|")})`,
-    "gi"
-);
-
-const renderStoryWithHighlights = (story: string) => {
-    const parts = story.split(TOOL_PATTERN);
-    if (parts.length === 1) return story;
-
-    return parts.map((part, index) =>
-        index % 2 === 1 ? (
-            <span key={`tool-${part}-${index}`} className="tool-mention">
-                {part}
-            </span>
-        ) : (
-            part
-        )
+function ToolEntry({
+    tool,
+    index,
+    onClick,
+}: Readonly<{
+    tool: ToolDefinition;
+    index: number;
+    onClick: () => void;
+}>) {
+    return (
+        <div
+            role="link"
+            tabIndex={0}
+            className="press-entry"
+            onClick={onClick}
+            onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onClick();
+                }
+            }}
+        >
+            <span className="press-entry__num">{String(index).padStart(2, "0")}</span>
+            <div className="press-entry__body">
+                <h3 className="press-entry__title">{tool.name}</h3>
+                <p className="press-entry__desc">{tool.description}</p>
+            </div>
+            <span className="press-entry__meta">{tool.tags.slice(0, 2).join(" · ")}</span>
+        </div>
     );
-};
-
-const pickNextRandomIndex = (length: number, currentIndex: number) => {
-    if (length <= 1) return 0;
-    let next = currentIndex;
-    while (next === currentIndex) {
-        next = Math.floor(Math.random() * length);
-    }
-    return next;
-};
+}
 
 export default function Dashboard() {
     const router = useRouter();
-    const { darkMode, recentTools, addRecentTool, clearRecentTools, setNavigating } = useAppStore();
+    const { recentTools, addRecentTool, clearRecentTools, setNavigating } = useAppStore();
     const [search, setSearch] = useState("");
-    const [searchFocused, setSearchFocused] = useState(false);
-    const [storyIndex, setStoryIndex] = useState(0);
-    // null = settled (render with tool-name highlights); string = scrambling (render plain)
-    const [scrambledText, setScrambledText] = useState<string | null>(null);
-
-    // ── Cycle to next story every 15s ───────────────────────────────────────
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setStoryIndex((i) => pickNextRandomIndex(DEVELOPER_STORIES.length, i));
-        }, 15000);
-        return () => clearInterval(interval);
-    }, []);
-
-    // ── Matrix-style scramble-decode animation on story change ──────────────
-    useEffect(() => {
-        const target = DEVELOPER_STORIES[storyIndex].text;
-        const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789{}[]<>/=+-*&^%$#@!?";
-        const FPS = 30;
-        const DURATION_MS = 1400;
-        const totalFrames = Math.floor((DURATION_MS / 1000) * FPS);
-        // Each character "locks in" at a position-staggered frame for the wave reveal
-        const lockFrames = target.split("").map((_, i) =>
-            Math.floor((i / Math.max(target.length, 1)) * totalFrames * 0.7)
-        );
-
-        let frame = 0;
-        const id = setInterval(() => {
-            const next = target
-                .split("")
-                .map((char, i) => {
-                    // Preserve whitespace and punctuation so the layout stays stable
-                    if (/[\s.,:;/&()'"-]/.test(char)) return char;
-                    if (frame >= lockFrames[i]) return char;
-                    return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
-                })
-                .join("");
-            setScrambledText(next);
-            frame++;
-            if (frame > totalFrames) {
-                setScrambledText(null);
-                clearInterval(id);
-            }
-        }, 1000 / FPS);
-
-        return () => clearInterval(id);
-    }, [storyIndex]);
 
     const allCategorized = useMemo(() => getToolsByCategory(), []);
 
@@ -245,501 +81,211 @@ export default function Dashboard() {
         [filteredCategorized]
     );
 
-    const handleToolClick = (id: string) => {
+    const handleClick = (id: string) => {
         addRecentTool(id);
         setNavigating(true, id);
         router.push(`/tools/${id}`);
     };
 
-    const stats = {
-        total: toolsRegistry.length,
-        categories: allCategorized.size,
-    };
-    const currentStory = DEVELOPER_STORIES[storyIndex];
+    const stats = useMemo(
+        () => ({ total: toolsRegistry.length, categories: allCategorized.size }),
+        [allCategorized]
+    );
+
+    const recentDefs = useMemo(
+        () =>
+            recentTools
+                .slice(0, 6)
+                .map((id) => toolsRegistry.find((t) => t.id === id))
+                .filter(Boolean) as ToolDefinition[],
+        [recentTools]
+    );
+
+    /* Number tools globally so each entry has a stable index across categories. */
+    const numbering = useMemo(() => {
+        const map = new Map<string, number>();
+        let n = 0;
+        allCategorized.forEach((tools) => {
+            tools.forEach((t) => {
+                n += 1;
+                map.set(t.id, n);
+            });
+        });
+        return map;
+    }, [allCategorized]);
 
     return (
-        <div style={{ width: "100%" }}>
-            {/* Hero Section */}
-            <motion.div
-                variants={fadeIn}
-                initial="hidden"
-                animate="show"
-                style={{ textAlign: "center", marginBottom: 56 }}
-            >
-                {/* Privacy badge row */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
-                    {[
-                        { icon: "⚡", label: `${stats.total} tools`, color: "#8b5cf6" },
-                        { icon: "🔒", label: "100% Private", color: "#10b981" },
-                        { icon: "🌐", label: "Works Offline", color: "#3b82f6" },
-                        { icon: "🚫", label: "No Tracking", color: "#f59e0b" },
-                    ].map(({ icon, label, color }) => (
-                        <motion.span
-                            key={label}
-                            whileHover={{ scale: 1.05 }}
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                                padding: "5px 12px",
-                                borderRadius: 20,
-                                fontSize: 12,
-                                fontWeight: 600,
-                                background: darkMode ? `${color}18` : `${color}12`,
-                                border: `1px solid ${color}40`,
-                                color: color,
-                                letterSpacing: "0.2px",
-                                cursor: "default",
-                            }}
-                        >
-                            <span>{icon}</span>
-                            {label}
-                        </motion.span>
-                    ))}
+        <article>
+            {/* Masthead */}
+            <section className="press-masthead">
+                <div>
+                    <div className="press-masthead__edition">
+                        <span>Vol. 01</span>
+                        <span>·</span>
+                        <span>{stats.total} tools</span>
+                        <span>·</span>
+                        <span>{stats.categories} sections</span>
+                        <span>·</span>
+                        <span>Local edition</span>
+                    </div>
+                    <h1 className="press-masthead__title">
+                        Developer <em>almanac</em>.
+                    </h1>
+                    <p className="press-masthead__lede">{LEDE}</p>
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                    style={{ textAlign: "center", marginBottom: 48 }}
-                >
-                    <h1 className="neon-text">My Dev Tools</h1>
+                <aside className="press-masthead__sidenote">
+                    <strong>Editor&rsquo;s note</strong>
+                    Hit <kbd>⌘K</kbd> to jump anywhere. Or scroll the index below — tools are
+                    numbered so you can cite the entry by number. Recently opened items live
+                    just under this masthead.
+                </aside>
+            </section>
 
-                    <motion.div
-                        className="animated-tagline matrix-style"
+            {/* Search row */}
+            <section style={{ marginBottom: 32 }}>
+                <label htmlFor="press-search" className="press-eyebrow" style={{ display: "block", marginBottom: 8 }}>
+                    Index search
+                </label>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                    <input
+                        id="press-search"
+                        type="text"
+                        value={search}
+                        placeholder={`Filter ${stats.total} entries by name, tag, or section…`}
+                        onChange={(e) => setSearch(e.target.value)}
+                        suppressHydrationWarning
                         style={{
-                            fontSize: "clamp(12px, 0.92vw, 14px)",
-                            color: darkMode ? "#a7f3d0" : "#166534",
-                            maxWidth: "82vw",
-                            margin: "40px auto 10px",
-                            padding: 0,
-                            fontWeight: 500,
-                            lineHeight: 1.35,
-                            textAlign: "center",
-                            minHeight: "1.6em",
-                            fontVariantNumeric: "tabular-nums",
+                            flex: "1 1 320px",
+                            minWidth: 0,
+                            background: "var(--paper)",
+                            border: "1px solid var(--ink)",
+                            borderRadius: "var(--radius)",
+                            padding: "10px 14px",
+                            font: "400 15px/1 var(--font-serif)",
+                            color: "var(--ink)",
+                            outline: "none",
                         }}
-                        aria-live="polite"
-                    >
-                        <span style={{ opacity: 0.5, marginRight: 6 }}>&gt;</span>
-                        {scrambledText !== null
-                            ? scrambledText
-                            : renderStoryWithHighlights(currentStory.text)}
-                    </motion.div>
-                </motion.div>
-
-                <div style={{ maxWidth: 580, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
-                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                        <span
+                    />
+                    {search && (
+                        <button
+                            type="button"
+                            onClick={() => setSearch("")}
                             style={{
-                                position: "absolute",
-                                left: 18,
-                                display: "flex",
-                                alignItems: "center",
-                                color: searchFocused
-                                    ? darkMode ? "#6366f1" : "#4f46e5"
-                                    : darkMode ? "#555" : "#aaa",
-                                pointerEvents: "none",
-                                zIndex: 1,
-                                transition: "color 0.15s",
+                                appearance: "none",
+                                background: "transparent",
+                                border: "1px solid var(--rule-soft)",
+                                color: "var(--ink-soft)",
+                                padding: "8px 14px",
+                                borderRadius: "var(--radius)",
+                                fontFamily: "var(--font-mono)",
+                                fontSize: 12,
+                                cursor: "pointer",
                             }}
                         >
-                            <SearchOutlined style={{ fontSize: 17 }} />
-                        </span>
-                        <input
-                            type="text"
-                            placeholder={`Search ${stats.total} tools by name, tag, or category…`}
-                            value={search}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-                            onFocus={() => setSearchFocused(true)}
-                            onBlur={() => setSearchFocused(false)}
-                            suppressHydrationWarning
-                            style={{
-                                width: "100%",
-                                height: 54,
-                                paddingLeft: 50,
-                                paddingRight: search ? 44 : 20,
-                                borderRadius: 14,
-                                border: `1.5px solid ${
-                                    searchFocused
-                                        ? darkMode ? "#6366f1" : "#4f46e5"
-                                        : darkMode ? "#2a2a2a" : "#e0e0e0"
-                                }`,
-                                background: darkMode ? "#141414" : "#ffffff",
-                                fontSize: 15,
-                                color: darkMode ? "#e5e5e5" : "#171717",
-                                outline: "none",
-                                boxShadow: searchFocused
-                                    ? darkMode
-                                        ? "0 0 0 3px rgba(99,102,241,0.2)"
-                                        : "0 0 0 3px rgba(79,70,229,0.12)"
-                                    : darkMode
-                                        ? "0 4px 20px rgba(0,0,0,0.3)"
-                                        : "0 4px 20px rgba(0,0,0,0.06)",
-                                transition: "border-color 0.15s, box-shadow 0.15s",
-                                fontFamily: "inherit",
-                            }}
-                        />
-                        {search && (
-                            <button
-                                type="button"
-                                onClick={() => setSearch("")}
-                                style={{
-                                    position: "absolute",
-                                    right: 14,
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: 7,
-                                    border: "none",
-                                    cursor: "pointer",
-                                    background: darkMode ? "#2a2a2a" : "#efefef",
-                                    color: darkMode ? "#737373" : "#aaa",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontSize: 15,
-                                    fontWeight: 700,
-                                    lineHeight: 1,
-                                }}
-                            >
-                                ×
-                            </button>
-                        )}
-                    </div>
-                    {search.trim() && (
-                        <p
-                            style={{
-                                marginTop: 10,
-                                marginBottom: 0,
-                                fontSize: 13,
-                                textAlign: "center",
-                                color: darkMode ? "#737373" : "#aaa",
-                            }}
-                        >
-                            {matchCount} {matchCount === 1 ? "tool" : "tools"} matching{" "}
-                            <strong style={{ color: darkMode ? "#a78bfa" : "#4f46e5" }}>
-                                &ldquo;{search}&rdquo;
-                            </strong>
-                        </p>
+                            clear
+                        </button>
                     )}
                 </div>
-            </motion.div>
-
-            {/* Recent Tools */}
-            <AnimatePresence>
-                {recentTools.length > 0 && !search.trim() && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        style={{ marginBottom: 48 }}
-                    >
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                marginBottom: 16,
-                            }}
-                        >
-                            <ClockCircleOutlined
-                                style={{
-                                    color: darkMode ? "#737373" : "#a3a3a3",
-                                    fontSize: 16,
-                                }}
-                            />
-                            <Title
-                                level={5}
-                                style={{
-                                    margin: 0,
-                                    color: darkMode ? "#737373" : "#525252",
-                                    fontWeight: 500,
-                                    flex: 1,
-                                }}
-                            >
-                                Recently Used
-                            </Title>
-                            <button
-                                type="button"
-                                onClick={clearRecentTools}
-                                style={{
-                                    border: "none",
-                                    background: "none",
-                                    cursor: "pointer",
-                                    fontSize: 12,
-                                    color: darkMode ? "#555" : "#bbb",
-                                    padding: "2px 8px",
-                                    borderRadius: 6,
-                                    fontFamily: "inherit",
-                                    fontWeight: 500,
-                                    transition: "color 0.15s",
-                                }}
-                                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = darkMode ? "#a78bfa" : "#4f46e5"; }}
-                                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = darkMode ? "#555" : "#bbb"; }}
-                            >
-                                Clear all
-                            </button>
-                        </div>
-                        <Space wrap size={[8, 8]}>
-                            {recentTools.slice(0, 8).map((id) => {
-                                const tool = toolsRegistry.find((t) => t.id === id);
-                                if (!tool) return null;
-                                const ToolIcon = tool.icon;
-                                return (
-                                    <motion.div
-                                        key={id}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.98 }}
-                                    >
-                                        <Tag
-                                            style={{
-                                                cursor: "pointer",
-                                                padding: "6px 14px",
-                                                borderRadius: 10,
-                                                fontSize: 13,
-                                                fontWeight: 500,
-                                                background: darkMode
-                                                    ? "rgba(99, 102, 241, 0.15)"
-                                                    : "rgba(79, 70, 229, 0.08)",
-                                                border: `1px solid ${darkMode ? "rgba(99, 102, 241, 0.3)" : "rgba(79, 70, 229, 0.2)"}`,
-                                                color: darkMode ? "#a78bfa" : "#4f46e5",
-                                            }}
-                                            onClick={() => handleToolClick(id)}
-                                        >
-                                            <ToolIcon style={{ marginRight: 6, fontSize: 14 }} />
-                                            {tool.name}
-                                        </Tag>
-                                    </motion.div>
-                                );
-                            })}
-                        </Space>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Empty state when search has no matches */}
-            {search.trim() && filteredCategorized.size === 0 && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    style={{ padding: "60px 0", textAlign: "center" }}
-                >
-                    <Empty
-                        description={
-                            <Text style={{ color: darkMode ? "#737373" : "#a3a3a3" }}>
-                                No tools match &ldquo;{search}&rdquo;
-                            </Text>
-                        }
-                    />
-                </motion.div>
-            )}
-
-            {/* Tool Grid by Category */}
-            {Array.from(filteredCategorized.entries()).map(([category, tools]) => {
-                const CategoryIcon = CATEGORY_ICONS[category];
-                const categoryColor = CATEGORY_COLORS[category];
-                const categoryDesc = CATEGORY_DESCRIPTIONS[category];
-                const isAlpha = ALPHA_CATEGORIES.includes(category);
-
-                return (
-                    <motion.div
-                        key={category}
-                        style={{ marginBottom: 48 }}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4 }}
-                    >
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                flexWrap: "wrap",
-                                gap: 12,
-                                marginBottom: 8,
-                            }}
-                        >
-                            <div
-                                style={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 10,
-                                    background: `${categoryColor}1f`,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                }}
-                            >
-                                <CategoryIcon
-                                    style={{ fontSize: 18, color: categoryColor }}
-                                />
-                            </div>
-                            <Title
-                                level={4}
-                                style={{ margin: 0, fontWeight: 600 }}
-                            >
-                                {category}
-                            </Title>
-                            <Badge
-                                count={tools.length}
-                                style={{
-                                    backgroundColor: categoryColor,
-                                    fontWeight: 600,
-                                    fontSize: 11,
-                                }}
-                            />
-                            {isAlpha && (
-                                <Tag
-                                    color="purple"
-                                    style={{
-                                        margin: 0,
-                                        fontWeight: 700,
-                                        letterSpacing: 0.6,
-                                    }}
-                                >
-                                    ALPHA
-                                </Tag>
-                            )}
-                        </div>
-                        {categoryDesc && (
-                            <Text
-                                type="secondary"
-                                style={{
-                                    display: "block",
-                                    marginBottom: 18,
-                                    paddingLeft: 48,
-                                    fontSize: 13,
-                                }}
-                            >
-                                {categoryDesc}
-                            </Text>
-                        )}
-
-                        <motion.div variants={container} initial="hidden" animate="show">
-                            <Row gutter={[20, 20]}>
-                                {tools.map((tool) => (
-                                    <Col xs={24} sm={12} md={8} lg={8} xl={6} xxl={6} key={tool.id}>
-                                        <ToolCard
-                                            tool={tool}
-                                            darkMode={darkMode}
-                                            onClick={() => handleToolClick(tool.id)}
-                                        />
-                                    </Col>
-                                ))}
-                            </Row>
-                        </motion.div>
-                    </motion.div>
-                );
-            })}
-        </div>
-    );
-}
-
-interface ToolCardProps {
-    tool: (typeof toolsRegistry)[0];
-    darkMode: boolean;
-    onClick: () => void;
-}
-
-function ToolCard({ tool, darkMode, onClick }: Readonly<ToolCardProps>) {
-    const isAlpha = ALPHA_CATEGORIES.includes(tool.category);
-    return (
-        <motion.div variants={item} whileHover={{ y: -6 }} whileTap={{ scale: 0.98 }}>
-            <Card
-                className="tool-card"
-                onClick={onClick}
-                hoverable
-                style={{
-                    borderRadius: 16,
-                    border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
-                    background: darkMode
-                        ? "linear-gradient(145deg, #1a1a1a 0%, #141414 100%)"
-                        : "linear-gradient(145deg, #ffffff 0%, #fafafa 100%)",
-                    height: "100%",
-                    overflow: "hidden",
-                    position: "relative",
-                }}
-                styles={{
-                    body: { padding: 20 },
-                }}
-            >
-                {isAlpha && (
-                    <Tag
-                        color="purple"
+                {search.trim() && (
+                    <p
                         style={{
-                            position: "absolute",
-                            top: 12,
-                            right: 12,
-                            fontSize: 9,
-                            fontWeight: 700,
-                            letterSpacing: 0.6,
-                            margin: 0,
-                            padding: "0 6px",
-                            lineHeight: "16px",
+                            marginTop: 10,
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 12,
+                            color: "var(--ink-faint)",
                         }}
                     >
-                        ALPHA
-                    </Tag>
+                        {matchCount} {matchCount === 1 ? "result" : "results"} for{" "}
+                        <span className="press-mono" style={{ color: "var(--ink)" }}>
+                            &ldquo;{search}&rdquo;
+                        </span>
+                    </p>
                 )}
-                <motion.div
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    transition={{ type: "spring", stiffness: 400 }}
-                    style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 14,
-                        background: `${tool.color}1f`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginBottom: 16,
-                    }}
-                >
-                    {React.createElement(tool.icon, {
-                        style: { fontSize: 24, color: tool.color },
-                    })}
-                </motion.div>
+            </section>
 
-                <Title
-                    level={5}
-                    style={{
-                        marginBottom: 6,
-                        fontWeight: 600,
-                        fontSize: 15,
-                    }}
-                >
-                    {tool.name}
-                </Title>
-                <Text
-                    style={{
-                        color: darkMode ? "#a3a3a3" : "#525252",
-                        fontSize: 13,
-                        lineHeight: 1.5,
-                        display: "block",
-                    }}
-                >
-                    {tool.description}
-                </Text>
-
-                <div style={{ marginTop: 12, display: "flex", gap: 4, flexWrap: "wrap" }}>
-                    {tool.tags.slice(0, 3).map((tag) => (
-                        <Tag
-                            key={tag}
+            {/* Recently used (only when not searching) */}
+            {recentDefs.length > 0 && !search.trim() && (
+                <section style={{ marginBottom: 40 }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "baseline",
+                            paddingBottom: 8,
+                            borderBottom: "1px solid var(--rule)",
+                            marginBottom: 8,
+                        }}
+                    >
+                        <h2 className="press-eyebrow" style={{ margin: 0 }}>
+                            Recently opened
+                        </h2>
+                        <button
+                            type="button"
+                            onClick={clearRecentTools}
                             style={{
+                                background: "transparent",
+                                border: 0,
+                                color: "var(--ink-faint)",
+                                fontFamily: "var(--font-mono)",
                                 fontSize: 11,
-                                padding: "2px 8px",
-                                borderRadius: 6,
-                                margin: 0,
-                                background: darkMode ? "#262626" : "#f5f5f5",
-                                border: "none",
-                                color: darkMode ? "#a3a3a3" : "#525252",
+                                cursor: "pointer",
                             }}
                         >
-                            {tag}
-                        </Tag>
+                            clear
+                        </button>
+                    </div>
+                    {recentDefs.map((tool, i) => (
+                        <ToolEntry
+                            key={tool.id}
+                            tool={tool}
+                            index={numbering.get(tool.id) ?? i + 1}
+                            onClick={() => handleClick(tool.id)}
+                        />
                     ))}
-                </div>
-            </Card>
-        </motion.div>
+                </section>
+            )}
+
+            {/* Empty state */}
+            {search.trim() && filteredCategorized.size === 0 && (
+                <section
+                    style={{
+                        textAlign: "center",
+                        padding: "60px 0",
+                        borderTop: "1px solid var(--rule-soft)",
+                        borderBottom: "1px solid var(--rule-soft)",
+                    }}
+                >
+                    <p
+                        className="press-mono"
+                        style={{ color: "var(--ink-faint)", margin: 0 }}
+                    >
+                        No entries match &ldquo;{search}&rdquo;.
+                    </p>
+                </section>
+            )}
+
+            {/* Index by section */}
+            {Array.from(filteredCategorized.entries()).map(([category, tools]) => (
+                <section key={category}>
+                    <header className="press-section-head">
+                        <h2 className="press-section-head__title">{category}</h2>
+                        <div className="press-section-head__rule" />
+                        <span className="press-section-head__count">
+                            {String(tools.length).padStart(2, "0")} entries
+                        </span>
+                    </header>
+
+                    {tools.map((tool) => (
+                        <ToolEntry
+                            key={tool.id}
+                            tool={tool}
+                            index={numbering.get(tool.id) ?? 0}
+                            onClick={() => handleClick(tool.id)}
+                        />
+                    ))}
+                </section>
+            ))}
+        </article>
     );
 }
