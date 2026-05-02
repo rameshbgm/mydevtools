@@ -429,7 +429,10 @@ function SelfSignedTab() {
             const fakeCertPem = generateSimulatedCert(certInfo, publicKeyDer, signature);
             setCertificate(fakeCertPem);
             void certBundle;
-            message.success("Certificate generated successfully!");
+            message.warning(
+                "Preview generated. Browsers can't produce a valid X.509 — copy the OpenSSL command for a real certificate.",
+                6
+            );
 
         } catch (error) {
             console.error("Certificate generation error:", error);
