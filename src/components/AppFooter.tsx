@@ -60,7 +60,7 @@ export default function AppFooter() {
                     >
                         <HeartFilled style={{ color: "#ec4899", fontSize: 16 }} />
                     </motion.span>
-                    <Text style={{ color: darkMode ? "#a3a3a3" : "#525252" }}>for</Text>
+                    <Text style={{ color: darkMode ? "#a3a3a3" : "#525252" }}>by</Text>
                     <a
                         href="https://rameshsnotebook.com/"
                         target="_blank"
