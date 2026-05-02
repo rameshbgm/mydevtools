@@ -637,26 +637,31 @@ export default function IPAddressToolsPage() {
             icon={<GlobalOutlined style={{ fontSize: 24, color: "#1890ff" }} />}
             color="#1890ff"
             learnMore={{
-                whatIs: "IP Address Tools is a comprehensive utility for analyzing and working with both IPv4 (32-bit) and IPv6 (128-bit) addresses. It validates addresses, determines network types, provides binary/hex representations, calculates subnets, and supports conversions between formats.",
-                whyUse: "Essential for network engineers, developers, and security professionals to validate IPs, calculate subnets, understand address classifications, debug network configurations, and convert between different representations.",
+                whatIs: "A complete utility for inspecting both IPv4 (32-bit, dotted-decimal) and IPv6 (128-bit, colon-hex) addresses. It validates the address, classifies it (private, loopback, link-local, multicast, reserved, documentation, ULA), shows the binary, decimal, and hex forms, computes the in-addr.arpa / ip6.arpa reverse-DNS pointer, and runs subnet math without sending the address anywhere.",
+                whyUse: "Network engineers waste minutes per IP toggling between calculators, RFC tables, and online lookups. This tool collapses that into a single view — useful when triaging firewall hits, planning a VPC, decoding access logs, or answering 'is 100.64.0.5 public?' (it's not — that's CGNAT space, RFC 6598).",
                 howToUse: [
-                    "Enter an IPv4 or IPv6 address to analyze",
-                    "View detailed information about the address type and properties",
-                    "Use the subnet calculator to determine network ranges",
-                    "Convert between binary, decimal, and hexadecimal formats",
-                    "Generate random IPs for testing purposes",
+                    "Enter any IPv4 or IPv6 address — validation runs as you type",
+                    "Read the classification, scope, and which RFC defines the range",
+                    "Switch to the subnet tab to compute network/broadcast/usable hosts for a CIDR",
+                    "Toggle representations: binary, decimal, hex, expanded vs compressed IPv6",
+                    "Generate a random address inside a chosen prefix for synthetic test data",
                 ],
                 tips: [
-                    "IPv6 addresses can use :: to compress consecutive zeros",
-                    "Private IPv4 ranges: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16",
-                    "Link-local (169.254.x.x) often indicates DHCP failure",
-                    "Use /64 prefix for most IPv6 networks",
+                    "IPv4 private space: 10.0.0.0/8 (RFC 1918), 172.16.0.0/12, 192.168.0.0/16",
+                    "100.64.0.0/10 (RFC 6598) is shared CGNAT space — neither truly public nor private",
+                    "169.254.0.0/16 (RFC 3927) is link-local — auto-assigned when DHCP fails",
+                    "IPv6 fc00::/7 is the Unique Local Address space — the IPv6 equivalent of RFC 1918",
+                    "IPv6 :: compresses one run of consecutive zero groups — only one :: per address",
+                    "/64 is the standard IPv6 subnet size; smaller subnets break SLAAC",
+                    "224.0.0.0/4 (IPv4) and ff00::/8 (IPv6) are multicast — used for mDNS, OSPF, IGMP",
                 ],
                 useCases: [
-                    "Validating IP addresses in forms and APIs",
-                    "Calculating subnet ranges for network planning",
-                    "Converting IPs for firewall configuration",
-                    "Understanding IPv6 addressing for migration",
+                    "Confirming whether a logged IP is internal, external, or shared CGNAT",
+                    "Planning VPC, VNet, and on-prem subnet allocations without overlap",
+                    "Decoding firewall and SIEM events that log IPs in unfamiliar formats",
+                    "Converting IPv4 to IPv4-mapped IPv6 (::ffff:1.2.3.4) for dual-stack systems",
+                    "Building reverse-DNS PTR records during DNS configuration",
+                    "Studying for CCNA, CompTIA Network+, AWS Networking certifications",
                 ],
             }}
         >

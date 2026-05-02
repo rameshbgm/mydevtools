@@ -89,26 +89,32 @@ export default function JsonPathTesterPage() {
             icon={<FileSearchOutlined style={{ fontSize: 24, color: "#722ed1" }} />}
             color="#722ed1"
             learnMore={{
-                whatIs: "JSONPath is a query language for JSON, similar to XPath for XML. It allows you to extract specific data from JSON documents using path expressions like $.store.book[*].author.",
-                whyUse: "Large JSON documents can be hard to navigate. JSONPath lets you extract exactly the data you need without writing parsing code, useful for APIs, configs, and data processing.",
+                whatIs: "JSONPath is a query language for JSON, originally proposed by Stefan Goessner in 2007 and standardized as RFC 9535 in 2024. It mirrors XPath's role for XML — letting you reach into deeply nested objects with terse path expressions like `$.store.book[?(@.price < 10)].title` instead of writing a custom traversal each time.",
+                whyUse: "Modern APIs return rich, nested JSON, and config files balloon with hundreds of keys. JSONPath lets you describe the exact slice you want declaratively — perfect for prototyping data-extraction logic before committing to code, building tests against API responses, or pulling fields out of webhook payloads in tools like jq, Postman, AWS CLI, and Kubernetes kubectl.",
                 howToUse: [
-                    "Paste your JSON document in the input editor",
-                    "Enter a JSONPath expression in the query field",
-                    "View matching results instantly",
-                    "Use the reference for expression syntax"
+                    "Paste a JSON document in the left editor (any size — query runs in your browser)",
+                    "Enter a JSONPath expression in the query field — the result updates as you type",
+                    "Click any of the example expressions to see how operators behave",
+                    "Read the syntax reference for filters, slices, recursive descent, and unions",
+                    "Copy the matched array as JSON and paste it into your code or tests",
                 ],
                 tips: [
-                    "$ represents the root object",
-                    ".name or ['name'] accesses properties",
-                    "[*] selects all array elements",
-                    "[?(@.price < 10)] filters by condition"
+                    "`$` is the root, `@` is the current node inside a filter expression",
+                    "`..` is recursive descent — `$..price` finds every price at any depth",
+                    "`[?(@.foo == 'bar')]` filters arrays — quotes must match the JSON's quoting style",
+                    "Slices borrow Python syntax — `[:3]` is the first three, `[-1:]` is the last",
+                    "Unions like `[0,2,4]` pick specific indices in one query",
+                    "Different implementations differ on edge cases (script expressions, unicode, regex) — RFC 9535 picks the safer subset",
+                    "When a query returns nothing, double-check the path is rooted with `$.` and that array indices are zero-based",
                 ],
                 useCases: [
-                    "Extracting specific fields from API responses",
-                    "Filtering JSON data by conditions",
-                    "Testing data extraction logic before coding",
-                    "Navigating complex nested JSON structures"
-                ]
+                    "Extracting specific fields from REST API responses for assertions",
+                    "Building Postman/Bruno test scripts that pluck values from JSON bodies",
+                    "Filtering large config files (Helm values, Kustomize, Terraform JSON output)",
+                    "Drilling into Kubernetes resource manifests with `kubectl -o jsonpath`",
+                    "Parsing log aggregator output (CloudWatch, Datadog, Elastic) for ad-hoc fields",
+                    "Designing JMESPath-equivalent queries before porting to AWS CLI or Azure CLI",
+                ],
             }}
         >
             <Row gutter={[24, 24]}>

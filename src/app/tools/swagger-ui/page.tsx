@@ -177,26 +177,31 @@ export default function SwaggerPage() {
       icon={<ApiOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
       color="#52c41a"
       learnMore={{
-        whatIs: "An interactive documentation viewer for OpenAPI (Swagger) specifications. It renders API docs from JSON/YAML specs, letting you explore endpoints, schemas, and even try API calls.",
-        whyUse: "OpenAPI specs define REST APIs in a standard format. This viewer transforms raw specs into beautiful, interactive documentation that developers can use to understand and test APIs.",
+        whatIs: "An interactive renderer for OpenAPI (formerly Swagger) specifications. Paste a JSON or YAML spec — version 2.0, 3.0, or 3.1 — and get the same browsable documentation experience that Swagger UI provides on api.example.com, including endpoint listings, request/response schemas, model definitions, security schemes, and a Try-it-out console for live calls.",
+        whyUse: "An OpenAPI spec is a single source of truth — but the raw JSON is hard to read and harder to share with non-developers. This viewer turns it into navigable docs in seconds, with no install, no spec server, and no signup. Useful for design reviews, contract validation, and onboarding new team members to an API.",
         howToUse: [
-          "Paste your OpenAPI spec (JSON or YAML) in the editor",
-          "Or upload a spec file from your computer",
-          "Click 'Render Docs' to generate interactive documentation",
-          "Explore endpoints, try out API calls, and view schemas"
+          "Paste your OpenAPI / Swagger spec (JSON or YAML) into the editor",
+          "Or upload a .json / .yaml / .yml file from disk",
+          "Click 'Render Docs' to switch to the interactive view",
+          "Expand operations to see parameters, request bodies, and example responses",
+          "Use 'Try it out' to make live calls — works for any CORS-enabled endpoint",
         ],
         tips: [
-          "Supports both OpenAPI 3.x and Swagger 2.0 formats",
-          "You can load remote specs via URL",
-          "Authentication can be configured for live API testing",
-          "Schemas and models are rendered with type information"
+          "Supports OpenAPI 3.0, 3.1, and Swagger 2.0 — auto-detected from the spec",
+          "$ref pointers to local components resolve automatically (external $refs need a hosted spec)",
+          "Set the `servers` block so the Try-it-out console hits the right environment",
+          "Define `securitySchemes` (bearer, apiKey, OAuth2) so the Authorize button appears",
+          "Use YAML for human-edited specs, JSON when generated from code (FastAPI, NestJS, springdoc)",
+          "Cross-origin Try-it-out requests are blocked by browser CORS — host a CORS-enabled mock or use the API Request Builder tool",
         ],
         useCases: [
-          "Viewing API documentation from spec files",
-          "Testing API endpoints interactively",
-          "Sharing API documentation with team members",
-          "Validating OpenAPI spec structure"
-        ]
+          "Reviewing an API contract before implementation (design-first workflow)",
+          "Sharing draft API docs with frontend, QA, and stakeholders without deploying anything",
+          "Onboarding new developers to an existing API surface",
+          "Validating that a generated spec (FastAPI, NestJS, springdoc, drf-spectacular) renders cleanly",
+          "Debugging spec-driven SDK generation by spotting missing types or examples",
+          "Smoke-testing endpoints against staging or production from a single page",
+        ],
       }}
     >
       {mode === "edit" ? (
