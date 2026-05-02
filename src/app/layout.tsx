@@ -28,10 +28,11 @@ const plexMono = IBM_Plex_Mono({
 export const viewport: Viewport = {
     themeColor: [
         { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-        { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+        { media: "(prefers-color-scheme: dark)", color: "#0f0f0f" },
     ],
     width: "device-width",
     initialScale: 1,
+    maximumScale: 5,
 };
 
 const SITE_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}`;

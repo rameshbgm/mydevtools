@@ -527,20 +527,21 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
         return out;
     }, []);
 
-    /* Ant Design theme tokens — keep functional with the press palette */
+    /* Ant Design theme tokens — match the white "press" palette */
     const antTheme = useMemo(
         () => ({
             algorithm: darkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
             token: {
-                colorPrimary: darkMode ? "#b6c891" : "#4f6b39",
-                colorBgBase: darkMode ? "#15140f" : "#f4efe6",
-                colorBgContainer: darkMode ? "#15140f" : "#f4efe6",
-                colorBgElevated: darkMode ? "#1f1d18" : "#f4efe6",
-                colorBorder: darkMode ? "#2c2a23" : "#c8bfaf",
-                colorBorderSecondary: darkMode ? "#2c2a23" : "#c8bfaf",
-                colorText: darkMode ? "#f1ede4" : "#1d1b18",
-                colorTextSecondary: darkMode ? "#c8c2b6" : "#4a4540",
-                colorTextTertiary: darkMode ? "#807a6e" : "#8a8378",
+                colorPrimary: darkMode ? "#6dbb83" : "#2f6b3f",
+                colorBgBase: darkMode ? "#0f0f0f" : "#ffffff",
+                colorBgContainer: darkMode ? "#0f0f0f" : "#ffffff",
+                colorBgElevated: darkMode ? "#181818" : "#ffffff",
+                colorBgLayout: darkMode ? "#0f0f0f" : "#ffffff",
+                colorBorder: darkMode ? "#2a2a2a" : "#e2e2e2",
+                colorBorderSecondary: darkMode ? "#2a2a2a" : "#e2e2e2",
+                colorText: darkMode ? "#f5f5f5" : "#111111",
+                colorTextSecondary: darkMode ? "#c8c8c8" : "#444444",
+                colorTextTertiary: darkMode ? "#888888" : "#767676",
                 borderRadius: 2,
                 borderRadiusLG: 6,
                 fontFamily:
@@ -628,11 +629,10 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
 
                                 <button
                                     type="button"
-                                    className="press-iconbtn"
+                                    className="press-iconbtn press-hamburger"
                                     aria-label="Open menu"
+                                    aria-haspopup="true"
                                     onClick={() => setMobileOpen(true)}
-                                    style={{ display: "none" }}
-                                    data-mobile-trigger
                                 >
                                     <IconMenu />
                                 </button>
@@ -644,14 +644,6 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
 
                     <AppFooter />
                 </div>
-
-                <style jsx>{`
-                    @media (max-width: 720px) {
-                        button[data-mobile-trigger] {
-                            display: inline-flex !important;
-                        }
-                    }
-                `}</style>
             </App>
         </ConfigProvider>
     );
