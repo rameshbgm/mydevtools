@@ -1,28 +1,55 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Serif, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import {
+    IBM_Plex_Serif,
+    IBM_Plex_Sans,
+    IBM_Plex_Mono,
+    JetBrains_Mono,
+    Space_Grotesk,
+    Inter,
+} from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
 import PwaRegister from "@/components/PwaRegister";
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/seo-content";
 import { toolsRegistry } from "@/lib/tools-registry";
 
+/* Press */
 const plexSerif = IBM_Plex_Serif({
     variable: "--font-plex-serif",
     subsets: ["latin"],
     weight: ["400", "500", "600", "700"],
     style: ["normal", "italic"],
 });
-
 const plexSans = IBM_Plex_Sans({
     variable: "--font-plex-sans",
     subsets: ["latin"],
     weight: ["400", "500", "600", "700"],
 });
-
 const plexMono = IBM_Plex_Mono({
     variable: "--font-plex-mono",
     subsets: ["latin"],
     weight: ["400", "500", "600"],
+});
+
+/* Terminal */
+const jetbrains = JetBrains_Mono({
+    variable: "--font-jetbrains",
+    subsets: ["latin"],
+    weight: ["400", "500", "600", "700"],
+});
+
+/* Brutal */
+const spaceGrotesk = Space_Grotesk({
+    variable: "--font-space-grotesk",
+    subsets: ["latin"],
+    weight: ["400", "500", "600", "700"],
+});
+
+/* Glass */
+const inter = Inter({
+    variable: "--font-inter",
+    subsets: ["latin"],
+    weight: ["400", "500", "600", "700"],
 });
 
 export const viewport: Viewport = {
@@ -178,7 +205,7 @@ export default function RootLayout({
     return (
         <html
             lang="en"
-            className={`${plexSerif.variable} ${plexSans.variable} ${plexMono.variable} h-full antialiased`}
+            className={`${plexSerif.variable} ${plexSans.variable} ${plexMono.variable} ${jetbrains.variable} ${spaceGrotesk.variable} ${inter.variable} h-full antialiased`}
             suppressHydrationWarning
         >
             <head>
