@@ -84,6 +84,18 @@ function IconArchive() {
     );
 }
 
+function IconPalette() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="13.5" cy="6.5" r="1.5" />
+            <circle cx="17.5" cy="10.5" r="1.5" />
+            <circle cx="8.5" cy="7.5" r="1.5" />
+            <circle cx="6.5" cy="12.5" r="1.5" />
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z" />
+        </svg>
+    );
+}
+
 /* ─── Version dropdown ───────────────────────────────────────────────────── */
 
 function VersionDropdown({
@@ -117,10 +129,15 @@ function VersionDropdown({
                 className="press-version__btn"
                 onClick={() => setOpen((v) => !v)}
                 aria-haspopup="listbox"
-                aria-label={`Design version: ${current.label}`}
+                aria-label={`Design version (currently ${current.label}). Click to change.`}
+                title={`Design: ${current.label} — click to switch`}
             >
-                <span>{current.label}</span>
-                <span className="press-version__caret">▾</span>
+                <span className="press-version__icon" aria-hidden="true">
+                    <IconPalette />
+                </span>
+                <span className="press-version__label">Design:</span>
+                <span className="press-version__current">{current.label}</span>
+                <span className="press-version__caret" aria-hidden="true">▾</span>
             </button>
             {open && (
                 <div

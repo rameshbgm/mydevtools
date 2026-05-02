@@ -1855,23 +1855,31 @@ html.theme-glass .ant-modal-content {
 .press-version__btn {
   appearance: none;
   background: var(--paper);
-  border: var(--rule-w) solid var(--rule-soft);
-  color: var(--ink-soft);
+  border: var(--rule-w) solid var(--accent);
+  color: var(--ink);
   height: 34px;
-  padding: 0 10px;
+  padding: 0 12px;
   border-radius: var(--radius);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.04em;
-  text-transform: uppercase;
-  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  font-weight: 600;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+  box-shadow: 0 0 0 0 transparent;
 }
-.press-version__btn:hover { border-color: var(--ink); color: var(--ink); }
-.press-version__caret { font-size: 10px; opacity: 0.7; }
+.press-version__btn:hover {
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.press-version__icon { display: inline-flex; color: var(--accent); }
+.press-version__label { color: var(--ink-faint); text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.08em; }
+.press-version__current { color: var(--accent-ink); text-transform: uppercase; }
+.press-version__caret { font-size: 10px; color: var(--accent); }
 
 .press-version__menu {
   position: absolute;
@@ -1945,13 +1953,15 @@ html.theme-terminal .press-version__btn {
 html.theme-terminal .press-version__btn::before { content: ":: "; color: var(--accent); }
 html.theme-terminal .press-version__menu { border-style: dashed; box-shadow: none; }
 
-/* Mobile: dropdown becomes icon-only, archive button hides */
+/* Mobile: dropdown shrinks but stays visible */
+@media (max-width: 960px) {
+  .press-version__label { display: none; }
+}
 @media (max-width: 720px) {
-  .press-version__btn { padding: 0 8px; font-size: 11px; }
+  .press-version__btn { padding: 0 10px; gap: 6px; }
   .press-archive-btn { display: none; }
-  .press-version__menu { right: 0; min-width: 200px; }
+  .press-version__menu { right: 0; min-width: 220px; }
 }
 @media (max-width: 480px) {
-  .press-version__btn span:first-child { display: none; }
-  .press-version__btn::after { content: "Theme"; font-size: 10px; }
+  .press-version__current { display: none; }
 }
