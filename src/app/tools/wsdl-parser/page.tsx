@@ -476,26 +476,31 @@ export default function WsdlParserPage() {
             icon={<CloudOutlined style={{ fontSize: 24, color: "#722ed1" }} />}
             color="#722ed1"
             learnMore={{
-                whatIs: "WSDL (Web Services Description Language) Parser analyzes WSDL files to extract service information, operations, messages, and data types. It presents SOAP service structure in a readable format.",
-                whyUse: "WSDL files describe SOAP web services but are complex XML documents. This parser breaks them down into understandable components, helping developers integrate with SOAP services.",
+                whatIs: "A WSDL (Web Services Description Language) Parser unwraps SOAP service contracts into their structural building blocks: services, ports, bindings, port types, operations, messages, and the XSD types that flow across the wire. WSDL 1.1 and 2.0 documents are dense XML; this tool surfaces every node so you can read the contract like an API reference.",
+                whyUse: "SOAP is still the lingua franca for banking, insurance, healthcare (HL7), tax authorities, and telecom OSS/BSS systems. Even with modern REST replacements, integrating with these services means reading a WSDL — and a 5,000-line XML file is brutal without tooling. This parser saves the back-and-forth between the WSDL, the XSD imports, and your IDE.",
                 howToUse: [
-                    "Paste WSDL content or enter a WSDL URL",
-                    "Click 'Parse' to analyze the service definition",
-                    "Browse services, ports, operations, and types",
-                    "Generate sample SOAP requests for operations"
+                    "Paste a WSDL document into the editor, or enter a remote URL to fetch (CORS permitting)",
+                    "Click 'Parse' to load the service tree — services, ports, bindings, operations",
+                    "Drill into any operation to see its input message, output message, and SOAP fault types",
+                    "Inspect the linked XSD types to understand the request/response shape",
+                    "Generate a sample SOAP envelope and copy it straight into the SOAP Client tool",
                 ],
                 tips: [
-                    "Remote WSDLs may have CORS restrictions - use a proxy if needed",
-                    "Check bindings for SOAP version (1.1 vs 1.2)",
-                    "Operations show input/output message structures",
-                    "XSD types define the data contract"
+                    "Remote WSDLs hosted without CORS headers won't load in the browser — paste the XML directly instead",
+                    "Check `<soap:binding transport>` to confirm SOAP 1.1 (HTTP) vs SOAP 1.2 — they have different envelope namespaces",
+                    "`<wsdl:import>` and `<xsd:import>` pull in additional schemas — fetch and inline them to see the full picture",
+                    "Operation style (document/literal vs rpc/encoded) changes how the body is wrapped — most modern services use document/literal-wrapped",
+                    "WS-Policy attachments describe security and transactional requirements — look for `<wsp:Policy>` blocks",
+                    "Use the XSD Validator tool to verify a sample message before sending it to the service",
                 ],
                 useCases: [
-                    "Understanding SOAP service structure",
-                    "Planning integration with enterprise systems",
-                    "Generating sample requests for testing",
-                    "Documenting SOAP service interfaces"
-                ]
+                    "Reverse-engineering legacy enterprise SOAP services for integration",
+                    "Generating client stubs in code-first tooling (Apache CXF, JAX-WS, .NET wsdl.exe)",
+                    "Auditing SOAP service contracts during procurement or vendor migration",
+                    "Building documentation for internal SOAP services exposed via API gateways",
+                    "Diagnosing schema mismatches when wire requests fail with `Fault` responses",
+                    "Onboarding to bank, payment, or government SOAP APIs without IDE plugins",
+                ],
             }}
         >
             <Row gutter={[16, 16]}>

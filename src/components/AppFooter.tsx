@@ -1,8 +1,7 @@
 "use client";
 
-import React from "react";
 import { Typography, Tooltip } from "antd";
-import { GithubOutlined, LinkedinFilled, HeartFilled, ThunderboltFilled } from "@ant-design/icons";
+import { GithubOutlined, LinkedinFilled, HeartFilled } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { toolsRegistry } from "@/lib/tools-registry";
@@ -18,7 +17,7 @@ export default function AppFooter() {
             style={{
                 position: "relative",
                 marginTop: 32,
-                padding: "20px 24px 16px",
+                padding: "clamp(16px, 3vw, 20px) clamp(12px, 4vw, 24px) clamp(14px, 3vw, 16px)",
                 borderTop: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
                 background: darkMode
                     ? "linear-gradient(180deg, transparent 0%, rgba(99, 102, 241, 0.02) 100%)"

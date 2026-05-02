@@ -900,25 +900,31 @@ export default function MACAddressToolsPage() {
             icon={<WifiOutlined style={{ fontSize: 24, color: "#722ed1" }} />}
             color="#722ed1"
             learnMore={{
-                whatIs: "MAC (Media Access Control) addresses are 48-bit unique identifiers assigned to network interfaces. The first 3 bytes (OUI - Organizationally Unique Identifier) identify the manufacturer, while the last 3 bytes (NIC) are device-specific.",
-                whyUse: "Essential for network troubleshooting, security auditing, device identification, VM configuration, IoT development, and understanding network traffic.",
+                whatIs: "MAC (Media Access Control) addresses are 48-bit (EUI-48) hardware identifiers burned into every Ethernet, Wi-Fi, and Bluetooth interface. The leading 24 bits (OUI — Organizationally Unique Identifier) are assigned by the IEEE to a vendor; the trailing 24 bits identify the specific NIC. EUI-64 extends this to 64 bits for IPv6 SLAAC and some industrial protocols.",
+                whyUse: "MACs surface in DHCP logs, ARP tables, switch CAM lookups, captive portals, MDM enrollment, and BLE scans. Looking up an OUI tells you whether a mystery device on the LAN is an Apple laptop, a Raspberry Pi, an HP printer, or a Sonos speaker — and randomized MACs (a common privacy feature on iOS, Android, Windows 10+) explain why the same phone shows up under different addresses every day.",
                 howToUse: [
-                    "Enter a MAC address to analyze its properties and lookup the vendor",
-                    "Generate random MAC addresses with custom prefixes",
-                    "Search the vendor database by OUI or company name",
-                    "Copy addresses in various formats for different use cases",
+                    "Paste any MAC in colon, hyphen, dotted, or bare-hex format — normalization runs as you type",
+                    "Inspect the OUI vendor lookup, broadcast/multicast/unicast bit, and U/L bit",
+                    "Switch to the generate tab to mint random locally-administered MACs for VMs, containers, or test rigs",
+                    "Search the vendor database by company name or OUI prefix",
+                    "Convert a MAC to its EUI-64 form for IPv6 SLAAC interface IDs",
                 ],
                 tips: [
-                    "The first bit indicates unicast (0) or multicast (1)",
-                    "The second bit indicates universal (0) or local (1) administration",
-                    "Use locally administered MACs for VMs and containers",
-                    "FF:FF:FF:FF:FF:FF is the broadcast address",
+                    "The least-significant bit of the first octet is the I/G bit: 0 = unicast, 1 = multicast",
+                    "The second-least-significant bit is the U/L bit: 0 = universal (vendor-assigned), 1 = locally administered",
+                    "Locally administered prefixes (x2, x6, xA, xE in the first octet) are safe for VMs/containers",
+                    "FF:FF:FF:FF:FF:FF is the L2 broadcast — every NIC on the segment processes it",
+                    "01:00:5E:* maps to IPv4 multicast (RFC 1112); 33:33:* maps to IPv6 multicast",
+                    "iOS, Android, and modern Windows randomize the MAC per-SSID for privacy — vendor lookups will show 'Locally administered'",
+                    "Apple's randomized MACs always set the U/L bit; it's a quick way to spot them in logs",
                 ],
                 useCases: [
-                    "Identifying device manufacturers on a network",
-                    "Generating unique MACs for virtual machines",
-                    "Network security analysis and MAC filtering",
-                    "IoT device identification and management",
+                    "Identifying mystery devices on a corporate or home LAN from DHCP/ARP logs",
+                    "Generating unique non-conflicting MACs for VMs, KVM/QEMU bridges, and Docker macvlan networks",
+                    "Pre-loading MAC allow-lists for 802.1X, captive portals, and MDM",
+                    "Auditing wireless surveys and BLE scans for unknown vendors",
+                    "Building EUI-64 IPv6 addresses for SLAAC-only environments",
+                    "Detecting MAC spoofing and randomization in IDS/SIEM analytics",
                 ],
             }}
         >

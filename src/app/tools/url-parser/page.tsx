@@ -86,26 +86,31 @@ export default function UrlParserPage() {
             icon={<GlobalOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
             color="#1677ff"
             learnMore={{
-                whatIs: "A URL parser breaks down URLs into their components: protocol, host, port, path, query parameters, and fragment. It helps you understand and manipulate URL structures.",
-                whyUse: "URLs contain multiple parts that often need to be extracted or modified. This tool visualizes URL structure, making it easy to debug routing, query params, and link issues.",
+                whatIs: "A URL parser dissects any URL into its WHATWG-standard components — scheme, username, password, host, port, pathname, search params, and fragment. It mirrors how browsers, servers, and routers interpret URLs internally, exposing the structure that drives routing, redirects, and request building.",
+                whyUse: "URLs are deceptively complex: an extra slash, encoded character, or unsafe scheme can break authentication callbacks, OAuth flows, or signed S3 links. Parsing surfaces exactly what each segment contains, so you can verify percent-encoding, spot stray query params, and confirm a URL behaves the same in every client.",
                 howToUse: [
-                    "Paste a URL in the input field",
-                    "View all parsed components (protocol, host, path, etc.)",
-                    "See query parameters as key-value pairs",
-                    "Copy individual components as needed"
+                    "Paste any HTTP, HTTPS, FTP, file, mailto, or custom-scheme URL into the input field",
+                    "Inspect the breakdown of scheme, host, port, pathname, query, and fragment",
+                    "Review query parameters as a key-value table — duplicate keys are preserved in order",
+                    "Copy any individual component or the rebuilt URL with one click",
+                    "Test edge cases: unicode hosts, IPv6 literals, percent-encoded paths, deep links",
                 ],
                 tips: [
-                    "Query params start after ? and are separated by &",
-                    "Fragment/hash (#) is client-side only",
-                    "Default ports: HTTP=80, HTTPS=443",
-                    "Use for debugging routing and API endpoints"
+                    "Query keys can repeat (?tag=a&tag=b) — order is preserved by the URL spec",
+                    "Fragments (#anchor) never reach the server — they are client-only",
+                    "Default ports (HTTP 80, HTTPS 443) are stripped by `URL.toString()`",
+                    "Punycode (xn--…) is how internationalized domains travel across DNS — the browser converts back automatically",
+                    "Trailing slashes matter for SEO and some routers — /about and /about/ may resolve differently",
+                    "Use `encodeURIComponent` for individual params, `encodeURI` for whole URLs",
                 ],
                 useCases: [
-                    "Debugging URL routing issues",
-                    "Extracting query parameters from URLs",
-                    "Understanding OAuth callback URLs",
-                    "Validating URL formats"
-                ]
+                    "Debugging OAuth, OIDC, and SAML callback URLs that fail with subtle encoding bugs",
+                    "Validating signed URLs (AWS S3, GCS, CloudFront) before they expire",
+                    "Auditing tracking parameters (utm_*, fbclid, gclid) in marketing links",
+                    "Extracting tokens from password-reset, magic-link, or share URLs",
+                    "Verifying webhook target URLs match exactly what's registered with the provider",
+                    "Inspecting deep links and universal links during mobile development",
+                ],
             }}
         >
             <Row gutter={[24, 24]}>
