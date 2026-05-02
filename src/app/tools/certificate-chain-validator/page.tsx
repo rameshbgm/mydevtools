@@ -124,7 +124,7 @@ function LiveCheckTab() {
     return (
         <Space direction="vertical" style={{ width: "100%" }} size="middle">
             <Card size="small" title="Enter URL or Hostname">
-                <Space.Compact style={{ width: "100%" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 0, width: "100%" }}>
                     <Input
                         size="large"
                         prefix={<GlobalOutlined />}
@@ -132,20 +132,28 @@ function LiveCheckTab() {
                         value={urlInput}
                         onChange={(e) => setUrlInput(e.target.value)}
                         onPressEnter={fetch_and_inspect}
-                        style={{ flex: 1 }}
+                        style={{ flex: "1 1 200px", minWidth: 0, borderRadius: "6px 0 0 6px" }}
                     />
                     <InputNumber
                         value={port}
                         onChange={(v) => setPort(v ?? 443)}
                         min={1}
                         max={65535}
-                        style={{ width: 90 }}
+                        size="large"
+                        style={{ width: 90, borderRadius: 0, marginLeft: -1 }}
                         placeholder="Port"
                     />
-                    <Button size="large" type="primary" icon={<SecurityScanOutlined />} loading={loading} onClick={fetch_and_inspect}>
+                    <Button
+                        size="large"
+                        type="primary"
+                        icon={<SecurityScanOutlined />}
+                        loading={loading}
+                        onClick={fetch_and_inspect}
+                        style={{ borderRadius: "0 6px 6px 0", marginLeft: -1 }}
+                    >
                         Inspect
                     </Button>
-                </Space.Compact>
+                </div>
                 <Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
                     Fetches the full certificate chain directly from the server — leaf + all intermediates + root CA.
                     Everything is processed locally; no external services involved.
@@ -376,24 +384,31 @@ function ChainValidatorTab() {
     return (
         <Space direction="vertical" style={{ width: "100%" }}>
             <Card size="small" title="Fetch from URL">
-                <Space.Compact style={{ width: "100%" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 0, width: "100%" }}>
                     <Input
                         prefix={<GlobalOutlined />}
                         placeholder="example.com"
                         value={fetchHost}
                         onChange={(e) => setFetchHost(e.target.value)}
                         onPressEnter={handleFetch}
-                        style={{ flex: 1 }}
+                        style={{ flex: "1 1 200px", minWidth: 0, borderRadius: "6px 0 0 6px" }}
                     />
                     <InputNumber
                         value={fetchPort}
                         onChange={(v) => setFetchPort(v ?? 443)}
                         min={1} max={65535}
-                        style={{ width: 90 }}
+                        style={{ width: 90, borderRadius: 0, marginLeft: -1 }}
                         placeholder="443"
                     />
-                    <Button type="primary" loading={fetchLoading} onClick={handleFetch}>Fetch</Button>
-                </Space.Compact>
+                    <Button
+                        type="primary"
+                        loading={fetchLoading}
+                        onClick={handleFetch}
+                        style={{ borderRadius: "0 6px 6px 0", marginLeft: -1 }}
+                    >
+                        Fetch
+                    </Button>
+                </div>
                 <Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
                     Fetches the live certificate chain and populates the textarea below for validation.
                 </Text>
