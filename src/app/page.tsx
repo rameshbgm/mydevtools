@@ -11,8 +11,18 @@ import {
     Space,
     Badge,
     Empty,
+    Collapse,
 } from "antd";
-import { SearchOutlined, ClockCircleOutlined } from "@ant-design/icons";
+import {
+    SearchOutlined,
+    ClockCircleOutlined,
+    SafetyCertificateOutlined,
+    LockOutlined,
+    ThunderboltOutlined,
+    InfoCircleOutlined,
+    HistoryOutlined,
+    GithubOutlined,
+} from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     toolsRegistry,
@@ -25,6 +35,7 @@ import {
     type ToolDefinition,
 } from "@/lib/tools-registry";
 import { useAppStore } from "@/lib/store";
+import { RELEASE_NOTES, KIND_LABEL, KIND_COLORS } from "@/lib/release-notes";
 
 const { Title, Text } = Typography;
 
@@ -329,6 +340,164 @@ export default function Dashboard() {
                     </motion.div>
                 </motion.div>
 
+                {/* About this app — default expanded, leads with privacy + security */}
+                <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    style={{ maxWidth: 720, margin: "0 auto 28px", padding: "0 12px", textAlign: "left" }}
+                >
+                    <Collapse
+                        defaultActiveKey={["about"]}
+                        ghost
+                        expandIconPosition="end"
+                        items={[
+                            {
+                                key: "about",
+                                label: (
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                        <InfoCircleOutlined style={{ color: darkMode ? "#a78bfa" : "#4f46e5", fontSize: 16 }} />
+                                        <Text strong style={{ fontSize: 14 }}>Learn More About This App</Text>
+                                    </div>
+                                ),
+                                children: (
+                                    <Card
+                                        style={{
+                                            background: darkMode ? "#141414" : "#ffffff",
+                                            border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
+                                            borderRadius: 14,
+                                        }}
+                                        styles={{ body: { padding: 22 } }}
+                                    >
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+                                            {/* Headline */}
+                                            <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.65, color: darkMode ? "#d4d4d4" : "#374151" }}>
+                                                <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>My Dev Tools</strong> is a private,
+                                                offline-capable workshop of <strong>{stats.total}+ developer utilities</strong> — formatters, validators,
+                                                converters, generators, certificate &amp; cryptography tools, network calculators, and references — all
+                                                running entirely in your browser.
+                                            </p>
+
+                                            {/* The problem it solves */}
+                                            <div>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                                                    <span style={{ fontSize: 16 }}>🎯</span>
+                                                    <Text strong style={{ fontSize: 13, color: "#f59e0b", letterSpacing: 0.3 }}>THE PROBLEM</Text>
+                                                </div>
+                                                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.7, color: darkMode ? "#a3a3a3" : "#4b5563" }}>
+                                                    Most online dev tools <strong>upload your data to a server</strong> — pasting a JWT, an API key,
+                                                    a private cert, or a customer payload sends it across the network and onto someone else&rsquo;s logs.
+                                                    That&rsquo;s a real exposure for any team handling tokens, PII, or production payloads.
+                                                </p>
+                                            </div>
+
+                                            {/* Privacy & Security — primary message */}
+                                            <div style={{
+                                                background: darkMode ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.06)",
+                                                border: `1px solid ${darkMode ? "rgba(16, 185, 129, 0.25)" : "rgba(16, 185, 129, 0.20)"}`,
+                                                borderRadius: 10,
+                                                padding: "14px 16px",
+                                            }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                                                    <LockOutlined style={{ color: "#10b981", fontSize: 16 }} />
+                                                    <Text strong style={{ fontSize: 13, color: "#10b981", letterSpacing: 0.3 }}>PRIVACY &amp; SECURITY — BY DEFAULT</Text>
+                                                </div>
+                                                <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 13.5, lineHeight: 1.75 }}>
+                                                    <li>
+                                                        <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Everything runs locally.</strong>{" "}
+                                                        Parsing, signing, hashing, encryption, certificate work — all happens in your browser tab.
+                                                        Your input never leaves your machine.
+                                                    </li>
+                                                    <li>
+                                                        <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No accounts, no tracking, no analytics.</strong>{" "}
+                                                        Nothing is logged. No cookies that follow you around. No third-party scripts.
+                                                    </li>
+                                                    <li>
+                                                        <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No third-party CDNs at runtime.</strong>{" "}
+                                                        Fonts, code editors, and crypto libraries are bundled with the app — no external requests
+                                                        on tool use.
+                                                    </li>
+                                                    <li>
+                                                        <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Works offline.</strong>{" "}
+                                                        Installable as a Progressive Web App; once loaded, it keeps working without a network.
+                                                    </li>
+                                                    <li>
+                                                        <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Open source.</strong>{" "}
+                                                        Every line is auditable on GitHub — verify the privacy claims for yourself.
+                                                    </li>
+                                                </ul>
+                                            </div>
+
+                                            {/* Why use it */}
+                                            <div>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                                                    <ThunderboltOutlined style={{ color: darkMode ? "#a78bfa" : "#4f46e5", fontSize: 16 }} />
+                                                    <Text strong style={{ fontSize: 13, color: darkMode ? "#a78bfa" : "#4f46e5", letterSpacing: 0.3 }}>WHY DEVELOPERS USE IT</Text>
+                                                </div>
+                                                <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 13.5, lineHeight: 1.75 }}>
+                                                    <li><strong>Safe to use at work</strong> — paste production tokens, internal certs, and customer payloads without compliance worry.</li>
+                                                    <li><strong>One tab, every utility</strong> — formatters, JWT, certificates, regex, network, encoding, hashing — no tool-hopping.</li>
+                                                    <li><strong>Fast and frictionless</strong> — no signup, no quotas, no rate limits, no upsell.</li>
+                                                    <li><strong>Mobile-friendly</strong> — every tool works on a phone, useful for on-call debugging.</li>
+                                                </ul>
+                                            </div>
+
+                                            {/* Trust footer */}
+                                            <div style={{
+                                                display: "flex",
+                                                gap: 10,
+                                                flexWrap: "wrap",
+                                                paddingTop: 14,
+                                                borderTop: `1px dashed ${darkMode ? "#262626" : "#e5e5e5"}`,
+                                            }}>
+                                                <a
+                                                    href="https://github.com/rameshbgm/mydevtools"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: 6,
+                                                        padding: "6px 12px",
+                                                        borderRadius: 8,
+                                                        fontSize: 12.5,
+                                                        fontWeight: 500,
+                                                        background: darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
+                                                        border: `1px solid ${darkMode ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`,
+                                                        color: darkMode ? "#e5e5e5" : "#171717",
+                                                        textDecoration: "none",
+                                                    }}
+                                                >
+                                                    <GithubOutlined /> View source on GitHub
+                                                </a>
+                                                <span style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: 6,
+                                                    padding: "6px 12px",
+                                                    borderRadius: 8,
+                                                    fontSize: 12.5,
+                                                    fontWeight: 500,
+                                                    background: darkMode ? "rgba(16,185,129,0.10)" : "rgba(16,185,129,0.08)",
+                                                    border: `1px solid ${darkMode ? "rgba(16,185,129,0.25)" : "rgba(16,185,129,0.20)"}`,
+                                                    color: "#10b981",
+                                                }}>
+                                                    <SafetyCertificateOutlined /> Zero data collection
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ),
+                            },
+                        ]}
+                        style={{
+                            background: darkMode ? "rgba(20,20,20,0.6)" : "#ffffff",
+                            border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
+                            borderRadius: 14,
+                        }}
+                    />
+                </motion.div>
+
                 <div style={{ maxWidth: 580, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
                     <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                         <span
@@ -631,6 +800,146 @@ export default function Dashboard() {
                     </motion.div>
                 );
             })}
+
+            {/* Release Notes — only shown when not actively searching */}
+            {!search.trim() && (
+                <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-80px" }}
+                    transition={{ duration: 0.5 }}
+                    style={{ marginTop: 64, marginBottom: 24 }}
+                >
+                    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
+                        <div
+                            style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 10,
+                                background: darkMode ? "rgba(99,102,241,0.15)" : "rgba(79,70,229,0.10)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                            }}
+                        >
+                            <HistoryOutlined style={{ fontSize: 18, color: darkMode ? "#a78bfa" : "#4f46e5" }} />
+                        </div>
+                        <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+                            What&rsquo;s New
+                        </Title>
+                        <Badge
+                            count={`${RELEASE_NOTES.length} releases`}
+                            style={{
+                                backgroundColor: darkMode ? "rgba(99,102,241,0.15)" : "rgba(79,70,229,0.10)",
+                                color: darkMode ? "#a78bfa" : "#4f46e5",
+                                fontWeight: 600,
+                                fontSize: 11,
+                                boxShadow: "none",
+                            }}
+                        />
+                    </div>
+                    <Text
+                        type="secondary"
+                        style={{ display: "block", marginBottom: 18, paddingLeft: 48, fontSize: 13 }}
+                    >
+                        Recent shipping work, newest first
+                    </Text>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        {RELEASE_NOTES.map((release) => {
+                            const c = KIND_COLORS[release.kind];
+                            const bg     = darkMode ? c.bgDark     : c.bg;
+                            const text   = darkMode ? c.textDark   : c.text;
+                            const border = darkMode ? c.borderDark : c.border;
+                            return (
+                                <Card
+                                    key={`${release.version}-${release.date}`}
+                                    style={{
+                                        borderRadius: 14,
+                                        border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
+                                        background: darkMode
+                                            ? "linear-gradient(145deg, #1a1a1a 0%, #141414 100%)"
+                                            : "linear-gradient(145deg, #ffffff 0%, #fafafa 100%)",
+                                    }}
+                                    styles={{ body: { padding: 18 } }}
+                                >
+                                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                                        <span
+                                            style={{
+                                                fontFamily: "var(--font-geist-mono), monospace",
+                                                fontSize: 12,
+                                                fontWeight: 600,
+                                                color: darkMode ? "#e5e5e5" : "#171717",
+                                                background: darkMode ? "#262626" : "#f5f5f5",
+                                                padding: "2px 8px",
+                                                borderRadius: 6,
+                                            }}
+                                        >
+                                            v{release.version}
+                                        </span>
+                                        <span
+                                            style={{
+                                                fontSize: 11,
+                                                fontWeight: 600,
+                                                letterSpacing: 0.4,
+                                                textTransform: "uppercase",
+                                                padding: "2px 8px",
+                                                borderRadius: 6,
+                                                background: bg,
+                                                color: text,
+                                                border: `1px solid ${border}`,
+                                            }}
+                                        >
+                                            {KIND_LABEL[release.kind]}
+                                        </span>
+                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                            {release.date}
+                                        </Text>
+                                    </div>
+                                    <Title level={5} style={{ margin: "0 0 10px", fontWeight: 600, fontSize: 15 }}>
+                                        {release.title}
+                                    </Title>
+                                    <ul
+                                        style={{
+                                            margin: 0,
+                                            paddingLeft: 20,
+                                            color: darkMode ? "#a3a3a3" : "#525252",
+                                            fontSize: 13.5,
+                                            lineHeight: 1.65,
+                                        }}
+                                    >
+                                        {release.notes.map((note) => (
+                                            <li key={note.slice(0, 40)} style={{ marginBottom: 4 }}>
+                                                {note}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </Card>
+                            );
+                        })}
+                    </div>
+
+                    <p
+                        style={{
+                            marginTop: 18,
+                            textAlign: "center",
+                            fontSize: 12,
+                            color: darkMode ? "#737373" : "#a3a3a3",
+                        }}
+                    >
+                        Full history on{" "}
+                        <a
+                            href="https://github.com/rameshbgm/mydevtools/commits/main"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: darkMode ? "#a78bfa" : "#4f46e5" }}
+                        >
+                            GitHub
+                        </a>
+                        .
+                    </p>
+                </motion.div>
+            )}
         </div>
     );
 }
