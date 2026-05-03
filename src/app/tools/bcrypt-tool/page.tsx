@@ -94,7 +94,7 @@ export default function BCryptToolPage() {
                         label: "Hash Password",
                         children: (
                             <Card>
-                                <Space direction="vertical" style={{ width: "100%" }} size="large">
+                                <Space orientation="vertical" style={{ width: "100%" }} size="large">
                                     <div>
                                         <Text strong style={{ display: "block", marginBottom: 8 }}>Password</Text>
                                         <Input.Password
@@ -152,7 +152,7 @@ export default function BCryptToolPage() {
                         label: "Verify Password",
                         children: (
                             <Card>
-                                <Space direction="vertical" style={{ width: "100%" }} size="large">
+                                <Space orientation="vertical" style={{ width: "100%" }} size="large">
                                     <div>
                                         <Text strong style={{ display: "block", marginBottom: 8 }}>BCrypt hash</Text>
                                         <Input

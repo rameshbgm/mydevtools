@@ -122,7 +122,7 @@ keytool -importkeystore \\
     -alias ${alias}`;
 
     return (
-        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <Card size="small" title="Step 1: Provide PEM inputs">
                 <div className="tool-split-pane" style={{ gap: 16 }}>
                     <div>
@@ -210,7 +210,7 @@ function CommandsTab() {
     ];
 
     return (
-        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <Card size="small">
                 <div className="tool-split-pane" style={{ gap: 16 }}>
                     <div>

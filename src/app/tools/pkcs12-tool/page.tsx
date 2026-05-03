@@ -104,7 +104,7 @@ function ReadPkcs12() {
 
     return (
         <Card>
-            <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                 <Upload accept=".p12,.pfx" beforeUpload={handleUpload} showUploadList={false} maxCount={1}>
                     <Button icon={<UploadOutlined />} size="large">{filename || "Upload .p12 or .pfx"}</Button>
                 </Upload>
@@ -128,7 +128,7 @@ function Pkcs12Result({ bundle }: { bundle: Pkcs12Bundle }) {
     const copy = (text: string, label: string) => { copyToClipboard(text, label); message.success(label); };
 
     return (
-        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <Alert
                 type="success"
                 message={
@@ -222,7 +222,7 @@ function CreatePkcs12() {
 
     return (
         <Card>
-            <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                 <div className="tool-split-pane" style={{ gap: 16 }}>
                     <div>
                         <Text strong>Certificate (PEM)</Text>

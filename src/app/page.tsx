@@ -12,7 +12,6 @@ import {
     Space,
     Badge,
     Empty,
-    Collapse,
 } from "antd";
 import {
     SearchOutlined,
@@ -60,6 +59,10 @@ const fadeIn = {
     show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
+// Module-level flag: resets when the JS bundle is reloaded (page refresh / new tab),
+// but survives client-side navigation so the panel stays dismissed within a session.
+let _aboutDismissed = false;
+
 export default function Dashboard() {
     const router = useRouter();
     const { darkMode, recentTools, addRecentTool, clearRecentTools, setNavigating } = useAppStore();
@@ -101,9 +104,9 @@ export default function Dashboard() {
         categories: allCategorized.size,
     };
 
-    const [aboutDismissed, setAboutDismissed] = useState(false);
-    const dismissAbout = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const [aboutDismissed, setAboutDismissed] = useState(_aboutDismissed);
+    const dismissAbout = () => {
+        _aboutDismissed = true;
         setAboutDismissed(true);
     };
 
@@ -121,55 +124,58 @@ export default function Dashboard() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    style={{ width: "94%", margin: "0 auto 28px", padding: 0, textAlign: "left" }}
+                    style={{
+                        width: "94%",
+                        margin: "0 auto 28px",
+                        textAlign: "left",
+                        borderRadius: 14,
+                        border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
+                        background: darkMode ? "rgba(20,20,20,0.6)" : "#ffffff",
+                        overflow: "hidden",
+                    }}
                 >
-                    <Collapse
-                        defaultActiveKey={["about"]}
-                        ghost
-                        expandIconPlacement="end"
-                        items={[
-                            {
-                                key: "about",
-                                label: (
-                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                        <InfoCircleOutlined style={{ color: darkMode ? "#a78bfa" : "#4f46e5", fontSize: 16 }} />
-                                        <Text strong style={{ fontSize: 14 }}>Learn More About This App</Text>
-                                        <button
-                                            type="button"
-                                            onClick={dismissAbout}
-                                            title="Dismiss"
-                                            style={{
-                                                marginLeft: "auto",
-                                                width: 24,
-                                                height: 24,
-                                                borderRadius: 6,
-                                                border: "none",
-                                                cursor: "pointer",
-                                                background: "transparent",
-                                                color: darkMode ? "#555" : "#bbb",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                fontSize: 14,
-                                                lineHeight: 1,
-                                                padding: 0,
-                                                flexShrink: 0,
-                                            }}
-                                        >
-                                            <CloseOutlined style={{ fontSize: 12 }} />
-                                        </button>
-                                    </div>
-                                ),
-                                children: (
-                                    <Card
-                                        style={{
-                                            background: darkMode ? "#141414" : "#ffffff",
-                                            border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
-                                            borderRadius: 14,
-                                        }}
-                                        styles={{ body: { padding: 22 } }}
-                                    >
-                                        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+                    {/* Header row */}
+                    <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "12px 16px",
+                        borderBottom: `1px solid ${darkMode ? "#262626" : "#f0f0f0"}`,
+                    }}>
+                        <InfoCircleOutlined style={{ color: darkMode ? "#a78bfa" : "#4f46e5", fontSize: 16 }} />
+                        <Text strong style={{ fontSize: 14, flex: 1 }}>Learn More About This App</Text>
+                        <button
+                            type="button"
+                            onClick={dismissAbout}
+                            title="Dismiss"
+                            style={{
+                                width: 24,
+                                height: 24,
+                                borderRadius: 6,
+                                border: "none",
+                                cursor: "pointer",
+                                background: "transparent",
+                                color: darkMode ? "#555" : "#bbb",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: 0,
+                                flexShrink: 0,
+                            }}
+                        >
+                            <CloseOutlined style={{ fontSize: 12 }} />
+                        </button>
+                    </div>
+                    {/* Content */}
+                    <Card
+                        style={{
+                            background: darkMode ? "#141414" : "#ffffff",
+                            border: "none",
+                            borderRadius: 0,
+                        }}
+                        styles={{ body: { padding: 22 } }}
+                    >
+                        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
                                             <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.65, color: darkMode ? "#d4d4d4" : "#374151" }}>
                                                 <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>My Dev Tools</strong> is a private,
                                                 offline-capable workshop of <strong>{stats.total}+ developer utilities</strong> — formatters, validators,
@@ -304,17 +310,8 @@ export default function Dashboard() {
                                             </div>
                                         </div>
                                     </Card>
-                                ),
-                            },
-                        ]}
-                        style={{
-                            background: darkMode ? "rgba(20,20,20,0.6)" : "#ffffff",
-                            border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
-                            borderRadius: 14,
-                        }}
-                    />
-                </motion.div>
-                )}
+                                </motion.div>
+                                )}
 
                 {/* Privacy badge row */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
