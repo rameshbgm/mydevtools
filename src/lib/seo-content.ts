@@ -16,9 +16,9 @@ export interface ToolSeoContent {
 
 export const SITE_NAME = "mydevtools";
 export const SITE_URL = "https://mydevtools.com";
-export const SITE_TAGLINE = "Free Online Developer Tools — 100% Client-Side";
+export const SITE_TAGLINE = "Free Online Developer Tools: 100% Client-Side";
 export const SITE_DESCRIPTION =
-    "Free, fast, privacy-first developer tools that run entirely in your browser. Format, validate, convert, encode, decode, generate and inspect — no signup, no upload, no tracking.";
+    "Free, fast, privacy-first developer tools that run entirely in your browser. Format, validate, convert, encode, decode, generate and inspect: no signup, no upload, no tracking.";
 
 export const SEO_CONTENT: Record<string, ToolSeoContent> = {
     // ===== Formatters =====

@@ -647,8 +647,8 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
             colorBgContainer: "#ffffff",
             colorBgLayout: "#fafafa",
             colorBgElevated: "#ffffff",
-            colorBorder: "#e5e5e5",
-            colorBorderSecondary: "#f0f0f0",
+            colorBorder: "#d1d5db",
+            colorBorderSecondary: "#e5e7eb",
             borderRadius: 10,
             fontFamily:
                 'var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -760,7 +760,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     // ── Command palette trigger button ──────────────────────────────────────
     const triggerBorder = darkMode ? "#2a2a2a" : "#e2e2e2";
     const triggerBg     = darkMode ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.025)";
-    const triggerText   = darkMode ? "#555" : "#aaa";
+    const triggerText   = darkMode ? "#555" : "#71717a";
     const kbdBg         = darkMode ? "#1e1e1e" : "#f2f2f2";
     const kbdBorder     = darkMode ? "#333" : "#ddd";
 
@@ -1000,7 +1000,14 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
 
                         <Content
                             style={{
-                                padding: isMobile ? "20px 16px" : "28px clamp(16px, 3%, 48px)",
+                                padding:
+                                    pathname === "/"
+                                        ? isMobile
+                                            ? "10px 16px 20px"
+                                            : "12px clamp(16px, 3%, 48px) 28px"
+                                        : isMobile
+                                          ? "20px 16px"
+                                          : "28px clamp(16px, 3%, 48px)",
                                 minHeight: "calc(100vh - 60px)",
                                 background: darkMode ? "#0a0a0a" : "#fafafa",
                             }}

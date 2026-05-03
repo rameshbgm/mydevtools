@@ -138,14 +138,14 @@ export const CATEGORY_DESCRIPTIONS: Record<ToolCategory, string> = {
     Validators: "Validate syntax, schemas, and patterns in your data",
     "Diff & Compare": "Compare documents side by side with highlighted differences",
     "Data Converters": "Convert between data formats: XML, JSON, CSV, YAML, XSLT",
-    "Encoding & Decoding": "Encode and decode text — Base64, URL, HTML, Unicode, Gzip",
+    "Encoding & Decoding": "Encode and decode text: Base64, URL, HTML, Unicode, Gzip",
     Cryptography: "Hashing, HMAC, JWT, JWS, JWE, and JWK key generation",
     "Certificates & Keys": "X.509 certificates, SSH keys, PKI tooling, and SSL inspection",
-    "API & Web Services": "REST, SOAP, WSDL — build and inspect web service requests",
+    "API & Web Services": "REST, SOAP, WSDL: build and inspect web service requests",
     Network: "IP, subnet, MAC address tooling and lookups",
     Generators: "Create UUIDs, passwords, code stubs, QR codes, and more",
     "Text & Utilities": "Text manipulation, time, color, number bases, and productivity",
-    "AI Alpha Tools": "AI-powered tools — early access, may change without notice",
+    "AI Alpha Tools": "AI-powered tools: early access, may change without notice",
     Reference: "Lookup guides for HTTP codes, MIME types, ports, and RFCs",
 };
 
