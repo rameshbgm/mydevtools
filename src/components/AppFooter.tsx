@@ -151,48 +151,15 @@ export default function AppFooter() {
                     <Text type="secondary" style={{ fontSize: 12 }}>
                         © {year} My Dev Tools
                     </Text>
-                    <span
-                        style={{
-                            display: "inline-block",
-                            width: 4,
-                            height: 4,
-                            borderRadius: "50%",
-                            background: darkMode ? "#404040" : "#d4d4d4",
-                        }}
-                    />
-                    <a
-                        href="/release-notes"
-                        style={{
-                            fontSize: 12,
-                            fontFamily: "var(--font-geist-mono), monospace",
-                            color: darkMode ? "#a78bfa" : "#4f46e5",
-                            textDecoration: "none",
-                            opacity: 0.85,
-                        }}
-                    >
+                    <span className="footer-dot" />
+                    <a href="/release-notes" className="footer-version-link">
                         v{APP_VERSION}
                     </a>
-                    <span
-                        style={{
-                            display: "inline-block",
-                            width: 4,
-                            height: 4,
-                            borderRadius: "50%",
-                            background: darkMode ? "#404040" : "#d4d4d4",
-                        }}
-                    />
+                    <span className="footer-dot" />
                     <Text type="secondary" style={{ fontSize: 12 }}>
                         {toolsRegistry.length} tools
                     </Text>
-                    <span
-                        style={{
-                            display: "inline-block",
-                            width: 4,
-                            height: 4,
-                            borderRadius: "50%",
-                            background: darkMode ? "#404040" : "#d4d4d4",
-                        }}
-                    />
+                    <span className="footer-dot" />
                     <Text type="secondary" style={{ fontSize: 12 }}>
                         100% client-side · no data leaves your browser
                     </Text>

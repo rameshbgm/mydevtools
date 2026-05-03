@@ -671,3 +671,28 @@ html, body {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* Footer stat strip */
+.footer-version-link {
+  font-size: 12px;
+  font-family: var(--font-geist-mono), monospace;
+  color: #4f46e5;
+  text-decoration: none;
+  opacity: 0.85;
+}
+
+:root.dark .footer-version-link {
+  color: #a78bfa;
+}
+
+.footer-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #d4d4d4;
+}
+
+:root.dark .footer-dot {
+  background: #404040;
+}
