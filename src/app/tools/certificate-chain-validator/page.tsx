@@ -122,7 +122,7 @@ function LiveCheckTab() {
     const copy = (text: string, label: string) => { copyToClipboard(text, label); message.success(label); };
 
     return (
-        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <Card size="small" title="Enter URL or Hostname">
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 0, width: "100%" }}>
                     <Input
@@ -209,7 +209,7 @@ function LiveCheckTab() {
                                 </Space>
                             ),
                             children: p ? (
-                                <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                                <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                     {/* ── Summary ── */}
                                     <Descriptions bordered size="small" column={{ xs: 1, md: 2 }} labelStyle={{ width: 160 }}>
                                         <Descriptions.Item label="Common Name" span={2}>{p.subject.CN ?? "—"}</Descriptions.Item>
@@ -253,7 +253,7 @@ function LiveCheckTab() {
                                     {/* ── Key Usage ── */}
                                     {(p.keyUsage.length > 0 || p.extendedKeyUsage.length > 0) && (
                                         <Card size="small" title="Key Usage">
-                                            <Space direction="vertical" size={4}>
+                                            <Space orientation="vertical" size={4}>
                                                 {p.keyUsage.length > 0 && (
                                                     <div>
                                                         <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>Key Usage:</Text>
@@ -382,7 +382,7 @@ function ChainValidatorTab() {
     };
 
     return (
-        <Space direction="vertical" style={{ width: "100%" }}>
+        <Space orientation="vertical" style={{ width: "100%" }}>
             <Card size="small" title="Fetch from URL">
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 0, width: "100%" }}>
                     <Input
@@ -442,7 +442,7 @@ function ChainValidatorTab() {
             {!result ? (
                 <Card size="small"><Empty description="Validate a chain to see results" /></Card>
             ) : (
-                <Space direction="vertical" style={{ width: "100%" }}>
+                <Space orientation="vertical" style={{ width: "100%" }}>
                     <Alert
                         type={result.valid ? "success" : "error"}
                         icon={result.valid ? <CheckCircleOutlined /> : <CloseCircleOutlined />}

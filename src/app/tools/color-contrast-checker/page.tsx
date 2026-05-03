@@ -87,7 +87,7 @@ export default function ColorContrastCheckerPage() {
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card title="Foreground (text)">
-                        <Space direction="vertical" style={{ width: "100%" }}>
+                        <Space orientation="vertical" style={{ width: "100%" }}>
                             <ColorPicker
                                 value={fg}
                                 onChange={(c) => setFg(c.toHexString())}
@@ -100,7 +100,7 @@ export default function ColorContrastCheckerPage() {
                 </Col>
                 <Col xs={24} lg={12}>
                     <Card title="Background">
-                        <Space direction="vertical" style={{ width: "100%" }}>
+                        <Space orientation="vertical" style={{ width: "100%" }}>
                             <ColorPicker
                                 value={bg}
                                 onChange={(c) => setBg(c.toHexString())}
@@ -139,7 +139,7 @@ export default function ColorContrastCheckerPage() {
                     </div>
                 </div>
 
-                <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                     <div>
                         <Text strong style={{ display: "block", marginBottom: 6 }}>Normal text</Text>
                         <Space wrap>

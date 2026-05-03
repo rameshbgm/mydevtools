@@ -216,7 +216,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
                         key: "subject",
                         label: "Subject / Issuer",
                         children: (
-                            <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                            <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                 <Card size="small" title="Subject">
                                     <Descriptions bordered size="small" column={1}>
                                         {Object.entries(info.subject).map(([k, v]) => (
@@ -243,7 +243,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
                         label: `SANs (${info.sans.length})`,
                         children:
                             info.sans.length > 0 ? (
-                                <Space direction="vertical" style={{ width: "100%" }}>
+                                <Space orientation="vertical" style={{ width: "100%" }}>
                                     {info.sans.map((san, i) => (
                                         <Tag
                                             key={i}
@@ -261,7 +261,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
                         key: "usage",
                         label: "Key Usage",
                         children: (
-                            <Space direction="vertical" style={{ width: "100%" }}>
+                            <Space orientation="vertical" style={{ width: "100%" }}>
                                 <div>
                                     <Text strong style={{ display: "block", marginBottom: 6 }}>
                                         Key Usage
@@ -332,7 +332,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
                         key: "publickey",
                         label: "Public Key",
                         children: (
-                            <Space direction="vertical" style={{ width: "100%" }}>
+                            <Space orientation="vertical" style={{ width: "100%" }}>
                                 <TextArea
                                     rows={10}
                                     value={info.publicKeyPem}
@@ -352,7 +352,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
                         key: "raw",
                         label: "Raw",
                         children: (
-                            <Space direction="vertical" style={{ width: "100%" }}>
+                            <Space orientation="vertical" style={{ width: "100%" }}>
                                 <Card size="small" title="PEM">
                                     <TextArea
                                         rows={8}
@@ -420,7 +420,7 @@ function DecodeTab({ input }: { input: string }) {
     }, [input, message]);
 
     return (
-        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <Button type="primary" icon={<SafetyCertificateOutlined />} loading={loading} onClick={decode}>
                     Decode
@@ -475,7 +475,7 @@ function FingerprintTab({ input }: { input: string }) {
     };
 
     return (
-        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <div>
                 <Button type="primary" icon={<SearchOutlined />} loading={loading} onClick={compute}>
                     Compute Fingerprints
@@ -628,7 +628,7 @@ function ConvertTab({ input }: { input: string }) {
     };
 
     return (
-        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
                 <Text strong>Convert to:</Text>
                 <Select
@@ -883,7 +883,7 @@ function PemParserTab({ input }: { input: string }) {
     }, [input, message]);
 
     return (
-        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <div>
                 <Button type="primary" icon={<EyeOutlined />} loading={loading} onClick={parse}>
                     Parse PEM Blocks
@@ -895,7 +895,7 @@ function PemParserTab({ input }: { input: string }) {
                     <Empty description="Parse PEM to see all blocks" />
                 </Card>
             ) : (
-                <Space direction="vertical" style={{ width: "100%" }}>
+                <Space orientation="vertical" style={{ width: "100%" }}>
                     {blocks.map((b, i) => (
                         <Card
                             key={i}
