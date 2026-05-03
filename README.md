@@ -13,7 +13,7 @@ A private, offline-first developer tools portal — **90 utilities** across **13
 
 - **90 tools** organised into 13 logical categories
 - **Stunning landing page** — animated hero, stats strip, category showcase with scroll effects (marketing styles live under `landing-*` in `globals.css`)
-- **Unified workspace chrome** — post-landing catalog, shell, and tool headers use **`src/app/workspace.css`** tokens (`.dark`‑aware `--app-*` variables, responsive catalogue cards)
+- **Unified workspace chrome (re‑skinned)** — everything after **`LandingMarketing`** on `/` shares one design system in **`src/app/workspace.css`**: semantic text tokens (`--app-text-heading`, `--app-text-body`), indigo + cyan accents, catalogue mesh background, category “banner” rows, tool cards with per‑tool `--tool-accent`, command palette (`app-cmd-*`), shell (`app-shell-*`), tool hero SVG wash (`ToolPageLayout`), plus responsive breakpoints for phone / tablet / desktop
 - **Installable PWA** — works as an app on iOS, Android, Mac and Windows
 - **Mobile-first responsive** — every tool adapts to phone, tablet and desktop
 - **Header search** with autocomplete — jump to any tool in two keystrokes
@@ -204,9 +204,9 @@ Themes are driven by:
 1. **`<html>.dark` class** — toggled by the theme button, persisted in localStorage
 2. **AntD `ConfigProvider`** — supplies token + component overrides (`darkAlgorithm` / `defaultAlgorithm`)
 3. **`globals.css`** — brand primitives (`--primary`, `--gradient-brand`, `--elevation-*`) and landing-only classes
-4. **`workspace.css`** — workspace/dashboard/tool shell palette (`--app-shell-bg`, `--app-catalog-bg`, `--app-card-*`, `--app-tool-hero-bg`, footer wash, etc.)
+4. **`workspace.css`** — workspace-only palette and layout helpers: structural tokens (`--app-shell-bg`, `--app-header-*`, `--app-sider-*`), readable typography (`--app-text-heading` / `--app-text-body` / `--app-text-muted`), surfaces (`--app-card-*`, `--app-tool-hero-*`, `--app-footer-*`), overlays (`--app-overlay-scrim`), and classes such as **`app-catalog-workspace`**, **`app-catalog-category-head`**, **`app-catalog-tool-card`**, **`app-tool-hero`** / **`app-tool-hero-svg`**, **`app-cmd-*`**, **`app-shell-*`**, **`app-workspace-footer`**, **`app-memory-page`**, **`app-not-found-shell`**.
 
-To tweak **landing** visuals, favour `globals.css` (`landing-*`). To tweak **catalog, sidebar/backdrop, tool headers**, prefer `workspace.css` and shallow edits to `darkTheme` / `lightTheme` in `AppShell.tsx` so contrast stays WCAG‑friendly.
+To tweak **landing** visuals, favour `globals.css` (`landing-*`). To tweak **catalog, sidebar, command palette, tool headers, footer, loader**, prefer **`workspace.css`** plus shallow `darkTheme` / `lightTheme` tokens in **`AppShell.tsx`**. Avoid flattening contrast: light mode keeps slate body text on cool gray shells; dark mode keeps zinc/slate ramps, not pure black on neon.
 
 ---
 

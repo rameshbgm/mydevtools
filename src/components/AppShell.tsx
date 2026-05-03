@@ -163,16 +163,11 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
         }
     };
 
-    // Theme tokens
-    const bg         = darkMode ? "#161616" : "#ffffff";
-    const border      = darkMode ? "#2a2a2a" : "#e8e8e8";
-    const divider     = darkMode ? "#1f1f1f" : "#f2f2f2";
     const textPrimary = darkMode ? "#e5e5e5" : "#171717";
-    const textMuted   = darkMode ? "#737373" : "#9a9a9a";
-    const activeBg    = darkMode ? "rgba(99,102,241,0.16)" : "rgba(79,70,229,0.08)";
+    const textMuted = darkMode ? "#737373" : "#9a9a9a";
     const activeAccent = darkMode ? "#6366f1" : "#4f46e5";
-    const kbdBg       = darkMode ? "#222" : "#f4f4f4";
-    const kbdBorder   = darkMode ? "#333" : "#ddd";
+    const kbdBg = darkMode ? "#222" : "#f4f4f4";
+    const kbdBorder = darkMode ? "#333" : "#ddd";
 
     const renderItem = (tool: (typeof toolsRegistry)[0], idx: number) => {
         const isActive = idx === activeIdx;
@@ -181,18 +176,9 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
             <div
                 key={tool.id}
                 data-active={isActive ? "true" : undefined}
+                className="app-cmd-row"
                 onClick={() => navigate(tool.id)}
                 onMouseEnter={() => setActiveIdx(idx)}
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "8px 20px",
-                    cursor: "pointer",
-                    background: isActive ? activeBg : "transparent",
-                    borderLeft: `3px solid ${isActive ? activeAccent : "transparent"}`,
-                    transition: "background 0.08s",
-                }}
             >
                 <span
                     style={{
@@ -250,18 +236,7 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 9999,
-                background: "rgba(0,0,0,0.55)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "center",
-                padding: "clamp(48px, 12vh, 110px) 16px 16px",
-            }}
+            className="app-cmd-overlay"
             onClick={onClose}
         >
             <motion.div
@@ -269,29 +244,10 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: -14 }}
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                style={{
-                    width: "100%",
-                    maxWidth: 660,
-                    borderRadius: 18,
-                    overflow: "hidden",
-                    background: bg,
-                    border: `1px solid ${border}`,
-                    boxShadow: darkMode
-                        ? "0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(99,102,241,0.12), inset 0 1px 0 rgba(255,255,255,0.04)"
-                        : "0 40px 100px rgba(0,0,0,0.14), 0 0 0 1px rgba(99,102,241,0.06)",
-                }}
+                className="app-cmd-panel"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* ── Search input row ── */}
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        padding: "16px 20px",
-                        borderBottom: `1px solid ${divider}`,
-                    }}
-                >
+                <div className="app-cmd-input-row">
                     <SearchOutlined
                         style={{
                             fontSize: 19,
@@ -307,16 +263,7 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                         placeholder="Search tools, categories, tags…"
                         autoComplete="off"
                         spellCheck={false}
-                        style={{
-                            flex: 1,
-                            border: "none",
-                            outline: "none",
-                            background: "transparent",
-                            fontSize: 16,
-                            fontWeight: 400,
-                            color: textPrimary,
-                            fontFamily: "inherit",
-                        }}
+                        className="app-cmd-field"
                     />
                     {query && (
                         <button
@@ -359,12 +306,7 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                     </kbd>
                 </div>
 
-                {/* ── Results area ── */}
-                <div
-                    ref={listRef}
-                    style={{ maxHeight: 420, overflowY: "auto", overflowX: "hidden" }}
-                >
-                    {/* Section label */}
+                <div ref={listRef} className="app-cmd-results">
                     {flatList.length > 0 && (
                         <div
                             style={{
@@ -373,8 +315,8 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                                 fontWeight: 700,
                                 letterSpacing: "0.07em",
                                 textTransform: "uppercase",
-                                color: textMuted,
                             }}
+                            className="app-cmd-muted"
                         >
                             {query.trim()
                                 ? `${searchResults.length} result${searchResults.length !== 1 ? "s" : ""}`
@@ -433,18 +375,7 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                     )}
                 </div>
 
-                {/* ── Footer ── */}
-                <div
-                    style={{
-                        padding: "9px 20px",
-                        borderTop: `1px solid ${divider}`,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 16,
-                        fontSize: 11.5,
-                        color: textMuted,
-                    }}
-                >
+                <div className="app-cmd-footer">
                     {(
                         [
                             ["↑↓", "navigate"],
@@ -471,7 +402,7 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                             {label}
                         </span>
                     ))}
-                    <span style={{ marginLeft: "auto", opacity: 0.6 }}>
+                    <span className="app-cmd-muted" style={{ marginLeft: "auto" }}>
                         {toolsRegistry.length} tools
                     </span>
                 </div>
@@ -684,27 +615,11 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                     display: "flex",
                     alignItems: "center",
                     gap: 12,
-                    borderBottom: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
+                    borderBottom: "1px solid var(--app-header-border)",
                     marginBottom: 8,
                 }}
             >
-                <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 12,
-                        background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)",
-                        cursor: "pointer",
-                    }}
-                    onClick={() => navigate("/")}
-                >
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="app-shell-brand-mark" onClick={() => navigate("/")}>
                     <CodeOutlined style={{ color: "#fff", fontSize: 20 }} />
                 </motion.div>
                 {(!sidebarCollapsed || isMobile) && (
@@ -838,9 +753,10 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                     )}
                 </AnimatePresence>
 
-                <Layout style={{ minHeight: "100vh" }} suppressHydrationWarning>
+                <Layout className="app-shell-layout" style={{ minHeight: "100vh" }} suppressHydrationWarning>
                     {!isMobile && (
                         <Sider
+                            className="app-shell-sider"
                             collapsible
                             collapsed={sidebarCollapsed}
                             onCollapse={toggleSidebar}
@@ -848,10 +764,6 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             width={SIDER_WIDTH}
                             collapsedWidth={SIDER_COLLAPSED_WIDTH}
                             style={{
-                                background: darkMode
-                                    ? "linear-gradient(90deg, rgba(99,102,241,0.22) 0, rgba(99,102,241,0.22) 3px, transparent 3px), linear-gradient(180deg, #141418 0%, #101012 100%)"
-                                    : "linear-gradient(90deg, rgba(79,70,229,0.16) 0, rgba(79,70,229,0.16) 3px, transparent 3px), linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
-                                borderRight: `1px solid ${darkMode ? "rgba(148,163,184,0.12)" : "#e2e8f0"}`,
                                 position: "fixed",
                                 height: "100vh",
                                 left: 0,
@@ -870,14 +782,11 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             open={mobileDrawerOpen}
                             onClose={() => setMobileDrawerOpen(false)}
                             size={Math.min(320, typeof window !== "undefined" ? window.innerWidth - 48 : 320)}
+                            classNames={{ body: "app-shell-drawer-body", mask: "app-shell-drawer-mask" }}
                             styles={{
-                                body: { padding: 0 },
+                                body: { padding: 0, background: "var(--app-sider-bg)" },
                                 header: { display: "none" },
-                                section: {
-                                    background: darkMode
-                                        ? "#101012"
-                                        : "#fafafa",
-                                },
+                                section: { background: "var(--app-sider-bg)" },
                             }}
                         >
                             {sidebarContent}
@@ -893,6 +802,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                         suppressHydrationWarning
                     >
                         <Header
+                            className="app-shell-header"
                             style={{
                                 background: "var(--app-header-bg)",
                                 backdropFilter: "blur(16px)",
@@ -901,11 +811,11 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 display: "flex",
                                 alignItems: "center",
                                 gap: 12,
-                                borderBottom: `1px solid ${darkMode ? "rgba(148,163,184,0.12)" : "#e2e8f0"}`,
                                 position: "sticky",
                                 top: 0,
                                 zIndex: 50,
                                 height: 60,
+                                borderBottom: "1px solid var(--app-header-border)",
                             }}
                             suppressHydrationWarning
                         >

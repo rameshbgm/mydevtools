@@ -52,7 +52,6 @@ export default function Dashboard() {
     const router = useRouter();
     const { darkMode, recentTools, addRecentTool, clearRecentTools, setNavigating } = useAppStore();
     const [search, setSearch] = useState("");
-    const [searchFocused, setSearchFocused] = useState(false);
     const [showScrollTop, setShowScrollTop] = useState(false);
     const allCategorized = useMemo(() => getToolsByCategory(), []);
     const toolsGridRef = useRef<HTMLDivElement>(null);
@@ -118,9 +117,6 @@ export default function Dashboard() {
         categories: allCategorized.size,
     };
 
-    const landHeading = darkMode ? "#fafafa" : "#09090b";
-    const landBody = darkMode ? "#a3a3a3" : "#404040";
-    const landMuted = darkMode ? "#737373" : "#71717a";
     const shellText = darkMode ? "#e5e5e5" : "#171717";
 
     return (
@@ -151,36 +147,12 @@ export default function Dashboard() {
                             viewport={{ once: true, margin: "-80px" }}
                             transition={{ duration: 0.5 }}
                         >
-                            <div
-                                className="app-catalog-intro-eyebrow"
-                                style={{ color: darkMode ? "#a5b4fc" : "#4f46e5" }}
-                            >
-                                The full catalog
-                            </div>
-                            <h2
-                                style={{
-                                    fontSize: "clamp(26px, 3.5vw, 38px)",
-                                    fontWeight: 700,
-                                    letterSpacing: "-0.02em",
-                                    margin: 0,
-                                    color: landHeading,
-                                }}
-                            >
+                            <div className="app-catalog-intro-eyebrow">The full catalog</div>
+                            <h2 className="app-catalog-intro-title">
                                 {stats.total} tools, organised across {stats.categories} categories.
                             </h2>
-                            <p
-                                style={{
-                                    fontSize: 15,
-                                    color: landBody,
-                                    marginTop: 12,
-                                    marginBottom: 0,
-                                    lineHeight: 1.55,
-                                    maxWidth: "52ch",
-                                    marginLeft: "auto",
-                                    marginRight: "auto",
-                                }}
-                            >
-                                Search by name, tag, or category. Or jump straight in.
+                            <p className="app-catalog-intro-desc">
+                                Search by name, tag, or category — or jump straight in.
                             </p>
                         </motion.div>
                     </div>
@@ -192,22 +164,9 @@ export default function Dashboard() {
                         className="app-catalog-search-wrap"
                     >
                         <div suppressHydrationWarning>
-                            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                                <span
-                                    style={{
-                                        position: "absolute",
-                                        left: 18,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        color: searchFocused
-                                            ? darkMode ? "#818cf8" : "#4f46e5"
-                                            : darkMode ? "#71717a" : "#64748b",
-                                        pointerEvents: "none",
-                                        zIndex: 1,
-                                        transition: "color 0.15s",
-                                    }}
-                                >
-                                    <SearchOutlined style={{ fontSize: 17 }} />
+                            <div className="app-catalog-search-field">
+                                <span className="app-catalog-search-icon">
+                                    <SearchOutlined style={{ fontSize: 18 }} />
                                 </span>
                                 <input
                                     type="text"
@@ -215,8 +174,6 @@ export default function Dashboard() {
                                     placeholder={`Search ${stats.total} tools…`}
                                     value={search}
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-                                    onFocus={() => setSearchFocused(true)}
-                                    onBlur={() => setSearchFocused(false)}
                                     suppressHydrationWarning
                                     style={{
                                         paddingRight: search ? 44 : 20,
@@ -250,19 +207,9 @@ export default function Dashboard() {
                         )}
                     </div>
                     {search.trim() && (
-                        <p
-                            style={{
-                                marginTop: 10,
-                                marginBottom: 0,
-                                fontSize: 13,
-                                textAlign: "center",
-                                color: darkMode ? "#737373" : "#71717a",
-                            }}
-                        >
+                        <p className="app-catalog-match-hint">
                             {matchCount} {matchCount === 1 ? "tool" : "tools"} matching{" "}
-                            <strong style={{ color: darkMode ? "#a78bfa" : "#4f46e5" }}>
-                                &ldquo;{search}&rdquo;
-                            </strong>
+                            <strong style={{ color: "var(--app-accent)" }}>&ldquo;{search}&rdquo;</strong>
                         </p>
                     )}
                 </div>
@@ -277,55 +224,22 @@ export default function Dashboard() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        style={{ marginBottom: 48 }}
+                        className="app-catalog-recent-block"
                     >
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                marginBottom: 16,
-                            }}
-                        >
-                            <ClockCircleOutlined
-                                style={{
-                                    color: darkMode ? "#737373" : "#a3a3a3",
-                                    fontSize: 16,
-                                }}
-                            />
-                            <Title
-                                level={5}
-                                style={{
-                                    margin: 0,
-                                    color: darkMode ? "#737373" : "#525252",
-                                    fontWeight: 500,
-                                    flex: 1,
-                                }}
-                            >
-                                Recently Used
+                        <div className="app-catalog-recent-head">
+                            <ClockCircleOutlined style={{ color: "var(--app-accent-2)", fontSize: 18 }} />
+                            <Title level={5} className="app-catalog-recent-title">
+                                Recently used
                             </Title>
                             <button
                                 type="button"
+                                className="app-catalog-recent-clear"
                                 onClick={clearRecentTools}
-                                style={{
-                                    border: "none",
-                                    background: "none",
-                                    cursor: "pointer",
-                                    fontSize: 12,
-                                    color: darkMode ? "#555" : "#71717a",
-                                    padding: "2px 8px",
-                                    borderRadius: 6,
-                                    fontFamily: "inherit",
-                                    fontWeight: 500,
-                                    transition: "color 0.15s",
-                                }}
-                                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = darkMode ? "#a78bfa" : "#4f46e5"; }}
-                                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = darkMode ? "#555" : "#71717a"; }}
                             >
                                 Clear all
                             </button>
                         </div>
-                        <Space wrap size={[8, 8]}>
+                        <Space wrap size={[10, 10]}>
                             {recentTools.slice(0, 8).map((id) => {
                                 const tool = toolsRegistry.find((t) => t.id === id);
                                 if (!tool) return null;
@@ -333,24 +247,10 @@ export default function Dashboard() {
                                 return (
                                     <motion.div
                                         key={id}
-                                        whileHover={{ scale: 1.05 }}
+                                        whileHover={{ scale: 1.03 }}
                                         whileTap={{ scale: 0.98 }}
                                     >
-                                        <Tag
-                                            style={{
-                                                cursor: "pointer",
-                                                padding: "6px 14px",
-                                                borderRadius: 10,
-                                                fontSize: 13,
-                                                fontWeight: 500,
-                                                background: darkMode
-                                                    ? "rgba(99, 102, 241, 0.15)"
-                                                    : "rgba(79, 70, 229, 0.08)",
-                                                border: `1px solid ${darkMode ? "rgba(99, 102, 241, 0.3)" : "rgba(79, 70, 229, 0.2)"}`,
-                                                color: darkMode ? "#a78bfa" : "#4f46e5",
-                                            }}
-                                            onClick={() => handleToolClick(id)}
-                                        >
+                                        <Tag className="app-catalog-recent-chip" onClick={() => handleToolClick(id)}>
                                             <ToolIcon style={{ marginRight: 6, fontSize: 14 }} />
                                             {tool.name}
                                         </Tag>
@@ -371,7 +271,7 @@ export default function Dashboard() {
                 >
                     <Empty
                         description={
-                            <Text style={{ color: landMuted }}>
+                            <Text style={{ color: "var(--app-text-muted)" }}>
                                 No tools match &ldquo;{search}&rdquo;
                             </Text>
                         }
@@ -395,87 +295,49 @@ export default function Dashboard() {
                             key={category}
                             id={anchorId}
                             className="app-catalog-category-block"
-                            style={{ marginBottom: 48 }}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.4 }}
+                            style={
+                                {
+                                    "--cat-accent": categoryColor,
+                                } as React.CSSProperties
+                            }
                         >
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    flexWrap: "wrap",
-                                    gap: 12,
-                                    marginBottom: 8,
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        width: 36,
-                                        height: 36,
-                                        borderRadius: 10,
-                                        background: `${categoryColor}1f`,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                    }}
-                                >
-                                    <CategoryIcon
-                                        style={{ fontSize: 18, color: categoryColor }}
-                                    />
+                            <div className="app-catalog-category-head">
+                                <div className="app-catalog-category-icon">
+                                    <CategoryIcon style={{ fontSize: 22, color: categoryColor }} />
                                 </div>
-                                <Title
-                                    level={4}
-                                    style={{ margin: 0, fontWeight: 600, color: landHeading }}
-                                >
-                                    {category}
-                                </Title>
-                                <Badge
-                                    count={tools.length}
-                                    style={{
-                                        backgroundColor: categoryColor,
-                                        fontWeight: 600,
-                                        fontSize: 11,
-                                    }}
-                                />
-                                {isAlpha && (
-                                    <Tag
-                                        color="purple"
-                                        style={{
-                                            margin: 0,
-                                            fontWeight: 700,
-                                            letterSpacing: 0.6,
-                                        }}
-                                    >
-                                        ALPHA
-                                    </Tag>
-                                )}
+                                <div className="app-catalog-category-titles">
+                                    <div className="app-catalog-category-name">
+                                        {category}
+                                        <span className="app-catalog-count-badge">
+                                            <Badge
+                                                count={tools.length}
+                                                style={{
+                                                    backgroundColor: categoryColor,
+                                                }}
+                                            />
+                                        </span>
+                                        {isAlpha && (
+                                            <Tag color="purple" style={{ margin: 0, fontWeight: 700, letterSpacing: 0.6 }}>
+                                                ALPHA
+                                            </Tag>
+                                        )}
+                                    </div>
+                                    {categoryDesc && (
+                                        <span className="app-catalog-category-desc landing-category-desc">
+                                            {categoryDesc}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                            {categoryDesc && (
-                                <Text
-                                    className="landing-category-desc"
-                                    style={{
-                                        display: "block",
-                                        marginBottom: 18,
-                                        paddingLeft: 48,
-                                        fontSize: 13,
-                                        color: landBody,
-                                        lineHeight: 1.55,
-                                    }}
-                                >
-                                    {categoryDesc}
-                                </Text>
-                            )}
 
                             <motion.div variants={container} initial="hidden" animate="show">
-                                <Row gutter={[14, 16]} wrap>
+                                <Row gutter={[16, 18]} wrap>
                                     {tools.map((tool) => (
-                                        <Col xs={24} sm={12} md={8} lg={8} xl={6} xxl={6} key={tool.id}>
-                                            <ToolCard
-                                                tool={tool}
-                                                darkMode={darkMode}
-                                                onClick={() => handleToolClick(tool.id)}
-                                            />
+                                        <Col xs={24} sm={12} lg={8} xl={6} key={tool.id}>
+                                            <ToolCard tool={tool} onClick={() => handleToolClick(tool.id)} />
                                         </Col>
                                     ))}
                                 </Row>
@@ -493,31 +355,12 @@ export default function Dashboard() {
                         key="landing-scroll-top"
                         type="button"
                         aria-label="Back to top"
+                        className="app-catalog-scroll-top"
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 8 }}
                         transition={{ duration: 0.2 }}
                         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        style={{
-                            position: "fixed",
-                            right: "max(16px, env(safe-area-inset-right, 0px))",
-                            bottom: "max(20px, env(safe-area-inset-bottom, 0px))",
-                            zIndex: 200,
-                            width: 46,
-                            height: 46,
-                            borderRadius: "50%",
-                            border: `1px solid ${darkMode ? "#3f3f46" : "#d4d4d8"}`,
-                            background: darkMode ? "rgba(24,24,27,0.92)" : "rgba(255,255,255,0.96)",
-                            backdropFilter: "blur(10px)",
-                            WebkitBackdropFilter: "blur(10px)",
-                            boxShadow: darkMode ? "0 10px 36px rgba(0,0,0,0.5)" : "0 10px 28px rgba(15,23,42,0.12)",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: darkMode ? "#fafafa" : "#18181b",
-                            padding: 0,
-                        }}
                     >
                         <VerticalAlignTopOutlined style={{ fontSize: 20 }} />
                     </motion.button>
@@ -529,11 +372,10 @@ export default function Dashboard() {
 
 interface ToolCardProps {
     tool: (typeof toolsRegistry)[0];
-    darkMode: boolean;
     onClick: () => void;
 }
 
-function ToolCard({ tool, darkMode, onClick }: Readonly<ToolCardProps>) {
+function ToolCard({ tool, onClick }: Readonly<ToolCardProps>) {
     const isAlpha = ALPHA_CATEGORIES.includes(tool.category);
     return (
         <motion.div variants={item} whileTap={{ scale: 0.98 }}>
@@ -541,14 +383,17 @@ function ToolCard({ tool, darkMode, onClick }: Readonly<ToolCardProps>) {
                 className="app-catalog-tool-card"
                 onClick={onClick}
                 hoverable={false}
-                style={{
-                    height: "100%",
-                    overflow: "hidden",
-                    position: "relative",
-                    cursor: "pointer",
-                }}
+                style={
+                    {
+                        height: "100%",
+                        overflow: "hidden",
+                        position: "relative",
+                        cursor: "pointer",
+                        "--tool-accent": tool.color,
+                    } as React.CSSProperties
+                }
                 styles={{
-                    body: { padding: 20 },
+                    body: { padding: 22 },
                 }}
             >
                 {isAlpha && (
@@ -570,60 +415,24 @@ function ToolCard({ tool, darkMode, onClick }: Readonly<ToolCardProps>) {
                     </Tag>
                 )}
                 <motion.div
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    transition={{ type: "spring", stiffness: 400 }}
-                    style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 14,
-                        background: `${tool.color}1f`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginBottom: 16,
-                    }}
+                    whileHover={{ scale: 1.06, rotate: 4 }}
+                    transition={{ type: "spring", stiffness: 380, damping: 18 }}
+                    className="app-catalog-tool-icon-wrap"
+                    style={{ color: tool.color }}
                 >
                     {React.createElement(tool.icon, {
-                        style: { fontSize: 24, color: tool.color },
+                        style: { fontSize: 26, color: tool.color },
                     })}
                 </motion.div>
 
-                <Title
-                    level={5}
-                    style={{
-                        marginBottom: 6,
-                        fontWeight: 600,
-                        fontSize: 15,
-                        color: darkMode ? "#fafafa" : "#09090b",
-                    }}
-                >
+                <Title level={5} className="app-catalog-tool-name">
                     {tool.name}
                 </Title>
-                <Text
-                    style={{
-                        color: darkMode ? "#a3a3a3" : "#404040",
-                        fontSize: 13,
-                        lineHeight: 1.5,
-                        display: "block",
-                    }}
-                >
-                    {tool.description}
-                </Text>
+                <Text className="app-catalog-tool-desc">{tool.description}</Text>
 
-                <div style={{ marginTop: 12, display: "flex", gap: 4, flexWrap: "wrap" }}>
+                <div style={{ marginTop: 14, display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {tool.tags.slice(0, 3).map((tag) => (
-                        <Tag
-                            key={tag}
-                            style={{
-                                fontSize: 11,
-                                padding: "2px 8px",
-                                borderRadius: 6,
-                                margin: 0,
-                                background: darkMode ? "#262626" : "#f5f5f5",
-                                border: "none",
-                                color: darkMode ? "#a3a3a3" : "#525252",
-                            }}
-                        >
+                        <Tag key={tag} className="app-catalog-tag">
                             {tag}
                         </Tag>
                     ))}
