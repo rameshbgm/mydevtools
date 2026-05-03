@@ -16,7 +16,7 @@
  * Public-facing version number shown in the topbar. Bump on a meaningful
  * shipping milestone — does NOT need to match individual entries below.
  */
-export const APP_VERSION = "1.1";
+export const APP_VERSION = "1.2";
 
 export type ReleaseKind = "feature" | "fix" | "security" | "ui" | "perf";
 
@@ -43,14 +43,52 @@ export interface ReleaseNote {
  * Release notes — newest entry FIRST. The exported array is sorted on
  * load so out-of-order appends still render correctly.
  *
- * V1.1 — current edition. Folds in everything shipped after launch:
- *        privacy hardening, certificate suite consolidation, command
+ * V1.2 — landing page redesign, Timer + Stopwatch tools, 90 tools total.
+ *
+ * V1.1 — privacy hardening, certificate suite consolidation, command
  *        palette, mobile + PWA polish, dashboard overview panel,
- *        and this very release-notes section.
+ *        and the release-notes section.
  *
  * V1.0 — initial public release of the toolkit (80+ tools).
  */
 const ENTRIES: ReleaseNote[] = [
+    {
+        date: "2026-05-03",
+        version: "1.2",
+        kind: "feature",
+        title: "Landing page redesign + Timer & Stopwatch tools",
+        summary:
+            "A visual milestone release. The home page is now a full branded landing experience with scroll animations and a category showcase. Two new productivity tools — Timer and Stopwatch — bring audio alerts and lap-split tracking directly into the browser.",
+        sections: [
+            {
+                label: "New home page",
+                bullets: [
+                    "Animated hero section with gradient background blob, gradient headline, and staggered pill badges.",
+                    "Stats strip: 90+ tools, 13 categories, 100% private, PWA ready — scroll-triggered entrance animations.",
+                    "Category showcase grid: all 13 categories with icon, description, tool count, and click-to-scroll.",
+                    "Fully theme-compatible (light/dark) and responsive down to 320px.",
+                ],
+            },
+            {
+                label: "Timer tool",
+                bullets: [
+                    "Countdown timer with 7 presets (1 min to 1 hr) plus custom H:M:S input.",
+                    "Circular progress ring shows percentage elapsed; turns green on completion.",
+                    "Audio chime on completion via Web Audio API — no external files, no permissions needed.",
+                    "Pomodoro-ready with optional session label; Time's Up alert pulses until reset.",
+                ],
+            },
+            {
+                label: "Stopwatch tool",
+                bullets: [
+                    "Millisecond-precision stopwatch (10ms tick) displayed as MM:SS.cc.",
+                    "Lap button records splits without stopping; table shows newest lap first.",
+                    "Best and worst laps highlighted automatically once two or more laps are recorded.",
+                    "Stats row shows total laps, best lap, worst lap, and average lap time.",
+                ],
+            },
+        ],
+    },
     {
         date: "2026-05-03",
         version: "1.1",

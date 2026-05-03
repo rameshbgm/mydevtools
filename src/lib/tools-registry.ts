@@ -840,6 +840,24 @@ export const toolsRegistry: ToolDefinition[] = [
         tags: ["todo", "task", "productivity", "tracker", "list", "planner", "indexeddb", "offline", "archive", "subtasks"],
         color: "#52c41a",
     },
+    {
+        id: "timer",
+        name: "Timer",
+        description: "Countdown timer with presets, custom duration, audio chime, and Pomodoro support — runs entirely in your browser",
+        icon: ClockCircleOutlined,
+        category: "Text & Utilities",
+        tags: ["timer", "countdown", "pomodoro", "alarm", "focus", "productivity"],
+        color: "#6366f1",
+    },
+    {
+        id: "stopwatch",
+        name: "Stopwatch",
+        description: "High-precision stopwatch with lap splits, best/worst lap highlighting, and millisecond accuracy — runs entirely in your browser",
+        icon: FieldTimeOutlined,
+        category: "Text & Utilities",
+        tags: ["stopwatch", "timer", "lap", "split", "timing", "benchmark", "interval"],
+        color: "#6366f1",
+    },
 
     // ===== AI Alpha Tools =====
     {

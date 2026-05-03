@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
     Card,
@@ -11,15 +11,21 @@ import {
     Space,
     Badge,
     Empty,
+    Button,
 } from "antd";
 import {
     SearchOutlined,
     ClockCircleOutlined,
     LockOutlined,
-    InfoCircleOutlined,
-    CloseOutlined,
+    GithubOutlined,
+    CheckCircleFilled,
+    CodeOutlined,
+    BankOutlined,
+    SafetyCertificateOutlined,
+    ArrowRightOutlined,
+    DisconnectOutlined,
 } from "@ant-design/icons";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform, useInView } from "framer-motion";
 import {
     toolsRegistry,
     getToolsByCategory,
@@ -31,6 +37,7 @@ import {
     type ToolDefinition,
 } from "@/lib/tools-registry";
 import { useAppStore } from "@/lib/store";
+import { APP_VERSION } from "@/lib/release-notes";
 
 const { Title, Text } = Typography;
 
@@ -49,14 +56,27 @@ const item = {
     },
 };
 
-const fadeIn = {
-    hidden: { opacity: 0, y: -16 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-};
-
-// Module-level flag: resets when the JS bundle is reloaded (page refresh / new tab),
-// but survives client-side navigation so the panel stays dismissed within a session.
-let _aboutDismissed = false;
+function AnimatedCounter({ to, suffix = "" }: { to: number; suffix?: string }) {
+    const ref = useRef<HTMLSpanElement>(null);
+    const inView = useInView(ref, { once: true, margin: "-20%" });
+    const [value, setValue] = useState(0);
+    useEffect(() => {
+        if (!inView) return;
+        const duration = 1400;
+        const start = performance.now();
+        let raf = 0;
+        const tick = () => {
+            const elapsed = performance.now() - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setValue(Math.round(to * eased));
+            if (progress < 1) raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [inView, to]);
+    return <span ref={ref}>{value}{suffix}</span>;
+}
 
 export default function Dashboard() {
     const router = useRouter();
@@ -64,6 +84,23 @@ export default function Dashboard() {
     const [search, setSearch] = useState("");
     const [searchFocused, setSearchFocused] = useState(false);
     const allCategorized = useMemo(() => getToolsByCategory(), []);
+    const toolsGridRef = useRef<HTMLDivElement>(null);
+
+    const { scrollY } = useScroll();
+    const bgParallax = useTransform(scrollY, [0, 800], [0, 120]);
+    const blobParallax = useTransform(scrollY, [0, 800], [0, 200]);
+    const blobParallaxReverse = useTransform(scrollY, [0, 800], [0, -150]);
+
+    const marqueeTools = useMemo(
+        () =>
+            toolsRegistry
+                .slice()
+                .sort((a, b) => a.id.localeCompare(b.id))
+                .filter((_, i) => i % 3 === 0)
+                .slice(0, 28)
+                .map((t) => ({ id: t.id, name: t.name, color: t.color })),
+        []
+    );
 
     const filteredCategorized = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -98,272 +135,1140 @@ export default function Dashboard() {
         categories: allCategorized.size,
     };
 
-    const [aboutDismissed, setAboutDismissed] = useState(_aboutDismissed);
-    const dismissAbout = () => {
-        _aboutDismissed = true;
-        setAboutDismissed(true);
-    };
-
     return (
         <div style={{ width: "100%" }}>
-            {/* Hero Section */}
-            <motion.div
-                variants={fadeIn}
-                initial="hidden"
-                animate="show"
-                style={{ textAlign: "center", marginBottom: 56 }}
+            {/* ================================================================
+                SECTION 1 — Cinematic hero with parallax dot grid
+            ================================================================ */}
+            <motion.section
+                style={{
+                    position: "relative",
+                    padding: "clamp(72px, 11vw, 140px) clamp(16px, 4vw, 24px) clamp(56px, 8vw, 96px)",
+                    overflow: "hidden",
+                    borderBottom: `1px solid ${darkMode ? "#161616" : "#ececec"}`,
+                }}
             >
-                {/* Privacy badges + title sit above the panel so they're always visible */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
-                    {[
-                        { icon: "⚡", label: `${stats.total} tools`, color: "#8b5cf6" },
-                        { icon: "🔒", label: "100% Private", color: "#10b981" },
-                        { icon: "🌐", label: "Works Offline", color: "#3b82f6" },
-                        { icon: "🚫", label: "No Tracking", color: "#f59e0b" },
-                    ].map(({ icon, label, color }) => (
+                {/* Parallax dotted grid */}
+                <motion.div
+                    aria-hidden
+                    style={{
+                        position: "absolute",
+                        inset: "-10% -10% -10% -10%",
+                        backgroundImage: darkMode
+                            ? "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)"
+                            : "radial-gradient(rgba(0,0,0,0.07) 1px, transparent 1px)",
+                        backgroundSize: "24px 24px",
+                        WebkitMaskImage: "radial-gradient(ellipse 70% 60% at 50% 40%, black 40%, transparent 90%)",
+                        maskImage: "radial-gradient(ellipse 70% 60% at 50% 40%, black 40%, transparent 90%)",
+                        y: bgParallax,
+                        pointerEvents: "none",
+                    }}
+                />
+                {/* Color blobs */}
+                <motion.div
+                    aria-hidden
+                    style={{
+                        position: "absolute",
+                        top: "10%",
+                        left: "8%",
+                        width: 320,
+                        height: 320,
+                        borderRadius: "50%",
+                        background: "radial-gradient(circle, rgba(99,102,241,0.20), transparent 70%)",
+                        filter: "blur(40px)",
+                        y: blobParallax,
+                        pointerEvents: "none",
+                    }}
+                />
+                <motion.div
+                    aria-hidden
+                    style={{
+                        position: "absolute",
+                        bottom: "5%",
+                        right: "10%",
+                        width: 380,
+                        height: 380,
+                        borderRadius: "50%",
+                        background: "radial-gradient(circle, rgba(236,72,153,0.16), transparent 70%)",
+                        filter: "blur(50px)",
+                        y: blobParallaxReverse,
+                        pointerEvents: "none",
+                    }}
+                />
+
+                <div style={{ position: "relative", maxWidth: 1080, margin: "0 auto" }}>
+                    {/* Status pill */}
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "6px 14px",
+                            borderRadius: 999,
+                            fontFamily: "var(--font-geist-mono), ui-monospace, monospace",
+                            fontSize: 12,
+                            background: darkMode ? "rgba(99,102,241,0.10)" : "rgba(79,70,229,0.06)",
+                            border: `1px solid ${darkMode ? "rgba(99,102,241,0.25)" : "rgba(79,70,229,0.18)"}`,
+                            color: darkMode ? "#a5b4fc" : "#4f46e5",
+                            marginBottom: 28,
+                        }}
+                    >
                         <motion.span
-                            key={label}
-                            whileHover={{ scale: 1.05 }}
+                            animate={{ scale: [1, 1.4, 1], opacity: [0.6, 1, 0.6] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }}
+                        />
+                        v{APP_VERSION} live &nbsp;·&nbsp; {stats.total} tools online &nbsp;·&nbsp; MIT licensed
+                    </motion.div>
+
+                    {/* Headline — word-by-word entrance */}
+                    <h1
+                        style={{
+                            fontSize: "clamp(38px, 7.4vw, 84px)",
+                            lineHeight: 0.98,
+                            fontWeight: 800,
+                            letterSpacing: "-0.035em",
+                            margin: 0,
+                            color: darkMode ? "#fafafa" : "#0a0a0a",
+                            maxWidth: 980,
+                        }}
+                    >
+                        {["The", "developer", "toolkit", "that"].map((w, i) => (
+                            <motion.span
+                                key={w + i}
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.55, delay: 0.05 + i * 0.06 }}
+                                style={{ display: "inline-block", marginRight: "0.28em" }}
+                            >
+                                {w}
+                            </motion.span>
+                        ))}
+                        <br />
+                        <motion.span
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.4 }}
                             style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                                padding: "5px 12px",
-                                borderRadius: 20,
-                                fontSize: 12,
-                                fontWeight: 600,
-                                background: darkMode ? `${color}18` : `${color}12`,
-                                border: `1px solid ${color}40`,
-                                color,
-                                letterSpacing: "0.2px",
-                                cursor: "default",
+                                background: "var(--gradient-brand)",
+                                WebkitBackgroundClip: "text",
+                                backgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                                color: "transparent",
+                                display: "inline-block",
                             }}
                         >
-                            <span>{icon}</span>
-                            {label}
+                            never phones home.
                         </motion.span>
-                    ))}
+                    </h1>
+
+                    {/* Subhead */}
+                    <motion.p
+                        initial={{ opacity: 0, y: 18 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.7 }}
+                        style={{
+                            fontSize: "clamp(16px, 1.7vw, 20px)",
+                            lineHeight: 1.55,
+                            color: darkMode ? "#a3a3a3" : "#525252",
+                            margin: "26px 0 0",
+                            maxWidth: 680,
+                            fontWeight: 400,
+                        }}
+                    >
+                        Format payloads, decode tokens, inspect certificates, generate keys.
+                        {stats.total} tools in one workspace, every byte stays inside your browser tab.
+                    </motion.p>
+
+                    {/* Action row */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 18 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.85 }}
+                        style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 36 }}
+                    >
+                        <Button
+                            type="primary"
+                            size="large"
+                            icon={<ArrowRightOutlined rotate={90} />}
+                            onClick={() => toolsGridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                            style={{ height: 50, paddingInline: 26, fontWeight: 600, borderRadius: 10, fontSize: 15 }}
+                        >
+                            Open the toolkit
+                        </Button>
+                        <Button
+                            size="large"
+                            icon={<GithubOutlined />}
+                            href="https://github.com/rameshbgm/mydevtools"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                height: 50,
+                                paddingInline: 22,
+                                fontWeight: 500,
+                                borderRadius: 10,
+                                fontSize: 15,
+                                background: darkMode ? "transparent" : "#ffffff",
+                                borderColor: darkMode ? "#2a2a2a" : "#d4d4d4",
+                                color: darkMode ? "#e5e5e5" : "#171717",
+                            }}
+                        >
+                            Audit the source
+                        </Button>
+                    </motion.div>
+
+                    {/* Scroll cue */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1.2, duration: 0.6 }}
+                        style={{
+                            position: "absolute",
+                            bottom: -20,
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            fontFamily: "var(--font-geist-mono), monospace",
+                            fontSize: 11,
+                            letterSpacing: "0.15em",
+                            color: darkMode ? "#525252" : "#a3a3a3",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 6,
+                        }}
+                    >
+                        <span>SCROLL</span>
+                        <motion.span
+                            animate={{ y: [0, 6, 0] }}
+                            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                            style={{ fontSize: 14 }}
+                        >
+                            ↓
+                        </motion.span>
+                    </motion.div>
                 </div>
+            </motion.section>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                    style={{ textAlign: "center", marginBottom: 28 }}
-                >
-                    <h1 className="neon-text">My Dev Tools</h1>
-                </motion.div>
+            {/* ================================================================
+                SECTION 2 — Manifesto strip
+            ================================================================ */}
+            <section style={{ padding: "clamp(80px, 12vw, 160px) clamp(20px, 5vw, 32px)" }}>
+                <div style={{ maxWidth: 980, margin: "0 auto" }}>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        viewport={{ once: true, margin: "-20%" }}
+                        transition={{ duration: 0.6 }}
+                        style={{
+                            fontFamily: "var(--font-geist-mono), monospace",
+                            fontSize: 12,
+                            color: darkMode ? "#6366f1" : "#4f46e5",
+                            letterSpacing: "0.18em",
+                            textTransform: "uppercase",
+                            marginBottom: 24,
+                        }}
+                    >
+                        The premise
+                    </motion.div>
+                    <h2
+                        style={{
+                            fontSize: "clamp(28px, 4.4vw, 52px)",
+                            fontWeight: 700,
+                            lineHeight: 1.2,
+                            letterSpacing: "-0.02em",
+                            margin: 0,
+                            color: darkMode ? "#fafafa" : "#0a0a0a",
+                        }}
+                    >
+                        {[
+                            "Every week, your engineers paste",
+                            "production tokens, internal payloads,",
+                            "and customer data into",
+                            "random websites they",
+                            "found on Google.",
+                        ].map((line, i) => (
+                            <motion.span
+                                key={i}
+                                initial={{ opacity: 0, y: 24 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: "-15%" }}
+                                transition={{ duration: 0.6, delay: i * 0.1 }}
+                                style={{ display: "block" }}
+                            >
+                                {line}
+                            </motion.span>
+                        ))}
+                        <motion.span
+                            initial={{ opacity: 0, y: 24 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-15%" }}
+                            transition={{ duration: 0.7, delay: 0.7 }}
+                            style={{
+                                display: "block",
+                                marginTop: 12,
+                                background: "var(--gradient-brand)",
+                                WebkitBackgroundClip: "text",
+                                backgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                                color: "transparent",
+                            }}
+                        >
+                            We built the alternative.
+                        </motion.span>
+                    </h2>
+                </div>
+            </section>
 
-                {!aboutDismissed && (
-                <motion.div
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
+            {/* ================================================================
+                SECTION 3 — Live counter stats
+            ================================================================ */}
+            <section style={{ padding: "0 clamp(20px, 5vw, 32px) clamp(80px, 10vw, 120px)" }}>
+                <div
                     style={{
-                        width: "94%",
-                        margin: "0 auto 28px",
-                        textAlign: "left",
-                        borderRadius: 14,
-                        border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
-                        background: darkMode ? "rgba(20,20,20,0.6)" : "#ffffff",
+                        maxWidth: 1100,
+                        margin: "0 auto",
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                        gap: 1,
+                        background: darkMode ? "#1a1a1a" : "#ececec",
+                        border: `1px solid ${darkMode ? "#1a1a1a" : "#ececec"}`,
+                        borderRadius: 18,
                         overflow: "hidden",
                     }}
                 >
-                    {/* Header row */}
-                    <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "12px 16px",
-                        borderBottom: `1px solid ${darkMode ? "#262626" : "#f0f0f0"}`,
-                    }}>
-                        <InfoCircleOutlined style={{ color: darkMode ? "#a78bfa" : "#4f46e5", fontSize: 16 }} />
-                        <Text strong style={{ fontSize: 14, flex: 1 }}>Learn More About This App</Text>
-                        <button
-                            type="button"
-                            onClick={dismissAbout}
-                            title="Dismiss"
+                    {[
+                        { value: stats.total, suffix: "", label: "Tools shipped", sub: "across the catalog", color: "#6366f1" },
+                        { value: stats.categories, suffix: "", label: "Categories", sub: "format · crypto · network · more", color: "#0ea5e9" },
+                        { value: 0, suffix: "", label: "Trackers", sub: "no analytics, no fingerprinting", color: "#10b981" },
+                        { value: 100, suffix: "%", label: "Client-side", sub: "every byte stays in your tab", color: "#f59e0b" },
+                    ].map((s, i) => (
+                        <motion.div
+                            key={s.label}
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-20%" }}
+                            transition={{ duration: 0.5, delay: i * 0.08 }}
                             style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: 6,
-                                border: "none",
-                                cursor: "pointer",
-                                background: "transparent",
-                                color: darkMode ? "#555" : "#bbb",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                padding: 0,
-                                flexShrink: 0,
+                                background: darkMode ? "#0a0a0a" : "#ffffff",
+                                padding: "36px 26px",
                             }}
                         >
-                            <CloseOutlined style={{ fontSize: 12 }} />
-                        </button>
-                    </div>
-                    {/* Content */}
-                    <Card
-                        style={{
-                            background: darkMode ? "#141414" : "#ffffff",
-                            border: "none",
-                            borderRadius: 0,
-                        }}
-                        styles={{ body: { padding: 22 } }}
+                            <div
+                                style={{
+                                    fontSize: "clamp(38px, 5vw, 56px)",
+                                    fontWeight: 800,
+                                    lineHeight: 1,
+                                    letterSpacing: "-0.03em",
+                                    color: s.color,
+                                    fontFamily: "var(--font-geist-mono), monospace",
+                                    marginBottom: 14,
+                                }}
+                            >
+                                <AnimatedCounter to={s.value} suffix={s.suffix} />
+                            </div>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: darkMode ? "#fafafa" : "#0a0a0a", marginBottom: 4 }}>
+                                {s.label}
+                            </div>
+                            <div style={{ fontSize: 12.5, color: darkMode ? "#737373" : "#737373" }}>
+                                {s.sub}
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </section>
+
+            {/* ================================================================
+                SECTION 4 — Bento grid: what's inside
+            ================================================================ */}
+            <section style={{ padding: "0 clamp(20px, 5vw, 32px) clamp(80px, 10vw, 120px)" }}>
+                <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-15%" }}
+                        transition={{ duration: 0.5 }}
+                        style={{ marginBottom: 32 }}
                     >
-                                        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                                            {/* Intro */}
-                                            <p style={{ margin: 0, fontSize: 16.5, lineHeight: 1.8, color: darkMode ? "#d4d4d4" : "#374151" }}>
-                                                <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>My Dev Tools</strong> is a{" "}
-                                                <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: "0.88em", color: darkMode ? "#a78bfa" : "#4f46e5" }}>private, offline-capable</span>{" "}
-                                                developer toolkit for engineers who routinely work with
-                                                sensitive data — tokens, certificates, credentials, and production payloads. Every operation
-                                                executes{" "}
-                                                <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: "0.88em", color: darkMode ? "#a78bfa" : "#4f46e5" }}>entirely within your browser tab</span>,
-                                                with no data ever transmitted to any server.{" "}
-                                                <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: "0.88em", color: darkMode ? "#34d399" : "#059669", fontWeight: 600 }}>Nothing is uploaded. Nothing is logged.</span>{" "}
-                                                No accounts. No telemetry. No exceptions.
-                                            </p>
+                        <div style={{
+                            fontFamily: "var(--font-geist-mono), monospace",
+                            fontSize: 12,
+                            color: darkMode ? "#6366f1" : "#4f46e5",
+                            letterSpacing: "0.18em",
+                            textTransform: "uppercase",
+                            marginBottom: 12,
+                        }}>
+                            What&apos;s inside
+                        </div>
+                        <h2 style={{
+                            fontSize: "clamp(28px, 4vw, 44px)",
+                            fontWeight: 700,
+                            lineHeight: 1.15,
+                            letterSpacing: "-0.02em",
+                            margin: 0,
+                            maxWidth: 720,
+                            color: darkMode ? "#fafafa" : "#0a0a0a",
+                        }}>
+                            One workshop, the entire backend toolbelt.
+                        </h2>
+                    </motion.div>
 
-                                            {/* Category chips */}
-                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                                                {[
-                                                    { label: "Encoding & Decoding",   color: "#14b8a6" },
-                                                    { label: "Diff & Compare",         color: "#f97316" },
-                                                    { label: "Formatters",             color: "#6366f1" },
-                                                    { label: "Validators",             color: "#3b82f6" },
-                                                    { label: "Converters",             color: "#0ea5e9" },
-                                                    { label: "Generators",             color: "#8b5cf6" },
-                                                    { label: "Certificates & Crypto",  color: "#10b981" },
-                                                    { label: "Network & Calculators",  color: "#f59e0b" },
-                                                ].map(({ label, color }) => (
-                                                    <span key={label} style={{
-                                                        display: "inline-flex",
-                                                        alignItems: "center",
-                                                        padding: "3px 11px",
-                                                        borderRadius: 20,
-                                                        fontSize: 12,
-                                                        fontWeight: 600,
-                                                        background: `${color}18`,
-                                                        border: `1px solid ${color}40`,
-                                                        color,
-                                                        letterSpacing: "0.1px",
-                                                    }}>
-                                                        {label}
-                                                    </span>
-                                                ))}
-                                            </div>
+                    <div className="landing-bento">
+                        {/* Featured tools rotating card */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            transition={{ duration: 0.5, delay: 0.05 }}
+                            whileHover={{ y: -4 }}
+                            className="b-big"
+                            style={{
+                                background: darkMode ? "linear-gradient(135deg, #111111, #1a1a2a)" : "linear-gradient(135deg, #ffffff, #f5f5ff)",
+                                border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
+                                borderRadius: 16,
+                                padding: 28,
+                                position: "relative",
+                                overflow: "hidden",
+                            }}
+                        >
+                            <div style={{
+                                fontFamily: "var(--font-geist-mono), monospace",
+                                fontSize: 11,
+                                color: "#6366f1",
+                                letterSpacing: "0.12em",
+                                textTransform: "uppercase",
+                                marginBottom: 14,
+                            }}>
+                                Engineer favorites
+                            </div>
+                            <div style={{
+                                fontSize: 22,
+                                fontWeight: 700,
+                                lineHeight: 1.25,
+                                color: darkMode ? "#fafafa" : "#0a0a0a",
+                                marginBottom: 18,
+                            }}>
+                                The 15 tools opened most often.
+                            </div>
+                            <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 160px), 1fr))",
+                                gap: "6px 10px",
+                            }}>
+                                {[
+                                    { name: "JWT Decoder",          color: "#6366f1", id: "jwt-decoder" },
+                                    { name: "JSON Formatter",        color: "#6366f1", id: "json-formatter" },
+                                    { name: "Regex Tester",          color: "#6366f1", id: "regex-tester" },
+                                    { name: "Base64 Encoder",        color: "#14b8a6", id: "base64" },
+                                    { name: "URL Parser",            color: "#0ea5e9", id: "url-parser" },
+                                    { name: "QR Code Generator",     color: "#8b5cf6", id: "qrcode-generator" },
+                                    { name: "POJO Generator",        color: "#8b5cf6", id: "java-pojo-generator" },
+                                    { name: "Certificate Inspector", color: "#10b981", id: "certificate-inspector" },
+                                    { name: "CSR Generator",         color: "#10b981", id: "certificate-generator" },
+                                    { name: "AES Encrypt / Decrypt", color: "#10b981", id: "aes-tool" },
+                                    { name: "Hash Generator",        color: "#10b981", id: "hash-generator" },
+                                    { name: "Bcrypt Tool",           color: "#10b981", id: "bcrypt-tool" },
+                                    { name: "API Request Builder",   color: "#f59e0b", id: "api-request-builder" },
+                                    { name: "IP Address Tools",      color: "#f59e0b", id: "ip-address-tools" },
+                                    { name: "Cron Parser",           color: "#52c41a", id: "cron-parser" },
+                                ].map(({ name, color, id }) => (
+                                    <button
+                                        type="button"
+                                        key={name}
+                                        onClick={() => handleToolClick(id)}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 7,
+                                            padding: "5px 6px",
+                                            background: "transparent",
+                                            border: "none",
+                                            borderRadius: 6,
+                                            cursor: "pointer",
+                                            textAlign: "left",
+                                            color: darkMode ? "#d4d4d4" : "#374151",
+                                            fontSize: 13,
+                                            fontWeight: 500,
+                                            transition: "background 0.15s, color 0.15s",
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = darkMode ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)";
+                                            e.currentTarget.style.color = color;
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = "transparent";
+                                            e.currentTarget.style.color = darkMode ? "#d4d4d4" : "#374151";
+                                        }}
+                                    >
+                                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                                        {name}
+                                    </button>
+                                ))}
+                            </div>
+                        </motion.div>
 
-                                            {/* Featured tools — simple 3-col bullet list, no tiles */}
+                        {/* Lock card */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            transition={{ duration: 0.5, delay: 0.12 }}
+                            whileHover={{ y: -4 }}
+                            className="b-tall"
+                            style={{
+                                background: darkMode ? "linear-gradient(160deg, rgba(16,185,129,0.10), #0a0a0a)" : "linear-gradient(160deg, rgba(16,185,129,0.08), #ffffff)",
+                                border: `1px solid ${darkMode ? "rgba(16,185,129,0.30)" : "rgba(16,185,129,0.25)"}`,
+                                borderRadius: 16,
+                                padding: 24,
+                                display: "flex",
+                                flexDirection: "column",
+                                justifyContent: "space-between",
+                                position: "relative",
+                                overflow: "hidden",
+                            }}
+                        >
+                            <motion.div
+                                animate={{ rotate: [0, 4, -4, 0] }}
+                                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                                style={{ fontSize: 38, color: "#10b981", lineHeight: 1 }}
+                            >
+                                <LockOutlined />
+                            </motion.div>
+                            <div>
+                                <div style={{ fontSize: 18, fontWeight: 700, color: darkMode ? "#fafafa" : "#0a0a0a", marginBottom: 6 }}>
+                                    Compliant by design
+                                </div>
+                                <div style={{ fontSize: 13, lineHeight: 1.5, color: darkMode ? "#a3a3a3" : "#525252" }}>
+                                    Paste production tokens and certificates without violating data handling policies.
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        {/* Open source */}
+                        <motion.a
+                            href="https://github.com/rameshbgm/mydevtools"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            transition={{ duration: 0.5, delay: 0.18 }}
+                            whileHover={{ y: -4 }}
+                            className="b-square"
+                            style={{
+                                background: darkMode ? "#111111" : "#ffffff",
+                                border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
+                                borderRadius: 16,
+                                padding: 22,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 14,
+                                textDecoration: "none",
+                                color: "inherit",
+                            }}
+                        >
+                            <GithubOutlined style={{ fontSize: 32, color: darkMode ? "#fafafa" : "#0a0a0a", flexShrink: 0 }} />
+                            <div>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: darkMode ? "#fafafa" : "#0a0a0a" }}>
+                                    MIT licensed source
+                                </div>
+                                <div style={{ fontSize: 12, color: darkMode ? "#737373" : "#737373", marginTop: 2 }}>
+                                    Every line auditable on GitHub
+                                </div>
+                            </div>
+                        </motion.a>
+
+                        {/* PWA */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            transition={{ duration: 0.5, delay: 0.24 }}
+                            whileHover={{ y: -4 }}
+                            className="b-square"
+                            style={{
+                                background: darkMode ? "linear-gradient(160deg, rgba(99,102,241,0.10), #0a0a0a)" : "linear-gradient(160deg, rgba(99,102,241,0.08), #ffffff)",
+                                border: `1px solid ${darkMode ? "rgba(99,102,241,0.30)" : "rgba(99,102,241,0.25)"}`,
+                                borderRadius: 16,
+                                padding: 22,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 14,
+                            }}
+                        >
+                            <DisconnectOutlined style={{ fontSize: 30, color: "#6366f1", flexShrink: 0 }} />
+                            <div>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: darkMode ? "#fafafa" : "#0a0a0a" }}>
+                                    Works offline
+                                </div>
+                                <div style={{ fontSize: 12, color: darkMode ? "#737373" : "#737373", marginTop: 2 }}>
+                                    Install as a PWA, run on a plane
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        {/* Wide row: categories ribbon */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            transition={{ duration: 0.5, delay: 0.30 }}
+                            whileHover={{ y: -4 }}
+                            className="b-wide"
+                            style={{
+                                background: darkMode ? "#111111" : "#ffffff",
+                                border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
+                                borderRadius: 16,
+                                padding: 22,
+                                display: "flex",
+                                flexDirection: "column",
+                                justifyContent: "center",
+                                gap: 12,
+                            }}
+                        >
+                            <div style={{
+                                fontFamily: "var(--font-geist-mono), monospace",
+                                fontSize: 11,
+                                color: darkMode ? "#737373" : "#737373",
+                                letterSpacing: "0.12em",
+                                textTransform: "uppercase",
+                            }}>
+                                Categories
+                            </div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                {[
+                                    { label: "Formatters",            color: "#6366f1" },
+                                    { label: "Validators",             color: "#3b82f6" },
+                                    { label: "Diff & Compare",         color: "#f97316" },
+                                    { label: "Data Converters",        color: "#0ea5e9" },
+                                    { label: "Encoding & Decoding",    color: "#14b8a6" },
+                                    { label: "Cryptography",           color: "#10b981" },
+                                    { label: "Certificates & Keys",    color: "#10b981" },
+                                    { label: "API & Web Services",     color: "#f59e0b" },
+                                    { label: "Network",                color: "#f59e0b" },
+                                    { label: "Generators",             color: "#8b5cf6" },
+                                    { label: "Text & Utilities",       color: "#52c41a" },
+                                    { label: "Reference",              color: "#fa8c16" },
+                                ].map(({ label, color }) => (
+                                    <span key={label} style={{
+                                        padding: "3px 10px",
+                                        borderRadius: 999,
+                                        fontSize: 11.5,
+                                        fontWeight: 600,
+                                        background: `${color}15`,
+                                        border: `1px solid ${color}30`,
+                                        color,
+                                    }}>
+                                        {label}
+                                    </span>
+                                ))}
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ================================================================
+                SECTION 5 — The privacy promise (5 guarantees + flow diagram)
+            ================================================================ */}
+            <section style={{ padding: "0 clamp(20px, 5vw, 32px) clamp(80px, 10vw, 120px)" }}>
+                <div
+                    style={{
+                        maxWidth: 1100,
+                        margin: "0 auto",
+                        background: darkMode ? "#0a0a0a" : "#fafafa",
+                        border: `1px solid ${darkMode ? "#1f1f1f" : "#ececec"}`,
+                        borderRadius: 20,
+                        padding: "clamp(36px, 5vw, 56px)",
+                        position: "relative",
+                        overflow: "hidden",
+                    }}
+                >
+                    {/* Accent gradient line at top */}
+                    <div
+                        aria-hidden
+                        style={{
+                            position: "absolute",
+                            top: 0, left: 0, right: 0,
+                            height: 3,
+                            background: "linear-gradient(90deg, transparent, #10b981, transparent)",
+                        }}
+                    />
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-100px" }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <div style={{
+                            fontFamily: "var(--font-geist-mono), monospace",
+                            fontSize: 12,
+                            color: "#10b981",
+                            letterSpacing: "0.18em",
+                            textTransform: "uppercase",
+                            marginBottom: 12,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                        }}>
+                            <LockOutlined />
+                            Privacy &amp; security &mdash; by default
+                        </div>
+                        <h2 style={{
+                            fontSize: "clamp(28px, 4vw, 44px)",
+                            fontWeight: 700,
+                            lineHeight: 1.15,
+                            letterSpacing: "-0.02em",
+                            margin: "0 0 36px",
+                            maxWidth: 720,
+                            color: darkMode ? "#fafafa" : "#0a0a0a",
+                        }}>
+                            Five promises. None of them have an asterisk.
+                        </h2>
+                    </motion.div>
+
+                    {/* Flow diagram */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true, margin: "-80px" }}
+                        transition={{ duration: 0.6 }}
+                        style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 12,
+                            marginBottom: 40,
+                            padding: "20px 0",
+                            borderTop: `1px dashed ${darkMode ? "#262626" : "#e5e5e5"}`,
+                            borderBottom: `1px dashed ${darkMode ? "#262626" : "#e5e5e5"}`,
+                        }}
+                    >
+                        {[
+                            { label: "Your input", sub: "in your tab", color: "#6366f1" },
+                            { label: "Tool runs", sub: "in your browser", color: "#6366f1" },
+                            { label: "Your output", sub: "stays with you", color: "#10b981" },
+                        ].map((node, i, arr) => (
+                            <React.Fragment key={node.label}>
+                                <div style={{
+                                    padding: "14px 22px",
+                                    borderRadius: 12,
+                                    background: darkMode ? "#1a1a1a" : "#ffffff",
+                                    border: `1px solid ${node.color}55`,
+                                    minWidth: 150,
+                                    textAlign: "center",
+                                }}>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: darkMode ? "#fafafa" : "#0a0a0a" }}>
+                                        {node.label}
+                                    </div>
+                                    <div style={{
+                                        fontSize: 11.5,
+                                        color: darkMode ? "#737373" : "#737373",
+                                        marginTop: 2,
+                                        fontFamily: "var(--font-geist-mono), monospace",
+                                    }}>
+                                        {node.sub}
+                                    </div>
+                                </div>
+                                {i < arr.length - 1 && (
+                                    <div style={{ position: "relative", width: 60, height: 2, background: darkMode ? "#262626" : "#d4d4d4" }}>
+                                        {i === 0 && (
                                             <div style={{
-                                                display: "grid",
-                                                gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 170px), 1fr))",
-                                                gap: "4px 8px",
+                                                position: "absolute",
+                                                top: -26,
+                                                left: "50%",
+                                                transform: "translateX(-50%)",
+                                                fontFamily: "var(--font-geist-mono), monospace",
+                                                fontSize: 11,
+                                                color: "#ef4444",
+                                                whiteSpace: "nowrap",
+                                                textDecoration: "line-through",
+                                                opacity: 0.7,
                                             }}>
-                                                {[
-                                                    { name: "JWT Decoder",          color: "#6366f1" },
-                                                    { name: "JSON Formatter",        color: "#6366f1" },
-                                                    { name: "Regex Tester",          color: "#6366f1" },
-                                                    { name: "Base64 Encoder",        color: "#14b8a6" },
-                                                    { name: "Encoding & Decoding",   color: "#14b8a6" },
-                                                    { name: "QR Code Generator",     color: "#8b5cf6" },
-                                                    { name: "POJO Generator",        color: "#8b5cf6" },
-                                                    { name: "Certificate Inspector", color: "#10b981" },
-                                                    { name: "CSR Generator",         color: "#10b981" },
-                                                    { name: "AES Encrypt / Decrypt", color: "#10b981" },
-                                                    { name: "Hash Generator",        color: "#10b981" },
-                                                    { name: "Bcrypt Tool",           color: "#10b981" },
-                                                    { name: "API Request Builder",   color: "#f59e0b" },
-                                                    { name: "IP Address Tools",      color: "#f59e0b" },
-                                                    { name: "URL Parser",            color: "#0ea5e9" },
-                                                ].map(({ name, color }) => (
-                                                    <div key={name} style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: 7,
-                                                        padding: "4px 2px",
-                                                    }}>
-                                                        <span style={{
-                                                            width: 5,
-                                                            height: 5,
-                                                            borderRadius: "50%",
-                                                            background: color,
-                                                            flexShrink: 0,
-                                                        }} />
-                                                        <span style={{
-                                                            fontSize: 12.5,
-                                                            fontWeight: 500,
-                                                            color: darkMode ? "#d4d4d4" : "#374151",
-                                                            lineHeight: 1.4,
-                                                        }}>
-                                                            {name}
-                                                        </span>
-                                                    </div>
-                                                ))}
+                                                no server
                                             </div>
-
-                                            {/* Privacy */}
-                                            <div style={{
-                                                background: darkMode ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.06)",
-                                                border: `1px solid ${darkMode ? "rgba(16, 185, 129, 0.25)" : "rgba(16, 185, 129, 0.20)"}`,
-                                                borderRadius: 10,
-                                                padding: "14px 16px",
-                                            }}>
-                                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                                                    <LockOutlined style={{ color: "#10b981", fontSize: 16 }} />
-                                                    <Text strong style={{ fontSize: 14, color: "#10b981", letterSpacing: 0.3 }}>PRIVACY &amp; SECURITY — BY DEFAULT</Text>
-                                                </div>
-                                                <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 14.5, lineHeight: 1.75 }}>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Everything runs locally.</strong>{" "}All parsing, signing, hashing, encryption, and certificate operations execute in your browser tab. Your input never leaves your machine.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No accounts, no tracking, no analytics.</strong>{" "}Nothing is logged. No session cookies. No third-party scripts.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No external dependencies at runtime.</strong>{" "}Fonts, editors, and cryptographic libraries are bundled — no outbound requests during tool use.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Works fully offline.</strong>{" "}Installable as a Progressive Web App; all tools remain functional without a network connection.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Open source and auditable.</strong>{" "}Every line of code is publicly available on GitHub — the privacy guarantees are verifiable, not assumed.</li>
-                                                </ul>
-                                            </div>
-
-                                            {/* Why */}
-                                            <div>
-                                                <Text strong style={{ fontSize: 13, letterSpacing: 0.5, textTransform: "uppercase", color: darkMode ? "#a78bfa" : "#4f46e5", display: "block", marginBottom: 8 }}>Why developers choose it</Text>
-                                                <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 14.5, lineHeight: 1.75 }}>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Compliant by design</strong> — paste production tokens, certificates, and internal payloads without violating data handling policies.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Consolidated toolchain</strong> — formatting, cryptography, certificates, network utilities, and encoding in one place.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Zero friction</strong> — no sign-up, no quotas, no rate limits, no advertisements.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Mobile-ready</strong> — every tool is responsive and functional on a phone for on-call workflows.</li>
-                                                </ul>
-                                            </div>
-
-                                            <div style={{
-                                                paddingTop: 14,
-                                                borderTop: `1px dashed ${darkMode ? "#262626" : "#e5e5e5"}`,
-                                                display: "flex",
-                                                justifyContent: "center",
-                                            }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={dismissAbout}
-                                                    style={{
-                                                        display: "inline-flex",
-                                                        alignItems: "center",
-                                                        gap: 6,
-                                                        padding: "6px 16px",
-                                                        borderRadius: 8,
-                                                        fontSize: 13.5,
-                                                        fontWeight: 500,
-                                                        cursor: "pointer",
-                                                        background: darkMode ? "rgba(16,185,129,0.10)" : "rgba(16,185,129,0.08)",
-                                                        border: `1px solid ${darkMode ? "rgba(16,185,129,0.25)" : "rgba(16,185,129,0.20)"}`,
-                                                        color: "#10b981",
-                                                    }}
-                                                >
-                                                    <CloseOutlined style={{ fontSize: 11 }} />
-                                                    Close this section
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                </motion.div>
+                                        )}
+                                    </div>
                                 )}
+                            </React.Fragment>
+                        ))}
+                    </motion.div>
 
+                    {/* Five promises */}
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                        gap: 18,
+                    }}>
+                        {[
+                            {
+                                title: "Everything runs locally",
+                                body: "Parsing, signing, hashing, encryption, certificate operations &mdash; all of it executes in your browser tab. Your input never leaves your machine.",
+                            },
+                            {
+                                title: "No accounts, no analytics",
+                                body: "Nothing is logged. No session cookies, no third-party scripts, no cross-site tracking, no fingerprinting.",
+                            },
+                            {
+                                title: "Bundled at build time",
+                                body: "Fonts, the Monaco editor, every cryptographic library &mdash; all bundled. Zero outbound requests once the page renders.",
+                            },
+                            {
+                                title: "Functional offline",
+                                body: "Installable as a Progressive Web App. Every tool keeps working without a network connection, ideal for plane mode and air-gapped networks.",
+                            },
+                            {
+                                title: "Open source &amp; auditable",
+                                body: "Every line of code is on GitHub under MIT. The privacy guarantees are verifiable, not assumed.",
+                            },
+                        ].map((promise, i) => (
+                            <motion.div
+                                key={promise.title}
+                                initial={{ opacity: 0, x: -20 }}
+                                whileInView={{ opacity: 1, x: 0 }}
+                                viewport={{ once: true, margin: "-30px" }}
+                                transition={{ duration: 0.4, delay: i * 0.06 }}
+                                style={{
+                                    background: darkMode ? "#111111" : "#ffffff",
+                                    border: `1px solid ${darkMode ? "#1f1f1f" : "#ececec"}`,
+                                    borderRadius: 12,
+                                    padding: 18,
+                                }}
+                            >
+                                <div style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    marginBottom: 8,
+                                    fontSize: 14.5,
+                                    fontWeight: 700,
+                                    color: darkMode ? "#fafafa" : "#0a0a0a",
+                                }}>
+                                    <CheckCircleFilled style={{ color: "#10b981", fontSize: 14 }} />
+                                    <span dangerouslySetInnerHTML={{ __html: promise.title }} />
+                                </div>
+                                <p style={{
+                                    margin: 0,
+                                    fontSize: 13.5,
+                                    lineHeight: 1.6,
+                                    color: darkMode ? "#a3a3a3" : "#525252",
+                                }}
+                                dangerouslySetInnerHTML={{ __html: promise.body }}
+                                />
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ================================================================
+                SECTION 6 — Built for engineers in regulated environments
+            ================================================================ */}
+            <section style={{ padding: "0 clamp(20px, 5vw, 32px) clamp(80px, 10vw, 120px)" }}>
+                <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-15%" }}
+                        transition={{ duration: 0.5 }}
+                        style={{ marginBottom: 36 }}
+                    >
+                        <div style={{
+                            fontFamily: "var(--font-geist-mono), monospace",
+                            fontSize: 12,
+                            color: darkMode ? "#6366f1" : "#4f46e5",
+                            letterSpacing: "0.18em",
+                            textTransform: "uppercase",
+                            marginBottom: 12,
+                        }}>
+                            Built for
+                        </div>
+                        <h2 style={{
+                            fontSize: "clamp(28px, 4vw, 44px)",
+                            fontWeight: 700,
+                            lineHeight: 1.15,
+                            letterSpacing: "-0.02em",
+                            margin: 0,
+                            maxWidth: 760,
+                            color: darkMode ? "#fafafa" : "#0a0a0a",
+                        }}>
+                            The teams that read every clause of the data agreement.
+                        </h2>
+                    </motion.div>
+
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                        gap: 18,
+                    }}>
+                        {[
+                            {
+                                icon: <CodeOutlined />,
+                                accent: "#6366f1",
+                                tag: "Individual developers",
+                                title: "Stop juggling 30 browser tabs.",
+                                bullets: [
+                                    "Cmd+K jumps to any of 90 tools in two keystrokes",
+                                    "Monaco editor on the inside, the same engine VS Code uses",
+                                    "No sign-up, no quotas, no rate limits, no ads",
+                                    "Every tool stays mobile-friendly for on-call workflows",
+                                ],
+                            },
+                            {
+                                icon: <BankOutlined />,
+                                accent: "#0ea5e9",
+                                tag: "Enterprise IT",
+                                title: "Replace the random formatter websites.",
+                                bullets: [
+                                    "Static build deploys to an internal portal in five minutes",
+                                    "Lock the whole site behind your existing SSO or VPN",
+                                    "Audit every dependency in package.json on GitHub",
+                                    "No data egress, no SaaS contract, no quarterly review",
+                                ],
+                            },
+                            {
+                                icon: <SafetyCertificateOutlined />,
+                                accent: "#10b981",
+                                tag: "Government &amp; regulated",
+                                title: "Air-gapped by design.",
+                                bullets: [
+                                    "Ships as static HTML, hosts on any internal web server",
+                                    "Zero outbound requests once the page is served",
+                                    "Useful for FedRAMP, HIPAA, PCI, ITAR, IL5 environments",
+                                    "Drop the build folder onto a classified network, open it offline",
+                                ],
+                            },
+                        ].map((card, i) => (
+                            <motion.div
+                                key={card.tag}
+                                initial={{ opacity: 0, y: 30 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: "-50px" }}
+                                transition={{ duration: 0.5, delay: i * 0.1 }}
+                                whileHover={{ y: -6 }}
+                                style={{
+                                    background: darkMode ? "#111111" : "#ffffff",
+                                    border: `1px solid ${darkMode ? "#262626" : "#ececec"}`,
+                                    borderRadius: 16,
+                                    padding: 26,
+                                    position: "relative",
+                                    overflow: "hidden",
+                                }}
+                            >
+                                {/* Accent corner */}
+                                <div
+                                    aria-hidden
+                                    style={{
+                                        position: "absolute",
+                                        top: 0, right: 0,
+                                        width: 80,
+                                        height: 80,
+                                        background: `radial-gradient(circle at top right, ${card.accent}25, transparent 70%)`,
+                                        pointerEvents: "none",
+                                    }}
+                                />
+                                <div style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    width: 42,
+                                    height: 42,
+                                    borderRadius: 12,
+                                    background: card.accent + "1a",
+                                    color: card.accent,
+                                    fontSize: 20,
+                                    marginBottom: 18,
+                                }}>
+                                    {card.icon}
+                                </div>
+                                <div style={{
+                                    fontFamily: "var(--font-geist-mono), monospace",
+                                    fontSize: 11,
+                                    color: card.accent,
+                                    letterSpacing: "0.12em",
+                                    textTransform: "uppercase",
+                                    marginBottom: 10,
+                                }}
+                                dangerouslySetInnerHTML={{ __html: card.tag }}
+                                />
+                                <h3 style={{
+                                    fontSize: 19,
+                                    fontWeight: 700,
+                                    lineHeight: 1.3,
+                                    margin: "0 0 16px",
+                                    color: darkMode ? "#fafafa" : "#0a0a0a",
+                                }}>
+                                    {card.title}
+                                </h3>
+                                <ul style={{
+                                    listStyle: "none",
+                                    padding: 0,
+                                    margin: 0,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 9,
+                                }}>
+                                    {card.bullets.map((b, j) => (
+                                        <li key={j} style={{
+                                            display: "flex",
+                                            alignItems: "flex-start",
+                                            gap: 8,
+                                            fontSize: 13.5,
+                                            lineHeight: 1.5,
+                                            color: darkMode ? "#a3a3a3" : "#525252",
+                                        }}>
+                                            <span style={{
+                                                marginTop: 6,
+                                                width: 4,
+                                                height: 4,
+                                                borderRadius: "50%",
+                                                background: card.accent,
+                                                flexShrink: 0,
+                                            }} />
+                                            {b}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ================================================================
+                SECTION 7 — Tool marquee (infinite ticker)
+            ================================================================ */}
+            <section style={{ padding: "0 0 clamp(80px, 10vw, 120px)" }}>
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true, margin: "-100px" }}
+                    transition={{ duration: 0.6 }}
+                    style={{
+                        textAlign: "center",
+                        padding: "0 clamp(20px, 5vw, 32px)",
+                        marginBottom: 28,
+                    }}
+                >
+                    <div style={{
+                        fontFamily: "var(--font-geist-mono), monospace",
+                        fontSize: 12,
+                        color: darkMode ? "#6366f1" : "#4f46e5",
+                        letterSpacing: "0.18em",
+                        textTransform: "uppercase",
+                        marginBottom: 8,
+                    }}>
+                        The catalog at a glance
+                    </div>
+                    <div style={{
+                        fontSize: "clamp(15px, 1.6vw, 18px)",
+                        color: darkMode ? "#a3a3a3" : "#525252",
+                    }}>
+                        {stats.total} tools, hover to pause.
+                    </div>
+                </motion.div>
+
+                <div className="tool-marquee-mask">
+                    <div className="tool-marquee-track">
+                        {[...marqueeTools, ...marqueeTools].map((tool, i) => (
+                            <button
+                                key={i}
+                                type="button"
+                                onClick={() => handleToolClick(tool.id)}
+                                style={{
+                                    flexShrink: 0,
+                                    padding: "10px 16px",
+                                    borderRadius: 999,
+                                    border: `1px solid ${darkMode ? "#262626" : "#ececec"}`,
+                                    background: darkMode ? "#111111" : "#ffffff",
+                                    color: darkMode ? "#d4d4d4" : "#374151",
+                                    fontSize: 13,
+                                    fontWeight: 500,
+                                    cursor: "pointer",
+                                    fontFamily: "var(--font-geist-mono), monospace",
+                                    whiteSpace: "nowrap",
+                                    transition: "border-color 0.15s, color 0.15s",
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = tool.color;
+                                    e.currentTarget.style.color = tool.color;
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = darkMode ? "#262626" : "#ececec";
+                                    e.currentTarget.style.color = darkMode ? "#d4d4d4" : "#374151";
+                                }}
+                            >
+                                <span style={{
+                                    display: "inline-block",
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: "50%",
+                                    background: tool.color,
+                                    marginRight: 8,
+                                    verticalAlign: "middle",
+                                }} />
+                                {tool.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ================================================================
+                SECTION 8 — Catalog header (intro to tool grid below)
+            ================================================================ */}
+            <div style={{ padding: "clamp(40px, 6vw, 64px) clamp(16px, 4vw, 24px) 16px", maxWidth: 1200, margin: "0 auto" }}>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-80px" }}
+                    transition={{ duration: 0.5 }}
+                    style={{ textAlign: "center", marginBottom: 24 }}
+                >
+                    <div style={{
+                        fontFamily: "var(--font-geist-mono), monospace",
+                        fontSize: 12,
+                        color: darkMode ? "#6366f1" : "#4f46e5",
+                        letterSpacing: "0.18em",
+                        textTransform: "uppercase",
+                        marginBottom: 10,
+                    }}>
+                        The full catalog
+                    </div>
+                    <h2 style={{
+                        fontSize: "clamp(26px, 3.5vw, 38px)",
+                        fontWeight: 700,
+                        letterSpacing: "-0.02em",
+                        margin: 0,
+                        color: darkMode ? "#fafafa" : "#0a0a0a",
+                    }}>
+                        {stats.total} tools, organised across {stats.categories} categories.
+                    </h2>
+                    <p style={{
+                        fontSize: 15,
+                        color: darkMode ? "#a3a3a3" : "#525252",
+                        marginTop: 12,
+                        marginBottom: 0,
+                    }}>
+                        Search by name, tag, or category. Or jump straight in.
+                    </p>
+                </motion.div>
+            </div>
+
+
+            {/* ================================================================
+                Search bar
+            ================================================================ */}
+            <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                style={{ marginBottom: 40 }}
+            >
                 <div style={{ maxWidth: 580, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
                     <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                         <span
@@ -461,7 +1366,9 @@ export default function Dashboard() {
                 </div>
             </motion.div>
 
-            {/* Recent Tools */}
+            {/* ================================================================
+                Recent Tools
+            ================================================================ */}
             <AnimatePresence>
                 {recentTools.length > 0 && !search.trim() && (
                     <motion.div
@@ -570,102 +1477,108 @@ export default function Dashboard() {
                 </motion.div>
             )}
 
-            {/* Tool Grid by Category */}
-            {Array.from(filteredCategorized.entries()).map(([category, tools]) => {
-                const CategoryIcon = CATEGORY_ICONS[category];
-                const categoryColor = CATEGORY_COLORS[category];
-                const categoryDesc = CATEGORY_DESCRIPTIONS[category];
-                const isAlpha = ALPHA_CATEGORIES.includes(category);
+            {/* ================================================================
+                Tool Grid by Category
+            ================================================================ */}
+            <div ref={toolsGridRef}>
+                {Array.from(filteredCategorized.entries()).map(([category, tools]) => {
+                    const CategoryIcon = CATEGORY_ICONS[category];
+                    const categoryColor = CATEGORY_COLORS[category];
+                    const categoryDesc = CATEGORY_DESCRIPTIONS[category];
+                    const isAlpha = ALPHA_CATEGORIES.includes(category);
+                    const anchorId = `category-${category.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9-]/g, "")}`;
 
-                return (
-                    <motion.div
-                        key={category}
-                        style={{ marginBottom: 48 }}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4 }}
-                    >
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                flexWrap: "wrap",
-                                gap: 12,
-                                marginBottom: 8,
-                            }}
+                    return (
+                        <motion.div
+                            key={category}
+                            id={anchorId}
+                            style={{ marginBottom: 48 }}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4 }}
                         >
                             <div
                                 style={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 10,
-                                    background: `${categoryColor}1f`,
                                     display: "flex",
                                     alignItems: "center",
-                                    justifyContent: "center",
+                                    flexWrap: "wrap",
+                                    gap: 12,
+                                    marginBottom: 8,
                                 }}
                             >
-                                <CategoryIcon
-                                    style={{ fontSize: 18, color: categoryColor }}
-                                />
-                            </div>
-                            <Title
-                                level={4}
-                                style={{ margin: 0, fontWeight: 600 }}
-                            >
-                                {category}
-                            </Title>
-                            <Badge
-                                count={tools.length}
-                                style={{
-                                    backgroundColor: categoryColor,
-                                    fontWeight: 600,
-                                    fontSize: 11,
-                                }}
-                            />
-                            {isAlpha && (
-                                <Tag
-                                    color="purple"
+                                <div
                                     style={{
-                                        margin: 0,
-                                        fontWeight: 700,
-                                        letterSpacing: 0.6,
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 10,
+                                        background: `${categoryColor}1f`,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
                                     }}
                                 >
-                                    ALPHA
-                                </Tag>
+                                    <CategoryIcon
+                                        style={{ fontSize: 18, color: categoryColor }}
+                                    />
+                                </div>
+                                <Title
+                                    level={4}
+                                    style={{ margin: 0, fontWeight: 600 }}
+                                >
+                                    {category}
+                                </Title>
+                                <Badge
+                                    count={tools.length}
+                                    style={{
+                                        backgroundColor: categoryColor,
+                                        fontWeight: 600,
+                                        fontSize: 11,
+                                    }}
+                                />
+                                {isAlpha && (
+                                    <Tag
+                                        color="purple"
+                                        style={{
+                                            margin: 0,
+                                            fontWeight: 700,
+                                            letterSpacing: 0.6,
+                                        }}
+                                    >
+                                        ALPHA
+                                    </Tag>
+                                )}
+                            </div>
+                            {categoryDesc && (
+                                <Text
+                                    type="secondary"
+                                    style={{
+                                        display: "block",
+                                        marginBottom: 18,
+                                        paddingLeft: 48,
+                                        fontSize: 13,
+                                    }}
+                                >
+                                    {categoryDesc}
+                                </Text>
                             )}
-                        </div>
-                        {categoryDesc && (
-                            <Text
-                                type="secondary"
-                                style={{
-                                    display: "block",
-                                    marginBottom: 18,
-                                    paddingLeft: 48,
-                                    fontSize: 13,
-                                }}
-                            >
-                                {categoryDesc}
-                            </Text>
-                        )}
 
-                        <motion.div variants={container} initial="hidden" animate="show">
-                            <Row gutter={[20, 20]}>
-                                {tools.map((tool) => (
-                                    <Col xs={24} sm={12} md={8} lg={8} xl={6} xxl={6} key={tool.id}>
-                                        <ToolCard
-                                            tool={tool}
-                                            darkMode={darkMode}
-                                            onClick={() => handleToolClick(tool.id)}
-                                        />
-                                    </Col>
-                                ))}
-                            </Row>
+                            <motion.div variants={container} initial="hidden" animate="show">
+                                <Row gutter={[20, 20]}>
+                                    {tools.map((tool) => (
+                                        <Col xs={24} sm={12} md={8} lg={8} xl={6} xxl={6} key={tool.id}>
+                                            <ToolCard
+                                                tool={tool}
+                                                darkMode={darkMode}
+                                                onClick={() => handleToolClick(tool.id)}
+                                            />
+                                        </Col>
+                                    ))}
+                                </Row>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                );
-            })}
+                    );
+                })}
+            </div>
         </div>
     );
 }

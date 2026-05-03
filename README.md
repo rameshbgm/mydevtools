@@ -1,6 +1,6 @@
 # mydevtools
 
-A private, offline-first developer tools portal — **87 utilities** across **13 categories**, all in one place. Built with Next.js 16, React 19, Ant Design 6, Monaco Editor, and Framer Motion.
+A private, offline-first developer tools portal — **90 utilities** across **13 categories**, all in one place. Built with Next.js 16, React 19, Ant Design 6, Monaco Editor, and Framer Motion.
 
 > Stop context-switching between dozens of single-purpose websites. Format, diff, decode, generate, validate, parse, calculate — all from one workspace, in your browser.
 
@@ -11,7 +11,8 @@ A private, offline-first developer tools portal — **87 utilities** across **13
 
 ## Highlights
 
-- **87 tools** organised into 13 logical categories
+- **90 tools** organised into 13 logical categories
+- **Stunning landing page** — animated hero, stats strip, category showcase with scroll effects
 - **Installable PWA** — works as an app on iOS, Android, Mac and Windows
 - **Mobile-first responsive** — every tool adapts to phone, tablet and desktop
 - **Header search** with autocomplete — jump to any tool in two keystrokes
@@ -20,7 +21,7 @@ A private, offline-first developer tools portal — **87 utilities** across **13
 - **Navigation loader** with friendly messages and 60-second safety timeout
 - **Privacy-first**: 100% client-side, no analytics, no telemetry, zero third-party runtime requests
 - **Static export** — every page is pre-rendered to HTML; deploy to any static host
-- **Production build:** 91 static routes pre-rendered (87 tools + dashboard + 404 + sitemap + robots)
+- **Production build:** 93 static routes pre-rendered (90 tools + dashboard + release-notes + 404 + sitemap + robots)
 - **MIT licensed** — fork it, modify it, ship it
 
 ---
@@ -29,21 +30,21 @@ A private, offline-first developer tools portal — **87 utilities** across **13
 
 | # | Category | Count | Examples |
 |---|----------|------:|----------|
-| 1 | Formatters | 7 | JSON, XML, SQL, HTML, JS, CSS, **YAML** |
-| 2 | Validators | 8 | JSON, XML, HTML, XSD, XPath, Regex, Credit Card, **Email** |
+| 1 | Formatters | 7 | JSON, XML, SQL, HTML, JS, CSS, YAML |
+| 2 | Validators | 8 | JSON, XML, HTML, XSD, XPath, Regex, Credit Card, Email |
 | 3 | Diff & Compare | 3 | JSON Diff, XML Diff, Text Diff |
-| 4 | Data Converters | 7 | XML↔JSON, CSV→JSON, CSV→XML, YAML↔JSON, XSLT, **JSON→CSV** |
-| 5 | Encoding & Decoding | 7 | Base64, URL, HTML Entities, Unicode, Gzip, String Escape, **Hex** |
-| 6 | Cryptography | 8 | Hash, HMAC, JWT, JWS, JWE, JWK, **BCrypt**, **AES** |
+| 4 | Data Converters | 7 | XML↔JSON, CSV→JSON, CSV→XML, YAML↔JSON, XSLT, JSON→CSV |
+| 5 | Encoding & Decoding | 7 | Base64, URL, HTML Entities, Unicode, Gzip, String Escape, Hex |
+| 6 | Cryptography | 8 | Hash, HMAC, JWT, JWS, JWE, JWK, BCrypt, AES |
 | 7 | Certificates & Keys | 12 | X.509 decoder/generator/CSR/converter, PEM, PKCS#12, JKS, SSH keys, SSL checker, fingerprints |
 | 8 | API & Web Services | 6 | Swagger/OpenAPI viewer, REST request builder, JSONPath, URL parser, WSDL, SOAP client |
 | 9 | Network | 3 | IP tools, Subnet calculator, MAC address tools |
-| 10 | Generators | 9 | UUID, Password, Lorem Ipsum, QR code, Markdown table, Java POJO, JSON→TypeScript, **Slug**, **Color Contrast Checker** |
-| 11 | Text & Utilities | 9 | Text manipulation, Markdown preview, Case converter, Timestamp, Color, Number base, Unix permissions, Cron parser, Todo list |
+| 10 | Generators | 9 | UUID, Password, Lorem Ipsum, QR code, Markdown table, Java POJO, JSON→TypeScript, Slug, Color Contrast Checker |
+| 11 | Text & Utilities | 11 | Case converter, Markdown, Timestamp, Color, Number base, Unix permissions, Cron parser, Todo list, **Timer**, **Stopwatch** |
 | 12 | **AI Alpha Tools** | 3 | RAG Doc Q&A, Text Summarizer, Code Explainer (early access — may change) |
 | 13 | Reference | 5 | HTTP status codes, MIME types, Port numbers, IP ranges, RFC standards |
 
-**New in latest release:** YAML Formatter · Email Validator · JSON→CSV · Hex Encoder/Decoder · BCrypt Hash & Verify · AES Encrypt/Decrypt · Slug Generator · Color Contrast Checker (WCAG AA/AAA)
+**New in v1.2:** Branded landing page with scroll animations · Timer (countdown + audio chime + Pomodoro) · Stopwatch (lap splits, best/worst highlighting)
 
 ---
 
