@@ -955,52 +955,43 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             </div>
 
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                                <Tooltip title="View source on GitHub">
+                                <Tooltip title={`GitHub · Version ${APP_VERSION} — view release notes`}>
                                     <a
                                         href="https://github.com/rameshbgm/mydevtools"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        aria-label="View source on GitHub"
+                                        aria-label={`View source on GitHub — version ${APP_VERSION}`}
                                         style={{
                                             display: "inline-flex",
+                                            flexDirection: "column",
                                             alignItems: "center",
                                             justifyContent: "center",
-                                            width: 34,
-                                            height: 34,
+                                            gap: 1,
+                                            padding: "4px 8px",
                                             borderRadius: 8,
                                             color: darkMode ? "#a3a3a3" : "#525252",
-                                            background: "transparent",
-                                            textDecoration: "none",
-                                            transition: "color 0.15s",
-                                        }}
-                                    >
-                                        <GithubOutlined style={{ fontSize: 18 }} />
-                                    </a>
-                                </Tooltip>
-                                <Tooltip title={`Version ${APP_VERSION} — view release notes & full catalog`}>
-                                    <span
-                                        onClick={() => navigate("/release-notes")}
-                                        style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            height: 28,
-                                            padding: "0 10px",
-                                            borderRadius: 8,
-                                            fontFamily: "var(--font-geist-mono), monospace",
-                                            fontSize: 11.5,
-                                            fontWeight: 600,
-                                            letterSpacing: 0.4,
-                                            color: darkMode ? "#a78bfa" : "#4f46e5",
                                             background: darkMode
-                                                ? "rgba(99, 102, 241, 0.12)"
-                                                : "rgba(79, 70, 229, 0.08)",
-                                            border: `1px solid ${darkMode ? "rgba(99, 102, 241, 0.30)" : "rgba(79, 70, 229, 0.20)"}`,
+                                                ? "rgba(99, 102, 241, 0.10)"
+                                                : "rgba(79, 70, 229, 0.07)",
+                                            border: `1px solid ${darkMode ? "rgba(99, 102, 241, 0.25)" : "rgba(79, 70, 229, 0.18)"}`,
+                                            textDecoration: "none",
                                             cursor: "pointer",
                                             userSelect: "none",
                                         }}
+                                        onClick={(e) => { e.preventDefault(); navigate("/release-notes"); }}
                                     >
-                                        V{APP_VERSION}
-                                    </span>
+                                        <GithubOutlined style={{ fontSize: 16 }} />
+                                        <span style={{
+                                            fontFamily: "var(--font-geist-mono), monospace",
+                                            fontSize: 9,
+                                            fontWeight: 700,
+                                            letterSpacing: 0.3,
+                                            color: darkMode ? "#a78bfa" : "#4f46e5",
+                                            lineHeight: 1,
+                                        }}>
+                                            V{APP_VERSION}
+                                        </span>
+                                    </a>
                                 </Tooltip>
                                 <Tooltip title="Memory & Storage Manager">
                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
