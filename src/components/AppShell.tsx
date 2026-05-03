@@ -16,7 +16,6 @@ import {
     Grid,
 } from "antd";
 import { setMessageInstance } from "@/lib/messageService";
-import { APP_VERSION } from "@/lib/release-notes";
 import {
     MenuFoldOutlined,
     MenuUnfoldOutlined,
@@ -26,7 +25,6 @@ import {
     CodeOutlined,
     SearchOutlined,
     DatabaseOutlined,
-    GithubOutlined,
 } from "@ant-design/icons";
 import {
     getToolsByCategory,
@@ -941,6 +939,25 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 />
                             </Tooltip>
 
+                            <Tooltip title="Memory & Storage Manager">
+                                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                    <Button
+                                        type="text"
+                                        icon={<DatabaseOutlined style={{ fontSize: 17, color: darkMode ? "#6366f1" : "#4f46e5" }} />}
+                                        onClick={() => navigate("/memory")}
+                                        style={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 10,
+                                            background: darkMode
+                                                ? "rgba(99, 102, 241, 0.1)"
+                                                : "rgba(79, 70, 229, 0.08)",
+                                            flexShrink: 0,
+                                        }}
+                                    />
+                                </motion.div>
+                            </Tooltip>
+
                             {/* Center: search trigger */}
                             <div
                                 style={{
@@ -955,61 +972,6 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             </div>
 
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                                <Tooltip title={`GitHub · Version ${APP_VERSION} — view release notes`}>
-                                    <a
-                                        href="https://github.com/rameshbgm/mydevtools"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        aria-label={`View source on GitHub — version ${APP_VERSION}`}
-                                        style={{
-                                            display: "inline-flex",
-                                            flexDirection: "column",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            gap: 1,
-                                            padding: "4px 8px",
-                                            borderRadius: 8,
-                                            color: darkMode ? "#a3a3a3" : "#525252",
-                                            background: darkMode
-                                                ? "rgba(99, 102, 241, 0.10)"
-                                                : "rgba(79, 70, 229, 0.07)",
-                                            border: `1px solid ${darkMode ? "rgba(99, 102, 241, 0.25)" : "rgba(79, 70, 229, 0.18)"}`,
-                                            textDecoration: "none",
-                                            cursor: "pointer",
-                                            userSelect: "none",
-                                        }}
-                                        onClick={(e) => { e.preventDefault(); navigate("/release-notes"); }}
-                                    >
-                                        <GithubOutlined style={{ fontSize: 16 }} />
-                                        <span style={{
-                                            fontFamily: "var(--font-geist-mono), monospace",
-                                            fontSize: 9,
-                                            fontWeight: 700,
-                                            letterSpacing: 0.3,
-                                            color: darkMode ? "#a78bfa" : "#4f46e5",
-                                            lineHeight: 1,
-                                        }}>
-                                            V{APP_VERSION}
-                                        </span>
-                                    </a>
-                                </Tooltip>
-                                <Tooltip title="Memory & Storage Manager">
-                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                        <Button
-                                            type="text"
-                                            icon={<DatabaseOutlined style={{ fontSize: 17, color: darkMode ? "#6366f1" : "#4f46e5" }} />}
-                                            onClick={() => navigate("/memory")}
-                                            style={{
-                                                width: 40,
-                                                height: 40,
-                                                borderRadius: 10,
-                                                background: darkMode
-                                                    ? "rgba(99, 102, 241, 0.1)"
-                                                    : "rgba(79, 70, 229, 0.08)",
-                                            }}
-                                        />
-                                    </motion.div>
-                                </Tooltip>
                                 <Tooltip title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                         <Button

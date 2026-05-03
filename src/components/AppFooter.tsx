@@ -5,6 +5,7 @@ import { GithubOutlined, LinkedinFilled, HeartFilled } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { toolsRegistry } from "@/lib/tools-registry";
+import { APP_VERSION } from "@/lib/release-notes";
 
 const { Text } = Typography;
 
@@ -150,6 +151,27 @@ export default function AppFooter() {
                     <Text type="secondary" style={{ fontSize: 12 }}>
                         © {year} My Dev Tools
                     </Text>
+                    <span
+                        style={{
+                            display: "inline-block",
+                            width: 4,
+                            height: 4,
+                            borderRadius: "50%",
+                            background: darkMode ? "#404040" : "#d4d4d4",
+                        }}
+                    />
+                    <a
+                        href="/release-notes"
+                        style={{
+                            fontSize: 12,
+                            fontFamily: "var(--font-geist-mono), monospace",
+                            color: darkMode ? "#a78bfa" : "#4f46e5",
+                            textDecoration: "none",
+                            opacity: 0.85,
+                        }}
+                    >
+                        v{APP_VERSION}
+                    </a>
                     <span
                         style={{
                             display: "inline-block",
