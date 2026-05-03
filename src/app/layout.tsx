@@ -6,6 +6,7 @@ import AppShell from "@/components/AppShell";
 import PwaRegister from "@/components/PwaRegister";
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/seo-content";
 import { toolsRegistry } from "@/lib/tools-registry";
+import { toolPath } from "@/lib/category-routes";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -168,7 +169,7 @@ const COLLECTION_STRUCTURED_DATA = {
     hasPart: toolsRegistry.map((t) => ({
         "@type": "SoftwareApplication",
         name: t.name,
-        url: `${SITE_URL}/tools/${t.id}`,
+        url: `${SITE_URL}${toolPath(t)}`,
         applicationCategory: "DeveloperApplication",
         applicationSubCategory: t.category,
     })),

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useId } from "react";
+import React, { useId, useMemo } from "react";
+import { usePathname } from "next/navigation";
 import { Typography, Breadcrumb, Collapse, Card, Tag } from "antd";
 import {
     HomeOutlined,
@@ -15,6 +16,8 @@ import {
 } from "@ant-design/icons";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { getToolIdFromPublicPath, dashboardCategoryHashId } from "@/lib/category-routes";
+import { toolsRegistry } from "@/lib/tools-registry";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -78,44 +81,65 @@ export default function ToolPageLayout({
     alpha,
     learnMore,
 }: Readonly<ToolPageLayoutProps>) {
+    const pathname = usePathname();
+    const toolId = getToolIdFromPublicPath(pathname);
+    const regTool = toolId ? toolsRegistry.find((t) => t.id === toolId) : undefined;
+    const category = regTool?.category;
+
+    const breadcrumbItems = useMemo(() => {
+        const items: {
+            title: React.ReactNode;
+        }[] = [
+            {
+                title: (
+                    <Link href="/" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <HomeOutlined style={{ fontSize: 14 }} />
+                        <span>Dashboard</span>
+                    </Link>
+                ),
+            },
+        ];
+        if (category) {
+            items.push({
+                title: (
+                    <Link href={`/#${dashboardCategoryHashId(category)}`} style={{ fontWeight: 500 }}>
+                        {category}
+                    </Link>
+                ),
+            });
+        }
+        items.push({
+            title: (
+                <span
+                    style={{
+                        fontWeight: 600,
+                        color: "var(--wb-text-heading)",
+                    }}
+                >
+                    {title}
+                </span>
+            ),
+        });
+        return items;
+    }, [category, pathname, title]);
+
     return (
         <motion.div
-            className="app-tool-shell"
+            className="wb-tool-shell"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
             style={{ width: "100%" }}
         >
             <Breadcrumb
-                className="app-tool-breadcrumb"
+                className="wb-tool-breadcrumb"
                 separator={<RightOutlined style={{ fontSize: 10, opacity: 0.5 }} />}
                 style={{ marginBottom: 22 }}
-                items={[
-                    {
-                        title: (
-                            <Link href="/" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <HomeOutlined style={{ fontSize: 14 }} />
-                                <span>Dashboard</span>
-                            </Link>
-                        )
-                    },
-                    {
-                        title: (
-                            <span
-                                style={{
-                                    fontWeight: 600,
-                                    color: "var(--app-text-heading)",
-                                }}
-                            >
-                                {title}
-                            </span>
-                        )
-                    },
-                ]}
+                items={breadcrumbItems}
             />
 
             <motion.div
-                className="app-tool-hero"
+                className="wb-tool-hero"
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1, duration: 0.32 }}
@@ -126,16 +150,16 @@ export default function ToolPageLayout({
                     } as React.CSSProperties
                 }
             >
-                <ToolHeroAccentSvg className="app-tool-hero-svg" />
-                <div className="app-tool-hero-layout">
+                <ToolHeroAccentSvg className="wb-tool-hero-svg" />
+                <div className="wb-tool-hero-layout">
                     <motion.div
                         whileHover={{ scale: 1.05, rotate: 4 }}
                         transition={{ type: "spring", stiffness: 380, damping: 18 }}
-                        className="app-tool-hero-icon"
+                        className="wb-tool-hero-icon"
                     >
                         {icon}
                     </motion.div>
-                    <div className="app-tool-hero-titles">
+                    <div className="wb-tool-hero-titles">
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <Title
                                 level={2}
@@ -145,7 +169,7 @@ export default function ToolPageLayout({
                                     letterSpacing: "-0.03em",
                                     fontSize: "clamp(18px, 3.8vw, 26px)",
                                     lineHeight: 1.18,
-                                    color: "var(--app-text-heading)",
+                                    color: "var(--wb-text-heading)",
                                 }}
                             >
                                 {title}
@@ -162,7 +186,7 @@ export default function ToolPageLayout({
                         </div>
                         <Text
                             style={{
-                                color: "var(--app-text-body)",
+                                color: "var(--wb-text-body)",
                                 fontSize: "clamp(13px, 1.7vw, 15px)",
                                 marginTop: 6,
                                 display: "block",
@@ -184,7 +208,7 @@ export default function ToolPageLayout({
                 >
                     <Collapse
                         ghost
-                        className="app-tool-learn-collapse"
+                        className="wb-tool-learn-collapse"
                         items={[
                             {
                                 key: "learn-more",
@@ -196,39 +220,39 @@ export default function ToolPageLayout({
                                 ),
                                 children: (
                                     <Card
-                                        className="app-tool-learn-card"
+                                        className="wb-tool-learn-card"
                                         styles={{ body: { padding: 20 } }}
                                     >
                                         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                                             {learnMore.whatIs && (
                                                 <div>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                                        <QuestionCircleOutlined className="app-learn-label-what" style={{ fontSize: 16 }} />
-                                                        <Text strong style={{ fontSize: 14 }} className="app-learn-label-what">
+                                                        <QuestionCircleOutlined className="wb-learn-label-what" style={{ fontSize: 16 }} />
+                                                        <Text strong style={{ fontSize: 14 }} className="wb-learn-label-what">
                                                             What is it?
                                                         </Text>
                                                     </div>
-                                                    <Paragraph className="app-learn-body">{learnMore.whatIs}</Paragraph>
+                                                    <Paragraph className="wb-learn-body">{learnMore.whatIs}</Paragraph>
                                                 </div>
                                             )}
 
                                             {learnMore.whyUse && (
                                                 <div>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                                        <BulbOutlined className="app-learn-label-why" style={{ fontSize: 16 }} />
-                                                        <Text strong style={{ fontSize: 14 }} className="app-learn-label-why">
+                                                        <BulbOutlined className="wb-learn-label-why" style={{ fontSize: 16 }} />
+                                                        <Text strong style={{ fontSize: 14 }} className="wb-learn-label-why">
                                                             Why use it?
                                                         </Text>
                                                     </div>
-                                                    <Paragraph className="app-learn-body">{learnMore.whyUse}</Paragraph>
+                                                    <Paragraph className="wb-learn-body">{learnMore.whyUse}</Paragraph>
                                                 </div>
                                             )}
 
                                             {learnMore.howToUse && learnMore.howToUse.length > 0 && (
                                                 <div>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                                        <UnorderedListOutlined className="app-learn-label-how" style={{ fontSize: 16 }} />
-                                                        <Text strong style={{ fontSize: 14 }} className="app-learn-label-how">
+                                                        <UnorderedListOutlined className="wb-learn-label-how" style={{ fontSize: 16 }} />
+                                                        <Text strong style={{ fontSize: 14 }} className="wb-learn-label-how">
                                                             How to use
                                                         </Text>
                                                     </div>
@@ -236,7 +260,7 @@ export default function ToolPageLayout({
                                                         style={{
                                                             margin: 0,
                                                             paddingLeft: 20,
-                                                            color: "var(--app-text-body)",
+                                                            color: "var(--wb-text-body)",
                                                         }}
                                                     >
                                                         {learnMore.howToUse.map((step) => (
@@ -249,8 +273,8 @@ export default function ToolPageLayout({
                                             {learnMore.useCases && learnMore.useCases.length > 0 && (
                                                 <div>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                                        <AimOutlined className="app-learn-label-use" style={{ fontSize: 16 }} />
-                                                        <Text strong style={{ fontSize: 14 }} className="app-learn-label-use">
+                                                        <AimOutlined className="wb-learn-label-use" style={{ fontSize: 16 }} />
+                                                        <Text strong style={{ fontSize: 14 }} className="wb-learn-label-use">
                                                             Use cases
                                                         </Text>
                                                     </div>
@@ -258,7 +282,7 @@ export default function ToolPageLayout({
                                                         style={{
                                                             margin: 0,
                                                             paddingLeft: 20,
-                                                            color: "var(--app-text-body)",
+                                                            color: "var(--wb-text-body)",
                                                         }}
                                                     >
                                                         {learnMore.useCases.map((useCase) => (
@@ -271,8 +295,8 @@ export default function ToolPageLayout({
                                             {learnMore.tips && learnMore.tips.length > 0 && (
                                                 <div>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                                        <ThunderboltOutlined className="app-learn-label-tips" style={{ fontSize: 16 }} />
-                                                        <Text strong style={{ fontSize: 14 }} className="app-learn-label-tips">
+                                                        <ThunderboltOutlined className="wb-learn-label-tips" style={{ fontSize: 16 }} />
+                                                        <Text strong style={{ fontSize: 14 }} className="wb-learn-label-tips">
                                                             Pro tips
                                                         </Text>
                                                     </div>
@@ -280,7 +304,7 @@ export default function ToolPageLayout({
                                                         style={{
                                                             margin: 0,
                                                             paddingLeft: 20,
-                                                            color: "var(--app-text-body)",
+                                                            color: "var(--wb-text-body)",
                                                         }}
                                                     >
                                                         {learnMore.tips.map((tip) => (

@@ -98,7 +98,7 @@ export default function NavigationLoader() {
         ? toolsRegistry.find((t) => t.id === navTargetId)
         : null;
     const ToolIcon = targetTool?.icon;
-    const accentColor = targetTool?.color ?? "#6366f1";
+    const accentColor = targetTool?.color ?? "#059669";
 
     return (
         <AnimatePresence>
@@ -112,7 +112,7 @@ export default function NavigationLoader() {
                     role="status"
                     aria-live="polite"
                     aria-label="Loading tool"
-                    className="app-nav-loader-backdrop"
+                    className="wb-navload-backdrop"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <motion.div
@@ -120,7 +120,7 @@ export default function NavigationLoader() {
                         animate={{ scale: 1, y: 0 }}
                         exit={{ scale: 0.96, y: 4 }}
                         transition={{ type: "spring", stiffness: 320, damping: 26 }}
-                        className="app-nav-loader-card"
+                        className="wb-navload-card"
                     >
                         <div style={{ position: "relative", width: 72, height: 72 }}>
                             <motion.div
@@ -179,8 +179,8 @@ export default function NavigationLoader() {
                             </motion.div>
                         </div>
                         <div style={{ textAlign: "center" }}>
-                            <div className="app-nav-loader-title">{targetTool ? targetTool.name : "Loading"}</div>
-                            <div className="app-nav-loader-sub">{message}</div>
+                            <div className="wb-navload-title">{targetTool ? targetTool.name : "Loading"}</div>
+                            <div className="wb-navload-sub">{message}</div>
                         </div>
                         <div
                             style={{

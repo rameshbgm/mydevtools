@@ -2,13 +2,14 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toolPathFromId } from "@/lib/category-routes";
 
 export default function CsvToXmlRedirect() {
     const router = useRouter();
 
     useEffect(() => {
-        // Redirect to the combined CSV converter with XML format
-        router.replace("/tools/csv-to-json?format=xml");
+        const p = toolPathFromId("csv-to-json");
+        if (p) router.replace(`${p}?format=xml`);
     }, [router]);
 
     return (

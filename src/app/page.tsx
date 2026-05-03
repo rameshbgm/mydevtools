@@ -28,6 +28,7 @@ import {
     type ToolCategory,
     type ToolDefinition,
 } from "@/lib/tools-registry";
+import { dashboardCategoryHashId, toolPathFromId } from "@/lib/category-routes";
 import { useAppStore } from "@/lib/store";
 import LandingMarketing from "@/components/LandingMarketing";
 
@@ -109,7 +110,8 @@ export default function Dashboard() {
     const handleToolClick = (id: string) => {
         addRecentTool(id);
         setNavigating(true, id);
-        router.push(`/tools/${id}`);
+        const p = toolPathFromId(id);
+        if (p) router.push(p);
     };
 
     const stats = {
@@ -137,21 +139,21 @@ export default function Dashboard() {
                 onToolClick={handleToolClick}
             />
 
-            <div id="landing-full-catalog" className="app-catalog-workspace">
-                <div className="app-catalog-workspace-inner">
+            <div id="landing-full-catalog" className="wb-cat-workspace">
+                <div className="wb-cat-workspace-inner">
                     {/* Catalog intro + search + grid (landing marketing above is unchanged) */}
-                    <div className="app-catalog-intro">
+                    <div className="wb-cat-intro">
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, margin: "-80px" }}
                             transition={{ duration: 0.5 }}
                         >
-                            <div className="app-catalog-intro-eyebrow">The full catalog</div>
-                            <h2 className="app-catalog-intro-title">
+                            <div className="wb-cat-intro-eyebrow">The full catalog</div>
+                            <h2 className="wb-cat-intro-title">
                                 {stats.total} tools, organised across {stats.categories} categories.
                             </h2>
-                            <p className="app-catalog-intro-desc">
+                            <p className="wb-cat-intro-desc">
                                 Search by name, tag, or category — or jump straight in.
                             </p>
                         </motion.div>
@@ -161,16 +163,16 @@ export default function Dashboard() {
                         initial={{ opacity: 0, y: -8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="app-catalog-search-wrap"
+                        className="wb-cat-search-wrap"
                     >
                         <div suppressHydrationWarning>
-                            <div className="app-catalog-search-field">
-                                <span className="app-catalog-search-icon">
+                            <div className="wb-cat-search-field">
+                                <span className="wb-cat-search-icon">
                                     <SearchOutlined style={{ fontSize: 18 }} />
                                 </span>
                                 <input
                                     type="text"
-                                    className="landing-catalog-search-input app-catalog-search-input"
+                                    className="landing-catalog-search-input wb-cat-search-input"
                                     placeholder={`Search ${stats.total} tools…`}
                                     value={search}
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
@@ -207,9 +209,9 @@ export default function Dashboard() {
                         )}
                     </div>
                     {search.trim() && (
-                        <p className="app-catalog-match-hint">
+                        <p className="wb-cat-match-hint">
                             {matchCount} {matchCount === 1 ? "tool" : "tools"} matching{" "}
-                            <strong style={{ color: "var(--app-accent)" }}>&ldquo;{search}&rdquo;</strong>
+                            <strong style={{ color: "var(--wb-accent)" }}>&ldquo;{search}&rdquo;</strong>
                         </p>
                     )}
                 </div>
@@ -224,16 +226,16 @@ export default function Dashboard() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="app-catalog-recent-block"
+                        className="wb-cat-recent-block"
                     >
-                        <div className="app-catalog-recent-head">
-                            <ClockCircleOutlined style={{ color: "var(--app-accent-2)", fontSize: 18 }} />
-                            <Title level={5} className="app-catalog-recent-title">
+                        <div className="wb-cat-recent-head">
+                            <ClockCircleOutlined style={{ color: "var(--wb-accent-2)", fontSize: 18 }} />
+                            <Title level={5} className="wb-cat-recent-title">
                                 Recently used
                             </Title>
                             <button
                                 type="button"
-                                className="app-catalog-recent-clear"
+                                className="wb-cat-recent-clear"
                                 onClick={clearRecentTools}
                             >
                                 Clear all
@@ -250,7 +252,7 @@ export default function Dashboard() {
                                         whileHover={{ scale: 1.03 }}
                                         whileTap={{ scale: 0.98 }}
                                     >
-                                        <Tag className="app-catalog-recent-chip" onClick={() => handleToolClick(id)}>
+                                        <Tag className="wb-cat-recent-chip" onClick={() => handleToolClick(id)}>
                                             <ToolIcon style={{ marginRight: 6, fontSize: 14 }} />
                                             {tool.name}
                                         </Tag>
@@ -271,7 +273,7 @@ export default function Dashboard() {
                 >
                     <Empty
                         description={
-                            <Text style={{ color: "var(--app-text-muted)" }}>
+                            <Text style={{ color: "var(--wb-text-muted)" }}>
                                 No tools match &ldquo;{search}&rdquo;
                             </Text>
                         }
@@ -288,13 +290,13 @@ export default function Dashboard() {
                     const categoryColor = CATEGORY_COLORS[category];
                     const categoryDesc = CATEGORY_DESCRIPTIONS[category];
                     const isAlpha = ALPHA_CATEGORIES.includes(category);
-                    const anchorId = `category-${category.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9-]/g, "")}`;
+                    const anchorId = dashboardCategoryHashId(category);
 
                     return (
                         <motion.div
                             key={category}
                             id={anchorId}
-                            className="app-catalog-category-block"
+                            className="wb-cat-category-block"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.4 }}
@@ -304,14 +306,14 @@ export default function Dashboard() {
                                 } as React.CSSProperties
                             }
                         >
-                            <div className="app-catalog-category-head">
-                                <div className="app-catalog-category-icon">
+                            <div className="wb-cat-category-head">
+                                <div className="wb-cat-category-icon">
                                     <CategoryIcon style={{ fontSize: 22, color: categoryColor }} />
                                 </div>
-                                <div className="app-catalog-category-titles">
-                                    <div className="app-catalog-category-name">
+                                <div className="wb-cat-category-titles">
+                                    <div className="wb-cat-category-name">
                                         {category}
-                                        <span className="app-catalog-count-badge">
+                                        <span className="wb-cat-count-badge">
                                             <Badge
                                                 count={tools.length}
                                                 style={{
@@ -326,7 +328,7 @@ export default function Dashboard() {
                                         )}
                                     </div>
                                     {categoryDesc && (
-                                        <span className="app-catalog-category-desc landing-category-desc">
+                                        <span className="wb-cat-category-desc landing-category-desc">
                                             {categoryDesc}
                                         </span>
                                     )}
@@ -355,7 +357,7 @@ export default function Dashboard() {
                         key="landing-scroll-top"
                         type="button"
                         aria-label="Back to top"
-                        className="app-catalog-scroll-top"
+                        className="wb-cat-scroll-top"
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 8 }}
@@ -380,7 +382,7 @@ function ToolCard({ tool, onClick }: Readonly<ToolCardProps>) {
     return (
         <motion.div variants={item} whileTap={{ scale: 0.98 }}>
             <Card
-                className="app-catalog-tool-card"
+                className="wb-cat-tool-card"
                 onClick={onClick}
                 hoverable={false}
                 style={
@@ -417,7 +419,7 @@ function ToolCard({ tool, onClick }: Readonly<ToolCardProps>) {
                 <motion.div
                     whileHover={{ scale: 1.06, rotate: 4 }}
                     transition={{ type: "spring", stiffness: 380, damping: 18 }}
-                    className="app-catalog-tool-icon-wrap"
+                    className="wb-cat-tool-icon-wrap"
                     style={{ color: tool.color }}
                 >
                     {React.createElement(tool.icon, {
@@ -425,14 +427,14 @@ function ToolCard({ tool, onClick }: Readonly<ToolCardProps>) {
                     })}
                 </motion.div>
 
-                <Title level={5} className="app-catalog-tool-name">
+                <Title level={5} className="wb-cat-tool-name">
                     {tool.name}
                 </Title>
-                <Text className="app-catalog-tool-desc">{tool.description}</Text>
+                <Text className="wb-cat-tool-desc">{tool.description}</Text>
 
                 <div style={{ marginTop: 14, display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {tool.tags.slice(0, 3).map((tag) => (
-                        <Tag key={tag} className="app-catalog-tag">
+                        <Tag key={tag} className="wb-cat-tag">
                             {tag}
                         </Tag>
                     ))}

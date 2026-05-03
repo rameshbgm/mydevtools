@@ -12,6 +12,7 @@ import {
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { toolsRegistry } from "@/lib/tools-registry";
+import { toolPath } from "@/lib/category-routes";
 import { useAppStore } from "@/lib/store";
 
 const { Title, Text, Paragraph } = Typography;
@@ -274,7 +275,7 @@ export default function NotFound() {
                                         whileTap={{ scale: 0.97 }}
                                     >
                                         <Tag
-                                            onClick={() => router.push(`/tools/${tool.id}`)}
+                                            onClick={() => router.push(toolPath(tool))}
                                             style={{
                                                 cursor: "pointer",
                                                 padding: "8px 14px",

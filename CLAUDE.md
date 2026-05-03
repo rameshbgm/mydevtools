@@ -6,18 +6,22 @@
 
 | Zone | Responsibility |
 |------|----------------|
-| **Landing marketing** | `LandingMarketing.tsx` + `globals.css` classes (`landing-*`). Do **not** change this block when doing workspace/tool UI work unless the task explicitly asks for landing changes. |
-| **Workspace chrome** | **`AppShell.tsx`** (sidebar, header, ⌘K palette, drawers), **`workspace.css`** (all `--app-*` tokens + `app-catalog-*`, `app-shell-*`, `app-tool-*`, `app-cmd-*`, `app-workspace-footer`, memory/404 wrappers). Loaded from **`layout.tsx`** after **`globals.css`**. |
-| **Per-tool UI** | Each `src/app/tools/<id>/page.tsx` — behaviour and Ant components stay as-is unless requested; wrapping chrome comes from **`ToolPageLayout.tsx`**. |
+| **Landing marketing** | `LandingMarketing.tsx` + `globals.css` classes (`landing-*`). Do **not** change unless the task explicitly asks for landing changes. |
+| **Workspace chrome** | **`AppShell.tsx`**, **`workspace.css`** — tokens **`--wb-*`**, helpers **`wb-cat-*`**, **`wb-shell-*`**, **`wb-tool-*`**, **`wb-cmd-*`**, **`wb-footer`**, **`wb-mem-*`**, **`wb-oops`** (loaded after **`globals.css`**). |
+| **Tool routes** | Files live under **`src/app/tools/[id]`**; **`src/proxy.ts`** (**Next.js proxy**, formerly middleware) **`rewrites`** public **`/[categorySlug]/[toolId]`** → **`/tools/[toolId]`** and **`308` redirects** **`/tools/...`** → the canonical prettier URL. |
+| **Tool chrome** | Shared **`ToolPageLayout.tsx`** + optional **`tools/layout.tsx`** (**`wb-tool-route`** frame). Inner tool logic stays in each **`page.tsx`**. |
 
-## Workspace design system (concise)
+## URL scheme
 
-- **Theme toggle**: `<html>` gets class **`dark`** in `AppShell`; **`workspace.css`** `:root` vs **`.dark`** define paired token values. Prefer **`var(--app-*)`** in new workspace styles instead of hard-coded hex grays.
-- **Catalog (`/` below the fold)** — **`app-catalog-workspace`**, intro/search, **`app-catalog-category-head`** with per-category **`--cat-accent`**, tool grid cards **`app-catalog-tool-card`** + **`--tool-accent`**.
-- **Shell** — **`app-shell-layout`**, **`app-shell-sider`**, **`app-shell-header`**, sidebar brand **`app-shell-brand-mark`**.
-- **Command palette** — **`app-cmd-overlay`**, **`app-cmd-panel`**, **`app-cmd-row`** ( **`data-active`** for selection).
-- **Tool pages** — **`app-tool-shell`**, breadcrumb **`app-tool-breadcrumb`**, hero **`app-tool-hero`** with decorative **`ToolHeroAccentSvg`**; learn-more label colours use **`--app-learn-*`** tokens.
+| Item | Detail |
+|------|--------|
+| **Canonical URL** | `/<categorySlug>/<toolId>` (e.g. `/formatters/json-formatter`). Slug logic: **`category-routes.categoryToSlug`**. |
+| **Helpers** | **`toolPath`**, **`toolPathFromId`**, **`getToolIdFromPublicPath`** in **`src/lib/category-routes.ts`**. |
+| **Middleware data** | Edge-safe **`src/lib/tool-url-table.ts`** (**`TOOL_ID_TO_CATEGORY`**). When adding a tool, extend the registry **and** this table (+ alias stubs like **`ssl-checker`** if applicable). |
 
-Behaviour (routing, registry, persistence) stays in **`lib/`** and **`store.ts`** — UI passes should not remove features.
+## Design tokens (concise)
 
-When editing themes: keep **contrast readable** in both light and dark; pair **`workspace.css`** tokens with Ant **`ConfigProvider`** component tokens rather than one-off colours.
+- **Theme toggle**: **`dark`** class on `<html>`; pair **`workspace.css`** with **`ConfigProvider`** in **`AppShell`** (accent ≈ emerald).
+- Prefer **`var(--wb-*)`** over ad-hoc colours; keep WCAG‑friendly contrast in both themes.
+
+Behaviour (routing, registry, persistence) stays in **`lib/`** and **`store.ts`** — passes should not remove features.

@@ -820,7 +820,7 @@ html, body {
 /* iOS: 16px+ input text avoids focus zoom */
 @media (max-width: 540px) {
   .landing-catalog-search-input,
-  .app-catalog-search-input {
+  .wb-cat-search-input {
     font-size: 16px !important;
   }
 }

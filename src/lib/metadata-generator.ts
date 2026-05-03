@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { getSeoContent, SITE_NAME, SITE_URL, SITE_DESCRIPTION } from "./seo-content";
 import { getToolById } from "./tools-registry";
+import { toolPathFromId } from "./category-routes";
 
 interface ToolMetadataParams {
     toolId: string;
@@ -19,7 +20,8 @@ export function generateToolMetadata(params: ToolMetadataParams): Metadata {
     const description = seo?.description ?? fallbackDescription;
     const keywords = seo?.keywords ?? fallbackKeywords;
 
-    const pageUrl = `${SITE_URL}/tools/${toolId}`;
+    const canon = toolPathFromId(toolId);
+    const pageUrl = `${SITE_URL}${canon ?? `/tools/${toolId}`}`;
     const ogImage = `${SITE_URL}/og-image.png`;
 
     return {
@@ -76,7 +78,8 @@ export function generateToolStructuredData(toolId: string) {
     const tool = getToolById(toolId);
     if (!tool) return null;
 
-    const pageUrl = `${SITE_URL}/tools/${toolId}`;
+    const canon = toolPathFromId(toolId);
+    const pageUrl = `${SITE_URL}${canon ?? `/tools/${toolId}`}`;
     const description = seo?.description ?? tool.description;
     const name = seo?.title?.split(" — ")[0]?.split(" | ")[0] ?? tool.name;
 

@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { RELEASE_NOTES, KIND_LABEL, KIND_COLORS, APP_VERSION } from "@/lib/release-notes";
+import { toolPathFromId } from "@/lib/category-routes";
 import {
     toolsRegistry,
     getToolsByCategory,
@@ -41,7 +42,8 @@ export default function ReleaseNotesPage() {
     const navigateToTool = (id: string) => {
         addRecentTool(id);
         setNavigating(true, id);
-        router.push(`/tools/${id}`);
+        const path = toolPathFromId(id);
+        if (path) router.push(path);
     };
 
     return (

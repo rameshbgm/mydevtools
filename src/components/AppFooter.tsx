@@ -14,7 +14,7 @@ export default function AppFooter() {
     const year = new Date().getFullYear();
 
     return (
-        <footer className="app-workspace-footer">
+        <footer className="wb-footer">
 
             <div
                 style={{
@@ -41,7 +41,7 @@ export default function AppFooter() {
                         fontSize: 14,
                     }}
                 >
-                    <Text style={{ color: "var(--app-text-body)" }}>Made with</Text>
+                    <Text style={{ color: "var(--wb-text-body)" }}>Made with</Text>
                     <motion.span
                         animate={{ scale: [1, 1.25, 1] }}
                         transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
@@ -49,7 +49,7 @@ export default function AppFooter() {
                     >
                         <HeartFilled style={{ color: "#ec4899", fontSize: 16 }} />
                     </motion.span>
-                    <Text style={{ color: "var(--app-text-body)" }}>by</Text>
+                    <Text style={{ color: "var(--wb-text-body)" }}>by</Text>
                     <a
                         href="https://rameshsnotebook.com/"
                         target="_blank"

@@ -1,8 +1,13 @@
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toolPathFromId } from "@/lib/category-routes";
+
 export default function Page() {
   const router = useRouter();
-  useEffect(() => { router.replace("/tools/certificate-chain-validator?tab=live"); }, [router]);
+  useEffect(() => {
+    const p = toolPathFromId("certificate-chain-validator");
+    if (p) router.replace(`${p}?tab=live`);
+  }, [router]);
   return null;
 }
