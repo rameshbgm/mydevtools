@@ -1,12 +1,12 @@
 {
   "name": "mytoosl",
-  "version": "0.1.0",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint src",
     "copy-monaco": "rm -rf public/monaco && mkdir -p public/monaco && cp -R node_modules/monaco-editor/min/vs public/monaco/vs",
     "postinstall": "npm run copy-monaco"
   },

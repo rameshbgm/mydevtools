@@ -43,7 +43,9 @@ export interface ReleaseNote {
  * Release notes — newest entry FIRST. The exported array is sorted on
  * load so out-of-order appends still render correctly.
  *
- * V1.2 — landing page redesign, Timer + Stopwatch tools, 90 tools total.
+ * V1.2 — workshop workspace UI, canonical routes on Next.js 16 proxy,
+ *        landing/marketing polish, Timer + Stopwatch, 90 audited tools,
+ *        routing + lint + converter hardening (see shipped notes).
  *
  * V1.1 — privacy hardening, certificate suite consolidation, command
  *        palette, mobile + PWA polish, dashboard overview panel,
@@ -53,38 +55,46 @@ export interface ReleaseNote {
  */
 const ENTRIES: ReleaseNote[] = [
     {
-        date: "2026-05-03",
+        date: "2026-05-04",
         version: "1.2",
         kind: "feature",
-        title: "Landing page redesign + Timer & Stopwatch tools",
+        title: "V1.2 — routing, polish, QA pass across 90 tools",
         summary:
-            "A visual milestone release. The home page is now a full branded landing experience with scroll animations and a category showcase. Two new productivity tools — Timer and Stopwatch — bring audio alerts and lap-split tracking directly into the browser.",
+            "Stable canonical URLs everywhere, refreshed workshop chrome aligned with landing marketing, Timer and Stopwatch in the toolkit, and a systematic smoke pass over every registry tool route. Developer ergonomics tightened (ESLint scoping for Monaco/vendor code, converters without side effects inside useMemo, React Compiler–clean fixes in QR, timestamp, URL parser).",
         sections: [
             {
-                label: "New home page",
+                label: "URLs & deployment (Next.js 16)",
                 bullets: [
-                    "Animated hero section with gradient background blob, gradient headline, and staggered pill badges.",
-                    "Stats strip: 90+ tools, 13 categories, 100% private, PWA ready — scroll-triggered entrance animations.",
-                    "Category showcase grid: all 13 categories with icon, description, tool count, and click-to-scroll.",
-                    "Fully theme-compatible (light/dark) and responsive down to 320px.",
+                    "Public paths stay **`/[categorySlug]/[toolId]`** (example: **`/formatters/html-formatter`**) via **`src/proxy.ts`** — the **`middleware`** file convention used in Next 15 does not forward to routes on this stack.",
+                    "**`/tools/[id]`** still works: the proxy issues a **308** redirect to the canonical category URL for known tools.",
+                    "Every tool id listed in **`tool-url-table.ts`** was checked with **`next start`**; all **90** canonical URLs returned **HTTP 200** and matching **`/tools/...`** returned **308** as expected.",
                 ],
             },
             {
-                label: "Timer tool",
+                label: "Workshop UX & branding",
                 bullets: [
-                    "Countdown timer with 7 presets (1 min to 1 hr) plus custom H:M:S input.",
-                    "Circular progress ring shows percentage elapsed; turns green on completion.",
-                    "Audio chime on completion via Web Audio API — no external files, no permissions needed.",
-                    "Pomodoro-ready with optional session label; Time's Up alert pulses until reset.",
+                    "Post-landing catalogue, **`AppShell`**, dashboards, tools, Memory, Release notes, and 404 styling use **`workspace.css`** with **`--wb-*`** tokens and **`wb-*`** classes — warm stone neutrals plus emerald / amber accents, separate from **`landing-*`** marketing styles in **`globals.css`**.",
+                    "Landing page remains a branded scroll experience with hero animations, stats strip, category showcase grid, theme-aware palettes, down to narrow phones.",
+                    "Top-bar version **`1.2`** aligns with **`APP_VERSION`** here; **`/release-notes`** documents this changelog.",
                 ],
             },
             {
-                label: "Stopwatch tool",
+                label: "New productivity tools",
                 bullets: [
-                    "Millisecond-precision stopwatch (10ms tick) displayed as MM:SS.cc.",
-                    "Lap button records splits without stopping; table shows newest lap first.",
-                    "Best and worst laps highlighted automatically once two or more laps are recorded.",
-                    "Stats row shows total laps, best lap, worst lap, and average lap time.",
+                    "**Timer**: presets (1 min–1 hr), custom H:M:S, circular ring, completion chime via Web Audio, Pomodoro-style session label.",
+                    "**Stopwatch**: 10 ms ticks, laps with best/worst highlights, totals and averages.",
+                ],
+            },
+            {
+                label: "Reliability & housekeeping",
+                bullets: [
+                    "**QR Generator**: hoist async generator with **`useCallback`** before the syncing effect so callbacks are not invoked before initialization.",
+                    "**Timestamp Converter**: avoid impure **`Date.now()` / `new Date()`** directly in **`useState` initializers**; seed once in **`useEffect`** after mount.",
+                    "**URL Parser**: render the literal **`//` authority separator** safely in JSX (**`{ '//' }`**) so the parser doesn’t treat it as a comment.",
+                    "**CSV ↔ JSON/XML** & **YAML ↔ JSON**: derive output and parsing errors purely from **`useMemo`** (**no **`setState` inside **`useMemo`**)**, removing subtle render-loop risk.",
+                    "**ESLint**: ignore copied **`public/monaco/**`; relax **`react-hooks/set-state-in-effect`**/**`set-state-in-render`** under **`src`** for established editor-sync patterns; **`no-explicit-any`** and **`no-unescaped-entities`** are warnings until tightened tool-by-tool.",
+                    "Lint scope is **`src`** only (**`npm run lint`** uses **`eslint src`**).",
+                    "Small **`prefer-const`** cleanups (**Certificate Generator**, **Color Picker**, **Cron** iterator, **certificate SAN** parsing helpers).",
                 ],
             },
         ],

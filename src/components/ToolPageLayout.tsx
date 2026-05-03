@@ -121,7 +121,7 @@ export default function ToolPageLayout({
             ),
         });
         return items;
-    }, [category, pathname, title]);
+    }, [category, title]);
 
     return (
         <motion.div

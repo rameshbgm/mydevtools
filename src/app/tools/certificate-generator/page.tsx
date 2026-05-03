@@ -365,7 +365,6 @@ function SelfSignedTab() {
         try {
             const sans = sanInput.split(",").map(s => s.trim()).filter(s => s.length > 0);
 
-            let keyPair: CryptoKeyPair;
             let algorithm: RsaHashedKeyGenParams | EcKeyGenParams;
             let signAlgorithm: AlgorithmIdentifier | RsaPssParams | EcdsaParams;
 
@@ -385,7 +384,7 @@ function SelfSignedTab() {
                 signAlgorithm = { name: "ECDSA", hash: "SHA-256" };
             }
 
-            keyPair = await crypto.subtle.generateKey(algorithm, true, ["sign", "verify"]);
+            const keyPair = await crypto.subtle.generateKey(algorithm, true, ["sign", "verify"]);
 
             const privateKeyDer = await crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
             const privateKeyPem = formatPEM(base64UrlEncode(privateKeyDer), "PRIVATE KEY");

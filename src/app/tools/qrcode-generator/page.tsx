@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, message, Slider, ColorPicker, Select, Tabs, Segmented } from "antd";
 import { QrcodeOutlined, CopyOutlined, DownloadOutlined, BgColorsOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
@@ -37,11 +37,7 @@ export default function QRCodeGeneratorPage() {
     const [margin, setMargin] = useState(2);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    useEffect(() => {
-        generateQR();
-    }, [content, size, errorLevel, foreground, background, margin]);
-
-    const generateQR = async () => {
+    const generateQR = useCallback(async () => {
         if (!content.trim()) {
             setQrDataUrl("");
             return;
@@ -58,10 +54,14 @@ export default function QRCodeGeneratorPage() {
                 },
             });
             setQrDataUrl(dataUrl);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("QR generation error:", err);
         }
-    };
+    }, [content, size, margin, errorLevel, foreground, background]);
+
+    useEffect(() => {
+        void generateQR();
+    }, [generateQR]);
 
     const downloadQR = async (format: "png" | "svg") => {
         if (!content.trim()) {
