@@ -26,6 +26,7 @@ import {
     CodeOutlined,
     SearchOutlined,
     DatabaseOutlined,
+    GithubOutlined,
 } from "@ant-design/icons";
 import {
     getToolsByCategory,
@@ -954,6 +955,28 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             </div>
 
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                <Tooltip title="View source on GitHub">
+                                    <a
+                                        href="https://github.com/rameshbgm/mydevtools"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        aria-label="View source on GitHub"
+                                        style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            width: 34,
+                                            height: 34,
+                                            borderRadius: 8,
+                                            color: darkMode ? "#a3a3a3" : "#525252",
+                                            background: "transparent",
+                                            textDecoration: "none",
+                                            transition: "color 0.15s",
+                                        }}
+                                    >
+                                        <GithubOutlined style={{ fontSize: 18 }} />
+                                    </a>
+                                </Tooltip>
                                 <Tooltip title={`Version ${APP_VERSION} — view release notes & full catalog`}>
                                     <span
                                         onClick={() => navigate("/release-notes")}

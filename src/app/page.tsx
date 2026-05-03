@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
     Card,
     Tag,
@@ -16,12 +15,8 @@ import {
 import {
     SearchOutlined,
     ClockCircleOutlined,
-    SafetyCertificateOutlined,
     LockOutlined,
-    ThunderboltOutlined,
     InfoCircleOutlined,
-    GithubOutlined,
-    ArrowRightOutlined,
     CloseOutlined,
 } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
@@ -119,6 +114,47 @@ export default function Dashboard() {
                 animate="show"
                 style={{ textAlign: "center", marginBottom: 56 }}
             >
+                {/* Privacy badges + title sit above the panel so they're always visible */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+                    {[
+                        { icon: "⚡", label: `${stats.total} tools`, color: "#8b5cf6" },
+                        { icon: "🔒", label: "100% Private", color: "#10b981" },
+                        { icon: "🌐", label: "Works Offline", color: "#3b82f6" },
+                        { icon: "🚫", label: "No Tracking", color: "#f59e0b" },
+                    ].map(({ icon, label, color }) => (
+                        <motion.span
+                            key={label}
+                            whileHover={{ scale: 1.05 }}
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 5,
+                                padding: "5px 12px",
+                                borderRadius: 20,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                background: darkMode ? `${color}18` : `${color}12`,
+                                border: `1px solid ${color}40`,
+                                color,
+                                letterSpacing: "0.2px",
+                                cursor: "default",
+                            }}
+                        >
+                            <span>{icon}</span>
+                            {label}
+                        </motion.span>
+                    ))}
+                </div>
+
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    style={{ textAlign: "center", marginBottom: 28 }}
+                >
+                    <h1 className="neon-text">My Dev Tools</h1>
+                </motion.div>
+
                 {!aboutDismissed && (
                 <motion.div
                     initial={{ opacity: 0, y: 12 }}
@@ -175,26 +211,98 @@ export default function Dashboard() {
                         }}
                         styles={{ body: { padding: 22 } }}
                     >
-                        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-                                            <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.65, color: darkMode ? "#d4d4d4" : "#374151" }}>
-                                                <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>My Dev Tools</strong> is a private,
-                                                offline-capable workshop of <strong>{stats.total}+ developer utilities</strong> — formatters, validators,
-                                                converters, generators, certificate &amp; cryptography tools, network calculators, and references — all
-                                                running entirely in your browser.
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                                            {/* Intro */}
+                                            <p style={{ margin: 0, fontSize: 16.5, lineHeight: 1.8, color: darkMode ? "#d4d4d4" : "#374151" }}>
+                                                <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>My Dev Tools</strong> is a{" "}
+                                                <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: "0.88em", color: darkMode ? "#a78bfa" : "#4f46e5" }}>private, offline-capable</span>{" "}
+                                                developer toolkit for engineers who routinely work with
+                                                sensitive data — tokens, certificates, credentials, and production payloads. Every operation
+                                                executes{" "}
+                                                <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: "0.88em", color: darkMode ? "#a78bfa" : "#4f46e5" }}>entirely within your browser tab</span>,
+                                                with no data ever transmitted to any server.{" "}
+                                                <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: "0.88em", color: darkMode ? "#34d399" : "#059669", fontWeight: 600 }}>Nothing is uploaded. Nothing is logged.</span>{" "}
+                                                No accounts. No telemetry. No exceptions.
                                             </p>
 
-                                            <div>
-                                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                                    <span style={{ fontSize: 16 }}>🎯</span>
-                                                    <Text strong style={{ fontSize: 13, color: "#f59e0b", letterSpacing: 0.3 }}>THE PROBLEM</Text>
-                                                </div>
-                                                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.7, color: darkMode ? "#a3a3a3" : "#4b5563" }}>
-                                                    Most online dev tools <strong>upload your data to a server</strong> — pasting a JWT, an API key,
-                                                    a private cert, or a customer payload sends it across the network and onto someone else&rsquo;s logs.
-                                                    That&rsquo;s a real exposure for any team handling tokens, PII, or production payloads.
-                                                </p>
+                                            {/* Category chips */}
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                                                {[
+                                                    { label: "Encoding & Decoding",   color: "#14b8a6" },
+                                                    { label: "Diff & Compare",         color: "#f97316" },
+                                                    { label: "Formatters",             color: "#6366f1" },
+                                                    { label: "Validators",             color: "#3b82f6" },
+                                                    { label: "Converters",             color: "#0ea5e9" },
+                                                    { label: "Generators",             color: "#8b5cf6" },
+                                                    { label: "Certificates & Crypto",  color: "#10b981" },
+                                                    { label: "Network & Calculators",  color: "#f59e0b" },
+                                                ].map(({ label, color }) => (
+                                                    <span key={label} style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        padding: "3px 11px",
+                                                        borderRadius: 20,
+                                                        fontSize: 12,
+                                                        fontWeight: 600,
+                                                        background: `${color}18`,
+                                                        border: `1px solid ${color}40`,
+                                                        color,
+                                                        letterSpacing: "0.1px",
+                                                    }}>
+                                                        {label}
+                                                    </span>
+                                                ))}
                                             </div>
 
+                                            {/* Featured tools — simple 3-col bullet list, no tiles */}
+                                            <div style={{
+                                                display: "grid",
+                                                gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 170px), 1fr))",
+                                                gap: "4px 8px",
+                                            }}>
+                                                {[
+                                                    { name: "JWT Decoder",          color: "#6366f1" },
+                                                    { name: "JSON Formatter",        color: "#6366f1" },
+                                                    { name: "Regex Tester",          color: "#6366f1" },
+                                                    { name: "Base64 Encoder",        color: "#14b8a6" },
+                                                    { name: "Encoding & Decoding",   color: "#14b8a6" },
+                                                    { name: "QR Code Generator",     color: "#8b5cf6" },
+                                                    { name: "POJO Generator",        color: "#8b5cf6" },
+                                                    { name: "Certificate Inspector", color: "#10b981" },
+                                                    { name: "CSR Generator",         color: "#10b981" },
+                                                    { name: "AES Encrypt / Decrypt", color: "#10b981" },
+                                                    { name: "Hash Generator",        color: "#10b981" },
+                                                    { name: "Bcrypt Tool",           color: "#10b981" },
+                                                    { name: "API Request Builder",   color: "#f59e0b" },
+                                                    { name: "IP Address Tools",      color: "#f59e0b" },
+                                                    { name: "URL Parser",            color: "#0ea5e9" },
+                                                ].map(({ name, color }) => (
+                                                    <div key={name} style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 7,
+                                                        padding: "4px 2px",
+                                                    }}>
+                                                        <span style={{
+                                                            width: 5,
+                                                            height: 5,
+                                                            borderRadius: "50%",
+                                                            background: color,
+                                                            flexShrink: 0,
+                                                        }} />
+                                                        <span style={{
+                                                            fontSize: 12.5,
+                                                            fontWeight: 500,
+                                                            color: darkMode ? "#d4d4d4" : "#374151",
+                                                            lineHeight: 1.4,
+                                                        }}>
+                                                            {name}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Privacy */}
                                             <div style={{
                                                 background: darkMode ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.06)",
                                                 border: `1px solid ${darkMode ? "rgba(16, 185, 129, 0.25)" : "rgba(16, 185, 129, 0.20)"}`,
@@ -203,156 +311,59 @@ export default function Dashboard() {
                                             }}>
                                                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                                                     <LockOutlined style={{ color: "#10b981", fontSize: 16 }} />
-                                                    <Text strong style={{ fontSize: 13, color: "#10b981", letterSpacing: 0.3 }}>PRIVACY &amp; SECURITY — BY DEFAULT</Text>
+                                                    <Text strong style={{ fontSize: 14, color: "#10b981", letterSpacing: 0.3 }}>PRIVACY &amp; SECURITY — BY DEFAULT</Text>
                                                 </div>
-                                                <ul style={{ margin: "0 0 12px", paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 13.5, lineHeight: 1.75 }}>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Everything runs locally.</strong>{" "}Parsing, signing, hashing, encryption, certificate work — all happens in your browser tab. Your input never leaves your machine.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No accounts, no tracking, no analytics.</strong>{" "}Nothing is logged. No cookies that follow you around. No third-party scripts.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No third-party CDNs at runtime.</strong>{" "}Fonts, code editors, and crypto libraries are bundled — no external requests on tool use.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Works offline.</strong>{" "}Installable as a PWA; once loaded, keeps working without a network.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Open source.</strong>{" "}Every line is auditable on GitHub — verify the privacy claims yourself.</li>
+                                                <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 14.5, lineHeight: 1.75 }}>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Everything runs locally.</strong>{" "}All parsing, signing, hashing, encryption, and certificate operations execute in your browser tab. Your input never leaves your machine.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No accounts, no tracking, no analytics.</strong>{" "}Nothing is logged. No session cookies. No third-party scripts.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No external dependencies at runtime.</strong>{" "}Fonts, editors, and cryptographic libraries are bundled — no outbound requests during tool use.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Works fully offline.</strong>{" "}Installable as a Progressive Web App; all tools remain functional without a network connection.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Open source and auditable.</strong>{" "}Every line of code is publicly available on GitHub — the privacy guarantees are verifiable, not assumed.</li>
                                                 </ul>
-                                                <div style={{ paddingLeft: 4 }}>
-                                                    <Text style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: 0.4, color: darkMode ? "#6ee7b7" : "#047857", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                                                        Real-world examples
-                                                    </Text>
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                                        {[
-                                                            { e: "🔑", t: "Decode a JWT — see claims, expiry, and signature status entirely in your tab, never transmitted" },
-                                                            { e: "🔒", t: "Inspect a TLS certificate chain — the domain name never goes to any third party" },
-                                                            { e: "🔐", t: "Test a bcrypt hash against a password — your plaintext stays on your machine" },
-                                                            { e: "📡", t: "Build an API request with the local CORS proxy — headers and body never touch an intermediary server" },
-                                                            { e: "📝", t: "Format a 10 MB JSON file — no upload, no size limit, no timeout" },
-                                                        ].map(({ e, t }) => (
-                                                            <div key={t} style={{ display: "flex", gap: 8, fontSize: 12.5, color: darkMode ? "#a3a3a3" : "#4b5563", lineHeight: 1.5 }}>
-                                                                <span style={{ flexShrink: 0 }}>{e}</span>
-                                                                <span>{t}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
                                             </div>
 
+                                            {/* Why */}
                                             <div>
-                                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                                    <ThunderboltOutlined style={{ color: darkMode ? "#a78bfa" : "#4f46e5", fontSize: 16 }} />
-                                                    <Text strong style={{ fontSize: 13, color: darkMode ? "#a78bfa" : "#4f46e5", letterSpacing: 0.3 }}>WHY DEVELOPERS USE IT</Text>
-                                                </div>
-                                                <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 13.5, lineHeight: 1.75 }}>
-                                                    <li><strong>Safe to use at work</strong> — paste production tokens, internal certs, and customer payloads without compliance worry.</li>
-                                                    <li><strong>One tab, every utility</strong> — formatters, JWT, certificates, regex, network, encoding, hashing — no tool-hopping.</li>
-                                                    <li><strong>Fast and frictionless</strong> — no signup, no quotas, no rate limits, no upsell.</li>
-                                                    <li><strong>Mobile-friendly</strong> — every tool works on a phone, useful for on-call debugging.</li>
+                                                <Text strong style={{ fontSize: 13, letterSpacing: 0.5, textTransform: "uppercase", color: darkMode ? "#a78bfa" : "#4f46e5", display: "block", marginBottom: 8 }}>Why developers choose it</Text>
+                                                <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 14.5, lineHeight: 1.75 }}>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Compliant by design</strong> — paste production tokens, certificates, and internal payloads without violating data handling policies.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Consolidated toolchain</strong> — formatting, cryptography, certificates, network utilities, and encoding in one place.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Zero friction</strong> — no sign-up, no quotas, no rate limits, no advertisements.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Mobile-ready</strong> — every tool is responsive and functional on a phone for on-call workflows.</li>
                                                 </ul>
                                             </div>
 
                                             <div style={{
-                                                display: "flex",
-                                                gap: 10,
-                                                flexWrap: "wrap",
-                                                alignItems: "center",
                                                 paddingTop: 14,
                                                 borderTop: `1px dashed ${darkMode ? "#262626" : "#e5e5e5"}`,
+                                                display: "flex",
+                                                justifyContent: "center",
                                             }}>
-                                                <a
-                                                    href="https://github.com/rameshbgm/mydevtools"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
+                                                <button
+                                                    type="button"
+                                                    onClick={dismissAbout}
                                                     style={{
                                                         display: "inline-flex",
                                                         alignItems: "center",
                                                         gap: 6,
-                                                        padding: "6px 12px",
+                                                        padding: "6px 16px",
                                                         borderRadius: 8,
-                                                        fontSize: 12.5,
+                                                        fontSize: 13.5,
                                                         fontWeight: 500,
-                                                        background: darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-                                                        border: `1px solid ${darkMode ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`,
-                                                        color: darkMode ? "#e5e5e5" : "#171717",
-                                                        textDecoration: "none",
+                                                        cursor: "pointer",
+                                                        background: darkMode ? "rgba(16,185,129,0.10)" : "rgba(16,185,129,0.08)",
+                                                        border: `1px solid ${darkMode ? "rgba(16,185,129,0.25)" : "rgba(16,185,129,0.20)"}`,
+                                                        color: "#10b981",
                                                     }}
                                                 >
-                                                    <GithubOutlined /> View source on GitHub
-                                                </a>
-                                                <span style={{
-                                                    display: "inline-flex",
-                                                    alignItems: "center",
-                                                    gap: 6,
-                                                    padding: "6px 12px",
-                                                    borderRadius: 8,
-                                                    fontSize: 12.5,
-                                                    fontWeight: 500,
-                                                    background: darkMode ? "rgba(16,185,129,0.10)" : "rgba(16,185,129,0.08)",
-                                                    border: `1px solid ${darkMode ? "rgba(16,185,129,0.25)" : "rgba(16,185,129,0.20)"}`,
-                                                    color: "#10b981",
-                                                }}>
-                                                    <SafetyCertificateOutlined /> Zero data collection
-                                                </span>
-                                                <Link
-                                                    href="/release-notes"
-                                                    style={{
-                                                        display: "inline-flex",
-                                                        alignItems: "center",
-                                                        gap: 6,
-                                                        padding: "6px 12px",
-                                                        borderRadius: 8,
-                                                        fontSize: 12.5,
-                                                        fontWeight: 500,
-                                                        marginLeft: "auto",
-                                                        background: darkMode ? "rgba(99,102,241,0.10)" : "rgba(79,70,229,0.07)",
-                                                        border: `1px solid ${darkMode ? "rgba(99,102,241,0.25)" : "rgba(79,70,229,0.18)"}`,
-                                                        color: darkMode ? "#a78bfa" : "#4f46e5",
-                                                        textDecoration: "none",
-                                                    }}
-                                                >
-                                                    <ArrowRightOutlined /> See full catalog &amp; release notes
-                                                </Link>
+                                                    <CloseOutlined style={{ fontSize: 11 }} />
+                                                    Close this section
+                                                </button>
                                             </div>
                                         </div>
                                     </Card>
                                 </motion.div>
                                 )}
-
-                {/* Privacy badge row */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
-                    {[
-                        { icon: "⚡", label: `${stats.total} tools`, color: "#8b5cf6" },
-                        { icon: "🔒", label: "100% Private", color: "#10b981" },
-                        { icon: "🌐", label: "Works Offline", color: "#3b82f6" },
-                        { icon: "🚫", label: "No Tracking", color: "#f59e0b" },
-                    ].map(({ icon, label, color }) => (
-                        <motion.span
-                            key={label}
-                            whileHover={{ scale: 1.05 }}
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                                padding: "5px 12px",
-                                borderRadius: 20,
-                                fontSize: 12,
-                                fontWeight: 600,
-                                background: darkMode ? `${color}18` : `${color}12`,
-                                border: `1px solid ${color}40`,
-                                color: color,
-                                letterSpacing: "0.2px",
-                                cursor: "default",
-                            }}
-                        >
-                            <span>{icon}</span>
-                            {label}
-                        </motion.span>
-                    ))}
-                </div>
-
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                    style={{ textAlign: "center", marginBottom: 48 }}
-                >
-                    <h1 className="neon-text">My Dev Tools</h1>
-                </motion.div>
 
                 <div style={{ maxWidth: 580, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
                     <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
