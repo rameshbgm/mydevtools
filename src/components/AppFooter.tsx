@@ -19,10 +19,8 @@ export default function AppFooter() {
                 position: "relative",
                 marginTop: 32,
                 padding: "clamp(16px, 3vw, 20px) clamp(12px, 4vw, 24px) clamp(14px, 3vw, 16px)",
-                borderTop: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
-                background: darkMode
-                    ? "linear-gradient(180deg, transparent 0%, rgba(99, 102, 241, 0.02) 100%)"
-                    : "linear-gradient(180deg, transparent 0%, rgba(99, 102, 241, 0.01) 100%)",
+                borderTop: `1px solid ${darkMode ? "rgba(148,163,184,0.12)" : "#e2e8f0"}`,
+                background: "var(--app-footer-bg)",
                 overflow: "hidden",
             }}
         >

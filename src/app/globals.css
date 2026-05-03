@@ -364,22 +364,6 @@ body {
   background: rgba(var(--primary-rgb), 0.06) !important;
 }
 
-/* Tool card animations */
-.tool-card {
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.25s ease;
-  cursor: pointer;
-  will-change: transform, box-shadow;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.tool-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--elevation-lg);
-}
-
 /* Light-mode card elevation — borders alone look flat against #fafafa */
 :root .ant-card {
   box-shadow: var(--elevation-sm);
@@ -835,7 +819,8 @@ html, body {
 
 /* iOS: 16px+ input text avoids focus zoom */
 @media (max-width: 540px) {
-  .landing-catalog-search-input {
+  .landing-catalog-search-input,
+  .app-catalog-search-input {
     font-size: 16px !important;
   }
 }

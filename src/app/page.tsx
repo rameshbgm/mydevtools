@@ -141,117 +141,88 @@ export default function Dashboard() {
                 onToolClick={handleToolClick}
             />
 
-            {/* ================================================================
-                SECTION 8: Catalog header (intro to tool grid below)
-            ================================================================ */}
-            <div
-                id="landing-full-catalog"
-                style={{ padding: "clamp(40px, 6vw, 64px) clamp(16px, 4vw, 24px) 16px", maxWidth: 1200, margin: "0 auto" }}
-            >
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-80px" }}
-                    transition={{ duration: 0.5 }}
-                    style={{ textAlign: "center", marginBottom: 24 }}
-                >
-                    <div style={{
-                        fontFamily: "var(--font-geist-mono), monospace",
-                        fontSize: 12,
-                        color: darkMode ? "#6366f1" : "#4f46e5",
-                        letterSpacing: "0.18em",
-                        textTransform: "uppercase",
-                        marginBottom: 10,
-                    }}>
-                        The full catalog
-                    </div>
-                    <h2 style={{
-                        fontSize: "clamp(26px, 3.5vw, 38px)",
-                        fontWeight: 700,
-                        letterSpacing: "-0.02em",
-                        margin: 0,
-                        color: landHeading,
-                    }}>
-                        {stats.total} tools, organised across {stats.categories} categories.
-                    </h2>
-                    <p style={{
-                        fontSize: 15,
-                        color: landBody,
-                        marginTop: 12,
-                        marginBottom: 0,
-                        lineHeight: 1.55,
-                        maxWidth: "52ch",
-                        marginLeft: "auto",
-                        marginRight: "auto",
-                    }}>
-                        Search by name, tag, or category. Or jump straight in.
-                    </p>
-                </motion.div>
-            </div>
-
-
-            {/* ================================================================
-                Search bar
-            ================================================================ */}
-            <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                style={{ marginBottom: 40 }}
-            >
-                <div style={{ maxWidth: 580, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
-                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                        <span
-                            style={{
-                                position: "absolute",
-                                left: 18,
-                                display: "flex",
-                                alignItems: "center",
-                                color: searchFocused
-                                    ? darkMode ? "#6366f1" : "#4f46e5"
-                                    : darkMode ? "#555" : "#71717a",
-                                pointerEvents: "none",
-                                zIndex: 1,
-                                transition: "color 0.15s",
-                            }}
+            <div id="landing-full-catalog" className="app-catalog-workspace">
+                <div className="app-catalog-workspace-inner">
+                    {/* Catalog intro + search + grid (landing marketing above is unchanged) */}
+                    <div className="app-catalog-intro">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-80px" }}
+                            transition={{ duration: 0.5 }}
                         >
-                            <SearchOutlined style={{ fontSize: 17 }} />
-                        </span>
-                        <input
-                            type="text"
-                            className="landing-catalog-search-input"
-                            placeholder={`Search ${stats.total} tools…`}
-                            value={search}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-                            onFocus={() => setSearchFocused(true)}
-                            onBlur={() => setSearchFocused(false)}
-                            suppressHydrationWarning
-                            style={{
-                                width: "100%",
-                                height: 54,
-                                paddingLeft: 50,
-                                paddingRight: search ? 44 : 20,
-                                borderRadius: 14,
-                                border: `1.5px solid ${
-                                    searchFocused
-                                        ? darkMode ? "#6366f1" : "#4f46e5"
-                                        : darkMode ? "#2a2a2a" : "#d1d5db"
-                                }`,
-                                background: darkMode ? "#141414" : "#ffffff",
-                                fontSize: 15,
-                                color: darkMode ? "#e5e5e5" : "#171717",
-                                outline: "none",
-                                boxShadow: searchFocused
-                                    ? darkMode
-                                        ? "0 0 0 3px rgba(99,102,241,0.2)"
-                                        : "0 0 0 3px rgba(79,70,229,0.12)"
-                                    : darkMode
-                                        ? "0 4px 20px rgba(0,0,0,0.3)"
-                                        : "0 4px 20px rgba(0,0,0,0.06)",
-                                transition: "border-color 0.15s, box-shadow 0.15s",
-                                fontFamily: "inherit",
-                            }}
-                        />
+                            <div
+                                className="app-catalog-intro-eyebrow"
+                                style={{ color: darkMode ? "#a5b4fc" : "#4f46e5" }}
+                            >
+                                The full catalog
+                            </div>
+                            <h2
+                                style={{
+                                    fontSize: "clamp(26px, 3.5vw, 38px)",
+                                    fontWeight: 700,
+                                    letterSpacing: "-0.02em",
+                                    margin: 0,
+                                    color: landHeading,
+                                }}
+                            >
+                                {stats.total} tools, organised across {stats.categories} categories.
+                            </h2>
+                            <p
+                                style={{
+                                    fontSize: 15,
+                                    color: landBody,
+                                    marginTop: 12,
+                                    marginBottom: 0,
+                                    lineHeight: 1.55,
+                                    maxWidth: "52ch",
+                                    marginLeft: "auto",
+                                    marginRight: "auto",
+                                }}
+                            >
+                                Search by name, tag, or category. Or jump straight in.
+                            </p>
+                        </motion.div>
+                    </div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="app-catalog-search-wrap"
+                    >
+                        <div suppressHydrationWarning>
+                            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                                <span
+                                    style={{
+                                        position: "absolute",
+                                        left: 18,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        color: searchFocused
+                                            ? darkMode ? "#818cf8" : "#4f46e5"
+                                            : darkMode ? "#71717a" : "#64748b",
+                                        pointerEvents: "none",
+                                        zIndex: 1,
+                                        transition: "color 0.15s",
+                                    }}
+                                >
+                                    <SearchOutlined style={{ fontSize: 17 }} />
+                                </span>
+                                <input
+                                    type="text"
+                                    className="landing-catalog-search-input app-catalog-search-input"
+                                    placeholder={`Search ${stats.total} tools…`}
+                                    value={search}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                                    onFocus={() => setSearchFocused(true)}
+                                    onBlur={() => setSearchFocused(false)}
+                                    suppressHydrationWarning
+                                    style={{
+                                        paddingRight: search ? 44 : 20,
+                                        fontFamily: "inherit",
+                                    }}
+                                />
                         {search && (
                             <button
                                 type="button"
@@ -423,6 +394,7 @@ export default function Dashboard() {
                         <motion.div
                             key={category}
                             id={anchorId}
+                            className="app-catalog-category-block"
                             style={{ marginBottom: 48 }}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -512,6 +484,8 @@ export default function Dashboard() {
                     );
                 })}
             </div>
+                </div>
+            </div>
 
             <AnimatePresence>
                 {showScrollTop && (
@@ -562,20 +536,16 @@ interface ToolCardProps {
 function ToolCard({ tool, darkMode, onClick }: Readonly<ToolCardProps>) {
     const isAlpha = ALPHA_CATEGORIES.includes(tool.category);
     return (
-        <motion.div variants={item} whileHover={{ y: -6 }} whileTap={{ scale: 0.98 }}>
+        <motion.div variants={item} whileTap={{ scale: 0.98 }}>
             <Card
-                className="tool-card"
+                className="app-catalog-tool-card"
                 onClick={onClick}
-                hoverable
+                hoverable={false}
                 style={{
-                    borderRadius: 16,
-                    border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
-                    background: darkMode
-                        ? "linear-gradient(145deg, #1a1a1a 0%, #141414 100%)"
-                        : "linear-gradient(145deg, #ffffff 0%, #fafafa 100%)",
                     height: "100%",
                     overflow: "hidden",
                     position: "relative",
+                    cursor: "pointer",
                 }}
                 styles={{
                     body: { padding: 20 },

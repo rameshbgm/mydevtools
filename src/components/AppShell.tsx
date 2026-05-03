@@ -617,8 +617,8 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                 'var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             fontSize: 14,
             colorText: "#e5e5e5",
-            colorTextSecondary: "#a3a3a3",
-            colorTextTertiary: "#737373",
+            colorTextSecondary: "#b4b4bf",
+            colorTextTertiary: "#8e8e9a",
         },
         components: {
             Menu: {
@@ -654,7 +654,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                 'var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             fontSize: 14,
             colorText: "#171717",
-            colorTextSecondary: "#525252",
+            colorTextSecondary: "#475569",
             colorTextTertiary: "#737373",
         },
         components: {
@@ -849,9 +849,9 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             collapsedWidth={SIDER_COLLAPSED_WIDTH}
                             style={{
                                 background: darkMode
-                                    ? "linear-gradient(180deg, #141414 0%, #0d0d0d 100%)"
-                                    : "linear-gradient(180deg, #ffffff 0%, #fafafa 100%)",
-                                borderRight: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
+                                    ? "linear-gradient(90deg, rgba(99,102,241,0.22) 0, rgba(99,102,241,0.22) 3px, transparent 3px), linear-gradient(180deg, #141418 0%, #101012 100%)"
+                                    : "linear-gradient(90deg, rgba(79,70,229,0.16) 0, rgba(79,70,229,0.16) 3px, transparent 3px), linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+                                borderRight: `1px solid ${darkMode ? "rgba(148,163,184,0.12)" : "#e2e8f0"}`,
                                 position: "fixed",
                                 height: "100vh",
                                 left: 0,
@@ -875,8 +875,8 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 header: { display: "none" },
                                 section: {
                                     background: darkMode
-                                        ? "linear-gradient(180deg, #141414 0%, #0d0d0d 100%)"
-                                        : "linear-gradient(180deg, #ffffff 0%, #fafafa 100%)",
+                                        ? "#101012"
+                                        : "#fafafa",
                                 },
                             }}
                         >
@@ -888,22 +888,20 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                         style={{
                             marginLeft: isMobile ? 0 : sidebarCollapsed ? SIDER_COLLAPSED_WIDTH : SIDER_WIDTH,
                             transition: "margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                            background: darkMode ? "#0a0a0a" : "#fafafa",
+                            background: "var(--app-shell-bg)",
                         }}
                         suppressHydrationWarning
                     >
                         <Header
                             style={{
-                                background: darkMode
-                                    ? "rgba(10, 10, 10, 0.85)"
-                                    : "rgba(250, 250, 250, 0.85)",
+                                background: "var(--app-header-bg)",
                                 backdropFilter: "blur(16px)",
                                 WebkitBackdropFilter: "blur(16px)",
                                 padding: isMobile ? "0 12px" : "0 24px",
                                 display: "flex",
                                 alignItems: "center",
                                 gap: 12,
-                                borderBottom: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
+                                borderBottom: `1px solid ${darkMode ? "rgba(148,163,184,0.12)" : "#e2e8f0"}`,
                                 position: "sticky",
                                 top: 0,
                                 zIndex: 50,
@@ -1009,7 +1007,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                           ? "20px 16px"
                                           : "28px clamp(16px, 3%, 48px)",
                                 minHeight: "calc(100vh - 60px)",
-                                background: darkMode ? "#0a0a0a" : "#fafafa",
+                                background: "var(--app-content-bg)",
                             }}
                             suppressHydrationWarning
                         >

@@ -2,7 +2,17 @@
 
 import React from "react";
 import { Typography, Breadcrumb, Collapse, Card, Alert, Tag } from "antd";
-import { HomeOutlined, RightOutlined, InfoCircleOutlined, QuestionCircleOutlined, BulbOutlined, ExperimentOutlined } from "@ant-design/icons";
+import {
+    HomeOutlined,
+    RightOutlined,
+    InfoCircleOutlined,
+    QuestionCircleOutlined,
+    BulbOutlined,
+    ExperimentOutlined,
+    UnorderedListOutlined,
+    AimOutlined,
+    ThunderboltOutlined,
+} from "@ant-design/icons";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
@@ -38,13 +48,14 @@ export default function ToolPageLayout({
 
     return (
         <motion.div
+            className="app-tool-shell"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
             style={{ width: "100%" }}
         >
-            {/* Breadcrumb */}
             <Breadcrumb
+                className="app-tool-breadcrumb"
                 separator={<RightOutlined style={{ fontSize: 10, opacity: 0.5 }} />}
                 style={{ marginBottom: 20 }}
                 items={[
@@ -56,7 +67,7 @@ export default function ToolPageLayout({
                                     display: "flex",
                                     alignItems: "center",
                                     gap: 6,
-                                    color: darkMode ? "#a3a3a3" : "#525252",
+                                    color: darkMode ? "#cbd5e1" : "#475569",
                                 }}
                             >
                                 <HomeOutlined style={{ fontSize: 14 }} />
@@ -77,8 +88,8 @@ export default function ToolPageLayout({
                 ]}
             />
 
-            {/* Header */}
             <motion.div
+                className="app-tool-hero"
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1, duration: 0.3 }}
@@ -87,13 +98,8 @@ export default function ToolPageLayout({
                     alignItems: "center",
                     gap: 12,
                     marginBottom: 24,
-                    padding: "clamp(12px, 2.5vw, 20px) clamp(14px, 2.5vw, 24px)",
-                    borderRadius: 16,
-                    background: darkMode
-                        ? `linear-gradient(135deg, ${color}10, transparent)`
-                        : `linear-gradient(135deg, ${color}08, transparent)`,
-                    border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
                     flexWrap: "wrap",
+                    background: `linear-gradient(135deg, ${color}${darkMode ? "22" : "18"}, transparent 58%), var(--app-tool-hero-bg)`,
                 }}
             >
                 <motion.div
@@ -140,7 +146,7 @@ export default function ToolPageLayout({
                     </div>
                     <Text
                         style={{
-                            color: darkMode ? "#737373" : "#737373",
+                            color: darkMode ? "#a1a1aa" : "#64748b",
                             fontSize: "clamp(12px, 1.6vw, 14px)",
                             marginTop: 4,
                             display: "block",
@@ -152,7 +158,6 @@ export default function ToolPageLayout({
                 </div>
             </motion.div>
 
-            {/* Learn More Section */}
             {learnMore && (
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -162,6 +167,7 @@ export default function ToolPageLayout({
                 >
                     <Collapse
                         ghost
+                        className="app-tool-learn-collapse"
                         items={[
                             {
                                 key: "learn-more",
@@ -173,11 +179,7 @@ export default function ToolPageLayout({
                                 ),
                                 children: (
                                     <Card
-                                        style={{
-                                            background: darkMode ? "#141414" : "#ffffff",
-                                            border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
-                                            borderRadius: 12,
-                                        }}
+                                        className="app-tool-learn-card"
                                         styles={{ body: { padding: 20 } }}
                                     >
                                         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -187,7 +189,7 @@ export default function ToolPageLayout({
                                                         <QuestionCircleOutlined style={{ color: "#3b82f6", fontSize: 16 }} />
                                                         <Text strong style={{ fontSize: 14, color: "#3b82f6" }}>What is it?</Text>
                                                     </div>
-                                                    <Paragraph style={{ margin: 0, color: darkMode ? "#a3a3a3" : "#525252", lineHeight: 1.7 }}>
+                                                    <Paragraph style={{ margin: 0, color: darkMode ? "#d4d4d8" : "#334155", lineHeight: 1.7 }}>
                                                         {learnMore.whatIs}
                                                     </Paragraph>
                                                 </div>
@@ -199,7 +201,7 @@ export default function ToolPageLayout({
                                                         <BulbOutlined style={{ color: "#f59e0b", fontSize: 16 }} />
                                                         <Text strong style={{ fontSize: 14, color: "#f59e0b" }}>Why use it?</Text>
                                                     </div>
-                                                    <Paragraph style={{ margin: 0, color: darkMode ? "#a3a3a3" : "#525252", lineHeight: 1.7 }}>
+                                                    <Paragraph style={{ margin: 0, color: darkMode ? "#d4d4d8" : "#334155", lineHeight: 1.7 }}>
                                                         {learnMore.whyUse}
                                                     </Paragraph>
                                                 </div>
@@ -208,10 +210,10 @@ export default function ToolPageLayout({
                                             {learnMore.howToUse && learnMore.howToUse.length > 0 && (
                                                 <div>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                                        <span style={{ fontSize: 16 }}>📋</span>
+                                                        <UnorderedListOutlined style={{ color: "#10b981", fontSize: 16 }} />
                                                         <Text strong style={{ fontSize: 14, color: "#10b981" }}>How to use</Text>
                                                     </div>
-                                                    <ol style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#525252" }}>
+                                                    <ol style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#d4d4d8" : "#334155" }}>
                                                         {learnMore.howToUse.map((step) => (
                                                             <li key={`step-${step.slice(0, 20)}`} style={{ marginBottom: 6, lineHeight: 1.6 }}>{step}</li>
                                                         ))}
@@ -222,10 +224,10 @@ export default function ToolPageLayout({
                                             {learnMore.useCases && learnMore.useCases.length > 0 && (
                                                 <div>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                                        <span style={{ fontSize: 16 }}>🎯</span>
+                                                        <AimOutlined style={{ color: "#8b5cf6", fontSize: 16 }} />
                                                         <Text strong style={{ fontSize: 14, color: "#8b5cf6" }}>Use Cases</Text>
                                                     </div>
-                                                    <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#525252" }}>
+                                                    <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#d4d4d8" : "#334155" }}>
                                                         {learnMore.useCases.map((useCase) => (
                                                             <li key={`usecase-${useCase.slice(0, 20)}`} style={{ marginBottom: 6, lineHeight: 1.6 }}>{useCase}</li>
                                                         ))}
@@ -236,10 +238,10 @@ export default function ToolPageLayout({
                                             {learnMore.tips && learnMore.tips.length > 0 && (
                                                 <div>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                                        <span style={{ fontSize: 16 }}>💡</span>
+                                                        <ThunderboltOutlined style={{ color: "#ec4899", fontSize: 16 }} />
                                                         <Text strong style={{ fontSize: 14, color: "#ec4899" }}>Pro Tips</Text>
                                                     </div>
-                                                    <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#525252" }}>
+                                                    <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#d4d4d8" : "#334155" }}>
                                                         {learnMore.tips.map((tip) => (
                                                             <li key={`tip-${tip.slice(0, 20)}`} style={{ marginBottom: 6, lineHeight: 1.6 }}>{tip}</li>
                                                         ))}
@@ -251,16 +253,10 @@ export default function ToolPageLayout({
                                 ),
                             },
                         ]}
-                        style={{
-                            background: darkMode ? "#0a0a0a" : "#ffffff",
-                            border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
-                            borderRadius: 12,
-                        }}
                     />
                 </motion.div>
             )}
 
-            {/* Content */}
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}

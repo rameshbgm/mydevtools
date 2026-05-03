@@ -12,7 +12,8 @@ A private, offline-first developer tools portal — **90 utilities** across **13
 ## Highlights
 
 - **90 tools** organised into 13 logical categories
-- **Stunning landing page** — animated hero, stats strip, category showcase with scroll effects
+- **Stunning landing page** — animated hero, stats strip, category showcase with scroll effects (marketing styles live under `landing-*` in `globals.css`)
+- **Unified workspace chrome** — post-landing catalog, shell, and tool headers use **`src/app/workspace.css`** tokens (`.dark`‑aware `--app-*` variables, responsive catalogue cards)
 - **Installable PWA** — works as an app on iOS, Android, Mac and Windows
 - **Mobile-first responsive** — every tool adapts to phone, tablet and desktop
 - **Header search** with autocomplete — jump to any tool in two keystrokes
@@ -133,7 +134,8 @@ src/
 │   ├── manifest.ts           # PWA manifest (Next.js metadata route)
 │   ├── sitemap.ts            # Auto-generated sitemap.xml
 │   ├── robots.ts             # robots.txt
-│   ├── globals.css           # Theme variables + global responsive overrides
+│   ├── globals.css           # Theme variables + landing (`landing-*`) + global overrides
+│   ├── workspace.css         # Workspace/catalog/tool-shell tokens & components (below marketing)
 │   └── tools/[id]/
 │       ├── page.tsx          # Tool implementation (87 of them)
 │       └── layout.tsx        # Per-tool SEO metadata + JSON-LD schema
@@ -201,9 +203,10 @@ Themes are driven by:
 
 1. **`<html>.dark` class** — toggled by the theme button, persisted in localStorage
 2. **AntD `ConfigProvider`** — supplies token + component overrides (`darkAlgorithm` / `defaultAlgorithm`)
-3. **CSS custom properties** in `globals.css` — `--primary`, `--primary-rgb`, `--gradient-brand`, `--elevation-*`, `--scrollbar-thumb`, `--selection-bg`
+3. **`globals.css`** — brand primitives (`--primary`, `--gradient-brand`, `--elevation-*`) and landing-only classes
+4. **`workspace.css`** — workspace/dashboard/tool shell palette (`--app-shell-bg`, `--app-catalog-bg`, `--app-card-*`, `--app-tool-hero-bg`, footer wash, etc.)
 
-To tweak colours, edit `:root { ... }` and `.dark { ... }` in `src/app/globals.css`. Component-specific overrides live in `darkTheme` / `lightTheme` objects in `AppShell.tsx`.
+To tweak **landing** visuals, favour `globals.css` (`landing-*`). To tweak **catalog, sidebar/backdrop, tool headers**, prefer `workspace.css` and shallow edits to `darkTheme` / `lightTheme` in `AppShell.tsx` so contrast stays WCAG‑friendly.
 
 ---
 
