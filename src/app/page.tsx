@@ -63,7 +63,6 @@ export default function Dashboard() {
     const { darkMode, recentTools, addRecentTool, clearRecentTools, setNavigating } = useAppStore();
     const [search, setSearch] = useState("");
     const [searchFocused, setSearchFocused] = useState(false);
-
     const allCategorized = useMemo(() => getToolsByCategory(), []);
 
     const filteredCategorized = useMemo(() => {
