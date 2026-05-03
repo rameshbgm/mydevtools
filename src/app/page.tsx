@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     Card,
@@ -39,24 +39,6 @@ import { RELEASE_NOTES, KIND_LABEL, KIND_COLORS } from "@/lib/release-notes";
 
 const { Title, Text } = Typography;
 
-interface DeveloperStory {
-    text: string;
-}
-
-// Story cards rotate randomly every 20 seconds.
-const DEVELOPER_STORIES = [
-    { text: "API incident debug: JSON Formatter and JSON Validator clean incoming payloads, then JSON Diff shows exactly what changed between stable and failing responses." },
-    { text: "Authentication flow check: JWT Decoder verifies claims, JWS Sign & Verify confirms signatures, and HMAC Generator reproduces backend signing logic." },
-    { text: "Certificate troubleshooting: Certificate Inspector reveals metadata while Certificate Chain & SSL pinpoints missing intermediate certificates." },
-    { text: "Data conversion workflow: XML to JSON Converter and JSON to XML Converter keep partner payloads aligned across services." },
-    { text: "Gateway validation: Base64 Encode / Decode and URL Encode / Decode help verify header transforms before production rollout." },
-    { text: "Reporting cleanup: CSV to JSON Converter plus SQL Formatter standardize analytics inputs for repeatable exports." },
-    { text: "Input hardening: Email Validator, Credit Card Validator, and Regex Tester block malformed values before database writes." },
-    { text: "Legacy integration support: WSDL Parser and SOAP Client reproduce enterprise requests and validate envelopes quickly." },
-    { text: "Developer docs update: Markdown Table Generator and Markdown Preview keep release notes consistent and readable." },
-    { text: "Release QA pass: XML Validator and Text Diff compare final outputs to ensure only intended changes are shipped." },
-] satisfies DeveloperStory[];
-
 const container = {
     hidden: {},
     show: { transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
@@ -77,160 +59,11 @@ const fadeIn = {
     show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
-const TOOL_NAMES = [
-    "JSON Formatter",
-    "JSON Validator",
-    "Regex Tester",
-    "JSON Diff",
-    "URL Parser",
-    "API Request Builder",
-    "Swagger / OpenAPI Viewer",
-    "HTTP Status Codes Reference",
-    "JWT Decoder",
-    "JWS Sign & Verify",
-    "HMAC Generator",
-    "JWE Encrypt & Decrypt",
-    "JWK Generator",
-    "AES Encrypt & Decrypt",
-    "Certificate Inspector",
-    "Certificate Chain & SSL",
-    "Certificate & CSR Generator",
-    "PKCS#12 / PFX Tool",
-    "XML to JSON Converter",
-    "JSON to XML Converter",
-    "YAML ↔ JSON Converter",
-    "CSV to JSON Converter",
-    "JSON to CSV Converter",
-    "SQL Formatter",
-    "Timestamp Converter",
-    "Email Validator",
-    "Credit Card Validator",
-    "XSD Schema Validator",
-    "Text Diff",
-    "XML Diff",
-    "XPath Tester",
-    "IP Address Tools",
-    "Subnet Calculator",
-    "Port Number Reference",
-    "UUID Generator",
-    "Password Generator",
-    "Unix Permissions Calculator",
-    "String Case Converter",
-    "Text Manipulation Tools",
-    "String Escape / Unescape",
-    "Base64 Encode / Decode",
-    "URL Encode / Decode",
-    "WSDL Parser",
-    "SOAP Client",
-    "MIME Types Reference",
-    "Markdown Table Generator",
-    "Markdown Preview",
-    "Code Explainer",
-    "Slug Generator",
-    "Unicode Converter",
-    "Number Base Converter",
-    "RFC Standards Reference",
-    "Cron Expression Parser",
-    "JSONPath Tester",
-    "Java POJO Generator",
-    "JSON to TypeScript",
-    "CSV to XML Converter",
-    "XML Formatter",
-    "Gzip Compress / Decompress",
-    "SSH Key Generator",
-    "Key Pair Generator",
-    "Lorem Ipsum Generator",
-    "Text Summarizer",
-    "MAC Address Tools",
-    "IP Ranges Reference",
-    "RAG Document Q&A",
-    "BCrypt Hash & Verify",
-    "YAML Formatter",
-    "HTML Formatter",
-    "XML Validator",
-];
-
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const TOOL_PATTERN = new RegExp(
-    `(${[...TOOL_NAMES].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|")})`,
-    "gi"
-);
-
-const renderStoryWithHighlights = (story: string) => {
-    const parts = story.split(TOOL_PATTERN);
-    if (parts.length === 1) return story;
-
-    return parts.map((part, index) =>
-        index % 2 === 1 ? (
-            <span key={`tool-${part}-${index}`} className="tool-mention">
-                {part}
-            </span>
-        ) : (
-            part
-        )
-    );
-};
-
-const pickNextRandomIndex = (length: number, currentIndex: number) => {
-    if (length <= 1) return 0;
-    let next = currentIndex;
-    while (next === currentIndex) {
-        next = Math.floor(Math.random() * length);
-    }
-    return next;
-};
-
 export default function Dashboard() {
     const router = useRouter();
     const { darkMode, recentTools, addRecentTool, clearRecentTools, setNavigating } = useAppStore();
     const [search, setSearch] = useState("");
     const [searchFocused, setSearchFocused] = useState(false);
-    const [storyIndex, setStoryIndex] = useState(0);
-    // null = settled (render with tool-name highlights); string = scrambling (render plain)
-    const [scrambledText, setScrambledText] = useState<string | null>(null);
-
-    // ── Cycle to next story every 15s ───────────────────────────────────────
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setStoryIndex((i) => pickNextRandomIndex(DEVELOPER_STORIES.length, i));
-        }, 15000);
-        return () => clearInterval(interval);
-    }, []);
-
-    // ── Matrix-style scramble-decode animation on story change ──────────────
-    useEffect(() => {
-        const target = DEVELOPER_STORIES[storyIndex].text;
-        const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789{}[]<>/=+-*&^%$#@!?";
-        const FPS = 30;
-        const DURATION_MS = 1400;
-        const totalFrames = Math.floor((DURATION_MS / 1000) * FPS);
-        // Each character "locks in" at a position-staggered frame for the wave reveal
-        const lockFrames = target.split("").map((_, i) =>
-            Math.floor((i / Math.max(target.length, 1)) * totalFrames * 0.7)
-        );
-
-        let frame = 0;
-        const id = setInterval(() => {
-            const next = target
-                .split("")
-                .map((char, i) => {
-                    // Preserve whitespace and punctuation so the layout stays stable
-                    if (/[\s.,:;/&()'"-]/.test(char)) return char;
-                    if (frame >= lockFrames[i]) return char;
-                    return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
-                })
-                .join("");
-            setScrambledText(next);
-            frame++;
-            if (frame > totalFrames) {
-                setScrambledText(null);
-                clearInterval(id);
-            }
-        }, 1000 / FPS);
-
-        return () => clearInterval(id);
-    }, [storyIndex]);
 
     const allCategorized = useMemo(() => getToolsByCategory(), []);
 
@@ -266,7 +99,6 @@ export default function Dashboard() {
         total: toolsRegistry.length,
         categories: allCategorized.size,
     };
-    const currentStory = DEVELOPER_STORIES[storyIndex];
 
     return (
         <div style={{ width: "100%" }}>
@@ -277,75 +109,14 @@ export default function Dashboard() {
                 animate="show"
                 style={{ textAlign: "center", marginBottom: 56 }}
             >
-                {/* Privacy badge row */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
-                    {[
-                        { icon: "⚡", label: `${stats.total} tools`, color: "#8b5cf6" },
-                        { icon: "🔒", label: "100% Private", color: "#10b981" },
-                        { icon: "🌐", label: "Works Offline", color: "#3b82f6" },
-                        { icon: "🚫", label: "No Tracking", color: "#f59e0b" },
-                    ].map(({ icon, label, color }) => (
-                        <motion.span
-                            key={label}
-                            whileHover={{ scale: 1.05 }}
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                                padding: "5px 12px",
-                                borderRadius: 20,
-                                fontSize: 12,
-                                fontWeight: 600,
-                                background: darkMode ? `${color}18` : `${color}12`,
-                                border: `1px solid ${color}40`,
-                                color: color,
-                                letterSpacing: "0.2px",
-                                cursor: "default",
-                            }}
-                        >
-                            <span>{icon}</span>
-                            {label}
-                        </motion.span>
-                    ))}
-                </div>
-
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                    style={{ textAlign: "center", marginBottom: 48 }}
-                >
-                    <h1 className="neon-text">My Dev Tools</h1>
-
-                    <motion.div
-                        className="animated-tagline matrix-style"
-                        style={{
-                            fontSize: "clamp(12px, 0.92vw, 14px)",
-                            color: darkMode ? "#a7f3d0" : "#166534",
-                            maxWidth: "82vw",
-                            margin: "40px auto 10px",
-                            padding: 0,
-                            fontWeight: 500,
-                            lineHeight: 1.35,
-                            textAlign: "center",
-                            minHeight: "1.6em",
-                            fontVariantNumeric: "tabular-nums",
-                        }}
-                        aria-live="polite"
-                    >
-                        <span style={{ opacity: 0.5, marginRight: 6 }}>&gt;</span>
-                        {scrambledText !== null
-                            ? scrambledText
-                            : renderStoryWithHighlights(currentStory.text)}
-                    </motion.div>
-                </motion.div>
-
-                {/* About this app — default expanded, leads with privacy + security */}
+                {/* About this app — default expanded, leads with privacy + security.
+                    Sits at the very top of the hero so first-time visitors read the
+                    privacy promise before scanning the tool index. */}
                 <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.2 }}
-                    style={{ maxWidth: 720, margin: "0 auto 28px", padding: "0 12px", textAlign: "left" }}
+                    transition={{ duration: 0.5 }}
+                    style={{ width: "94%", margin: "0 auto 28px", padding: 0, textAlign: "left" }}
                 >
                     <Collapse
                         defaultActiveKey={["about"]}
@@ -370,7 +141,6 @@ export default function Dashboard() {
                                         styles={{ body: { padding: 22 } }}
                                     >
                                         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-                                            {/* Headline */}
                                             <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.65, color: darkMode ? "#d4d4d4" : "#374151" }}>
                                                 <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>My Dev Tools</strong> is a private,
                                                 offline-capable workshop of <strong>{stats.total}+ developer utilities</strong> — formatters, validators,
@@ -378,7 +148,6 @@ export default function Dashboard() {
                                                 running entirely in your browser.
                                             </p>
 
-                                            {/* The problem it solves */}
                                             <div>
                                                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                                                     <span style={{ fontSize: 16 }}>🎯</span>
@@ -391,7 +160,6 @@ export default function Dashboard() {
                                                 </p>
                                             </div>
 
-                                            {/* Privacy & Security — primary message */}
                                             <div style={{
                                                 background: darkMode ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.06)",
                                                 border: `1px solid ${darkMode ? "rgba(16, 185, 129, 0.25)" : "rgba(16, 185, 129, 0.20)"}`,
@@ -403,32 +171,14 @@ export default function Dashboard() {
                                                     <Text strong style={{ fontSize: 13, color: "#10b981", letterSpacing: 0.3 }}>PRIVACY &amp; SECURITY — BY DEFAULT</Text>
                                                 </div>
                                                 <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 13.5, lineHeight: 1.75 }}>
-                                                    <li>
-                                                        <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Everything runs locally.</strong>{" "}
-                                                        Parsing, signing, hashing, encryption, certificate work — all happens in your browser tab.
-                                                        Your input never leaves your machine.
-                                                    </li>
-                                                    <li>
-                                                        <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No accounts, no tracking, no analytics.</strong>{" "}
-                                                        Nothing is logged. No cookies that follow you around. No third-party scripts.
-                                                    </li>
-                                                    <li>
-                                                        <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No third-party CDNs at runtime.</strong>{" "}
-                                                        Fonts, code editors, and crypto libraries are bundled with the app — no external requests
-                                                        on tool use.
-                                                    </li>
-                                                    <li>
-                                                        <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Works offline.</strong>{" "}
-                                                        Installable as a Progressive Web App; once loaded, it keeps working without a network.
-                                                    </li>
-                                                    <li>
-                                                        <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Open source.</strong>{" "}
-                                                        Every line is auditable on GitHub — verify the privacy claims for yourself.
-                                                    </li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Everything runs locally.</strong>{" "}Parsing, signing, hashing, encryption, certificate work — all happens in your browser tab. Your input never leaves your machine.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No accounts, no tracking, no analytics.</strong>{" "}Nothing is logged. No cookies that follow you around. No third-party scripts.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No third-party CDNs at runtime.</strong>{" "}Fonts, code editors, and crypto libraries are bundled with the app — no external requests on tool use.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Works offline.</strong>{" "}Installable as a Progressive Web App; once loaded, it keeps working without a network.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Open source.</strong>{" "}Every line is auditable on GitHub — verify the privacy claims for yourself.</li>
                                                 </ul>
                                             </div>
 
-                                            {/* Why use it */}
                                             <div>
                                                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                                                     <ThunderboltOutlined style={{ color: darkMode ? "#a78bfa" : "#4f46e5", fontSize: 16 }} />
@@ -442,7 +192,40 @@ export default function Dashboard() {
                                                 </ul>
                                             </div>
 
-                                            {/* Trust footer */}
+                                            {/* Full categorized inventory — every category as a bullet,
+                                                every tool as a sub-bullet "name : description". Sourced from
+                                                the live tools registry so it stays in sync automatically. */}
+                                            <div>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                                                    <span style={{ fontSize: 16 }}>📚</span>
+                                                    <Text strong style={{ fontSize: 13, color: darkMode ? "#34d399" : "#059669", letterSpacing: 0.3 }}>WHAT&rsquo;S INSIDE — FULL CATALOG</Text>
+                                                </div>
+                                                <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 13.5, lineHeight: 1.7 }}>
+                                                    {Array.from(allCategorized.entries()).map(([category, tools]) => (
+                                                        <li key={category} style={{ marginBottom: 10 }}>
+                                                            <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>
+                                                                {category}
+                                                            </strong>{" "}
+                                                            <span style={{ color: darkMode ? "#737373" : "#9ca3af", fontSize: 12 }}>
+                                                                ({tools.length})
+                                                            </span>
+                                                            <ul style={{ margin: "6px 0 0", paddingLeft: 18, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 13, lineHeight: 1.65 }}>
+                                                                {tools.map((tool) => (
+                                                                    <li key={tool.id} style={{ marginBottom: 2 }}>
+                                                                        <strong style={{ color: darkMode ? "#d4d4d4" : "#374151", fontWeight: 600 }}>
+                                                                            {tool.name}
+                                                                        </strong>
+                                                                        <span style={{ color: darkMode ? "#737373" : "#6b7280" }}>
+                                                                            {" : "}{tool.description}
+                                                                        </span>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+
                                             <div style={{
                                                 display: "flex",
                                                 gap: 10,
@@ -496,6 +279,47 @@ export default function Dashboard() {
                             borderRadius: 14,
                         }}
                     />
+                </motion.div>
+
+                {/* Privacy badge row */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+                    {[
+                        { icon: "⚡", label: `${stats.total} tools`, color: "#8b5cf6" },
+                        { icon: "🔒", label: "100% Private", color: "#10b981" },
+                        { icon: "🌐", label: "Works Offline", color: "#3b82f6" },
+                        { icon: "🚫", label: "No Tracking", color: "#f59e0b" },
+                    ].map(({ icon, label, color }) => (
+                        <motion.span
+                            key={label}
+                            whileHover={{ scale: 1.05 }}
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 5,
+                                padding: "5px 12px",
+                                borderRadius: 20,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                background: darkMode ? `${color}18` : `${color}12`,
+                                border: `1px solid ${color}40`,
+                                color: color,
+                                letterSpacing: "0.2px",
+                                cursor: "default",
+                            }}
+                        >
+                            <span>{icon}</span>
+                            {label}
+                        </motion.span>
+                    ))}
+                </div>
+
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    style={{ textAlign: "center", marginBottom: 48 }}
+                >
+                    <h1 className="neon-text">My Dev Tools</h1>
                 </motion.div>
 
                 <div style={{ maxWidth: 580, margin: "0 auto", padding: "0 12px" }} suppressHydrationWarning>
