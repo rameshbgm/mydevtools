@@ -101,12 +101,9 @@ export default function Dashboard() {
         categories: allCategorized.size,
     };
 
-    const [aboutDismissed, setAboutDismissed] = useState(
-        () => typeof window !== "undefined" && localStorage.getItem("devtools-about-dismissed") === "1"
-    );
+    const [aboutDismissed, setAboutDismissed] = useState(false);
     const dismissAbout = (e: React.MouseEvent) => {
         e.stopPropagation();
-        localStorage.setItem("devtools-about-dismissed", "1");
         setAboutDismissed(true);
     };
 
