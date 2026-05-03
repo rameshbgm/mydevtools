@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
     Card,
     Tag,
@@ -20,8 +21,9 @@ import {
     LockOutlined,
     ThunderboltOutlined,
     InfoCircleOutlined,
-    HistoryOutlined,
     GithubOutlined,
+    ArrowRightOutlined,
+    CloseOutlined,
 } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -35,7 +37,6 @@ import {
     type ToolDefinition,
 } from "@/lib/tools-registry";
 import { useAppStore } from "@/lib/store";
-import { RELEASE_NOTES, KIND_LABEL, KIND_COLORS } from "@/lib/release-notes";
 
 const { Title, Text } = Typography;
 
@@ -100,6 +101,15 @@ export default function Dashboard() {
         categories: allCategorized.size,
     };
 
+    const [aboutDismissed, setAboutDismissed] = useState(
+        () => typeof window !== "undefined" && localStorage.getItem("devtools-about-dismissed") === "1"
+    );
+    const dismissAbout = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        localStorage.setItem("devtools-about-dismissed", "1");
+        setAboutDismissed(true);
+    };
+
     return (
         <div style={{ width: "100%" }}>
             {/* Hero Section */}
@@ -109,9 +119,7 @@ export default function Dashboard() {
                 animate="show"
                 style={{ textAlign: "center", marginBottom: 56 }}
             >
-                {/* About this app — default expanded, leads with privacy + security.
-                    Sits at the very top of the hero so first-time visitors read the
-                    privacy promise before scanning the tool index. */}
+                {!aboutDismissed && (
                 <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -121,7 +129,7 @@ export default function Dashboard() {
                     <Collapse
                         defaultActiveKey={["about"]}
                         ghost
-                        expandIconPosition="end"
+                        expandIconPlacement="end"
                         items={[
                             {
                                 key: "about",
@@ -129,6 +137,30 @@ export default function Dashboard() {
                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                         <InfoCircleOutlined style={{ color: darkMode ? "#a78bfa" : "#4f46e5", fontSize: 16 }} />
                                         <Text strong style={{ fontSize: 14 }}>Learn More About This App</Text>
+                                        <button
+                                            type="button"
+                                            onClick={dismissAbout}
+                                            title="Dismiss"
+                                            style={{
+                                                marginLeft: "auto",
+                                                width: 24,
+                                                height: 24,
+                                                borderRadius: 6,
+                                                border: "none",
+                                                cursor: "pointer",
+                                                background: "transparent",
+                                                color: darkMode ? "#555" : "#bbb",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                fontSize: 14,
+                                                lineHeight: 1,
+                                                padding: 0,
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            <CloseOutlined style={{ fontSize: 12 }} />
+                                        </button>
                                     </div>
                                 ),
                                 children: (
@@ -170,13 +202,32 @@ export default function Dashboard() {
                                                     <LockOutlined style={{ color: "#10b981", fontSize: 16 }} />
                                                     <Text strong style={{ fontSize: 13, color: "#10b981", letterSpacing: 0.3 }}>PRIVACY &amp; SECURITY — BY DEFAULT</Text>
                                                 </div>
-                                                <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 13.5, lineHeight: 1.75 }}>
+                                                <ul style={{ margin: "0 0 12px", paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 13.5, lineHeight: 1.75 }}>
                                                     <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Everything runs locally.</strong>{" "}Parsing, signing, hashing, encryption, certificate work — all happens in your browser tab. Your input never leaves your machine.</li>
                                                     <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No accounts, no tracking, no analytics.</strong>{" "}Nothing is logged. No cookies that follow you around. No third-party scripts.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No third-party CDNs at runtime.</strong>{" "}Fonts, code editors, and crypto libraries are bundled with the app — no external requests on tool use.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Works offline.</strong>{" "}Installable as a Progressive Web App; once loaded, it keeps working without a network.</li>
-                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Open source.</strong>{" "}Every line is auditable on GitHub — verify the privacy claims for yourself.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>No third-party CDNs at runtime.</strong>{" "}Fonts, code editors, and crypto libraries are bundled — no external requests on tool use.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Works offline.</strong>{" "}Installable as a PWA; once loaded, keeps working without a network.</li>
+                                                    <li><strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>Open source.</strong>{" "}Every line is auditable on GitHub — verify the privacy claims yourself.</li>
                                                 </ul>
+                                                <div style={{ paddingLeft: 4 }}>
+                                                    <Text style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: 0.4, color: darkMode ? "#6ee7b7" : "#047857", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                                                        Real-world examples
+                                                    </Text>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                                        {[
+                                                            { e: "🔑", t: "Decode a JWT — see claims, expiry, and signature status entirely in your tab, never transmitted" },
+                                                            { e: "🔒", t: "Inspect a TLS certificate chain — the domain name never goes to any third party" },
+                                                            { e: "🔐", t: "Test a bcrypt hash against a password — your plaintext stays on your machine" },
+                                                            { e: "📡", t: "Build an API request with the local CORS proxy — headers and body never touch an intermediary server" },
+                                                            { e: "📝", t: "Format a 10 MB JSON file — no upload, no size limit, no timeout" },
+                                                        ].map(({ e, t }) => (
+                                                            <div key={t} style={{ display: "flex", gap: 8, fontSize: 12.5, color: darkMode ? "#a3a3a3" : "#4b5563", lineHeight: 1.5 }}>
+                                                                <span style={{ flexShrink: 0 }}>{e}</span>
+                                                                <span>{t}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div>
@@ -192,44 +243,11 @@ export default function Dashboard() {
                                                 </ul>
                                             </div>
 
-                                            {/* Full categorized inventory — every category as a bullet,
-                                                every tool as a sub-bullet "name : description". Sourced from
-                                                the live tools registry so it stays in sync automatically. */}
-                                            <div>
-                                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                                                    <span style={{ fontSize: 16 }}>📚</span>
-                                                    <Text strong style={{ fontSize: 13, color: darkMode ? "#34d399" : "#059669", letterSpacing: 0.3 }}>WHAT&rsquo;S INSIDE — FULL CATALOG</Text>
-                                                </div>
-                                                <ul style={{ margin: 0, paddingLeft: 20, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 13.5, lineHeight: 1.7 }}>
-                                                    {Array.from(allCategorized.entries()).map(([category, tools]) => (
-                                                        <li key={category} style={{ marginBottom: 10 }}>
-                                                            <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>
-                                                                {category}
-                                                            </strong>{" "}
-                                                            <span style={{ color: darkMode ? "#737373" : "#9ca3af", fontSize: 12 }}>
-                                                                ({tools.length})
-                                                            </span>
-                                                            <ul style={{ margin: "6px 0 0", paddingLeft: 18, color: darkMode ? "#a3a3a3" : "#4b5563", fontSize: 13, lineHeight: 1.65 }}>
-                                                                {tools.map((tool) => (
-                                                                    <li key={tool.id} style={{ marginBottom: 2 }}>
-                                                                        <strong style={{ color: darkMode ? "#d4d4d4" : "#374151", fontWeight: 600 }}>
-                                                                            {tool.name}
-                                                                        </strong>
-                                                                        <span style={{ color: darkMode ? "#737373" : "#6b7280" }}>
-                                                                            {" : "}{tool.description}
-                                                                        </span>
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-
                                             <div style={{
                                                 display: "flex",
                                                 gap: 10,
                                                 flexWrap: "wrap",
+                                                alignItems: "center",
                                                 paddingTop: 14,
                                                 borderTop: `1px dashed ${darkMode ? "#262626" : "#e5e5e5"}`,
                                             }}>
@@ -267,6 +285,25 @@ export default function Dashboard() {
                                                 }}>
                                                     <SafetyCertificateOutlined /> Zero data collection
                                                 </span>
+                                                <Link
+                                                    href="/release-notes"
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: 6,
+                                                        padding: "6px 12px",
+                                                        borderRadius: 8,
+                                                        fontSize: 12.5,
+                                                        fontWeight: 500,
+                                                        marginLeft: "auto",
+                                                        background: darkMode ? "rgba(99,102,241,0.10)" : "rgba(79,70,229,0.07)",
+                                                        border: `1px solid ${darkMode ? "rgba(99,102,241,0.25)" : "rgba(79,70,229,0.18)"}`,
+                                                        color: darkMode ? "#a78bfa" : "#4f46e5",
+                                                        textDecoration: "none",
+                                                    }}
+                                                >
+                                                    <ArrowRightOutlined /> See full catalog &amp; release notes
+                                                </Link>
                                             </div>
                                         </div>
                                     </Card>
@@ -280,6 +317,7 @@ export default function Dashboard() {
                         }}
                     />
                 </motion.div>
+                )}
 
                 {/* Privacy badge row */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
@@ -624,146 +662,6 @@ export default function Dashboard() {
                     </motion.div>
                 );
             })}
-
-            {/* Release Notes — only shown when not actively searching */}
-            {!search.trim() && (
-                <motion.div
-                    initial={{ opacity: 0, y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-80px" }}
-                    transition={{ duration: 0.5 }}
-                    style={{ marginTop: 64, marginBottom: 24 }}
-                >
-                    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
-                        <div
-                            style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: 10,
-                                background: darkMode ? "rgba(99,102,241,0.15)" : "rgba(79,70,229,0.10)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                            }}
-                        >
-                            <HistoryOutlined style={{ fontSize: 18, color: darkMode ? "#a78bfa" : "#4f46e5" }} />
-                        </div>
-                        <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
-                            What&rsquo;s New
-                        </Title>
-                        <Badge
-                            count={`${RELEASE_NOTES.length} releases`}
-                            style={{
-                                backgroundColor: darkMode ? "rgba(99,102,241,0.15)" : "rgba(79,70,229,0.10)",
-                                color: darkMode ? "#a78bfa" : "#4f46e5",
-                                fontWeight: 600,
-                                fontSize: 11,
-                                boxShadow: "none",
-                            }}
-                        />
-                    </div>
-                    <Text
-                        type="secondary"
-                        style={{ display: "block", marginBottom: 18, paddingLeft: 48, fontSize: 13 }}
-                    >
-                        Recent shipping work, newest first
-                    </Text>
-
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                        {RELEASE_NOTES.map((release) => {
-                            const c = KIND_COLORS[release.kind];
-                            const bg     = darkMode ? c.bgDark     : c.bg;
-                            const text   = darkMode ? c.textDark   : c.text;
-                            const border = darkMode ? c.borderDark : c.border;
-                            return (
-                                <Card
-                                    key={`${release.version}-${release.date}`}
-                                    style={{
-                                        borderRadius: 14,
-                                        border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
-                                        background: darkMode
-                                            ? "linear-gradient(145deg, #1a1a1a 0%, #141414 100%)"
-                                            : "linear-gradient(145deg, #ffffff 0%, #fafafa 100%)",
-                                    }}
-                                    styles={{ body: { padding: 18 } }}
-                                >
-                                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                                        <span
-                                            style={{
-                                                fontFamily: "var(--font-geist-mono), monospace",
-                                                fontSize: 12,
-                                                fontWeight: 600,
-                                                color: darkMode ? "#e5e5e5" : "#171717",
-                                                background: darkMode ? "#262626" : "#f5f5f5",
-                                                padding: "2px 8px",
-                                                borderRadius: 6,
-                                            }}
-                                        >
-                                            v{release.version}
-                                        </span>
-                                        <span
-                                            style={{
-                                                fontSize: 11,
-                                                fontWeight: 600,
-                                                letterSpacing: 0.4,
-                                                textTransform: "uppercase",
-                                                padding: "2px 8px",
-                                                borderRadius: 6,
-                                                background: bg,
-                                                color: text,
-                                                border: `1px solid ${border}`,
-                                            }}
-                                        >
-                                            {KIND_LABEL[release.kind]}
-                                        </span>
-                                        <Text type="secondary" style={{ fontSize: 12 }}>
-                                            {release.date}
-                                        </Text>
-                                    </div>
-                                    <Title level={5} style={{ margin: "0 0 10px", fontWeight: 600, fontSize: 15 }}>
-                                        {release.title}
-                                    </Title>
-                                    <ul
-                                        style={{
-                                            margin: 0,
-                                            paddingLeft: 20,
-                                            color: darkMode ? "#a3a3a3" : "#525252",
-                                            fontSize: 13.5,
-                                            lineHeight: 1.65,
-                                        }}
-                                    >
-                                        {release.notes.map((note) => (
-                                            <li key={note.slice(0, 40)} style={{ marginBottom: 4 }}>
-                                                {note}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </Card>
-                            );
-                        })}
-                    </div>
-
-                    <p
-                        style={{
-                            marginTop: 18,
-                            textAlign: "center",
-                            fontSize: 12,
-                            color: darkMode ? "#737373" : "#a3a3a3",
-                        }}
-                    >
-                        Full history on{" "}
-                        <a
-                            href="https://github.com/rameshbgm/mydevtools/commits/main"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: darkMode ? "#a78bfa" : "#4f46e5" }}
-                        >
-                            GitHub
-                        </a>
-                        .
-                    </p>
-                </motion.div>
-            )}
         </div>
     );
 }

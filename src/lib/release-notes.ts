@@ -12,106 +12,175 @@
  *   - notes:     1-5 bullet points, each one short imperative-tense sentence
  */
 
+/**
+ * Public-facing version number shown in the topbar. Bump on a meaningful
+ * shipping milestone — does NOT need to match individual entries below.
+ */
+export const APP_VERSION = "1.1";
+
 export type ReleaseKind = "feature" | "fix" | "security" | "ui" | "perf";
+
+/**
+ * One section per ReleaseNote. The dashboard renders the title, the kind
+ * badge, the date, and each section as a labeled bullet list. Group related
+ * bullets under a section to keep long releases readable.
+ */
+export interface ReleaseSection {
+    label: string;
+    bullets: string[];
+}
 
 export interface ReleaseNote {
     date: string;          // ISO YYYY-MM-DD
-    version: string;       // semver-ish, e.g. "1.4.0"
+    version: string;       // semver-ish, e.g. "1.1"
     kind: ReleaseKind;
     title: string;
-    notes: string[];
+    summary?: string;      // optional one-liner shown above the sections
+    sections: ReleaseSection[];
 }
 
-export const RELEASE_NOTES: ReleaseNote[] = [
+/**
+ * Release notes — newest entry FIRST. The exported array is sorted on
+ * load so out-of-order appends still render correctly.
+ *
+ * V1.1 — current edition. Folds in everything shipped after launch:
+ *        privacy hardening, certificate suite consolidation, command
+ *        palette, mobile + PWA polish, dashboard overview panel,
+ *        and this very release-notes section.
+ *
+ * V1.0 — initial public release of the toolkit (80+ tools).
+ */
+const ENTRIES: ReleaseNote[] = [
     {
         date: "2026-05-03",
-        version: "1.6.0",
+        version: "1.1",
         kind: "feature",
-        title: "App overview, release notes, and richer Learn-More copy",
-        notes: [
-            "New 'Learn More About This App' panel on the dashboard with privacy and security context.",
-            "New 'What's New' release notes section so returning users can scan recent shipping work.",
-            "Expanded Learn-More copy for URL Parser, Swagger Viewer, JSONPath Tester, WSDL Parser, IP Address Tools, and MAC Address Tools — RFC references and real-world tips throughout.",
-        ],
-    },
-    {
-        date: "2026-05-03",
-        version: "1.5.1",
-        kind: "fix",
-        title: "Honest expectations for in-browser certificate generation",
-        notes: [
-            "Browser Web Crypto cannot emit a valid X.509 certificate, so the self-signed tab now warns and points users to the OpenSSL command instead of claiming success.",
-        ],
-    },
-    {
-        date: "2026-05-03",
-        version: "1.5.0",
-        kind: "ui",
-        title: "Mobile polish and animated tagline",
-        notes: [
-            "Footer padding now uses clamp() so phones under 360px get tighter spacing.",
-            "Matrix-style scramble-decode animation rotates the tagline on the hero.",
-            "Certificate Validator URL layout cleaned up on small screens.",
-        ],
-    },
-    {
-        date: "2026-04-12",
-        version: "1.4.0",
-        kind: "security",
-        title: "Full privacy hardening",
-        notes: [
-            "Removed every third-party runtime request — no Google Fonts CDN, no analytics, no remote APIs.",
-            "Replaced the crt.sh CT log search with a local live server certificate inspection over a direct TLS socket.",
-            "Added a same-origin CORS proxy so the API Request Builder can hit any endpoint without leaking referrer to a third party.",
-        ],
-    },
-    {
-        date: "2026-04-05",
-        version: "1.3.0",
-        kind: "feature",
-        title: "PWA support and full mobile responsiveness",
-        notes: [
-            "Installable as a Progressive Web App with offline support for every tool.",
-            "Every tool page is now mobile-responsive end to end.",
-            "Added storage and memory management page.",
-        ],
-    },
-    {
-        date: "2026-03-24",
-        version: "1.2.0",
-        kind: "feature",
-        title: "Certificate suite consolidation and CSR fixes",
-        notes: [
-            "Merged 10 separate certificate tools into 4 cohesive ones (Inspector, Chain & SSL, Generator, PKCS#12).",
-            "Fixed CSR generation for ECDSA and Ed25519 — signatures now verify correctly with OpenSSL.",
-            "Added URL fetch to inspect any live server's certificate directly from the browser.",
-        ],
-    },
-    {
-        date: "2026-03-12",
-        version: "1.1.0",
-        kind: "feature",
-        title: "Command palette and search",
-        notes: [
-            "Cmd/Ctrl-K opens a global command palette to jump to any tool.",
-            "Header search is keyboard-navigable with category grouping.",
+        title: "Trust, transparency, and a smarter dashboard",
+        summary:
+            "A polish-and-trust release. The dashboard now opens with a privacy-first overview, the catalog is searchable end-to-end, and several tools picked up real-world fixes. No paid features, no telemetry — same promise, more honest about its limits.",
+        sections: [
+            {
+                label: "Dashboard overview & navigation",
+                bullets: [
+                    "New 'Learn More About This App' panel — default expanded, leads with the security and privacy promise.",
+                    "Full categorized catalog inside the panel: every section listed with every tool and a short description.",
+                    "Removed the matrix-style scramble tagline so the privacy message reads in a single scan.",
+                    "Version badge added to the topbar; clicking the Memory icon stays one click away.",
+                    "This Release Notes panel itself — collapsible, sorted newest first, color-coded by change kind.",
+                ],
+            },
+            {
+                label: "Privacy & security hardening",
+                bullets: [
+                    "Removed every third-party runtime request — no Google Fonts CDN, no analytics, no telemetry, no external scripts.",
+                    "Replaced the crt.sh CT log search with a local live-server certificate inspection over a direct TLS socket. Domain names you inspect never go to a third party.",
+                    "Added a same-origin CORS proxy so the API Request Builder can hit any endpoint without leaking the referrer to a third party.",
+                    "Honest in-browser certificate-generation messaging: Web Crypto cannot emit a valid X.509 cert, so the self-signed tab now warns and points to the matching OpenSSL command instead of claiming success.",
+                    "Open source on GitHub — every privacy claim is independently auditable.",
+                ],
+            },
+            {
+                label: "New & improved tools",
+                bullets: [
+                    "Certificate suite consolidated: 10 separate cert tools merged into 4 cohesive ones (Inspector, Chain & SSL, Generator, PKCS#12).",
+                    "Fixed CSR generation for ECDSA and Ed25519 — signatures now verify correctly with OpenSSL.",
+                    "URL fetch lets you inspect any live server's certificate chain directly from the browser.",
+                    "Expanded Learn-More copy across URL Parser, Swagger Viewer, JSONPath Tester, WSDL Parser, IP Address Tools, and MAC Address Tools — with RFC references and real-world examples.",
+                ],
+            },
+            {
+                label: "PWA, mobile, and discoverability",
+                bullets: [
+                    "Installable as a Progressive Web App with full offline support for every tool.",
+                    "Every tool page is mobile-responsive end-to-end; footer padding scales with clamp() so sub-360px phones aren't cramped.",
+                    "Cmd/Ctrl-K opens a global command palette that jumps to any tool with keyboard navigation.",
+                    "Header search is keyboard-navigable with category grouping in the dropdown.",
+                    "Storage & memory management page so you can see and clear what's persisted locally.",
+                    "Certificate Validator URL layout cleaned up on small screens.",
+                ],
+            },
         ],
     },
     {
         date: "2026-02-28",
-        version: "1.0.0",
+        version: "1.0",
         kind: "feature",
         title: "Initial public release",
-        notes: [
-            "80+ developer tools, all running entirely in the browser.",
-            "JSON, XML, YAML, CSV converters and validators.",
-            "Cryptography (JWT, JWS, JWE, JWK, HMAC, AES, BCrypt, hashing).",
-            "Certificate inspection, generation, chain validation; SSH key generation.",
-            "Network tools: IP/subnet calculator, MAC lookup, port reference.",
-            "REST and SOAP clients, OpenAPI viewer, regex tester, JSONPath/XPath testers.",
+        summary:
+            "First public edition of My Dev Tools — a private, offline-capable workshop of developer utilities that runs entirely in your browser. No accounts, no uploads, no tracking.",
+        sections: [
+            {
+                label: "Formatting, validation & diff",
+                bullets: [
+                    "Formatters for JSON, XML, YAML, HTML, CSS, JavaScript, and SQL with prettify and minify modes.",
+                    "Validators for JSON, XML, HTML, XSD schema, email addresses, and credit-card numbers (Luhn).",
+                    "Side-by-side diff for JSON, XML, and arbitrary text.",
+                ],
+            },
+            {
+                label: "Data conversion",
+                bullets: [
+                    "Bidirectional XML ↔ JSON, YAML ↔ JSON, CSV ↔ JSON, and CSV ↔ XML converters.",
+                    "JSON to TypeScript and Java POJO code generators.",
+                    "XSLT transformer with live preview.",
+                ],
+            },
+            {
+                label: "Encoding & cryptography",
+                bullets: [
+                    "Base64, URL, HTML entities, Unicode, Hex, and Gzip encoders/decoders.",
+                    "Hash generation: MD5, SHA-1/224/256/384/512, SHA-3, RIPEMD-160; HMAC; BCrypt with verify.",
+                    "Full JOSE suite: JWT decoder, JWS sign/verify, JWE encrypt/decrypt, JWK generator.",
+                    "AES encrypt/decrypt with passphrase or key.",
+                ],
+            },
+            {
+                label: "Certificates, keys & SSH",
+                bullets: [
+                    "X.509 certificate inspection (PEM/DER), fingerprinting, format conversion, and PEM-bundle parsing.",
+                    "Self-signed certificate and CSR generation with RSA/ECDSA keys.",
+                    "PKCS#12 (.pfx) and Java KeyStore (.jks) tooling.",
+                    "RSA, ECDSA, and Ed25519 key-pair generation; SSH key generation with optional passphrase.",
+                ],
+            },
+            {
+                label: "API, web services & network",
+                bullets: [
+                    "REST API request builder with auth, headers, body, history, and cURL export.",
+                    "Swagger / OpenAPI viewer; SOAP client and WSDL parser; JSONPath and XPath testers.",
+                    "URL parser; IP address tools (IPv4/IPv6); subnet calculator; MAC address lookup.",
+                    "Reference tables: HTTP status codes, MIME types, port numbers, RFC standards, IP ranges.",
+                ],
+            },
+            {
+                label: "Generators & utilities",
+                bullets: [
+                    "UUID, password, QR code, and Lorem Ipsum generators.",
+                    "String case converter, escape/unescape, Unix permission calculator, cron expression parser.",
+                    "Markdown preview, Markdown table builder, slug generator, regex tester with live highlights.",
+                    "Color picker, color-contrast checker, timestamp converter, number-base converter.",
+                ],
+            },
+            {
+                label: "Foundations",
+                bullets: [
+                    "100% client-side execution — no data ever leaves your browser.",
+                    "Light and dark themes with persistent preference.",
+                    "Open-source under the MIT license.",
+                ],
+            },
         ],
     },
 ];
+
+/* Sort newest-first by date, then version, so out-of-order appends still
+   render correctly. Frozen so the array can be safely shared at runtime. */
+export const RELEASE_NOTES: ReadonlyArray<ReleaseNote> = Object.freeze(
+    [...ENTRIES].sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+        return a.version < b.version ? 1 : -1;
+    })
+);
 
 export const KIND_LABEL: Record<ReleaseKind, string> = {
     feature:  "Feature",

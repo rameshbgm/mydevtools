@@ -16,6 +16,7 @@ import {
     Grid,
 } from "antd";
 import { setMessageInstance } from "@/lib/messageService";
+import { APP_VERSION } from "@/lib/release-notes";
 import {
     MenuFoldOutlined,
     MenuUnfoldOutlined,
@@ -953,6 +954,31 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             </div>
 
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                <Tooltip title={`Version ${APP_VERSION} — view release notes & full catalog`}>
+                                    <span
+                                        onClick={() => navigate("/release-notes")}
+                                        style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            height: 28,
+                                            padding: "0 10px",
+                                            borderRadius: 8,
+                                            fontFamily: "var(--font-geist-mono), monospace",
+                                            fontSize: 11.5,
+                                            fontWeight: 600,
+                                            letterSpacing: 0.4,
+                                            color: darkMode ? "#a78bfa" : "#4f46e5",
+                                            background: darkMode
+                                                ? "rgba(99, 102, 241, 0.12)"
+                                                : "rgba(79, 70, 229, 0.08)",
+                                            border: `1px solid ${darkMode ? "rgba(99, 102, 241, 0.30)" : "rgba(79, 70, 229, 0.20)"}`,
+                                            cursor: "pointer",
+                                            userSelect: "none",
+                                        }}
+                                    >
+                                        V{APP_VERSION}
+                                    </span>
+                                </Tooltip>
                                 <Tooltip title="Memory & Storage Manager">
                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                         <Button
