@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { RELEASE_NOTES, KIND_LABEL, KIND_COLORS, APP_VERSION } from "@/lib/release-notes";
+import { toolPathFromId } from "@/lib/category-routes";
 import {
     toolsRegistry,
     getToolsByCategory,
@@ -41,7 +42,8 @@ export default function ReleaseNotesPage() {
     const navigateToTool = (id: string) => {
         addRecentTool(id);
         setNavigating(true, id);
-        router.push(`/tools/${id}`);
+        const path = toolPathFromId(id);
+        if (path) router.push(path);
     };
 
     return (
@@ -154,7 +156,7 @@ export default function ReleaseNotesPage() {
                             fontWeight: 600,
                             background: darkMode ? "rgba(52,211,153,0.10)" : "rgba(5,150,105,0.08)",
                             border: `1px solid ${darkMode ? "rgba(52,211,153,0.25)" : "rgba(5,150,105,0.2)"}`,
-                            color: darkMode ? "#34d399" : "#059669",
+                            color: darkMode ? "#22d3ee" : "#0891b2",
                         }}
                     >
                         {totalTools} tools
@@ -376,7 +378,7 @@ export default function ReleaseNotesPage() {
                     }}
                 >
                     <BookOutlined
-                        style={{ fontSize: 20, color: darkMode ? "#34d399" : "#059669" }}
+                        style={{ fontSize: 20, color: darkMode ? "#22d3ee" : "#0891b2" }}
                     />
                     <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
                         What&apos;s Inside — Full Catalog
@@ -387,7 +389,7 @@ export default function ReleaseNotesPage() {
                             backgroundColor: darkMode
                                 ? "rgba(52,211,153,0.15)"
                                 : "rgba(5,150,105,0.10)",
-                            color: darkMode ? "#34d399" : "#059669",
+                            color: darkMode ? "#22d3ee" : "#0891b2",
                             fontWeight: 600,
                             fontSize: 11,
                             boxShadow: "none",

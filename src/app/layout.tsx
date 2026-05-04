@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Geist, Geist_Mono, Sora } from "next/font/google";
 import "./globals.css";
+import "./workspace.css";
 import AppShell from "@/components/AppShell";
 import PwaRegister from "@/components/PwaRegister";
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/seo-content";
 import { toolsRegistry } from "@/lib/tools-registry";
+import { toolPath } from "@/lib/category-routes";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -16,6 +18,19 @@ const geistMono = Geist_Mono({
     subsets: ["latin"],
 });
 
+const fraunces = Fraunces({
+    variable: "--font-fraunces",
+    subsets: ["latin"],
+    axes: ["SOFT", "WONK", "opsz"],
+});
+
+/** Hero wordmark (“My Dev Tools”): Sora — geometric / tech-forward, distinct from Geist */
+const landingDisplay = Sora({
+    variable: "--font-landing-display",
+    subsets: ["latin"],
+    weight: ["600", "700", "800"],
+});
+
 export const viewport: Viewport = {
     themeColor: [
         { media: "(prefers-color-scheme: light)", color: "#ffffff" },
@@ -25,7 +40,7 @@ export const viewport: Viewport = {
     initialScale: 1,
 };
 
-const SITE_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}`;
+const SITE_TITLE = `${SITE_NAME}: ${SITE_TAGLINE}`;
 
 export const metadata: Metadata = {
     metadataBase: new URL(SITE_URL),
@@ -148,13 +163,13 @@ const ORG_STRUCTURED_DATA = {
 const COLLECTION_STRUCTURED_DATA = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: `${SITE_NAME} — All Developer Tools`,
+    name: `${SITE_NAME}: All Developer Tools`,
     url: SITE_URL,
     description: SITE_DESCRIPTION,
     hasPart: toolsRegistry.map((t) => ({
         "@type": "SoftwareApplication",
         name: t.name,
-        url: `${SITE_URL}/tools/${t.id}`,
+        url: `${SITE_URL}${toolPath(t)}`,
         applicationCategory: "DeveloperApplication",
         applicationSubCategory: t.category,
     })),
@@ -168,7 +183,7 @@ export default function RootLayout({
     return (
         <html
             lang="en"
-            className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+            className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${landingDisplay.variable} h-full antialiased`}
             suppressHydrationWarning
         >
             <head>

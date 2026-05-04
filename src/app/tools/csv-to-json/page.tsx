@@ -107,21 +107,23 @@ export default function CsvConverterPage() {
     const [arrayFormat, setArrayFormat] = useState(false);
     const [rootElement, setRootElement] = useState("data");
     const [rowElement, setRowElement] = useState("row");
-    const [error, setError] = useState<string | null>(null);
 
-    const output = useMemo(() => {
-        setError(null);
-        if (!input.trim()) return "";
-
+    const { output, conversionError } = useMemo(() => {
+        if (!input.trim()) return { output: "", conversionError: null as string | null };
         try {
             if (outputFormat === "json") {
-                return csvToJson(input, { hasHeader, delimiter, arrayFormat });
-            } else {
-                return csvToXml(input, { hasHeader, delimiter, rootElement, rowElement });
+                return {
+                    output: csvToJson(input, { hasHeader, delimiter, arrayFormat }),
+                    conversionError: null as string | null,
+                };
             }
-        } catch (err: any) {
-            setError(err.message);
-            return "";
+            return {
+                output: csvToXml(input, { hasHeader, delimiter, rootElement, rowElement }),
+                conversionError: null as string | null,
+            };
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return { output: "", conversionError: msg };
         }
     }, [input, outputFormat, hasHeader, delimiter, arrayFormat, rootElement, rowElement]);
 
@@ -202,8 +204,8 @@ export default function CsvConverterPage() {
                             )
                         }
                     >
-                        {error ? (
-                            <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />
+                        {conversionError ? (
+                            <Alert type="error" message={conversionError} showIcon style={{ marginBottom: 16 }} />
                         ) : null}
                         <CodeEditor
                             value={output}

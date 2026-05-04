@@ -364,20 +364,6 @@ body {
   background: rgba(var(--primary-rgb), 0.06) !important;
 }
 
-/* Tool card animations */
-.tool-card {
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.25s ease;
-  cursor: pointer;
-  will-change: transform, box-shadow;
-}
-
-.tool-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--elevation-lg);
-}
-
 /* Light-mode card elevation — borders alone look flat against #fafafa */
 :root .ant-card {
   box-shadow: var(--elevation-sm);
@@ -695,4 +681,295 @@ html, body {
 
 :root.dark .footer-dot {
   background: #404040;
+}
+
+/* Landing page tool marquee */
+@keyframes marquee-slide {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+.tool-marquee-track {
+  display: inline-flex;
+  gap: 14px;
+  white-space: nowrap;
+  animation: marquee-slide 60s linear infinite;
+  will-change: transform;
+}
+
+.tool-marquee-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  overflow: hidden;
+  width: 100%;
+}
+
+.tool-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-marquee-track {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .premise-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Landing: avoid horizontal scroll; clip marquee / wide flex children */
+.landing-marketing-root,
+.landing-page-shell {
+  min-width: 0;
+  overflow-x: clip;
+}
+
+/* Hero “Open catalog”: square, neon periwinkle rim, cyan typography (Cryptography button uses its own class) */
+.landing-open-catalog-btn.ant-btn {
+  border-radius: 0 !important;
+}
+
+.landing-open-catalog-btn.ant-btn-default {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+:root:not(.dark) .landing-open-catalog-btn.ant-btn-default {
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 1px solid #6366f1 !important;
+  color: #0891b2 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+:root.dark .landing-open-catalog-btn.ant-btn-default {
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 1px solid #919cff !important;
+  color: #66eaff !important;
+  box-shadow:
+    0 0 16px rgba(123, 140, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+.landing-open-catalog-btn.ant-btn-default:not(:disabled):hover {
+  filter: brightness(1.06);
+  color: inherit !important;
+}
+
+.landing-open-catalog-btn.ant-btn-default:not(:disabled):focus-visible {
+  outline: 2px solid rgba(129, 140, 248, 0.9);
+  outline-offset: 2px;
+}
+
+@media (max-width: 940px) {
+  .landing-fresh-hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: clamp(18px, 5vw, 28px) !important;
+  }
+}
+@media (max-width: 840px) {
+  .landing-fresh-split {
+    grid-template-columns: 1fr !important;
+  }
+  .landing-fresh-privacy-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .landing-fresh-meta {
+    column-count: 1 !important;
+  }
+}
+
+/* Built-for section: single-line headline */
+.landing-built-for-heading {
+  font-size: clamp(1.05rem, 3.2vw + 0.55rem, 2.5rem);
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+@media (max-width: 380px) {
+  .landing-built-for-heading {
+    font-size: clamp(0.95rem, 2.95vw + 0.68rem, 2.5rem);
+    letter-spacing: -0.045em !important;
+  }
+}
+
+/* Stack section meta rows on narrow viewports so captions stay readable */
+@media (max-width: 520px) {
+  .landing-cat-explorer-head,
+  .landing-momentum-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .landing-cat-explorer-head > span:last-child {
+    width: 100%;
+    line-height: 1.45;
+  }
+}
+
+/* Catalog: category blurb aligned with icon row on small screens */
+@media (max-width: 576px) {
+  .landing-category-desc {
+    padding-left: 0 !important;
+  }
+}
+
+/* iOS: 16px+ input text avoids focus zoom */
+@media (max-width: 540px) {
+  .landing-catalog-search-input,
+  .wb-cat-search-input {
+    font-size: 16px !important;
+  }
+}
+
+/* Category strip: optional manual scroll fallback (reduced-motion) */
+.landing-cat-strip {
+  padding-inline: 2px;
+  scroll-padding-inline: 8px;
+}
+
+/* Continuous category chip marquee (duplicate row; seamless wrap) — content moves L→R visually */
+@keyframes landing-cat-marquee-ltr {
+  from {
+    transform: translate3d(-50%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.landing-cat-marquee-mask {
+  overflow: hidden;
+  width: 100%;
+  padding-bottom: 8px;
+  margin-inline: -4px;
+  padding-inline: 4px;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+}
+
+.landing-cat-marquee-track {
+  display: inline-flex;
+  gap: 10px;
+  width: max-content;
+  animation: landing-cat-marquee-ltr 52s linear infinite;
+  will-change: transform;
+}
+
+.landing-cat-marquee-mask:hover .landing-cat-marquee-track,
+.landing-cat-marquee-mask:focus-within .landing-cat-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-cat-marquee-track {
+    animation: none;
+  }
+
+  .landing-cat-marquee-mask {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    -webkit-mask-image: none;
+    mask-image: none;
+    margin-inline: -4px;
+    padding-inline: 4px;
+  }
+
+  .landing-cat-marquee-track > * {
+    flex: 0 0 auto !important;
+  }
+}
+
+.landing-cat-chip-link:focus {
+  outline: none;
+}
+
+.landing-cat-chip-link:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.85);
+  outline-offset: 2px;
+}
+
+/* Favorites panel: keep 3 columns on wide cards, stack on narrow widths */
+@media (max-width: 420px) {
+  .landing-favorites-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+@media (min-width: 421px) and (max-width: 640px) {
+  .landing-favorites-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Landing bento grid */
+.landing-bento {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-auto-rows: 130px;
+  gap: 14px;
+}
+
+.landing-bento > .b-tall   { grid-column: span 2; grid-row: span 2; }
+.landing-bento > .b-wide   { grid-column: span 4; grid-row: span 1; }
+.landing-bento > .b-square { grid-column: span 2; grid-row: span 1; }
+.landing-bento > .b-big    { grid-column: span 4; grid-row: span 2; }
+.landing-bento > .b-full   { grid-column: 1 / -1; grid-row: span 1; }
+
+@media (max-width: 900px) {
+  .landing-bento { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 140px; }
+  .landing-bento > .b-tall   { grid-column: span 2; grid-row: span 2; }
+  .landing-bento > .b-wide   { grid-column: span 2; grid-row: span 1; }
+  .landing-bento > .b-full   { grid-column: 1 / -1; }
+  .landing-bento > .b-square { grid-column: span 1; grid-row: span 1; }
+  .landing-bento > .b-big    { grid-column: span 2; grid-row: span 2; }
+}
+
+/* Landing manifesto reveal underline */
+.manifesto-accent {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+}
+.manifesto-accent::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -2px;
+  height: 6px;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.45), transparent);
+  border-radius: 2px;
+}
+
+/* Hero title glyph fill only (child span): not the hero section background */
+/* Landing hero title: slow “cooling” gradient drift (cyan / teal sweep) */
+@keyframes landing-hero-cooling-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.landing-hero-title-cool {
+  background-size: 275% auto;
+  background-position: 0% 50%;
+  animation: landing-hero-cooling-flow 13s ease-in-out infinite;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-title-cool {
+    animation: none;
+    background-size: 100% auto;
+    background-position: 0% 50%;
+  }
 }

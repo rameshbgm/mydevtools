@@ -7,7 +7,6 @@ function fallbackCopy(text: string) {
     textarea.style.left = "-9999px";
     document.body.appendChild(textarea);
     textarea.select();
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
     document.execCommand("copy");
     textarea.remove();
 }

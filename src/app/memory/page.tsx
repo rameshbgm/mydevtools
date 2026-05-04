@@ -308,7 +308,7 @@ export default function MemoryPage() {
     const cardBg = darkMode ? "#1a1a1a" : "#fafafa";
 
     return (
-        <div style={{ maxWidth: 820, margin: "0 auto" }}>
+        <div className="wb-mem-page">
             {/* ── Header ───────────────────────────────────────────────────── */}
             <motion.div
                 initial={{ opacity: 0, y: -16 }}
@@ -339,12 +339,7 @@ export default function MemoryPage() {
                     </div>
 
                     {/* Total usage chip */}
-                    <div style={{
-                        display: "flex", alignItems: "center", gap: 10,
-                        padding: "10px 18px", borderRadius: 12,
-                        background: darkMode ? "#1a1a1a" : "#f5f5f5",
-                        border: `1px solid ${border}`,
-                    }}>
+                    <div className="wb-mem-chip">
                         <DatabaseOutlined style={{ color: "#6366f1", fontSize: 16 }} />
                         <div>
                             <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>{formatBytes(totalBytes)}</div>

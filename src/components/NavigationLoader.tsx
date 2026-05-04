@@ -98,7 +98,7 @@ export default function NavigationLoader() {
         ? toolsRegistry.find((t) => t.id === navTargetId)
         : null;
     const ToolIcon = targetTool?.icon;
-    const accentColor = targetTool?.color ?? "#6366f1";
+    const accentColor = targetTool?.color ?? "#0891b2";
 
     return (
         <AnimatePresence>
@@ -112,19 +112,7 @@ export default function NavigationLoader() {
                     role="status"
                     aria-live="polite"
                     aria-label="Loading tool"
-                    style={{
-                        position: "fixed",
-                        inset: 0,
-                        zIndex: 9999,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: darkMode
-                            ? "rgba(10, 10, 10, 0.7)"
-                            : "rgba(250, 250, 250, 0.78)",
-                        backdropFilter: "blur(8px)",
-                        WebkitBackdropFilter: "blur(8px)",
-                    }}
+                    className="wb-navload-backdrop"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <motion.div
@@ -132,23 +120,7 @@ export default function NavigationLoader() {
                         animate={{ scale: 1, y: 0 }}
                         exit={{ scale: 0.96, y: 4 }}
                         transition={{ type: "spring", stiffness: 320, damping: 26 }}
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: 18,
-                            padding: "28px 36px",
-                            borderRadius: 18,
-                            background: darkMode
-                                ? "linear-gradient(145deg, #1a1a1a 0%, #141414 100%)"
-                                : "linear-gradient(145deg, #ffffff 0%, #fafafa 100%)",
-                            border: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
-                            boxShadow: darkMode
-                                ? "0 20px 60px rgba(0,0,0,0.5)"
-                                : "0 20px 60px rgba(0,0,0,0.12)",
-                            minWidth: 280,
-                            maxWidth: "calc(100vw - 32px)",
-                        }}
+                        className="wb-navload-card"
                     >
                         <div style={{ position: "relative", width: 72, height: 72 }}>
                             <motion.div
@@ -207,24 +179,8 @@ export default function NavigationLoader() {
                             </motion.div>
                         </div>
                         <div style={{ textAlign: "center" }}>
-                            <div
-                                style={{
-                                    fontWeight: 600,
-                                    fontSize: 15,
-                                    color: darkMode ? "#e5e5e5" : "#171717",
-                                    marginBottom: 4,
-                                }}
-                            >
-                                {targetTool ? targetTool.name : "Loading"}
-                            </div>
-                            <div
-                                style={{
-                                    fontSize: 12,
-                                    color: darkMode ? "#737373" : "#a3a3a3",
-                                }}
-                            >
-                                {message}
-                            </div>
+                            <div className="wb-navload-title">{targetTool ? targetTool.name : "Loading"}</div>
+                            <div className="wb-navload-sub">{message}</div>
                         </div>
                         <div
                             style={{

@@ -975,14 +975,14 @@ export default function IPAddressToolsPage() {
                                                             <Statistic
                                                                 title="Total Addresses"
                                                                 value={subnetInfo.totalHosts.toLocaleString()}
-                                                                valueStyle={{ fontSize: 18 }}
+                                                                styles={{ content: { fontSize: 18 } }}
                                                             />
                                                         </Col>
                                                         <Col span={12}>
                                                             <Statistic
                                                                 title="Usable Hosts"
                                                                 value={subnetInfo.usableHosts.toLocaleString()}
-                                                                valueStyle={{ fontSize: 18, color: "#52c41a" }}
+                                                                styles={{ content: { fontSize: 18, color: "#52c41a" } }}
                                                             />
                                                         </Col>
                                                     </Row>

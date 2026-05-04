@@ -412,7 +412,7 @@ export default function SSHKeyGeneratorPage() {
                                             <div>
                                                 <Text strong>1. Save the private key:</Text>
                                                 <pre style={{
-                                                    background: darkMode ? "#1f1f1f" : "#f5f5f5",
+                                                    background: "var(--wb-card-solid-bg)",
                                                     padding: 8,
                                                     borderRadius: 4,
                                                     fontSize: 12
@@ -429,7 +429,7 @@ chmod 600 ~/.ssh/id_rsa`}
                                             <div>
                                                 <Text strong>2. Copy public key to server:</Text>
                                                 <pre style={{
-                                                    background: darkMode ? "#1f1f1f" : "#f5f5f5",
+                                                    background: "var(--wb-card-solid-bg)",
                                                     padding: 8,
                                                     borderRadius: 4,
                                                     fontSize: 12

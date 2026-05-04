@@ -34,6 +34,7 @@ import {
     toolsRegistry,
 } from "@/lib/tools-registry";
 import type { ToolCategory } from "@/lib/tools-registry";
+import { getToolIdFromPublicPath, toolPath } from "@/lib/category-routes";
 import { useAppStore } from "@/lib/store";
 import { motion, AnimatePresence } from "framer-motion";
 import AppFooter from "./AppFooter";
@@ -136,10 +137,12 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
 
     const navigate = useCallback(
         (id: string) => {
+            const def = toolsRegistry.find((t) => t.id === id);
+            if (!def) return;
             addRecentTool(id);
             setNavigating(true, id);
             onClose();
-            router.push(`/tools/${id}`);
+            router.push(toolPath(def));
         },
         [addRecentTool, setNavigating, onClose, router]
     );
@@ -163,16 +166,11 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
         }
     };
 
-    // Theme tokens
-    const bg         = darkMode ? "#161616" : "#ffffff";
-    const border      = darkMode ? "#2a2a2a" : "#e8e8e8";
-    const divider     = darkMode ? "#1f1f1f" : "#f2f2f2";
     const textPrimary = darkMode ? "#e5e5e5" : "#171717";
-    const textMuted   = darkMode ? "#737373" : "#9a9a9a";
-    const activeBg    = darkMode ? "rgba(99,102,241,0.16)" : "rgba(79,70,229,0.08)";
-    const activeAccent = darkMode ? "#6366f1" : "#4f46e5";
-    const kbdBg       = darkMode ? "#222" : "#f4f4f4";
-    const kbdBorder   = darkMode ? "#333" : "#ddd";
+    const textMuted = darkMode ? "#737373" : "#9a9a9a";
+    const activeAccent = darkMode ? "#22d3ee" : "#0891b2";
+    const kbdBg = darkMode ? "#222" : "#f4f4f4";
+    const kbdBorder = darkMode ? "#333" : "#ddd";
 
     const renderItem = (tool: (typeof toolsRegistry)[0], idx: number) => {
         const isActive = idx === activeIdx;
@@ -181,18 +179,9 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
             <div
                 key={tool.id}
                 data-active={isActive ? "true" : undefined}
+                className="wb-cmd-row"
                 onClick={() => navigate(tool.id)}
                 onMouseEnter={() => setActiveIdx(idx)}
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "8px 20px",
-                    cursor: "pointer",
-                    background: isActive ? activeBg : "transparent",
-                    borderLeft: `3px solid ${isActive ? activeAccent : "transparent"}`,
-                    transition: "background 0.08s",
-                }}
             >
                 <span
                     style={{
@@ -250,18 +239,7 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 9999,
-                background: "rgba(0,0,0,0.55)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "center",
-                padding: "clamp(48px, 12vh, 110px) 16px 16px",
-            }}
+            className="wb-cmd-overlay"
             onClick={onClose}
         >
             <motion.div
@@ -269,29 +247,10 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: -14 }}
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                style={{
-                    width: "100%",
-                    maxWidth: 660,
-                    borderRadius: 18,
-                    overflow: "hidden",
-                    background: bg,
-                    border: `1px solid ${border}`,
-                    boxShadow: darkMode
-                        ? "0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(99,102,241,0.12), inset 0 1px 0 rgba(255,255,255,0.04)"
-                        : "0 40px 100px rgba(0,0,0,0.14), 0 0 0 1px rgba(99,102,241,0.06)",
-                }}
+                className="wb-cmd-panel"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* ── Search input row ── */}
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        padding: "16px 20px",
-                        borderBottom: `1px solid ${divider}`,
-                    }}
-                >
+                <div className="wb-cmd-input-row">
                     <SearchOutlined
                         style={{
                             fontSize: 19,
@@ -307,16 +266,7 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                         placeholder="Search tools, categories, tags…"
                         autoComplete="off"
                         spellCheck={false}
-                        style={{
-                            flex: 1,
-                            border: "none",
-                            outline: "none",
-                            background: "transparent",
-                            fontSize: 16,
-                            fontWeight: 400,
-                            color: textPrimary,
-                            fontFamily: "inherit",
-                        }}
+                        className="wb-cmd-field"
                     />
                     {query && (
                         <button
@@ -359,12 +309,7 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                     </kbd>
                 </div>
 
-                {/* ── Results area ── */}
-                <div
-                    ref={listRef}
-                    style={{ maxHeight: 420, overflowY: "auto", overflowX: "hidden" }}
-                >
-                    {/* Section label */}
+                <div ref={listRef} className="wb-cmd-results">
                     {flatList.length > 0 && (
                         <div
                             style={{
@@ -373,8 +318,8 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                                 fontWeight: 700,
                                 letterSpacing: "0.07em",
                                 textTransform: "uppercase",
-                                color: textMuted,
                             }}
+                            className="wb-cmd-muted"
                         >
                             {query.trim()
                                 ? `${searchResults.length} result${searchResults.length !== 1 ? "s" : ""}`
@@ -433,18 +378,7 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                     )}
                 </div>
 
-                {/* ── Footer ── */}
-                <div
-                    style={{
-                        padding: "9px 20px",
-                        borderTop: `1px solid ${divider}`,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 16,
-                        fontSize: 11.5,
-                        color: textMuted,
-                    }}
-                >
+                <div className="wb-cmd-footer">
                     {(
                         [
                             ["↑↓", "navigate"],
@@ -471,7 +405,7 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                             {label}
                         </span>
                     ))}
-                    <span style={{ marginLeft: "auto", opacity: 0.6 }}>
+                    <span className="wb-cmd-muted" style={{ marginLeft: "auto" }}>
                         {toolsRegistry.length} tools
                     </span>
                 </div>
@@ -494,8 +428,8 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     const navigate = React.useCallback(
         (path: string) => {
             if (path === pathname) return;
-            const match = path.match(/^\/tools\/([^/]+)/);
-            const targetId = match ? match[1] : null;
+            const targetId =
+                path === "/memory" || path === "/release-notes" ? null : getToolIdFromPublicPath(path);
             setNavigating(true, targetId);
             router.push(path);
         },
@@ -517,9 +451,9 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     }, []);
 
     const activeCategory = useMemo(() => {
-        const match = pathname.match(/^\/tools\/([^/]+)/);
-        if (!match) return null;
-        return toolsRegistry.find((t) => t.id === match[1])?.category ?? null;
+        const tid = getToolIdFromPublicPath(pathname);
+        if (!tid) return null;
+        return toolsRegistry.find((t) => t.id === tid)?.category ?? null;
     }, [pathname]);
 
     const [openKey, setOpenKey] = useState<string | null>(activeCategory);
@@ -578,7 +512,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                         </span>
                     ),
                     children: tools.map((t) => ({
-                        key: `/tools/${t.id}`,
+                        key: toolPath(t),
                         icon: React.createElement(t.icon, {
                             style: { fontSize: 14, color: t.color },
                         }),
@@ -606,7 +540,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     const darkTheme = {
         algorithm: theme.darkAlgorithm,
         token: {
-            colorPrimary: "#6366f1",
+            colorPrimary: "#22d3ee",
             colorBgContainer: "#141414",
             colorBgLayout: "#0a0a0a",
             colorBgElevated: "#1f1f1f",
@@ -617,16 +551,16 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                 'var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             fontSize: 14,
             colorText: "#e5e5e5",
-            colorTextSecondary: "#a3a3a3",
-            colorTextTertiary: "#737373",
+            colorTextSecondary: "#b4b4bf",
+            colorTextTertiary: "#8e8e9a",
         },
         components: {
             Menu: {
                 itemBg: "transparent",
                 subMenuItemBg: "transparent",
-                itemSelectedBg: "rgba(99, 102, 241, 0.15)",
-                itemHoverBg: "rgba(99, 102, 241, 0.08)",
-                itemSelectedColor: "#a78bfa",
+                itemSelectedBg: "rgba(34, 211, 238, 0.16)",
+                itemHoverBg: "rgba(34, 211, 238, 0.08)",
+                itemSelectedColor: "#67e8f9",
                 itemColor: "#a3a3a3",
                 groupTitleColor: "#737373",
                 itemHeight: 38,
@@ -643,27 +577,27 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     const lightTheme = {
         algorithm: theme.defaultAlgorithm,
         token: {
-            colorPrimary: "#4f46e5",
+            colorPrimary: "#0891b2",
             colorBgContainer: "#ffffff",
             colorBgLayout: "#fafafa",
             colorBgElevated: "#ffffff",
-            colorBorder: "#e5e5e5",
-            colorBorderSecondary: "#f0f0f0",
+            colorBorder: "#d1d5db",
+            colorBorderSecondary: "#e5e7eb",
             borderRadius: 10,
             fontFamily:
                 'var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             fontSize: 14,
             colorText: "#171717",
-            colorTextSecondary: "#525252",
+            colorTextSecondary: "#475569",
             colorTextTertiary: "#737373",
         },
         components: {
             Menu: {
                 itemBg: "transparent",
                 subMenuItemBg: "transparent",
-                itemSelectedBg: "rgba(79, 70, 229, 0.08)",
-                itemHoverBg: "rgba(79, 70, 229, 0.04)",
-                itemSelectedColor: "#4f46e5",
+                itemSelectedBg: "rgba(8, 145, 178, 0.1)",
+                itemHoverBg: "rgba(8, 145, 178, 0.05)",
+                itemSelectedColor: "#0e7490",
                 itemColor: "#525252",
                 groupTitleColor: "#737373",
                 itemHeight: 38,
@@ -684,27 +618,11 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                     display: "flex",
                     alignItems: "center",
                     gap: 12,
-                    borderBottom: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
+                    borderBottom: "1px solid var(--wb-header-border)",
                     marginBottom: 8,
                 }}
             >
-                <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 12,
-                        background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)",
-                        cursor: "pointer",
-                    }}
-                    onClick={() => navigate("/")}
-                >
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="wb-shell-brand-mark" onClick={() => navigate("/")}>
                     <CodeOutlined style={{ color: "#fff", fontSize: 20 }} />
                 </motion.div>
                 {(!sidebarCollapsed || isMobile) && (
@@ -760,7 +678,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     // ── Command palette trigger button ──────────────────────────────────────
     const triggerBorder = darkMode ? "#2a2a2a" : "#e2e2e2";
     const triggerBg     = darkMode ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.025)";
-    const triggerText   = darkMode ? "#555" : "#aaa";
+    const triggerText   = darkMode ? "#555" : "#71717a";
     const kbdBg         = darkMode ? "#1e1e1e" : "#f2f2f2";
     const kbdBorder     = darkMode ? "#333" : "#ddd";
 
@@ -789,8 +707,10 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                 justifyContent: isMobile ? "center" : "flex-start",
             }}
             onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = darkMode ? "#6366f1" : "#4f46e5";
-                (e.currentTarget as HTMLButtonElement).style.background = darkMode ? "rgba(99,102,241,0.08)" : "rgba(79,70,229,0.04)";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = darkMode ? "#22d3ee" : "#0891b2";
+                (e.currentTarget as HTMLButtonElement).style.background = darkMode
+                    ? "rgba(34,211,238,0.1)"
+                    : "rgba(8,145,178,0.06)";
             }}
             onMouseLeave={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.borderColor = triggerBorder;
@@ -838,9 +758,10 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                     )}
                 </AnimatePresence>
 
-                <Layout style={{ minHeight: "100vh" }} suppressHydrationWarning>
+                <Layout className="wb-shell-layout" style={{ minHeight: "100vh" }} suppressHydrationWarning>
                     {!isMobile && (
                         <Sider
+                            className="wb-shell-sider"
                             collapsible
                             collapsed={sidebarCollapsed}
                             onCollapse={toggleSidebar}
@@ -848,10 +769,6 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             width={SIDER_WIDTH}
                             collapsedWidth={SIDER_COLLAPSED_WIDTH}
                             style={{
-                                background: darkMode
-                                    ? "linear-gradient(180deg, #141414 0%, #0d0d0d 100%)"
-                                    : "linear-gradient(180deg, #ffffff 0%, #fafafa 100%)",
-                                borderRight: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
                                 position: "fixed",
                                 height: "100vh",
                                 left: 0,
@@ -870,14 +787,11 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             open={mobileDrawerOpen}
                             onClose={() => setMobileDrawerOpen(false)}
                             size={Math.min(320, typeof window !== "undefined" ? window.innerWidth - 48 : 320)}
+                            classNames={{ body: "wb-shell-drawer-body", mask: "wb-shell-drawer-mask" }}
                             styles={{
-                                body: { padding: 0 },
+                                body: { padding: 0, background: "var(--wb-sider-bg)" },
                                 header: { display: "none" },
-                                section: {
-                                    background: darkMode
-                                        ? "linear-gradient(180deg, #141414 0%, #0d0d0d 100%)"
-                                        : "linear-gradient(180deg, #ffffff 0%, #fafafa 100%)",
-                                },
+                                section: { background: "var(--wb-sider-bg)" },
                             }}
                         >
                             {sidebarContent}
@@ -888,26 +802,25 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                         style={{
                             marginLeft: isMobile ? 0 : sidebarCollapsed ? SIDER_COLLAPSED_WIDTH : SIDER_WIDTH,
                             transition: "margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                            background: darkMode ? "#0a0a0a" : "#fafafa",
+                            background: "var(--wb-shell-bg)",
                         }}
                         suppressHydrationWarning
                     >
                         <Header
+                            className="wb-shell-header"
                             style={{
-                                background: darkMode
-                                    ? "rgba(10, 10, 10, 0.85)"
-                                    : "rgba(250, 250, 250, 0.85)",
+                                background: "var(--wb-header-bg)",
                                 backdropFilter: "blur(16px)",
                                 WebkitBackdropFilter: "blur(16px)",
                                 padding: isMobile ? "0 12px" : "0 24px",
                                 display: "flex",
                                 alignItems: "center",
                                 gap: 12,
-                                borderBottom: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
                                 position: "sticky",
                                 top: 0,
                                 zIndex: 50,
                                 height: 60,
+                                borderBottom: "1px solid var(--wb-header-border)",
                             }}
                             suppressHydrationWarning
                         >
@@ -943,15 +856,15 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                     <Button
                                         type="text"
-                                        icon={<DatabaseOutlined style={{ fontSize: 17, color: darkMode ? "#6366f1" : "#4f46e5" }} />}
+                                        icon={<DatabaseOutlined style={{ fontSize: 17, color: darkMode ? "#22d3ee" : "#0891b2" }} />}
                                         onClick={() => navigate("/memory")}
                                         style={{
                                             width: 40,
                                             height: 40,
                                             borderRadius: 10,
                                             background: darkMode
-                                                ? "rgba(99, 102, 241, 0.1)"
-                                                : "rgba(79, 70, 229, 0.08)",
+                                                ? "rgba(34, 211, 238, 0.12)"
+                                                : "rgba(8, 145, 178, 0.1)",
                                             flexShrink: 0,
                                         }}
                                     />
@@ -980,7 +893,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                                 darkMode ? (
                                                     <SunOutlined style={{ fontSize: 18, color: "#faad14" }} />
                                                 ) : (
-                                                    <MoonOutlined style={{ fontSize: 18, color: "#6366f1" }} />
+                                                    <MoonOutlined style={{ fontSize: 18, color: "#0891b2" }} />
                                                 )
                                             }
                                             onClick={toggleDarkMode}
@@ -990,7 +903,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                                 borderRadius: 10,
                                                 background: darkMode
                                                     ? "rgba(250, 173, 20, 0.1)"
-                                                    : "rgba(99, 102, 241, 0.1)",
+                                                    : "rgba(8, 145, 178, 0.1)",
                                             }}
                                         />
                                     </motion.div>
@@ -1000,9 +913,16 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
 
                         <Content
                             style={{
-                                padding: isMobile ? "20px 16px" : "28px clamp(16px, 3%, 48px)",
+                                padding:
+                                    pathname === "/"
+                                        ? isMobile
+                                            ? "10px 16px 20px"
+                                            : "12px clamp(16px, 3%, 48px) 28px"
+                                        : isMobile
+                                          ? "20px 16px"
+                                          : "28px clamp(16px, 3%, 48px)",
                                 minHeight: "calc(100vh - 60px)",
-                                background: darkMode ? "#0a0a0a" : "#fafafa",
+                                background: "var(--wb-content-bg)",
                             }}
                             suppressHydrationWarning
                         >

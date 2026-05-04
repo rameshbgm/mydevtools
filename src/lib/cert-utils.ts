@@ -170,9 +170,9 @@ function parseExtensions(extsSeq: forge.asn1.Asn1): {
         "1.3.6.1.5.5.7.3.9": "OCSP Signing",
     };
 
-    let sans: string[] = [];
+    const sans: string[] = [];
     let keyUsage: string[] = [];
-    let extendedKeyUsage: string[] = [];
+    const extendedKeyUsage: string[] = [];
     let basicConstraints: { ca: boolean; pathLenConstraint?: number } | null = null;
 
     const extensions = extsSeq.value as forge.asn1.Asn1[];

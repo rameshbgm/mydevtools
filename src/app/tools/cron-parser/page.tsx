@@ -175,7 +175,7 @@ function getNextRuns(expression: string, count: number = 5): Date[] {
 
     const runs: Date[] = [];
     const now = new Date();
-    let current = new Date(now);
+    const current = new Date(now);
     current.setSeconds(0, 0);
 
     const parts = expression.trim().split(/\s+/);

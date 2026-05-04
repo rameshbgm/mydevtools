@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, Alert, Segmented } from "antd";
+import { Card, Row, Col, Button, Space, message, Alert, Segmented } from "antd";
 import { SwapOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import YAML from "yaml";
-
-const { Text } = Typography;
 
 const SAMPLE_YAML = `# Application Configuration
 server:
@@ -74,26 +72,28 @@ export default function YamlJsonConverterPage() {
     const [mode, setMode] = useState<"yaml-to-json" | "json-to-yaml">("yaml-to-json");
     const [yamlInput, setYamlInput] = useState(SAMPLE_YAML);
     const [jsonInput, setJsonInput] = useState(SAMPLE_JSON);
-    const [error, setError] = useState<string | null>(null);
 
     const input = mode === "yaml-to-json" ? yamlInput : jsonInput;
     const setInput = mode === "yaml-to-json" ? setYamlInput : setJsonInput;
 
-    const output = useMemo(() => {
-        setError(null);
-        if (!input.trim()) return "";
-
+    const { output, conversionError } = useMemo(() => {
+        if (!input.trim()) return { output: "", conversionError: null as string | null };
         try {
             if (mode === "yaml-to-json") {
                 const parsed = YAML.parse(input);
-                return JSON.stringify(parsed, null, 2);
-            } else {
-                const parsed = JSON.parse(input);
-                return YAML.stringify(parsed, { indent: 2 });
+                return {
+                    output: JSON.stringify(parsed, null, 2),
+                    conversionError: null as string | null,
+                };
             }
-        } catch (err: any) {
-            setError(err.message);
-            return "";
+            const parsed = JSON.parse(input);
+            return {
+                output: YAML.stringify(parsed, { indent: 2 }),
+                conversionError: null as string | null,
+            };
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return { output: "", conversionError: msg };
         }
     }, [input, mode]);
 
@@ -103,7 +103,7 @@ export default function YamlJsonConverterPage() {
     };
 
     const swapContent = () => {
-        if (output && !error) {
+        if (output && !conversionError) {
             if (mode === "yaml-to-json") {
                 setJsonInput(output);
             } else {
@@ -154,7 +154,7 @@ export default function YamlJsonConverterPage() {
                             ]}
                             size="large"
                         />
-                        {output && !error && (
+                        {output && !conversionError && (
                             <Button icon={<SwapOutlined />} onClick={swapContent}>
                                 Swap
                             </Button>
@@ -191,8 +191,8 @@ export default function YamlJsonConverterPage() {
                             )
                         }
                     >
-                        {error ? (
-                            <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />
+                        {conversionError ? (
+                            <Alert type="error" message={conversionError} showIcon style={{ marginBottom: 16 }} />
                         ) : null}
                         <CodeEditor
                             value={output}

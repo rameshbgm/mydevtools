@@ -14,18 +14,7 @@ export default function AppFooter() {
     const year = new Date().getFullYear();
 
     return (
-        <footer
-            style={{
-                position: "relative",
-                marginTop: 32,
-                padding: "clamp(16px, 3vw, 20px) clamp(12px, 4vw, 24px) clamp(14px, 3vw, 16px)",
-                borderTop: `1px solid ${darkMode ? "#262626" : "#e5e5e5"}`,
-                background: darkMode
-                    ? "linear-gradient(180deg, transparent 0%, rgba(99, 102, 241, 0.02) 100%)"
-                    : "linear-gradient(180deg, transparent 0%, rgba(99, 102, 241, 0.01) 100%)",
-                overflow: "hidden",
-            }}
-        >
+        <footer className="wb-footer">
 
             <div
                 style={{
@@ -52,7 +41,7 @@ export default function AppFooter() {
                         fontSize: 14,
                     }}
                 >
-                    <Text style={{ color: darkMode ? "#a3a3a3" : "#525252" }}>Made with</Text>
+                    <Text style={{ color: "var(--wb-text-body)" }}>Made with</Text>
                     <motion.span
                         animate={{ scale: [1, 1.25, 1] }}
                         transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
@@ -60,7 +49,7 @@ export default function AppFooter() {
                     >
                         <HeartFilled style={{ color: "#ec4899", fontSize: 16 }} />
                     </motion.span>
-                    <Text style={{ color: darkMode ? "#a3a3a3" : "#525252" }}>by</Text>
+                    <Text style={{ color: "var(--wb-text-body)" }}>by</Text>
                     <a
                         href="https://rameshsnotebook.com/"
                         target="_blank"

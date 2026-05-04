@@ -169,7 +169,7 @@ banana`);
                                 <Statistic title="Unique Lines" value={stats.uniqueLines} />
                             </Col>
                             <Col xs={12} sm={8} md={4}>
-                                <Statistic title="Duplicates" value={stats.duplicateLines} valueStyle={{ color: stats.duplicateLines > 0 ? "#f5222d" : undefined }} />
+                                <Statistic title="Duplicates" value={stats.duplicateLines} styles={{ content: { color: stats.duplicateLines > 0 ? "#f5222d" : undefined } }} />
                             </Col>
                         </Row>
                     </Card>

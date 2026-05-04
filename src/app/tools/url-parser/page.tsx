@@ -237,7 +237,7 @@ export default function UrlParserPage() {
                             <Card title="URL Structure" style={{ marginTop: 16 }}>
                                 <div style={{ fontFamily: "monospace", fontSize: 12, overflowX: "auto" }}>
                                     <span style={{ color: "#722ed1" }}>{parsed.protocol}</span>
-                                    <span style={{ color: "#8c8c8c" }}>//</span>
+                                    <span style={{ color: "#8c8c8c" }}>{ "//" }</span>
                                     {parsed.username && (
                                         <>
                                             <span style={{ color: "#fa541c" }}>{parsed.username}</span>

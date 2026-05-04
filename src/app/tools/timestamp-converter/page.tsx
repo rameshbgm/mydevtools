@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Card, Input, Space, Typography, Button, App } from "antd";
 import { FieldTimeOutlined, CopyOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -10,8 +10,13 @@ const { Text, Title } = Typography;
 
 export default function TimestampConverterPage() {
     const { message } = App.useApp();
-    const [timestamp, setTimestamp] = useState(Math.floor(Date.now() / 1000).toString());
-    const [dateStr, setDateStr] = useState(new Date().toISOString());
+    const [timestamp, setTimestamp] = useState("");
+    const [dateStr, setDateStr] = useState("");
+
+    useEffect(() => {
+        setTimestamp(String(Math.floor(Date.now() / 1000)));
+        setDateStr(new Date().toISOString());
+    }, []);
 
     const tsToDate = () => {
         const ts = parseInt(timestamp);

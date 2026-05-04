@@ -1,6 +1,6 @@
 # mydevtools
 
-A private, offline-first developer tools portal — **87 utilities** across **13 categories**, all in one place. Built with Next.js 16, React 19, Ant Design 6, Monaco Editor, and Framer Motion.
+A private, offline-first developer tools portal — **90 utilities** across **13 categories**, all in one place. Built with Next.js 16, React 19, Ant Design 6, Monaco Editor, and Framer Motion.
 
 > Stop context-switching between dozens of single-purpose websites. Format, diff, decode, generate, validate, parse, calculate — all from one workspace, in your browser.
 
@@ -11,7 +11,10 @@ A private, offline-first developer tools portal — **87 utilities** across **13
 
 ## Highlights
 
-- **87 tools** organised into 13 logical categories
+- **90 tools** organised into 13 logical categories
+- **Editorial landing page (rebrand 2026)** — tool-themed SVG hero (JSON tree + SHA-256 bars + regex bracket), 3-pillar value section, category grid, spotlight cards and animated marquee. Self-contained `lv-*` styles in `LandingMarketing.tsx` with `lv-light` / `lv-dark` modifier classes.
+- **Canonical URLs** — each tool opens at **`/<category-slug>/<tool-id>`** (e.g. `/formatters/json-formatter`). Legacy **`/tools/...`** hit a **308** redirect to that path; **`src/proxy.ts`** (Next.js 16 proxy, formerly middleware) rewrites the pretty URL to the existing **`/tools/*`** file routes.
+- **Workshop chrome (rebrand 2026)** — post‑landing catalogue + **`AppShell`** + tool shells use **`src/app/workspace.css`** with **`--wb-*`** tokens and **`wb-*`** classes (slate-cool neutrals + **cyan / indigo** accents matching the landing palette), plus **`wb-tool-route`** from **`tools/layout.tsx`**.
 - **Installable PWA** — works as an app on iOS, Android, Mac and Windows
 - **Mobile-first responsive** — every tool adapts to phone, tablet and desktop
 - **Header search** with autocomplete — jump to any tool in two keystrokes
@@ -20,7 +23,7 @@ A private, offline-first developer tools portal — **87 utilities** across **13
 - **Navigation loader** with friendly messages and 60-second safety timeout
 - **Privacy-first**: 100% client-side, no analytics, no telemetry, zero third-party runtime requests
 - **Static export** — every page is pre-rendered to HTML; deploy to any static host
-- **Production build:** 91 static routes pre-rendered (87 tools + dashboard + 404 + sitemap + robots)
+- **Production build:** 93 static routes pre-rendered (90 tools + dashboard + release-notes + 404 + sitemap + robots)
 - **MIT licensed** — fork it, modify it, ship it
 
 ---
@@ -29,21 +32,21 @@ A private, offline-first developer tools portal — **87 utilities** across **13
 
 | # | Category | Count | Examples |
 |---|----------|------:|----------|
-| 1 | Formatters | 7 | JSON, XML, SQL, HTML, JS, CSS, **YAML** |
-| 2 | Validators | 8 | JSON, XML, HTML, XSD, XPath, Regex, Credit Card, **Email** |
+| 1 | Formatters | 7 | JSON, XML, SQL, HTML, JS, CSS, YAML |
+| 2 | Validators | 8 | JSON, XML, HTML, XSD, XPath, Regex, Credit Card, Email |
 | 3 | Diff & Compare | 3 | JSON Diff, XML Diff, Text Diff |
-| 4 | Data Converters | 7 | XML↔JSON, CSV→JSON, CSV→XML, YAML↔JSON, XSLT, **JSON→CSV** |
-| 5 | Encoding & Decoding | 7 | Base64, URL, HTML Entities, Unicode, Gzip, String Escape, **Hex** |
-| 6 | Cryptography | 8 | Hash, HMAC, JWT, JWS, JWE, JWK, **BCrypt**, **AES** |
+| 4 | Data Converters | 7 | XML↔JSON, CSV→JSON, CSV→XML, YAML↔JSON, XSLT, JSON→CSV |
+| 5 | Encoding & Decoding | 7 | Base64, URL, HTML Entities, Unicode, Gzip, String Escape, Hex |
+| 6 | Cryptography | 8 | Hash, HMAC, JWT, JWS, JWE, JWK, BCrypt, AES |
 | 7 | Certificates & Keys | 12 | X.509 decoder/generator/CSR/converter, PEM, PKCS#12, JKS, SSH keys, SSL checker, fingerprints |
 | 8 | API & Web Services | 6 | Swagger/OpenAPI viewer, REST request builder, JSONPath, URL parser, WSDL, SOAP client |
 | 9 | Network | 3 | IP tools, Subnet calculator, MAC address tools |
-| 10 | Generators | 9 | UUID, Password, Lorem Ipsum, QR code, Markdown table, Java POJO, JSON→TypeScript, **Slug**, **Color Contrast Checker** |
-| 11 | Text & Utilities | 9 | Text manipulation, Markdown preview, Case converter, Timestamp, Color, Number base, Unix permissions, Cron parser, Todo list |
+| 10 | Generators | 9 | UUID, Password, Lorem Ipsum, QR code, Markdown table, Java POJO, JSON→TypeScript, Slug, Color Contrast Checker |
+| 11 | Text & Utilities | 11 | Case converter, Markdown, Timestamp, Color, Number base, Unix permissions, Cron parser, Todo list, **Timer**, **Stopwatch** |
 | 12 | **AI Alpha Tools** | 3 | RAG Doc Q&A, Text Summarizer, Code Explainer (early access — may change) |
 | 13 | Reference | 5 | HTTP status codes, MIME types, Port numbers, IP ranges, RFC standards |
 
-**New in latest release:** YAML Formatter · Email Validator · JSON→CSV · Hex Encoder/Decoder · BCrypt Hash & Verify · AES Encrypt/Decrypt · Slug Generator · Color Contrast Checker (WCAG AA/AAA)
+**New in v1.2:** Branded landing page with scroll animations · Timer (countdown + audio chime + Pomodoro) · Stopwatch (lap splits, best/worst highlighting)
 
 ---
 
@@ -132,7 +135,8 @@ src/
 │   ├── manifest.ts           # PWA manifest (Next.js metadata route)
 │   ├── sitemap.ts            # Auto-generated sitemap.xml
 │   ├── robots.ts             # robots.txt
-│   ├── globals.css           # Theme variables + global responsive overrides
+│   ├── globals.css           # Theme variables + landing (`landing-*`) + global overrides
+│   ├── workspace.css         # Workspace/catalog/tool-shell tokens & components (below marketing)
 │   └── tools/[id]/
 │       ├── page.tsx          # Tool implementation (87 of them)
 │       └── layout.tsx        # Per-tool SEO metadata + JSON-LD schema
@@ -200,9 +204,11 @@ Themes are driven by:
 
 1. **`<html>.dark` class** — toggled by the theme button, persisted in localStorage
 2. **AntD `ConfigProvider`** — supplies token + component overrides (`darkAlgorithm` / `defaultAlgorithm`)
-3. **CSS custom properties** in `globals.css` — `--primary`, `--primary-rgb`, `--gradient-brand`, `--elevation-*`, `--scrollbar-thumb`, `--selection-bg`
+3. **`globals.css`** — brand primitives (`--primary`, `--gradient-brand`, `--elevation-*`) and landing-only classes
+4. **`workspace.css`** — workspace palette and helpers: **`--wb-*`** variables and **`wb-cat-*`**, **`wb-shell-*`**, **`wb-tool-*`**, **`wb-cmd-*`**, **`wb-footer`**, **`wb-mem-*`**, **`wb-oops`**. Use **`toolPath`** / **`toolPathFromId`** from **`src/lib/category-routes.ts`** for destinations.
+5. **`tool-url-table.ts`** — subset of **`{ toolId → category }`** for the **Edge proxy** (no React / icons). When you add/remove tools or alias routes, extend this alongside **`tools-registry.ts`**.
 
-To tweak colours, edit `:root { ... }` and `.dark { ... }` in `src/app/globals.css`. Component-specific overrides live in `darkTheme` / `lightTheme` objects in `AppShell.tsx`.
+To tweak **landing**, use **`globals.css`** (`landing-*`). To tweak workspace chrome, edit **`workspace.css`** and **`AppShell`** theme tokens together so contrast stays strong in **light stone** and **dark espresso** shells.
 
 ---
 

@@ -401,7 +401,7 @@ export default function JWEToolPage() {
                             <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
                                 <Text strong>Key Algorithm (alg)</Text>
                                 <Tooltip title="Algorithm used to encrypt the Content Encryption Key">
-                                    <InfoCircleOutlined style={{ color: darkMode ? "#8c8c8c" : "#595959" }} />
+                                    <InfoCircleOutlined style={{ color: "var(--wb-text-muted)" }} />
                                 </Tooltip>
                             </div>
                             <Select
@@ -418,7 +418,7 @@ export default function JWEToolPage() {
                             <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
                                 <Text strong>Content Algorithm (enc)</Text>
                                 <Tooltip title="Algorithm used to encrypt the actual content">
-                                    <InfoCircleOutlined style={{ color: darkMode ? "#8c8c8c" : "#595959" }} />
+                                    <InfoCircleOutlined style={{ color: "var(--wb-text-muted)" }} />
                                 </Tooltip>
                             </div>
                             <Select
@@ -564,7 +564,7 @@ export default function JWEToolPage() {
                                         <pre style={{
                                             marginTop: 8,
                                             padding: 12,
-                                            background: darkMode ? "#1f1f1f" : "#f5f5f5",
+                                            background: "var(--wb-card-solid-bg)",
                                             borderRadius: 6,
                                             overflow: "auto"
                                         }}>
