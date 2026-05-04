@@ -118,7 +118,7 @@ export default function StopwatchPage() {
         ? laps.reduce((sum, l) => sum + l.lapTime, 0) / laps.length
         : 0;
 
-    const displayColor = running ? "#6366f1" : elapsed > 0 ? "#f59e0b" : (darkMode ? "#ffffff" : "#1a1a2e");
+    const displayColor = running ? "#6366f1" : elapsed > 0 ? "#f59e0b" : "var(--wb-text-heading)";
 
     const columns: ColumnsType<LapRecord> = [
         {
@@ -203,8 +203,8 @@ export default function StopwatchPage() {
                 style={{
                     textAlign: "center",
                     marginBottom: 16,
-                    background: darkMode ? "#1a1a2e" : "#fafafa",
-                    border: `1px solid ${darkMode ? "#2d2d4e" : "#e5e7eb"}`,
+                    background: "var(--wb-card-solid-bg)",
+                    border: "1px solid var(--wb-card-border)",
                     borderRadius: 16,
                 }}
             >
@@ -289,7 +289,7 @@ export default function StopwatchPage() {
 
             <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
                 <Col xs={12} sm={6}>
-                    <Card size="small" style={{ textAlign: "center", background: darkMode ? "#111827" : "#f9fafb" }}>
+                    <Card size="small" style={{ textAlign: "center", background: "var(--wb-card-solid-bg)" }}>
                         <Statistic
                             title="Total Laps"
                             value={laps.length}
@@ -299,7 +299,7 @@ export default function StopwatchPage() {
                     </Card>
                 </Col>
                 <Col xs={12} sm={6}>
-                    <Card size="small" style={{ textAlign: "center", background: darkMode ? "#111827" : "#f9fafb" }}>
+                    <Card size="small" style={{ textAlign: "center", background: "var(--wb-card-solid-bg)" }}>
                         <Statistic
                             title="Best Lap"
                             value={fastestLap ? formatLapTime(fastestLap.lapTime) : "—"}
@@ -308,7 +308,7 @@ export default function StopwatchPage() {
                     </Card>
                 </Col>
                 <Col xs={12} sm={6}>
-                    <Card size="small" style={{ textAlign: "center", background: darkMode ? "#111827" : "#f9fafb" }}>
+                    <Card size="small" style={{ textAlign: "center", background: "var(--wb-card-solid-bg)" }}>
                         <Statistic
                             title="Worst Lap"
                             value={slowestLap ? formatLapTime(slowestLap.lapTime) : "—"}
@@ -317,7 +317,7 @@ export default function StopwatchPage() {
                     </Card>
                 </Col>
                 <Col xs={12} sm={6}>
-                    <Card size="small" style={{ textAlign: "center", background: darkMode ? "#111827" : "#f9fafb" }}>
+                    <Card size="small" style={{ textAlign: "center", background: "var(--wb-card-solid-bg)" }}>
                         <Statistic
                             title="Average Lap"
                             value={laps.length > 0 ? formatLapTime(avgLapMs) : "—"}
@@ -344,7 +344,7 @@ export default function StopwatchPage() {
                                     <Tag>{laps.length}</Tag>
                                 </Space>
                             }
-                            style={{ background: darkMode ? "#111827" : "#fafafa" }}
+                            style={{ background: "var(--wb-card-solid-bg)" }}
                         >
                             <Table<LapRecord>
                                 columns={columns}

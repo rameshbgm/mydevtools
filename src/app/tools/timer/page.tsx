@@ -133,10 +133,10 @@ export default function TimerPage() {
     const progressPercent = totalSeconds > 0 ? Math.round(((totalSeconds - remainingSeconds) / totalSeconds) * 100) : 0;
     const strokeColor = isComplete ? "#10b981" : "#6366f1";
 
-    const cardBg = darkMode ? "#1a1a2e" : "#ffffff";
-    const cardBorder = darkMode ? "#2d2d4e" : "#e5e7eb";
-    const textColor = darkMode ? "#e5e5e5" : "#171717";
-    const secondaryColor = darkMode ? "#a3a3a3" : "#6b7280";
+    const cardBg = "var(--wb-card-solid-bg)";
+    const cardBorder = "var(--wb-card-border)";
+    const textColor = "var(--wb-text-heading)";
+    const secondaryColor = "var(--wb-text-muted)";
 
     return (
         <ToolPageLayout

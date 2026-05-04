@@ -1164,7 +1164,7 @@ ${sanEntries.join("\n")}
                                 <Divider>Generated Commands (based on your settings)</Divider>
                                 <div style={{ position: "relative" }}>
                                     <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(generateOpensslCommand(), "OpenSSL commands")} style={{ position: "absolute", right: 8, top: 8, zIndex: 1 }}>Copy</Button>
-                                    <pre style={{ background: darkMode ? "#1f1f1f" : "#f5f5f5", padding: 16, borderRadius: 4, overflow: "auto", fontSize: 12, margin: 0 }}>
+                                    <pre style={{ background: "var(--wb-card-solid-bg)", padding: 16, borderRadius: 4, overflow: "auto", fontSize: 12, margin: 0 }}>
                                         {generateOpensslCommand()}
                                     </pre>
                                 </div>
@@ -1174,7 +1174,7 @@ ${sanEntries.join("\n")}
                                         key: "verify",
                                         label: "Verify CSR",
                                         children: (
-                                            <pre style={{ background: darkMode ? "#1f1f1f" : "#f5f5f5", padding: 12, borderRadius: 4, fontSize: 12 }}>
+                                            <pre style={{ background: "var(--wb-card-solid-bg)", padding: 12, borderRadius: 4, fontSize: 12 }}>
                                                 {`# View CSR contents\nopenssl req -in certificate.csr -text -noout\n\n# Verify CSR signature\nopenssl req -in certificate.csr -verify -noout`}
                                             </pre>
                                         ),
@@ -1183,7 +1183,7 @@ ${sanEntries.join("\n")}
                                         key: "verify-key",
                                         label: "Verify Key Matches CSR",
                                         children: (
-                                            <pre style={{ background: darkMode ? "#1f1f1f" : "#f5f5f5", padding: 12, borderRadius: 4, fontSize: 12 }}>
+                                            <pre style={{ background: "var(--wb-card-solid-bg)", padding: 12, borderRadius: 4, fontSize: 12 }}>
                                                 {`# Compare modulus of key and CSR (should match)\nopenssl rsa -in private.key -modulus -noout | openssl md5\nopenssl req -in certificate.csr -modulus -noout | openssl md5`}
                                             </pre>
                                         ),
@@ -1192,7 +1192,7 @@ ${sanEntries.join("\n")}
                                         key: "selfsigned",
                                         label: "Create Self-Signed Certificate",
                                         children: (
-                                            <pre style={{ background: darkMode ? "#1f1f1f" : "#f5f5f5", padding: 12, borderRadius: 4, fontSize: 12 }}>
+                                            <pre style={{ background: "var(--wb-card-solid-bg)", padding: 12, borderRadius: 4, fontSize: 12 }}>
                                                 {`# Generate self-signed certificate (for testing)\nopenssl req -x509 -nodes -days 365 -newkey rsa:2048 \\\n  -keyout private.key -out certificate.crt \\\n  -subj "/C=US/ST=State/L=City/O=Org/CN=example.com"`}
                                             </pre>
                                         ),
