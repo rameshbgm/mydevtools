@@ -294,7 +294,7 @@ export default function StopwatchPage() {
                             title="Total Laps"
                             value={laps.length}
                             prefix={<TrophyOutlined />}
-                            valueStyle={{ fontSize: 22 }}
+                            styles={{ content: { fontSize: 22 } }}
                         />
                     </Card>
                 </Col>
@@ -303,7 +303,7 @@ export default function StopwatchPage() {
                         <Statistic
                             title="Best Lap"
                             value={fastestLap ? formatLapTime(fastestLap.lapTime) : "—"}
-                            valueStyle={{ fontSize: 18, color: "#22c55e", fontFamily: "var(--font-geist-mono), monospace" }}
+                            styles={{ content: { fontSize: 18, color: "#22c55e", fontFamily: "var(--font-geist-mono), monospace" } }}
                         />
                     </Card>
                 </Col>
@@ -312,7 +312,7 @@ export default function StopwatchPage() {
                         <Statistic
                             title="Worst Lap"
                             value={slowestLap ? formatLapTime(slowestLap.lapTime) : "—"}
-                            valueStyle={{ fontSize: 18, color: "#ef4444", fontFamily: "var(--font-geist-mono), monospace" }}
+                            styles={{ content: { fontSize: 18, color: "#ef4444", fontFamily: "var(--font-geist-mono), monospace" } }}
                         />
                     </Card>
                 </Col>
@@ -321,7 +321,7 @@ export default function StopwatchPage() {
                         <Statistic
                             title="Average Lap"
                             value={laps.length > 0 ? formatLapTime(avgLapMs) : "—"}
-                            valueStyle={{ fontSize: 18, fontFamily: "var(--font-geist-mono), monospace" }}
+                            styles={{ content: { fontSize: 18, fontFamily: "var(--font-geist-mono), monospace" } }}
                         />
                     </Card>
                 </Col>

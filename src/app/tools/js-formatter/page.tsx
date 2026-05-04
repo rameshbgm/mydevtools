@@ -5,7 +5,9 @@ import { Card, Input, Typography, Row, Col, Button, Space, message, InputNumber,
 import { CodeOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
-import { js as beautifyJs } from "js-beautify";
+import beautify from "js-beautify";
+
+const beautifyJs = (beautify as unknown as { js: (input: string, opts?: Record<string, unknown>) => string }).js;
 
 const { Text } = Typography;
 

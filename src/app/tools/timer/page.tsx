@@ -176,7 +176,7 @@ export default function TimerPage() {
                                         textAlign: "center",
                                     }}
                                 >
-                                    <Space direction="vertical" size={24} style={{ width: "100%" }}>
+                                    <Space orientation="vertical" size={24} style={{ width: "100%" }}>
                                         <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                                             <Progress
                                                 type="circle"
@@ -202,7 +202,7 @@ export default function TimerPage() {
                                             </div>
                                         </div>
 
-                                        <Space direction="vertical" size={8}>
+                                        <Space orientation="vertical" size={8}>
                                             <Space>
                                                 <CheckCircleOutlined style={{ color: "#10b981", fontSize: 24 }} />
                                                 <Text style={{ color: "#10b981", fontSize: 22, fontWeight: 600 }}>
@@ -242,7 +242,7 @@ export default function TimerPage() {
                                         textAlign: "center",
                                     }}
                                 >
-                                    <Space direction="vertical" size={24} style={{ width: "100%" }}>
+                                    <Space orientation="vertical" size={24} style={{ width: "100%" }}>
                                         <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                                             <Progress
                                                 type="circle"
@@ -334,7 +334,7 @@ export default function TimerPage() {
                 </Col>
 
                 <Col xs={24} lg={10}>
-                    <Space direction="vertical" size={20} style={{ width: "100%" }}>
+                    <Space orientation="vertical" size={20} style={{ width: "100%" }}>
                         <Card
                             title={
                                 <Text style={{ color: textColor, fontWeight: 600 }}>Presets</Text>
@@ -378,9 +378,9 @@ export default function TimerPage() {
                             }}
                             styles={{ body: { paddingTop: 12 } }}
                         >
-                            <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                            <Space orientation="vertical" size={12} style={{ width: "100%" }}>
                                 <Space wrap>
-                                    <Space direction="vertical" size={2}>
+                                    <Space orientation="vertical" size={2}>
                                         <Text style={{ color: secondaryColor, fontSize: 12 }}>Hours</Text>
                                         <InputNumber
                                             min={0}
@@ -390,7 +390,7 @@ export default function TimerPage() {
                                             style={{ width: 80 }}
                                         />
                                     </Space>
-                                    <Space direction="vertical" size={2}>
+                                    <Space orientation="vertical" size={2}>
                                         <Text style={{ color: secondaryColor, fontSize: 12 }}>Minutes</Text>
                                         <InputNumber
                                             min={0}
@@ -400,7 +400,7 @@ export default function TimerPage() {
                                             style={{ width: 80 }}
                                         />
                                     </Space>
-                                    <Space direction="vertical" size={2}>
+                                    <Space orientation="vertical" size={2}>
                                         <Text style={{ color: secondaryColor, fontSize: 12 }}>Seconds</Text>
                                         <InputNumber
                                             min={0}

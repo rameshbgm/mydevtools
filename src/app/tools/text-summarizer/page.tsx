@@ -284,7 +284,7 @@ export default function TextSummarizerPage() {
                                             title="Reduction"
                                             value={result.reductionPercentage}
                                             suffix="%"
-                                            valueStyle={{ color: "#52c41a" }}
+                                            styles={{ content: { color: "#52c41a" } }}
                                         />
                                     </Col>
                                 </Row>
