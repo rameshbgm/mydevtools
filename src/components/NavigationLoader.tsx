@@ -98,7 +98,7 @@ export default function NavigationLoader() {
         ? toolsRegistry.find((t) => t.id === navTargetId)
         : null;
     const ToolIcon = targetTool?.icon;
-    const accentColor = targetTool?.color ?? "#059669";
+    const accentColor = targetTool?.color ?? "#0891b2";
 
     return (
         <AnimatePresence>

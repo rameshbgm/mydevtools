@@ -7,40 +7,40 @@
 /* ─── Core tokens ─── */
 
 :root {
-  /* Workshop theme — stone paper + emerald (readable, distinct from landing) */
-  --wb-accent: #059669;
-  --wb-accent-soft: rgba(5, 150, 105, 0.12);
-  --wb-accent-2: #d97706;
+  /* Rebrand 2026 — cyan/indigo on slate-cool neutrals (matches landing). */
+  --wb-accent: #0891b2;
+  --wb-accent-soft: rgba(8, 145, 178, 0.12);
+  --wb-accent-2: #6366f1;
   --wb-radius-sm: 10px;
   --wb-radius-md: 14px;
   --wb-radius-lg: 18px;
-  --wb-radius-xl: 20px;
+  --wb-radius-xl: 22px;
 
-  --wb-shell-bg: #f5f1eb;
-  --wb-content-bg: #f5f1eb;
-  --wb-header-bg: rgba(250, 248, 245, 0.88);
-  --wb-header-border: rgba(28, 25, 23, 0.09);
+  --wb-shell-bg: #f8fafc;
+  --wb-content-bg: #f8fafc;
+  --wb-header-bg: rgba(255, 255, 255, 0.86);
+  --wb-header-border: rgba(15, 23, 42, 0.08);
 
-  --wb-sider-bg: linear-gradient(190deg, #fffefb 0%, #f8f5f0 52%, #f1ede6 100%);
-  --wb-sider-border: rgba(28, 25, 23, 0.1);
-  --wb-sider-accent-line: rgba(5, 150, 105, 0.35);
+  --wb-sider-bg: linear-gradient(190deg, #ffffff 0%, #f8fafc 52%, #f1f5f9 100%);
+  --wb-sider-border: rgba(15, 23, 42, 0.08);
+  --wb-sider-accent-line: rgba(8, 145, 178, 0.4);
 
   --wb-cat-bg: radial-gradient(
       100% 72% at 14% -6%,
-      rgba(5, 150, 105, 0.09),
+      rgba(8, 145, 178, 0.09),
       transparent 52%
     ),
-    radial-gradient(88% 50% at 96% 0%, rgba(217, 119, 6, 0.06), transparent 46%),
-    linear-gradient(176deg, #fffdfb 0%, #f7f4ef 52%, #f0eae2 100%);
-  --wb-cat-divider: rgba(41, 37, 36, 0.1);
+    radial-gradient(88% 50% at 96% 0%, rgba(99, 102, 241, 0.07), transparent 46%),
+    linear-gradient(176deg, #ffffff 0%, #f8fafc 52%, #eff3f8 100%);
+  --wb-cat-divider: rgba(15, 23, 42, 0.08);
 
-  --wb-text-heading: #1c1917;
-  --wb-text-body: #44403c;
-  --wb-text-muted: #78716c;
+  --wb-text-heading: #0f172a;
+  --wb-text-body: #334155;
+  --wb-text-muted: #64748b;
 
   --wb-card-bg: linear-gradient(
     155deg,
-    rgba(255, 255, 255, 0.97) 0%,
+    rgba(255, 255, 255, 0.98) 0%,
     rgba(248, 250, 252, 0.94) 100%
   );
   --wb-card-solid-bg: #ffffff;
@@ -53,99 +53,100 @@
 
   --wb-tool-hero-bg: linear-gradient(
     125deg,
-    rgba(255, 255, 255, 0.92) 0%,
-    rgba(241, 245, 249, 0.75) 55%,
-    rgba(238, 242, 255, 0.55) 100%
+    rgba(255, 255, 255, 0.94) 0%,
+    rgba(236, 254, 255, 0.7) 50%,
+    rgba(238, 242, 255, 0.6) 100%
   );
   --wb-tool-hero-border: rgba(15, 23, 42, 0.1);
 
   --wb-footer-bg: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(79, 70, 229, 0.04) 100%
+    rgba(99, 102, 241, 0.04) 100%
   );
   --wb-footer-border: rgba(15, 23, 42, 0.08);
 
-  /* Learn-more section labels (ToolPageLayout) */
-  --wb-learn-what: #2563eb;
+  /* Learn-more section labels (ToolPageLayout) — WCAG AA on light surfaces */
+  --wb-learn-what: #0e7490;
   --wb-learn-why: #b45309;
   --wb-learn-how: #047857;
   --wb-learn-use: #6d28d9;
   --wb-learn-tips: #be185d;
 
   /* Overlays */
-  --wb-overlay-scrim: rgba(28, 25, 23, 0.48);
-  --wb-loader-backdrop: rgba(250, 248, 245, 0.86);
+  --wb-overlay-scrim: rgba(15, 23, 42, 0.5);
+  --wb-loader-backdrop: rgba(248, 250, 252, 0.86);
 }
 
 .dark {
-  --wb-accent: #34d399;
-  --wb-accent-soft: rgba(52, 211, 153, 0.16);
-  --wb-accent-2: #fbbf24;
-  --wb-shell-bg: #141210;
-  --wb-content-bg: #141210;
-  --wb-header-bg: rgba(26, 22, 20, 0.86);
-  --wb-header-border: rgba(214, 211, 209, 0.12);
+  --wb-accent: #22d3ee;
+  --wb-accent-soft: rgba(34, 211, 238, 0.16);
+  --wb-accent-2: #818cf8;
+  --wb-shell-bg: #09090b;
+  --wb-content-bg: #09090b;
+  --wb-header-bg: rgba(12, 12, 15, 0.86);
+  --wb-header-border: rgba(244, 244, 245, 0.1);
 
   --wb-sider-bg: linear-gradient(
     198deg,
-    #1b1816 0%,
-    #151210 48%,
-    #110f0d 100%
+    #111114 0%,
+    #0c0c0f 48%,
+    #08080a 100%
   );
-  --wb-sider-border: rgba(214, 211, 209, 0.1);
-  --wb-sider-accent-line: rgba(52, 211, 153, 0.45);
+  --wb-sider-border: rgba(244, 244, 245, 0.08);
+  --wb-sider-accent-line: rgba(34, 211, 238, 0.5);
 
   --wb-cat-bg: radial-gradient(
       110% 78% at 6% -10%,
-      rgba(52, 211, 153, 0.12),
+      rgba(34, 211, 238, 0.12),
       transparent 52%
     ),
-    radial-gradient(92% 50% at 98% -4%, rgba(251, 191, 36, 0.08), transparent 48%),
-    linear-gradient(178deg, #181512 0%, #141210 55%, #0f0e0d 100%);
-  --wb-cat-divider: rgba(214, 211, 209, 0.12);
+    radial-gradient(92% 50% at 98% -4%, rgba(129, 140, 248, 0.1), transparent 48%),
+    linear-gradient(178deg, #0d0d10 0%, #09090b 55%, #07070a 100%);
+  --wb-cat-divider: rgba(244, 244, 245, 0.1);
 
-  --wb-text-heading: #f5f5f4;
-  --wb-text-body: #d6d3d1;
-  --wb-text-muted: #a8a29e;
+  --wb-text-heading: #fafafa;
+  --wb-text-body: #d4d4d8;
+  --wb-text-muted: #a1a1aa;
 
   --wb-card-bg: linear-gradient(
     152deg,
-    rgba(52, 211, 153, 0.05) 0%,
-    #1c1917 40%,
-    #171411 100%
+    rgba(34, 211, 238, 0.06) 0%,
+    #111114 42%,
+    #0c0c0f 100%
   );
-  --wb-card-solid-bg: #1a1715;
-  --wb-card-border: rgba(214, 211, 209, 0.14);
+  --wb-card-solid-bg: #111114;
+  --wb-card-border: rgba(244, 244, 245, 0.1);
   --wb-card-shadow: 0 1px 0 rgba(255, 255, 255, 0.03),
     0 14px 40px rgba(0, 0, 0, 0.5);
 
-  --wb-search-bg: #1a1715;
-  --wb-search-border: rgba(214, 211, 209, 0.18);
+  --wb-search-bg: #111114;
+  --wb-search-border: rgba(244, 244, 245, 0.14);
 
   --wb-tool-hero-bg: linear-gradient(
     128deg,
-    rgba(251, 191, 36, 0.07) 0%,
-    rgba(52, 211, 153, 0.09) 38%,
-    rgba(26, 22, 20, 0.96) 100%
+    rgba(129, 140, 248, 0.08) 0%,
+    rgba(34, 211, 238, 0.09) 40%,
+    rgba(12, 12, 15, 0.96) 100%
   );
-  --wb-tool-hero-border: rgba(214, 211, 209, 0.16);
+  --wb-tool-hero-border: rgba(244, 244, 245, 0.12);
 
   --wb-footer-bg: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(52, 211, 153, 0.05) 100%
+    rgba(34, 211, 238, 0.05) 100%
   );
-  --wb-footer-border: rgba(214, 211, 209, 0.12);
+  --wb-footer-border: rgba(244, 244, 245, 0.1);
 
+  /* Learn-more — WCAG AA on dark zinc surfaces */
   --wb-learn-what: #7dd3fc;
   --wb-learn-why: #fcd34d;
   --wb-learn-how: #6ee7b7;
   --wb-learn-use: #c4b5fd;
   --wb-learn-tips: #fda4af;
 
-  --wb-overlay-scrim: rgba(9, 9, 9, 0.78);
-  --wb-loader-backdrop: rgba(18, 16, 14, 0.82);
+  --wb-overlay-scrim: rgba(0, 0, 0, 0.7);
+  --wb-loader-backdrop: rgba(9, 9, 11, 0.86);
 }
 
 /* ─── App shell ─── */
@@ -173,13 +174,18 @@
   width: 42px;
   height: 42px;
   border-radius: var(--wb-radius-md);
-  background: linear-gradient(135deg, #059669 0%, #0d9488 48%, #d97706 100%);
+  background: linear-gradient(135deg, var(--wb-accent) 0%, var(--wb-accent-2) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.35);
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--wb-accent) 35%, transparent);
   cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.wb-shell-brand-mark:hover {
+  transform: translateY(-1px) rotate(-3deg);
+  box-shadow: 0 10px 28px color-mix(in oklab, var(--wb-accent) 45%, transparent);
 }
 
 .wb-tool-route {

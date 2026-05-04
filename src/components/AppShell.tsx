@@ -168,7 +168,7 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
 
     const textPrimary = darkMode ? "#e5e5e5" : "#171717";
     const textMuted = darkMode ? "#737373" : "#9a9a9a";
-    const activeAccent = darkMode ? "#34d399" : "#059669";
+    const activeAccent = darkMode ? "#22d3ee" : "#0891b2";
     const kbdBg = darkMode ? "#222" : "#f4f4f4";
     const kbdBorder = darkMode ? "#333" : "#ddd";
 
@@ -540,7 +540,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     const darkTheme = {
         algorithm: theme.darkAlgorithm,
         token: {
-            colorPrimary: "#34d399",
+            colorPrimary: "#22d3ee",
             colorBgContainer: "#141414",
             colorBgLayout: "#0a0a0a",
             colorBgElevated: "#1f1f1f",
@@ -558,9 +558,9 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
             Menu: {
                 itemBg: "transparent",
                 subMenuItemBg: "transparent",
-                itemSelectedBg: "rgba(52, 211, 153, 0.16)",
-                itemHoverBg: "rgba(52, 211, 153, 0.08)",
-                itemSelectedColor: "#6ee7b7",
+                itemSelectedBg: "rgba(34, 211, 238, 0.16)",
+                itemHoverBg: "rgba(34, 211, 238, 0.08)",
+                itemSelectedColor: "#67e8f9",
                 itemColor: "#a3a3a3",
                 groupTitleColor: "#737373",
                 itemHeight: 38,
@@ -577,7 +577,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     const lightTheme = {
         algorithm: theme.defaultAlgorithm,
         token: {
-            colorPrimary: "#059669",
+            colorPrimary: "#0891b2",
             colorBgContainer: "#ffffff",
             colorBgLayout: "#fafafa",
             colorBgElevated: "#ffffff",
@@ -595,9 +595,9 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
             Menu: {
                 itemBg: "transparent",
                 subMenuItemBg: "transparent",
-                itemSelectedBg: "rgba(5, 150, 105, 0.1)",
-                itemHoverBg: "rgba(5, 150, 105, 0.05)",
-                itemSelectedColor: "#047857",
+                itemSelectedBg: "rgba(8, 145, 178, 0.1)",
+                itemHoverBg: "rgba(8, 145, 178, 0.05)",
+                itemSelectedColor: "#0e7490",
                 itemColor: "#525252",
                 groupTitleColor: "#737373",
                 itemHeight: 38,
@@ -707,10 +707,10 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                 justifyContent: isMobile ? "center" : "flex-start",
             }}
             onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = darkMode ? "#34d399" : "#059669";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = darkMode ? "#22d3ee" : "#0891b2";
                 (e.currentTarget as HTMLButtonElement).style.background = darkMode
-                    ? "rgba(52,211,153,0.1)"
-                    : "rgba(5,150,105,0.06)";
+                    ? "rgba(34,211,238,0.1)"
+                    : "rgba(8,145,178,0.06)";
             }}
             onMouseLeave={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.borderColor = triggerBorder;
@@ -856,15 +856,15 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                     <Button
                                         type="text"
-                                        icon={<DatabaseOutlined style={{ fontSize: 17, color: darkMode ? "#34d399" : "#059669" }} />}
+                                        icon={<DatabaseOutlined style={{ fontSize: 17, color: darkMode ? "#22d3ee" : "#0891b2" }} />}
                                         onClick={() => navigate("/memory")}
                                         style={{
                                             width: 40,
                                             height: 40,
                                             borderRadius: 10,
                                             background: darkMode
-                                                ? "rgba(52, 211, 153, 0.12)"
-                                                : "rgba(5, 150, 105, 0.1)",
+                                                ? "rgba(34, 211, 238, 0.12)"
+                                                : "rgba(8, 145, 178, 0.1)",
                                             flexShrink: 0,
                                         }}
                                     />
@@ -893,7 +893,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                                 darkMode ? (
                                                     <SunOutlined style={{ fontSize: 18, color: "#faad14" }} />
                                                 ) : (
-                                                    <MoonOutlined style={{ fontSize: 18, color: "#059669" }} />
+                                                    <MoonOutlined style={{ fontSize: 18, color: "#0891b2" }} />
                                                 )
                                             }
                                             onClick={toggleDarkMode}
@@ -903,7 +903,7 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                                 borderRadius: 10,
                                                 background: darkMode
                                                     ? "rgba(250, 173, 20, 0.1)"
-                                                    : "rgba(5, 150, 105, 0.1)",
+                                                    : "rgba(8, 145, 178, 0.1)",
                                             }}
                                         />
                                     </motion.div>

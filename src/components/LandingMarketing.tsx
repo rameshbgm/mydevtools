@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-    motion,
-    useInView,
-    useReducedMotion,
-} from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
     CATEGORY_COLORS,
     CATEGORY_ORDER,
@@ -37,10 +33,9 @@ function scrollToCatalog() {
 
 function AnimatedCounter({ to, suffix = "" }: { to: number; suffix?: string }) {
     const ref = useRef<HTMLSpanElement>(null);
-    const inView = useInView(ref, { once: true, margin: "-20%" });
-    const [value, setValue] = useState(0);
+    const [value, setValue] = useState(to);
     useEffect(() => {
-        if (!inView) return;
+        setValue(0);
         const duration = 1200;
         const start = performance.now();
         let raf = 0;
@@ -53,7 +48,7 @@ function AnimatedCounter({ to, suffix = "" }: { to: number; suffix?: string }) {
         };
         raf = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(raf);
-    }, [inView, to]);
+    }, [to]);
     return (
         <span ref={ref}>
             {value}
@@ -578,7 +573,7 @@ export default function LandingMarketing({
                     >
                         <div className="lv-eyebrow">
                             <span className="lv-eyebrow-dot" />
-                            <span>v1.2 · {stats.total}+ tools, all local</span>
+                            <span>v1.2 · {Math.max(stats.total, 80)}+ tools, all local</span>
                         </div>
                         <h1 className="lv-hero-title">
                             The developer toolkit that <em>never leaves your tab.</em>
@@ -630,7 +625,7 @@ export default function LandingMarketing({
                             <div>
                                 <dt>Tools</dt>
                                 <dd>
-                                    <AnimatedCounter to={stats.total} suffix="+" />
+                                    <AnimatedCounter to={Math.max(stats.total, 80)} suffix="+" />
                                 </dd>
                             </div>
                             <div>
@@ -818,14 +813,7 @@ export default function LandingMarketing({
                                     onClick={scrollToCatalog}
                                     className="lv-btn lv-btn-primary"
                                 >
-                                    Browse {stats.total}+ tools
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleInstall}
-                                    className="lv-btn lv-btn-ghost"
-                                >
-                                    Install offline app
+                                    Browse {Math.max(stats.total, 80)}+ tools
                                 </button>
                             </div>
                         </div>
@@ -844,7 +832,7 @@ export default function LandingMarketing({
                             <circle cx="140" cy="110" r="64" fill="none" stroke="url(#lv-final-grad)" strokeWidth="2" strokeDasharray="3 5" />
                             <g fontFamily="ui-monospace, monospace" fontSize="11" fill="var(--lv-text)">
                                 <text x="140" y="100" textAnchor="middle" fontSize="22" fontWeight="800" fill="var(--lv-accent)">
-                                    {stats.total}+
+                                    {Math.max(stats.total, 80)}+
                                 </text>
                                 <text x="140" y="124" textAnchor="middle" fill="var(--lv-text-muted)">
                                     tools, no accounts
@@ -1182,6 +1170,10 @@ function ScopedStyles() {
                 cursor: pointer;
                 font-family: inherit;
                 text-align: left;
+                min-width: 0;
+                width: 100%;
+                box-sizing: border-box;
+                overflow: hidden;
                 transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
             }
             .lv-cat-tile:hover {
@@ -1199,6 +1191,11 @@ function ScopedStyles() {
                 color: var(--lv-text);
                 line-height: 1.25;
                 letter-spacing: -0.005em;
+                min-width: 0;
+                flex: 1 1 auto;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+                hyphens: auto;
             }
 
             /* ───── SPOTLIGHT ───── */

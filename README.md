@@ -12,9 +12,9 @@ A private, offline-first developer tools portal — **90 utilities** across **13
 ## Highlights
 
 - **90 tools** organised into 13 logical categories
-- **Stunning landing page** — animated hero, stats strip, category showcase with scroll effects (marketing styles live under `landing-*` in `globals.css`)
+- **Editorial landing page (rebrand 2026)** — tool-themed SVG hero (JSON tree + SHA-256 bars + regex bracket), 3-pillar value section, category grid, spotlight cards and animated marquee. Self-contained `lv-*` styles in `LandingMarketing.tsx` with `lv-light` / `lv-dark` modifier classes.
 - **Canonical URLs** — each tool opens at **`/<category-slug>/<tool-id>`** (e.g. `/formatters/json-formatter`). Legacy **`/tools/...`** hit a **308** redirect to that path; **`src/proxy.ts`** (Next.js 16 proxy, formerly middleware) rewrites the pretty URL to the existing **`/tools/*`** file routes.
-- **Workshop chrome** — post‑landing catalogue + **`AppShell`** + tool shells use **`src/app/workspace.css`** with **`--wb-*`** tokens and **`wb-*`** classes (stone / warm neutrals + **emerald / amber** accents), plus **`wb-tool-route`** from **`tools/layout.tsx`**. Landing marketing styles stay **`landing-*`** in **`globals.css`**.
+- **Workshop chrome (rebrand 2026)** — post‑landing catalogue + **`AppShell`** + tool shells use **`src/app/workspace.css`** with **`--wb-*`** tokens and **`wb-*`** classes (slate-cool neutrals + **cyan / indigo** accents matching the landing palette), plus **`wb-tool-route`** from **`tools/layout.tsx`**.
 - **Installable PWA** — works as an app on iOS, Android, Mac and Windows
 - **Mobile-first responsive** — every tool adapts to phone, tablet and desktop
 - **Header search** with autocomplete — jump to any tool in two keystrokes
