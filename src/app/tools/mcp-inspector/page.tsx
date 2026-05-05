@@ -99,7 +99,7 @@ function formatMs(ms: number): string {
     return `${(ms / 1000).toFixed(2)}s`;
 }
 
-async function mcpFetch(
+async function mcpFetchDirect(
     url: string,
     headers: Record<string, string>,
     body: unknown,
@@ -119,12 +119,6 @@ async function mcpFetch(
     } catch (err: any) {
         clearTimeout(timer);
         if (err?.name === "AbortError") throw new Error(`Request timed out after ${timeoutMs}ms`);
-        const msg = err?.message || String(err);
-        if (msg.toLowerCase().includes("failed to fetch") || msg.toLowerCase().includes("cors")) {
-            throw new Error(
-                `${msg}\n\nCORS tip: start your MCP server with CORS headers enabled, e.g.:\n  Access-Control-Allow-Origin: *\n  Access-Control-Allow-Headers: Content-Type`,
-            );
-        }
         throw err;
     }
     clearTimeout(timer);
@@ -136,6 +130,66 @@ async function mcpFetch(
         return JSON.parse(text);
     } catch {
         throw new Error(`Non-JSON response: ${text.slice(0, 200)}`);
+    }
+}
+
+async function mcpFetchViaProxy(
+    url: string,
+    headers: Record<string, string>,
+    body: unknown,
+    timeoutMs: number,
+): Promise<unknown> {
+    const res = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            url,
+            method: "POST",
+            headers,
+            body: JSON.stringify(body),
+            bodyIsBase64: false,
+            timeout: timeoutMs,
+            followRedirects: true,
+        }),
+    });
+    const proxy = await res.json();
+    if (proxy.error) throw new Error(proxy.error);
+    if (proxy.status < 200 || proxy.status >= 300) {
+        throw new Error(`HTTP ${proxy.status}: ${proxy.statusText || proxy.body?.slice?.(0, 120)}`);
+    }
+    try {
+        return JSON.parse(proxy.body);
+    } catch {
+        throw new Error(`Non-JSON response from server: ${proxy.body?.slice?.(0, 200)}`);
+    }
+}
+
+function isLikelyCorsError(err: unknown): boolean {
+    const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+    return msg.includes("failed to fetch") || msg.includes("cors") || msg.includes("networkerror");
+}
+
+/**
+ * Try a direct browser fetch first. If it fails with what looks like a CORS or
+ * network error, automatically retry through /api/proxy so the inspector keeps
+ * working against MCP servers that don't ship CORS headers. Returns whether the
+ * proxy was used so the caller can surface a notice/badge.
+ */
+async function mcpFetch(
+    url: string,
+    headers: Record<string, string>,
+    body: unknown,
+    timeoutMs: number,
+): Promise<{ data: unknown; usedProxy: boolean }> {
+    try {
+        const data = await mcpFetchDirect(url, headers, body, timeoutMs);
+        return { data, usedProxy: false };
+    } catch (err) {
+        if (isLikelyCorsError(err)) {
+            const data = await mcpFetchViaProxy(url, headers, body, timeoutMs);
+            return { data, usedProxy: true };
+        }
+        throw err;
     }
 }
 
@@ -167,6 +221,7 @@ export default function McpInspectorPage() {
         } catch { return []; }
     });
     const [activeTab, setActiveTab] = useState("connect");
+    const [proxyInUse, setProxyInUse] = useState(false);
 
     const patchConfig = (patch: Partial<McpConfig>) => {
         setConfig(prev => {
@@ -214,29 +269,34 @@ export default function McpInspectorPage() {
                 ? config.serverUrl.replace(/\/sse$/, "")
                 : config.serverUrl.replace(/\/$/, "");
 
+            let viaProxy = false;
             if (config.transport === "sse") {
                 // initialize handshake
-                await mcpFetch(`${base}/`, headers,
+                const init = await mcpFetch(`${base}/`, headers,
                     { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "mydevtools-mcp-inspector", version: "1.3" } } },
                     config.requestTimeoutMs,
                 );
+                viaProxy = viaProxy || init.usedProxy;
                 // tools/list
-                const listJson = await mcpFetch(`${base}/`, headers,
+                const list = await mcpFetch(`${base}/`, headers,
                     { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
                     config.requestTimeoutMs,
-                ) as any;
-                setTools(listJson?.result?.tools || []);
+                );
+                viaProxy = viaProxy || list.usedProxy;
+                setTools((list.data as any)?.result?.tools || []);
             } else {
-                const listJson = await mcpFetch(`${base}/`, headers,
+                const list = await mcpFetch(`${base}/`, headers,
                     { jsonrpc: "2.0", id: 1, method: "tools/list", params: {} },
                     config.requestTimeoutMs,
-                ) as any;
-                setTools(listJson?.result?.tools || []);
+                );
+                viaProxy = viaProxy || list.usedProxy;
+                setTools((list.data as any)?.result?.tools || []);
             }
 
+            setProxyInUse(viaProxy);
             setConnected(true);
             setActiveTab("tools");
-            message.success("Connected — tool list loaded");
+            message.success(viaProxy ? "Connected via server CORS fallback — tool list loaded" : "Connected — tool list loaded");
         } catch (err: any) {
             setLastError(err.message);
             message.error("Connection failed: " + err.message);
@@ -249,6 +309,7 @@ export default function McpInspectorPage() {
         setConnected(false);
         setTools([]);
         setSelectedTool(null);
+        setProxyInUse(false);
         message.info("Disconnected");
     };
 
@@ -280,12 +341,14 @@ export default function McpInspectorPage() {
                 : config.serverUrl.replace(/\/$/, "");
 
             const effectiveTimeout = Math.min(config.requestTimeoutMs, config.maxTotalTimeoutMs);
-            const json = await mcpFetch(
+            const result = await mcpFetch(
                 `${base}/`,
                 headers,
                 { jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name: selectedTool.name, arguments: parsedArgs } },
                 effectiveTimeout,
-            ) as any;
+            );
+            if (result.usedProxy) setProxyInUse(true);
+            const json = result.data as any;
 
             const durationMs = Date.now() - start;
 
@@ -370,7 +433,7 @@ export default function McpInspectorPage() {
                 tips: [
                     "SSE transport: point at the /sse endpoint of an MCP server running locally",
                     "HTTP transport: use the streamable-HTTP endpoint (typically /mcp)",
-                    "If you see a CORS error, start your MCP server with Access-Control-Allow-Origin: * headers",
+                    "Add Access-Control-Allow-Origin: * to your MCP server to keep traffic 100% in the browser",
                     "Custom headers are useful for bearer tokens or API keys required by the server",
                     "Reset Timeout on Progress: keeps long-running tools alive as long as they stream progress events",
                 ],
@@ -380,6 +443,22 @@ export default function McpInspectorPage() {
                     "Validating input/output schemas match what your agent expects",
                     "Stress-testing timeout and progress-reset behaviour",
                 ],
+                serverNotice: {
+                    route: "proxy",
+                    purpose: "MCP traffic is sent directly from your browser to the MCP server. If the browser blocks the request with a CORS error, the inspector automatically retries the request through this app's server-side proxy so the inspector keeps working. A 'via server' badge appears in the tab bar whenever the proxy fallback was used.",
+                    sentFields: [
+                        "MCP server URL",
+                        "Custom headers you configured (including any auth tokens)",
+                        "JSON-RPC payload (initialize / tools/list / tools/call with arguments)",
+                    ],
+                    extra: (
+                        <Text style={{ fontSize: 12 }}>
+                            <Text strong>To stay 100% client-side:</Text> start your MCP server with{" "}
+                            <Text code>Access-Control-Allow-Origin: *</Text> and{" "}
+                            <Text code>Access-Control-Allow-Headers: Content-Type</Text>. Direct browser fetch will then succeed and the &quot;via server&quot; badge will not appear.
+                        </Text>
+                    ),
+                },
             }}
         >
             <Tabs
@@ -390,6 +469,11 @@ export default function McpInspectorPage() {
                         {connected
                             ? <Badge status="success" text={<Text style={{ fontSize: 12, color: "#22c55e" }}>Connected</Text>} />
                             : <Badge status="default" text={<Text type="secondary" style={{ fontSize: 12 }}>Disconnected</Text>} />}
+                        {connected && proxyInUse && (
+                            <Tooltip title="Browser was blocked by CORS, so this connection is being proxied through this app's server. See Learn More for details on what is sent.">
+                                <Tag color="warning" style={{ fontSize: 11, margin: 0 }}>via server</Tag>
+                            </Tooltip>
+                        )}
                         {connected && (
                             <Button size="small" danger icon={<CloseCircleOutlined />} onClick={handleDisconnect}>
                                 Disconnect

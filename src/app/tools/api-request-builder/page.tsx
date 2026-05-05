@@ -746,7 +746,22 @@ Console.WriteLine(content);`;
                     "Debugging API authentication issues",
                     "Generating API client code for different languages",
                     "Documenting API workflows with saved requests"
-                ]
+                ],
+                serverNotice: {
+                    route: "proxy",
+                    purpose: "Every request is forwarded through a server-side proxy. This is required to bypass browser CORS restrictions and avoid TLS validation errors when testing arbitrary HTTP APIs — features that are simply not possible from a pure browser fetch.",
+                    sentFields: [
+                        "Target URL",
+                        "HTTP method, headers, query string, and body (exactly as you composed them)",
+                        "Auth credentials you entered (Bearer/Basic/API key) — these are part of the request and reach the target server",
+                    ],
+                    extra: (
+                        <Text style={{ fontSize: 12 }}>
+                            Tests, code generation, response parsing, and history all run 100% in your browser.
+                            Only the outbound network call itself transits the proxy.
+                        </Text>
+                    ),
+                },
             }}
         >
             <Row gutter={[16, 16]}>

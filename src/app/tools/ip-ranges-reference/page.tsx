@@ -175,6 +175,35 @@ const IPV4_RANGES: IPRange[] = [
         usableAddresses: "131,072",
         details: "Reserved for network benchmark testing. Used by network equipment vendors."
     },
+    // IETF Protocol Assignments
+    {
+        range: "192.0.0.0 - 192.0.0.255",
+        cidr: "192.0.0.0/24",
+        description: "IETF Protocol Assignments",
+        category: "Reserved",
+        rfc: "RFC 6890",
+        usableAddresses: "256",
+        details: "Allocated for IETF protocol assignments. 192.0.0.170 / 192.0.0.171 are NAT64/DNS64 well-known prefixes."
+    },
+    // 6to4 Anycast Relay (deprecated)
+    {
+        range: "192.88.99.0 - 192.88.99.255",
+        cidr: "192.88.99.0/24",
+        description: "6to4 Relay Anycast (deprecated)",
+        category: "Special",
+        rfc: "RFC 7526",
+        usableAddresses: "256",
+        details: "Was used for 6to4 relay anycast. Formally deprecated in 2015; should not be used in new deployments."
+    },
+    // AS112
+    {
+        range: "192.31.196.0 - 192.31.196.255",
+        cidr: "192.31.196.0/24",
+        description: "AS112-v4",
+        category: "Special",
+        rfc: "RFC 7535",
+        details: "Anycast prefix used by the AS112 project to absorb DNS queries for private addresses."
+    },
 ];
 
 const IPV6_RANGES: IPRange[] = [
@@ -258,6 +287,40 @@ const IPV6_RANGES: IPRange[] = [
         category: "Special",
         rfc: "RFC 4380",
         details: "Teredo addresses for IPv6 tunneling through NAT. Used by Windows."
+    },
+    // NAT64 well-known prefix
+    {
+        range: "64:ff9b::/96",
+        cidr: "64:ff9b::/96",
+        description: "IPv4/IPv6 Translation (NAT64)",
+        category: "Special",
+        rfc: "RFC 6052",
+        details: "Well-known prefix for IPv4-embedded IPv6 addresses used by NAT64 / DNS64 translators."
+    },
+    {
+        range: "64:ff9b:1::/48",
+        cidr: "64:ff9b:1::/48",
+        description: "Local-Use IPv4/IPv6 Translation",
+        category: "Special",
+        rfc: "RFC 8215",
+        details: "Local-use prefix for IPv4/IPv6 translation when the well-known prefix is unsuitable."
+    },
+    {
+        range: "::ffff:0:0/96",
+        cidr: "::ffff:0:0/96",
+        description: "IPv4-Mapped IPv6 Address",
+        category: "Special",
+        rfc: "RFC 4291",
+        details: "Used to represent IPv4 addresses inside IPv6 (::ffff:192.0.2.1). Common in dual-stack sockets."
+    },
+    // Discard prefix
+    {
+        range: "100::/64",
+        cidr: "100::/64",
+        description: "Discard-Only Address Block",
+        category: "Reserved",
+        rfc: "RFC 6666",
+        details: "Used as a sink for traffic that should be silently discarded. Routers blackhole this prefix."
     },
 ];
 
@@ -562,6 +625,24 @@ export default function IPRangesReferencePage() {
                             </Card>
                         </Col>
                     </Row>
+                </Col>
+
+                {/* Live cloud provider ranges */}
+                <Col xs={24}>
+                    <Card size="small" title={<><GlobalOutlined /> Live Cloud Provider Ranges</>}>
+                        <Paragraph style={{ fontSize: 13, marginBottom: 8 }}>
+                            Cloud providers publish their public IP ranges as machine-readable feeds that change frequently
+                            (often weekly). These are not embedded in this tool — fetch them live from the source for accurate, up-to-date CIDRs:
+                        </Paragraph>
+                        <Space orientation="vertical" size={4} style={{ width: "100%" }}>
+                            <div><Text strong>AWS:</Text>{" "}<a href="https://ip-ranges.amazonaws.com/ip-ranges.json" target="_blank" rel="noopener noreferrer">ip-ranges.amazonaws.com/ip-ranges.json</a></div>
+                            <div><Text strong>Google Cloud:</Text>{" "}<a href="https://www.gstatic.com/ipranges/cloud.json" target="_blank" rel="noopener noreferrer">gstatic.com/ipranges/cloud.json</a></div>
+                            <div><Text strong>Azure:</Text>{" "}<a href="https://www.microsoft.com/download/details.aspx?id=56519" target="_blank" rel="noopener noreferrer">microsoft.com/download (ServiceTags JSON)</a></div>
+                            <div><Text strong>Cloudflare:</Text>{" "}<a href="https://www.cloudflare.com/ips-v4" target="_blank" rel="noopener noreferrer">cloudflare.com/ips-v4</a> · <a href="https://www.cloudflare.com/ips-v6" target="_blank" rel="noopener noreferrer">/ips-v6</a></div>
+                            <div><Text strong>GitHub:</Text>{" "}<a href="https://api.github.com/meta" target="_blank" rel="noopener noreferrer">api.github.com/meta</a></div>
+                            <div><Text strong>Fastly:</Text>{" "}<a href="https://api.fastly.com/public-ip-list" target="_blank" rel="noopener noreferrer">api.fastly.com/public-ip-list</a></div>
+                        </Space>
+                    </Card>
                 </Col>
             </Row>
         </ToolPageLayout>
