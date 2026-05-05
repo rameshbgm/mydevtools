@@ -62,6 +62,8 @@ export const TOOL_ID_TO_CATEGORY = {
   "url-parser": "API & Web Services",
   "wsdl-parser": "API & Web Services",
   "soap-client": "API & Web Services",
+  "mcp-inspector": "API & Web Services",
+  "a2a-inspector": "API & Web Services",
   "ip-address-tools": "Network",
   "subnet-calculator": "Network",
   "mac-address-tools": "Network",

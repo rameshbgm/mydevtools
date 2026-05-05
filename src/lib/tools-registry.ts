@@ -645,6 +645,24 @@ export const toolsRegistry: ToolDefinition[] = [
         tags: ["soap", "wsdl", "xml", "webservice", "test", "api"],
         color: "#fa541c",
     },
+    {
+        id: "mcp-inspector",
+        name: "MCP Inspector",
+        description: "Connect to any Model Context Protocol server, browse tools, and call them interactively over SSE or HTTP",
+        icon: ThunderboltOutlined,
+        category: "API & Web Services",
+        tags: ["mcp", "model-context-protocol", "ai", "tools", "llm", "agent", "sse", "http", "stdio"],
+        color: "#6366f1",
+    },
+    {
+        id: "a2a-inspector",
+        name: "A2A Inspector",
+        description: "Test Agent-to-Agent protocol agents: view the agent card, validate spec compliance, chat, and inspect raw JSON-RPC 2.0 messages",
+        icon: RobotOutlined,
+        category: "API & Web Services",
+        tags: ["a2a", "agent", "protocol", "jsonrpc", "ai", "multi-agent", "chat", "inspect"],
+        color: "#0891b2",
+    },
 
     // ===== Network =====
     {

@@ -16,7 +16,7 @@
  * Public-facing version number shown in the topbar. Bump on a meaningful
  * shipping milestone — does NOT need to match individual entries below.
  */
-export const APP_VERSION = "1.2";
+export const APP_VERSION = "1.3";
 
 export type ReleaseKind = "feature" | "fix" | "security" | "ui" | "perf";
 
@@ -54,6 +54,45 @@ export interface ReleaseNote {
  * V1.0 — initial public release of the toolkit (80+ tools).
  */
 const ENTRIES: ReleaseNote[] = [
+    {
+        date: "2026-05-06",
+        version: "1.3",
+        kind: "feature",
+        title: "V1.3 — MCP Inspector, A2A Protocol Inspector, WSDL/XSD import",
+        summary:
+            "Protocol tooling for the AI era: a full Model Context Protocol inspector, an Agent-to-Agent protocol testing workbench, and enhanced WSDL support with external XSD import. Additional bug fixes shipping alongside these features.",
+        sections: [
+            {
+                label: "MCP Inspector (new tool)",
+                bullets: [
+                    "Connect to any MCP server over **stdio**, **SSE**, or **HTTP** transport from the browser.",
+                    "Configure **command + arguments + server entry** for stdio servers; URL-based config for SSE/HTTP.",
+                    "Set **custom headers**, **request timeout**, **maximum total timeout**, and optionally **reset timeout on progress** for long-running tool calls.",
+                    "**Inspector proxy address** and **proxy session token** fields for routing through the MCP inspector proxy.",
+                    "**Task TTL** and **history persistence** — per-session tool-call history with memory section integration so prompts survive a page reload.",
+                    "Full tool listing, schema display, and interactive **call panel** — fill arguments, fire the call, inspect the raw result.",
+                ],
+            },
+            {
+                label: "A2A Protocol Inspector (new tool)",
+                bullets: [
+                    "Connect to any local or remote **Agent2Agent** agent by URL and inspect its **Agent Card** (name, description, capabilities, skills).",
+                    "**Spec compliance checker** — validates the card against the A2A spec and surfaces missing or malformed fields.",
+                    "**Live chat interface** — send tasks as natural-language messages and stream responses directly in the browser.",
+                    "**Debug console** — shows every raw **JSON-RPC 2.0** request and response with syntax highlighting and copy-to-clipboard.",
+                    "Persistent connection history and per-session message log; state kept in the memory section.",
+                ],
+            },
+            {
+                label: "WSDL Parser — external XSD support",
+                bullets: [
+                    "New **Import XSD** tab: paste an external XSD document or load one by URL to resolve `<xsd:import>` / `<xsd:include>` references that point outside the WSDL.",
+                    "Multiple XSD documents can be added to the import set; the parser resolves types across all of them before rendering the schema tree.",
+                    "Inline **paste XSD** textarea alongside the WSDL editor so schemas with split-out type files work without leaving the tool.",
+                ],
+            },
+        ],
+    },
     {
         date: "2026-05-04",
         version: "1.2",
