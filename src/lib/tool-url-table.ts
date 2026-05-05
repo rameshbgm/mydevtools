@@ -87,6 +87,8 @@ export const TOOL_ID_TO_CATEGORY = {
   "todo-list": "Text & Utilities",
   "timer": "Text & Utilities",
   "stopwatch": "Text & Utilities",
+  "sticky-notes": "Text & Utilities",
+  "rich-text-editor": "Text & Utilities",
   "rag-search": "AI Alpha Tools",
   "text-summarizer": "AI Alpha Tools",
   "code-explainer": "AI Alpha Tools",

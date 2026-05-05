@@ -53,6 +53,8 @@ import {
     AuditOutlined,
     ToolOutlined,
     DeploymentUnitOutlined,
+    PushpinOutlined,
+    FormOutlined,
 } from "@ant-design/icons";
 import React from "react";
 
@@ -875,6 +877,24 @@ export const toolsRegistry: ToolDefinition[] = [
         category: "Text & Utilities",
         tags: ["stopwatch", "timer", "lap", "split", "timing", "benchmark", "interval"],
         color: "#6366f1",
+    },
+    {
+        id: "sticky-notes",
+        name: "Sticky Notes",
+        description: "Create, organize, and persist colorful sticky notes in your browser — pin, color-code, search, and delete with full localStorage memory",
+        icon: PushpinOutlined,
+        category: "Text & Utilities",
+        tags: ["notes", "sticky", "memo", "reminder", "pin", "organize", "productivity", "offline"],
+        color: "#f59e0b",
+    },
+    {
+        id: "rich-text-editor",
+        name: "Rich Text Editor",
+        description: "WYSIWYG document editor with full formatting (bold, headings, lists, links, colors), multiple documents, local save, source view, and export",
+        icon: FormOutlined,
+        category: "Text & Utilities",
+        tags: ["editor", "wysiwyg", "rich text", "notepad", "document", "format", "bold", "italic", "word processor"],
+        color: "#0891b2",
     },
 
     // ===== AI Alpha Tools =====

@@ -61,6 +61,24 @@ const STORAGE_CATALOGUE: StorageEntry[] = [
         icon: "✅",
         color: "#f59e0b",
     },
+    {
+        id: "sticky-notes",
+        label: "Sticky Notes",
+        description: "Your saved sticky notes — titles, content, colors, and pin state.",
+        keys: ["wb-sticky-notes-v1"],
+        type: "tool-data",
+        icon: "📌",
+        color: "#f59e0b",
+    },
+    {
+        id: "rich-text-editor",
+        label: "Rich Text Editor",
+        description: "Your saved documents — titles, formatted content (HTML), and timestamps.",
+        keys: ["wb-rich-text-docs-v1"],
+        type: "tool-data",
+        icon: "📝",
+        color: "#0891b2",
+    },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
