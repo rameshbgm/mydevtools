@@ -216,7 +216,7 @@ export default function ToolPageLayout({
                     <Collapse
                         ghost
                         className="wb-tool-learn-collapse"
-                        defaultActiveKey={learnMore.serverNotice ? ["learn-more"] : undefined}
+                        defaultActiveKey={undefined}
                         items={[
                             {
                                 key: "learn-more",

@@ -30,6 +30,8 @@ import {
     ThunderboltOutlined,
     SendOutlined,
     BulbOutlined,
+    SyncOutlined,
+    QuestionCircleOutlined,
     FileSearchOutlined,
     TranslationOutlined,
     SafetyOutlined,
@@ -83,23 +85,24 @@ export type ToolCategory =
     | "Network"
     | "Generators"
     | "Text & Utilities"
-    | "AI Alpha Tools"
+    | "Fun & Games"
+    | "Artificial Intelligence"
     | "Reference";
 
-// Display order: AI Alpha Tools and Reference always at bottom (in that order)
 export const CATEGORY_ORDER: ToolCategory[] = [
-    "Formatters",
-    "Validators",
+    "Artificial Intelligence",
     "Diff & Compare",
-    "Data Converters",
-    "Encoding & Decoding",
-    "Cryptography",
-    "Certificates & Keys",
     "API & Web Services",
-    "Network",
+    "Encoding & Decoding",
+    "Certificates & Keys",
+    "Cryptography",
+    "Data Converters",
+    "Formatters",
+    "Fun & Games",
     "Generators",
+    "Network",
     "Text & Utilities",
-    "AI Alpha Tools",
+    "Validators",
     "Reference",
 ];
 
@@ -115,7 +118,8 @@ export const CATEGORY_COLORS: Record<ToolCategory, string> = {
     Network: "#1890ff",
     Generators: "#597ef7",
     "Text & Utilities": "#52c41a",
-    "AI Alpha Tools": "#9254de",
+    "Fun & Games": "#f97316",
+    "Artificial Intelligence": "#9254de",
     Reference: "#fa8c16",
 };
 
@@ -131,7 +135,8 @@ export const CATEGORY_ICONS: Record<ToolCategory, IconComponent> = {
     Network: WifiOutlined,
     Generators: BuildOutlined,
     "Text & Utilities": ToolOutlined,
-    "AI Alpha Tools": RobotOutlined,
+    "Fun & Games": ThunderboltOutlined,
+    "Artificial Intelligence": RobotOutlined,
     Reference: BookOutlined,
 };
 
@@ -147,12 +152,13 @@ export const CATEGORY_DESCRIPTIONS: Record<ToolCategory, string> = {
     Network: "IP, subnet, MAC address tooling and lookups",
     Generators: "Create UUIDs, passwords, code stubs, QR codes, and more",
     "Text & Utilities": "Text manipulation, time, color, number bases, and productivity",
-    "AI Alpha Tools": "AI-powered tools: early access, may change without notice",
+    "Fun & Games": "Coin toss, dice rolls, timers, and other playful utilities",
+    "Artificial Intelligence": "AI-powered protocol inspectors: MCP and Agent-to-Agent",
     Reference: "Lookup guides for HTTP codes, MIME types, ports, and RFCs",
 };
 
 // Marks a category as Alpha quality (UI surfaces a badge)
-export const ALPHA_CATEGORIES: ToolCategory[] = ["AI Alpha Tools"];
+export const ALPHA_CATEGORIES: ToolCategory[] = [];
 
 export const toolsRegistry: ToolDefinition[] = [
     // ===== Formatters =====
@@ -647,24 +653,6 @@ export const toolsRegistry: ToolDefinition[] = [
         tags: ["soap", "wsdl", "xml", "webservice", "test", "api"],
         color: "#fa541c",
     },
-    {
-        id: "mcp-inspector",
-        name: "MCP Inspector",
-        description: "Connect to any Model Context Protocol server, browse tools, and call them interactively over SSE or HTTP",
-        icon: ThunderboltOutlined,
-        category: "API & Web Services",
-        tags: ["mcp", "model-context-protocol", "ai", "tools", "llm", "agent", "sse", "http", "stdio"],
-        color: "#6366f1",
-    },
-    {
-        id: "a2a-inspector",
-        name: "A2A Inspector",
-        description: "Test Agent-to-Agent protocol agents: view the agent card, validate spec compliance, chat, and inspect raw JSON-RPC 2.0 messages",
-        icon: RobotOutlined,
-        category: "API & Web Services",
-        tags: ["a2a", "agent", "protocol", "jsonrpc", "ai", "multi-agent", "chat", "inspect"],
-        color: "#0891b2",
-    },
 
     // ===== Network =====
     {
@@ -861,24 +849,6 @@ export const toolsRegistry: ToolDefinition[] = [
         color: "#52c41a",
     },
     {
-        id: "timer",
-        name: "Timer",
-        description: "Countdown timer with presets, custom duration, audio chime, and Pomodoro support — runs entirely in your browser",
-        icon: ClockCircleOutlined,
-        category: "Text & Utilities",
-        tags: ["timer", "countdown", "pomodoro", "alarm", "focus", "productivity"],
-        color: "#6366f1",
-    },
-    {
-        id: "stopwatch",
-        name: "Stopwatch",
-        description: "High-precision stopwatch with lap splits, best/worst lap highlighting, and millisecond accuracy — runs entirely in your browser",
-        icon: FieldTimeOutlined,
-        category: "Text & Utilities",
-        tags: ["stopwatch", "timer", "lap", "split", "timing", "benchmark", "interval"],
-        color: "#6366f1",
-    },
-    {
         id: "sticky-notes",
         name: "Sticky Notes",
         description: "Create, organize, and persist colorful sticky notes in your browser — pin, color-code, search, and delete with full localStorage memory",
@@ -897,33 +867,24 @@ export const toolsRegistry: ToolDefinition[] = [
         color: "#0891b2",
     },
 
-    // ===== AI Alpha Tools =====
+    // ===== Artificial Intelligence =====
     {
-        id: "rag-search",
-        name: "RAG Document Q&A",
-        description: "Upload documents and ask questions using AI-powered retrieval augmented generation",
-        icon: DatabaseOutlined,
-        category: "AI Alpha Tools",
-        tags: ["rag", "ai", "document", "search", "llm"],
-        color: "#9254de",
+        id: "mcp-inspector",
+        name: "MCP Inspector",
+        description: "Connect to any Model Context Protocol server, browse tools, and call them interactively over SSE or HTTP",
+        icon: ThunderboltOutlined,
+        category: "Artificial Intelligence",
+        tags: ["mcp", "model-context-protocol", "ai", "tools", "llm", "agent", "sse", "http", "stdio"],
+        color: "#6366f1",
     },
     {
-        id: "text-summarizer",
-        name: "Text Summarizer",
-        description: "Summarize long text into key points using AI-powered extraction",
-        icon: BulbOutlined,
-        category: "AI Alpha Tools",
-        tags: ["ai", "summarize", "text", "extract", "tldr"],
-        color: "#9254de",
-    },
-    {
-        id: "code-explainer",
-        name: "Code Explainer",
-        description: "Get AI-powered explanations for code snippets in any language",
-        icon: CodeOutlined,
-        category: "AI Alpha Tools",
-        tags: ["ai", "code", "explain", "learn", "understand"],
-        color: "#9254de",
+        id: "a2a-inspector",
+        name: "A2A Inspector",
+        description: "Test Agent-to-Agent protocol agents: view the agent card, validate spec compliance, chat, and inspect raw JSON-RPC 2.0 messages",
+        icon: RobotOutlined,
+        category: "Artificial Intelligence",
+        tags: ["a2a", "agent", "protocol", "jsonrpc", "ai", "multi-agent", "chat", "inspect"],
+        color: "#0891b2",
     },
 
     // ===== Reference =====
@@ -971,6 +932,70 @@ export const toolsRegistry: ToolDefinition[] = [
         category: "Reference",
         tags: ["rfc", "standards", "jwt", "jwe", "jws", "oauth", "http", "tls", "ssl", "security", "protocol", "ietf", "specification"],
         color: "#722ed1",
+    },
+    // ===== Fun & Games =====
+    {
+        id: "coin-toss",
+        name: "Coin Toss",
+        description: "Flip a fair virtual coin with 3D animation — heads or tails with flip statistics",
+        icon: SwapOutlined,
+        category: "Fun & Games",
+        tags: ["coin", "flip", "random", "heads", "tails", "chance", "probability", "fun"],
+        color: "#f59e0b",
+    },
+    {
+        id: "dice-roll",
+        name: "Dice Roll",
+        description: "Roll polyhedral dice (d4–d20) with advantage/disadvantage mode for TTRPGs and probability experiments",
+        icon: ThunderboltOutlined,
+        category: "Fun & Games",
+        tags: ["dice", "roll", "d6", "d20", "random", "rpg", "ttrpg", "dnd", "probability", "fun"],
+        color: "#8b5cf6",
+    },
+    {
+        id: "timer",
+        name: "Timer",
+        description: "Countdown timer with presets, custom duration, audio chime, and Pomodoro support — runs entirely in your browser",
+        icon: ClockCircleOutlined,
+        category: "Fun & Games",
+        tags: ["timer", "countdown", "pomodoro", "alarm", "focus", "productivity"],
+        color: "#6366f1",
+    },
+    {
+        id: "stopwatch",
+        name: "Stopwatch",
+        description: "High-precision stopwatch with lap splits, best/worst lap highlighting, and millisecond accuracy — runs entirely in your browser",
+        icon: FieldTimeOutlined,
+        category: "Fun & Games",
+        tags: ["stopwatch", "timer", "lap", "split", "timing", "benchmark", "interval"],
+        color: "#6366f1",
+    },
+    {
+        id: "spin-wheel",
+        name: "Spin the Wheel",
+        description: "Animated prize wheel — add up to 12 custom options and spin to pick a random winner",
+        icon: SyncOutlined,
+        category: "Fun & Games",
+        tags: ["spin", "wheel", "random", "decision", "picker", "fortune", "fun", "game", "raffle"],
+        color: "#f97316",
+    },
+    {
+        id: "magic-8ball",
+        name: "Magic 8-Ball",
+        description: "Ask a yes/no question and let the classic Magic 8-Ball reveal your fate with all 20 original responses",
+        icon: QuestionCircleOutlined,
+        category: "Fun & Games",
+        tags: ["magic", "8ball", "fortune", "decision", "random", "fun", "oracle", "fate"],
+        color: "#6366f1",
+    },
+    {
+        id: "typing-test",
+        name: "Typing Speed Test",
+        description: "Measure your WPM with real-time character highlighting, accuracy tracking, and timed test modes",
+        icon: FontSizeOutlined,
+        category: "Fun & Games",
+        tags: ["typing", "wpm", "speed", "accuracy", "keyboard", "practice", "benchmark"],
+        color: "#06b6d4",
     },
 ];
 

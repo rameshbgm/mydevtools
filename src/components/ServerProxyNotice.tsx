@@ -43,7 +43,7 @@ export default function ServerProxyNotice({ route, purpose, sentFields, extra }:
             showIcon
             icon={<CloudServerOutlined />}
             style={{ marginBottom: 16 }}
-            message={
+            title={
                 <Text strong style={{ fontSize: 13 }}>
                     This action sends data to the server
                 </Text>

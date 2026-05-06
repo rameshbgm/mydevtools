@@ -1092,7 +1092,7 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
         ],
     },
 
-    // ===== AI Alpha Tools =====
+    // ===== Retired AI tools (pages kept for SEO, not in registry) =====
     "rag-search": {
         title: "RAG Document Q&A — Ask Questions on Your Docs (AI Alpha)",
         description:

@@ -54,6 +54,7 @@ import {
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import SslConfigSection, { DEFAULT_SSL_CONFIG, buildSslProxyFields, type SslConfig } from "@/components/SslConfigSection";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -261,6 +262,38 @@ export default function ApiRequestBuilderPage() {
     const [loading, setLoading] = useState(false);
     const [responseTime, setResponseTime] = useState<number | null>(null);
     const [responseSize, setResponseSize] = useState<number | null>(null);
+
+    // Header JSON/Form mode
+    const [headerMode, setHeaderMode] = useState<"form" | "json">("form");
+    const [headerJson, setHeaderJson] = useState("{}");
+
+    // SSL/TLS configuration (proxied requests)
+    const [sslConfig, setSslConfig] = useState<SslConfig>(DEFAULT_SSL_CONFIG);
+
+    const headersToJson = (hdrs: KeyValuePair[]): string => {
+        const obj: Record<string, string> = {};
+        hdrs.filter(h => h.enabled && h.key).forEach(h => { obj[h.key] = h.value; });
+        return Object.keys(obj).length === 0 ? "{}" : JSON.stringify(obj, null, 2);
+    };
+
+    const jsonToHeaderPairs = (json: string): KeyValuePair[] | null => {
+        try {
+            const obj = JSON.parse(json);
+            if (typeof obj !== "object" || obj === null || Array.isArray(obj)) return null;
+            return Object.entries(obj).map(([key, value]) => ({
+                id: generateId(), key, value: String(value), enabled: true,
+            }));
+        } catch { return null; }
+    };
+
+    const switchHeaderMode = (mode: "form" | "json") => {
+        if (mode === "json") setHeaderJson(headersToJson(headers));
+        else {
+            const parsed = jsonToHeaderPairs(headerJson);
+            if (parsed !== null) setHeaders(parsed);
+        }
+        setHeaderMode(mode);
+    };
 
     // UI state
     const [activeRequestTab, setActiveRequestTab] = useState("body");
@@ -514,6 +547,12 @@ export default function ApiRequestBuilderPage() {
                 bodyIsBase64,
                 timeout: settings.timeout,
                 followRedirects: settings.followRedirects,
+                // Settings tab "Validate SSL" mirrors the SSL tab's verify toggle.
+                // The SSL tab takes precedence (richer config — CA, mTLS, etc.).
+                ...buildSslProxyFields({
+                    ...sslConfig,
+                    sslVerify: sslConfig.sslVerify || settings.validateSSL,
+                }),
             };
 
             const proxyRes = await fetch("/api/proxy", {
@@ -903,31 +942,63 @@ Console.WriteLine(content);`;
                                     label: <><FormOutlined /> Headers ({headers.filter(h => h.enabled).length})</>,
                                     children: (
                                         <div>
-                                            {headers.map((h) => (
-                                                <Space key={h.id} style={{ width: "100%", marginBottom: 8 }} wrap>
-                                                    <Switch checked={h.enabled} onChange={(v) => updateItem(setHeaders, h.id, "enabled", v)} size="small" />
-                                                    <Select
-                                                        value={h.key || undefined}
-                                                        onChange={(v) => updateItem(setHeaders, h.id, "key", v)}
-                                                        style={{ width: 180 }}
-                                                        showSearch
-                                                        allowClear
-                                                        placeholder="Header name"
-                                                    >
-                                                        {COMMON_HEADERS.map((name) => (
-                                                            <Select.Option key={name} value={name}>{name}</Select.Option>
-                                                        ))}
-                                                    </Select>
-                                                    <Input
-                                                        value={h.value}
-                                                        onChange={(e) => updateItem(setHeaders, h.id, "value", e.target.value)}
-                                                        placeholder="Value"
-                                                        style={{ flex: 1, minWidth: 180 }}
+                                            <div style={{ marginBottom: 12 }}>
+                                                <Segmented
+                                                    size="small"
+                                                    value={headerMode}
+                                                    onChange={(v) => switchHeaderMode(v as "form" | "json")}
+                                                    options={[
+                                                        { label: "Form", value: "form" },
+                                                        { label: "JSON", value: "json" },
+                                                    ]}
+                                                />
+                                            </div>
+                                            {headerMode === "form" ? (
+                                                <>
+                                                    {headers.map((h) => (
+                                                        <Space key={h.id} style={{ width: "100%", marginBottom: 8 }} wrap>
+                                                            <Switch checked={h.enabled} onChange={(v) => updateItem(setHeaders, h.id, "enabled", v)} size="small" />
+                                                            <Select
+                                                                value={h.key || undefined}
+                                                                onChange={(v) => updateItem(setHeaders, h.id, "key", v)}
+                                                                style={{ width: 180 }}
+                                                                showSearch
+                                                                allowClear
+                                                                placeholder="Header name"
+                                                            >
+                                                                {COMMON_HEADERS.map((name) => (
+                                                                    <Select.Option key={name} value={name}>{name}</Select.Option>
+                                                                ))}
+                                                            </Select>
+                                                            <Input
+                                                                value={h.value}
+                                                                onChange={(e) => updateItem(setHeaders, h.id, "value", e.target.value)}
+                                                                placeholder="Value"
+                                                                style={{ flex: 1, minWidth: 180 }}
+                                                            />
+                                                            <Button icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setHeaders, h.id)} />
+                                                        </Space>
+                                                    ))}
+                                                    <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setHeaders)}>Add Header</Button>
+                                                </>
+                                            ) : (
+                                                <div>
+                                                    <TextArea
+                                                        value={headerJson}
+                                                        onChange={e => {
+                                                            setHeaderJson(e.target.value);
+                                                            const parsed = jsonToHeaderPairs(e.target.value);
+                                                            if (parsed !== null) setHeaders(parsed);
+                                                        }}
+                                                        rows={7}
+                                                        style={{ fontFamily: "monospace", fontSize: 12 }}
+                                                        placeholder={'{\n  "Authorization": "Bearer xxx",\n  "Accept": "application/json"\n}'}
                                                     />
-                                                    <Button icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setHeaders, h.id)} />
-                                                </Space>
-                                            ))}
-                                            <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setHeaders)}>Add Header</Button>
+                                                    <Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: "block" }}>
+                                                        JSON object — auto-syncs to form when valid
+                                                    </Text>
+                                                </div>
+                                            )}
                                         </div>
                                     ),
                                 },
@@ -1082,6 +1153,13 @@ Console.WriteLine(content);`;
                                                 Follow Redirects
                                             </Checkbox>
                                         </Space>
+                                    ),
+                                },
+                                {
+                                    key: "ssl",
+                                    label: <><SafetyCertificateOutlined /> SSL</>,
+                                    children: (
+                                        <SslConfigSection value={sslConfig} onChange={setSslConfig} />
                                     ),
                                 },
                                 {
