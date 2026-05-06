@@ -55,21 +55,21 @@ export interface ReleaseNote {
  */
 const ENTRIES: ReleaseNote[] = [
     {
-        date: "2026-05-06",
+        date: "2026-05-07",
         version: "1.3",
         kind: "feature",
-        title: "V1.3 — MCP Inspector, A2A Protocol Inspector, WSDL/XSD import",
+        title: "V1.3 — AI protocol tooling, Fun & Games expansion, persistence & polish",
         summary:
-            "Protocol tooling for the AI era: a full Model Context Protocol inspector, an Agent-to-Agent protocol testing workbench, and enhanced WSDL support with external XSD import. Additional bug fixes shipping alongside these features.",
+            "Protocol tooling for the AI era (MCP Inspector, A2A Inspector), a full Fun & Games expansion (Spin the Wheel, Magic 8-Ball, Typing Speed Test), two new persistent-text utilities (Sticky Notes, Rich Text Editor), enhanced WSDL/XSD import, and a reliability sweep fixing antd v6 deprecations and SSR hydration mismatches across the toolkit.",
         sections: [
             {
                 label: "MCP Inspector (new tool)",
                 bullets: [
                     "Connect to any MCP server over **stdio**, **SSE**, or **HTTP** transport from the browser.",
-                    "Configure **command + arguments + server entry** for stdio servers; URL-based config for SSE/HTTP.",
+                    "Four connection modes: **direct** (auto-fallback), **direct-strict** (no fallback), **via-server-proxy** (CORS-safe), and **via-mcp-proxy** (tunnels through `npx @modelcontextprotocol/inspector`).",
                     "Set **custom headers**, **request timeout**, **maximum total timeout**, and optionally **reset timeout on progress** for long-running tool calls.",
-                    "**Inspector proxy address** and **proxy session token** fields for routing through the MCP inspector proxy.",
-                    "**Task TTL** and **history persistence** — per-session tool-call history with memory section integration so prompts survive a page reload.",
+                    "**OAuth 2.0** PKCE flow with configurable client ID and redirect URL; **SSL/TLS** toggle and inspector proxy token fields.",
+                    "**Diagnose** button runs a connectivity pre-flight and surfaces CORS, auth, and transport errors before you start calling tools.",
                     "Full tool listing, schema display, and interactive **call panel** — fill arguments, fire the call, inspect the raw result.",
                 ],
             },
@@ -77,10 +77,11 @@ const ENTRIES: ReleaseNote[] = [
                 label: "A2A Protocol Inspector (new tool)",
                 bullets: [
                     "Connect to any local or remote **Agent2Agent** agent by URL and inspect its **Agent Card** (name, description, capabilities, skills).",
+                    "Supports both current A2A spec (`message/send` + `message/stream`) and legacy protocol (`tasks/send` + `agent.json`).",
                     "**Spec compliance checker** — validates the card against the A2A spec and surfaces missing or malformed fields.",
-                    "**Live chat interface** — send tasks as natural-language messages and stream responses directly in the browser.",
+                    "**Streaming responses** — live-streamed via `fetch` + `ReadableStream`; task lifecycle, **contextId** tracking, and skill testing with structured input.",
                     "**Debug console** — shows every raw **JSON-RPC 2.0** request and response with syntax highlighting and copy-to-clipboard.",
-                    "Persistent connection history and per-session message log; state kept in the memory section.",
+                    "Persistent connection history and per-session message log.",
                 ],
             },
             {
@@ -88,7 +89,48 @@ const ENTRIES: ReleaseNote[] = [
                 bullets: [
                     "New **Import XSD** tab: paste an external XSD document or load one by URL to resolve `<xsd:import>` / `<xsd:include>` references that point outside the WSDL.",
                     "Multiple XSD documents can be added to the import set; the parser resolves types across all of them before rendering the schema tree.",
-                    "Inline **paste XSD** textarea alongside the WSDL editor so schemas with split-out type files work without leaving the tool.",
+                ],
+            },
+            {
+                label: "Spin the Wheel (new tool)",
+                bullets: [
+                    "Customisable SVG spinning wheel with 2–12 entries, full-rotation Framer Motion animation, and a winner spotlight on landing.",
+                    "Add, rename, or remove items freely; entries persist in **localStorage** across reloads.",
+                    "12-colour palette auto-assigned to segments; winner highlight with gold border and animated reveal card.",
+                ],
+            },
+            {
+                label: "Magic 8-Ball (new tool)",
+                bullets: [
+                    "All 20 classic responses (10 positive, 5 neutral, 5 negative — same distribution as the original toy).",
+                    "Animated SVG ball with radial-gradient 3D sheen and Framer Motion shake; fortune text rendered inside the triangle window.",
+                    "Per-session response stats with animated progress bars and question history tracking last 8 entries.",
+                ],
+            },
+            {
+                label: "Typing Speed Test (new tool)",
+                bullets: [
+                    "Measures **WPM** (words per minute) and accuracy in real time using the standard correctChars ÷ 5 ÷ minutes formula.",
+                    "Hidden textarea captures keystrokes; visible display highlights characters green (correct), red (error), purple (cursor), and faded (pending).",
+                    "Four durations (15 s / 30 s / 60 s / 2 min); timer starts on first keystroke, auto-finishes when the passage is fully typed.",
+                    "Results history shows last 5 tests with WPM, accuracy, and error count.",
+                ],
+            },
+            {
+                label: "Sticky Notes & Rich Text Editor (new tools)",
+                bullets: [
+                    "**Sticky Notes**: multi-board note management with colour themes and persistence in **localStorage**.",
+                    "**Rich Text Editor**: WYSIWYG editing with export options, also persisted locally so content survives page reloads.",
+                ],
+            },
+            {
+                label: "Antd v6 compatibility & SSR reliability",
+                bullets: [
+                    "Fixed `Space direction=\"vertical\"` → `orientation=\"vertical\"` deprecation (MCP Inspector, Coin Toss).",
+                    "Fixed `Statistic valueStyle` → `styles={{ content }}` and `Progress trailColor` → `railColor` deprecations (Coin Toss, Stopwatch).",
+                    "Resolved **SSR hydration mismatch** in Timer's `RingTicks` SVG: `Math.sin`/`Math.cos` coordinates rounded to 4 decimal places so Node.js and browser V8 emit identical strings.",
+                    "Added `mounted` guards on antd `InputNumber`/`Input`/`Select` fields in Timer and Dice Roll to prevent browser-extension (`data-sharkid`) attribute injection from causing React hydration warnings.",
+                    "Fixed MCP Inspector hydration: `localStorage` read moved from `useState` initialiser to `useEffect` so server and client see the same initial state.",
                 ],
             },
         ],

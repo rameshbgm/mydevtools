@@ -1,6 +1,6 @@
 # mydevtools
 
-A private, offline-first developer tools portal — **90 utilities** across **13 categories**, all in one place. Built with Next.js 16, React 19, Ant Design 6, Monaco Editor, and Framer Motion.
+A private, offline-first developer tools portal — **90 utilities** across **14 categories**, all in one place. Built with Next.js 16, React 19, Ant Design 6, Monaco Editor, and Framer Motion.
 
 > Stop context-switching between dozens of single-purpose websites. Format, diff, decode, generate, validate, parse, calculate — all from one workspace, in your browser.
 
@@ -11,7 +11,7 @@ A private, offline-first developer tools portal — **90 utilities** across **13
 
 ## Highlights
 
-- **90 tools** organised into 13 logical categories
+- **90 tools** organised into 14 logical categories
 - **Editorial landing page (rebrand 2026)** — tool-themed SVG hero (JSON tree + SHA-256 bars + regex bracket), 3-pillar value section, category grid, spotlight cards and animated marquee. Self-contained `lv-*` styles in `LandingMarketing.tsx` with `lv-light` / `lv-dark` modifier classes.
 - **Canonical URLs** — each tool opens at **`/<category-slug>/<tool-id>`** (e.g. `/formatters/json-formatter`). Legacy **`/tools/...`** hit a **308** redirect to that path; **`src/proxy.ts`** (Next.js 16 proxy, formerly middleware) rewrites the pretty URL to the existing **`/tools/*`** file routes.
 - **Workshop chrome (rebrand 2026)** — post‑landing catalogue + **`AppShell`** + tool shells use **`src/app/workspace.css`** with **`--wb-*`** tokens and **`wb-*`** classes (slate-cool neutrals + **cyan / indigo** accents matching the landing palette), plus **`wb-tool-route`** from **`tools/layout.tsx`**.
@@ -23,7 +23,7 @@ A private, offline-first developer tools portal — **90 utilities** across **13
 - **Navigation loader** with friendly messages and 60-second safety timeout
 - **Privacy-first**: 100% client-side, no analytics, no telemetry, zero third-party runtime requests
 - **Static export** — every page is pre-rendered to HTML; deploy to any static host
-- **Production build:** 93 static routes pre-rendered (90 tools + dashboard + release-notes + 404 + sitemap + robots)
+- **Production build:** 96 static routes pre-rendered (90 tools + dashboard + release-notes + 404 + sitemap + robots)
 - **MIT licensed** — fork it, modify it, ship it
 
 ---
@@ -38,15 +38,16 @@ A private, offline-first developer tools portal — **90 utilities** across **13
 | 4 | Data Converters | 7 | XML↔JSON, CSV→JSON, CSV→XML, YAML↔JSON, XSLT, JSON→CSV |
 | 5 | Encoding & Decoding | 7 | Base64, URL, HTML Entities, Unicode, Gzip, String Escape, Hex |
 | 6 | Cryptography | 8 | Hash, HMAC, JWT, JWS, JWE, JWK, BCrypt, AES |
-| 7 | Certificates & Keys | 12 | X.509 decoder/generator/CSR/converter, PEM, PKCS#12, JKS, SSH keys, SSL checker, fingerprints |
+| 7 | Certificates & Keys | 7 | X.509 inspector/decoder, SSL checker, CSR, PEM parser, PKCS#12, JKS, SSH keys |
 | 8 | API & Web Services | 6 | Swagger/OpenAPI viewer, REST request builder, JSONPath, URL parser, WSDL, SOAP client |
-| 9 | Network | 3 | IP tools, Subnet calculator, MAC address tools |
-| 10 | Generators | 9 | UUID, Password, Lorem Ipsum, QR code, Markdown table, Java POJO, JSON→TypeScript, Slug, Color Contrast Checker |
-| 11 | Text & Utilities | 11 | Case converter, Markdown, Timestamp, Color, Number base, Unix permissions, Cron parser, Todo list, **Timer**, **Stopwatch** |
-| 12 | **AI Alpha Tools** | 3 | RAG Doc Q&A, Text Summarizer, Code Explainer (early access — may change) |
-| 13 | Reference | 5 | HTTP status codes, MIME types, Port numbers, IP ranges, RFC standards |
+| 9 | Artificial Intelligence | 2 | MCP Inspector, A2A Protocol Inspector |
+| 10 | Network | 3 | IP tools, Subnet calculator, MAC address tools |
+| 11 | Generators | 9 | UUID, Password, Lorem Ipsum, QR code, Markdown table, Java POJO, JSON→TypeScript, Slug, Color Contrast Checker |
+| 12 | Fun & Games | 7 | Timer, Stopwatch, Coin Toss, Dice Roll, Spin the Wheel, Magic 8-Ball, Typing Speed Test |
+| 13 | Text & Utilities | 11 | Case converter, Markdown, Timestamp, Color picker, Cron parser, Todo list, Sticky Notes, Rich Text Editor |
+| 14 | Reference | 5 | HTTP status codes, MIME types, Port numbers, IP ranges, RFC standards |
 
-**New in v1.2:** Branded landing page with scroll animations · Timer (countdown + audio chime + Pomodoro) · Stopwatch (lap splits, best/worst highlighting)
+**New in v1.3:** MCP Inspector · A2A Protocol Inspector · Spin the Wheel · Magic 8-Ball · Typing Speed Test · Sticky Notes · Rich Text Editor · antd v6 compatibility sweep · SSR hydration fixes
 
 ---
 
