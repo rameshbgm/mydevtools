@@ -50,21 +50,47 @@ export const metadata: Metadata = {
     },
     description: SITE_DESCRIPTION,
     keywords: [
-        "developer tools",
-        "online developer tools",
+        // Core brand
+        "developer tools online",
         "free developer tools",
-        "json formatter",
-        "regex tester",
-        "base64 encoder",
-        "jwt decoder",
+        "online developer tools",
+        "browser developer tools",
+        "client-side developer tools",
+        "no signup developer tools",
+        "private developer tools",
+        // Formatters & validators
+        "json formatter online",
+        "xml formatter",
+        "sql formatter",
+        "json validator",
+        "regex tester online",
+        // Encoding & crypto
+        "base64 encoder decoder",
+        "jwt decoder online",
+        "hash generator",
+        "aes encrypt online",
+        "url encoder decoder",
+        // Generators & converters
         "uuid generator",
         "qr code generator",
-        "api tester",
-        "ssl checker",
-        "private developer tools",
-        "client-side developer tools",
-        "browser developer tools",
-        "no signup developer tools",
+        "json to csv converter",
+        "xml to json converter",
+        "yaml to json",
+        // Certificates & network
+        "ssl certificate checker",
+        "x509 certificate decoder",
+        "subnet calculator",
+        "ip address tools",
+        // API & AI tools
+        "api request builder",
+        "swagger ui viewer",
+        "mcp inspector",
+        "a2a inspector",
+        // Fun & productivity
+        "typing speed test",
+        "pomodoro timer online",
+        "spin the wheel online",
+        "sticky notes browser",
     ].join(", "),
     authors: [{ name: SITE_NAME }],
     creator: SITE_NAME,
@@ -148,6 +174,91 @@ const SITE_STRUCTURED_DATA = {
     },
 };
 
+const PLATFORM_STRUCTURED_DATA = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: SITE_NAME,
+    url: SITE_URL,
+    description: "90 free developer tools in one place — format, validate, convert, encode, decode, generate, inspect and test: all client-side, no signup, no tracking.",
+    applicationCategory: "DeveloperApplication",
+    applicationSubCategory: "Developer Productivity",
+    operatingSystem: "Any (Web Browser)",
+    browserRequirements: "Requires JavaScript. Works in all modern browsers.",
+    offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+    },
+    featureList: [
+        "JSON, XML, SQL, HTML, CSS, YAML formatters",
+        "JWT decoder and generator",
+        "Base64, URL, Unicode encoding/decoding",
+        "AES, HMAC, BCrypt cryptography tools",
+        "X.509 certificate inspector and decoder",
+        "MCP and A2A protocol inspectors",
+        "UUID, QR code, password generators",
+        "Regex tester with match highlighting",
+        "REST API request builder",
+        "Typing speed test (WPM)",
+        "Countdown timer and stopwatch",
+        "Spin the wheel random picker",
+    ],
+    author: {
+        "@type": "Organization",
+        name: SITE_NAME,
+        url: SITE_URL,
+    },
+    isAccessibleForFree: true,
+    inLanguage: "en",
+};
+
+const SITE_FAQ_STRUCTURED_DATA = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+        {
+            "@type": "Question",
+            name: "Is mydevtools really free?",
+            acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes, 100% free. No signup, no credit card, no premium tier. All 90 tools are permanently free.",
+            },
+        },
+        {
+            "@type": "Question",
+            name: "Does my data leave my browser?",
+            acceptedAnswer: {
+                "@type": "Answer",
+                text: "No. Every tool runs entirely in your browser using client-side JavaScript. No data is sent to any server. The app is statically exported and requires no server-side runtime.",
+            },
+        },
+        {
+            "@type": "Question",
+            name: "Can I use mydevtools offline?",
+            acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes. mydevtools is a Progressive Web App (PWA) and can be installed on any device. Once installed, a service worker caches the app so it works without an internet connection.",
+            },
+        },
+        {
+            "@type": "Question",
+            name: "How many tools does mydevtools have?",
+            acceptedAnswer: {
+                "@type": "Answer",
+                text: "mydevtools has 90 tools across 14 categories: Formatters, Validators, Diff & Compare, Data Converters, Encoding & Decoding, Cryptography, Certificates & Keys, API & Web Services, Artificial Intelligence, Network, Generators, Fun & Games, Text & Utilities, and Reference.",
+            },
+        },
+        {
+            "@type": "Question",
+            name: "Does mydevtools work on mobile?",
+            acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes. Every tool is designed to be mobile-responsive and adapts to phone, tablet and desktop screen sizes. You can also install it as a PWA on iOS and Android.",
+            },
+        },
+    ],
+};
+
 const ORG_STRUCTURED_DATA = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -194,6 +305,14 @@ export default function RootLayout({
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{ __html: JSON.stringify(ORG_STRUCTURED_DATA) }}
+                />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(PLATFORM_STRUCTURED_DATA) }}
+                />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(SITE_FAQ_STRUCTURED_DATA) }}
                 />
                 <script
                     type="application/ld+json"

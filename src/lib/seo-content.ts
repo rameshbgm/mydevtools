@@ -367,6 +367,13 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "url-safe base64",
             "base64 to text",
             "text to base64",
+            "base64 file encoder",
+            "decode base64 string",
+        ],
+        faq: [
+            { q: "What is Base64 encoding?", a: "Base64 is a binary-to-text encoding that represents binary data using 64 printable ASCII characters (A–Z, a–z, 0–9, +, /). It is commonly used to embed binary data (images, files) inside JSON, HTML, emails, and HTTP headers." },
+            { q: "What is URL-safe Base64?", a: "URL-safe Base64 replaces + with - and / with _, producing strings that can be safely used in URLs and filenames without percent-encoding. JWTs use URL-safe Base64 without padding." },
+            { q: "Does Base64 encrypt my data?", a: "No. Base64 is an encoding, not encryption. Anyone with the encoded string can instantly decode it. Use AES or other encryption if you need to protect sensitive data." },
         ],
     },
     "url-encoder": {
@@ -1335,6 +1342,257 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "wcag aa aaa",
             "color accessibility checker",
             "text background contrast",
+        ],
+    },
+
+    // ===== Certificates & Keys =====
+    "certificate-inspector": {
+        title: "X.509 Certificate Inspector — Parse, Decode & Analyze SSL Certs",
+        description:
+            "Inspect X.509 certificates in PEM or DER format. Extract subject, issuer, SANs, validity, public key, signature algorithm and extensions. Free cert decoder.",
+        keywords: [
+            "x509 certificate inspector",
+            "ssl certificate decoder",
+            "certificate parser online",
+            "pem certificate decoder",
+            "der certificate viewer",
+            "x509 viewer",
+            "certificate details online",
+            "ssl cert info",
+            "certificate subject issuer",
+            "san certificate checker",
+        ],
+        faq: [
+            { q: "What information can I extract from an X.509 certificate?", a: "An X.509 certificate contains the subject (owner), issuer (CA), validity period, Subject Alternative Names (SANs), public key, signature algorithm, serial number, and extensions such as Key Usage and Extended Key Usage." },
+            { q: "What is the difference between PEM and DER format?", a: "PEM is a Base64-encoded certificate wrapped in -----BEGIN CERTIFICATE----- headers, commonly used in files. DER is the raw binary form. This tool accepts both formats." },
+        ],
+    },
+
+    // ===== Artificial Intelligence =====
+    "mcp-inspector": {
+        title: "MCP Inspector — Test Model Context Protocol Servers Online",
+        description:
+            "Interactive inspector for Model Context Protocol (MCP) servers. Connect via SSE or Streamable HTTP, discover tools, call them with custom args, inspect JSON-RPC responses.",
+        keywords: [
+            "mcp inspector",
+            "model context protocol inspector",
+            "mcp server tester",
+            "mcp tool calling",
+            "mcp sse transport",
+            "mcp http transport",
+            "model context protocol debugger",
+            "mcp json-rpc",
+            "test mcp server online",
+            "mcp oauth inspector",
+            "anthropic mcp tools",
+            "claude mcp server",
+        ],
+        faq: [
+            { q: "What is Model Context Protocol (MCP)?", a: "MCP is an open standard introduced by Anthropic that lets AI models like Claude discover and call external tools, databases, and APIs through a standardized JSON-RPC 2.0 protocol over SSE or Streamable HTTP transports." },
+            { q: "What transports does the MCP Inspector support?", a: "The inspector supports Streamable HTTP (the modern 2025-03-26 spec) and legacy SSE transports, with four connection modes: direct browser fetch, direct-strict, via server proxy (for CORS bypass), and via MCP proxy tunnel." },
+            { q: "How does session tracking work?", a: "On initialize, the MCP server returns a Mcp-Session-Id header. The inspector captures this and forwards it on every subsequent request (tools/list, tools/call), ensuring the server can maintain state across the conversation." },
+        ],
+    },
+    "a2a-inspector": {
+        title: "A2A Protocol Inspector — Test Agent-to-Agent AI Servers Online",
+        description:
+            "Debug and test Agent-to-Agent (A2A) protocol servers. Discover agent cards, validate spec compliance, send tasks, stream responses, track contextId. Free A2A debugger.",
+        keywords: [
+            "a2a inspector",
+            "agent to agent protocol",
+            "a2a protocol tester",
+            "a2a agent card",
+            "a2a json-rpc debugger",
+            "agent protocol inspector",
+            "a2a compliance checker",
+            "agent streaming responses",
+            "a2a task lifecycle",
+            "ai agent protocol debug",
+        ],
+        faq: [
+            { q: "What is the A2A (Agent-to-Agent) protocol?", a: "A2A is an open protocol for AI agents to communicate with each other. Agents expose an agent-card.json describing their capabilities and skills, then accept JSON-RPC 2.0 messages via message/send and message/stream endpoints." },
+            { q: "What does the compliance checker verify?", a: "The compliance checker validates that the agent card contains all required fields (name, description, version, capabilities) and checks that skills have proper ids and descriptions per the A2A spec." },
+        ],
+    },
+
+    // ===== Fun & Games =====
+    "timer": {
+        title: "Online Countdown Timer — Pomodoro, Custom Time, Audio Alert",
+        description:
+            "Free online countdown timer with presets (Pomodoro 25 min, 5 min break, 1 hr), custom hours/minutes/seconds, and audio chime when finished. No signup needed.",
+        keywords: [
+            "online countdown timer",
+            "pomodoro timer",
+            "countdown timer online",
+            "timer online free",
+            "work timer",
+            "study timer",
+            "focus timer",
+            "kitchen timer online",
+            "countdown clock",
+            "pomodoro technique timer",
+            "25 minute timer",
+            "time management timer",
+        ],
+        faq: [
+            { q: "What is the Pomodoro technique?", a: "The Pomodoro technique is a time-management method where you work in focused 25-minute intervals (pomodoros) separated by 5-minute breaks. After four pomodoros you take a longer 15–30 minute break." },
+            { q: "Does the timer play a sound when it finishes?", a: "Yes. The timer plays an audio chime when the countdown reaches zero. Make sure your browser audio is not muted." },
+        ],
+    },
+    "stopwatch": {
+        title: "Online Stopwatch — Lap Timer with Split Times (Free)",
+        description:
+            "Precise browser-based stopwatch with lap splits, best/worst lap highlighting, and millisecond accuracy. Perfect for workouts, coding sprints, and timing tasks.",
+        keywords: [
+            "online stopwatch",
+            "stopwatch with laps",
+            "lap timer online",
+            "split time stopwatch",
+            "precision stopwatch",
+            "browser stopwatch",
+            "free online stopwatch",
+            "workout timer",
+            "interval timer",
+            "millisecond stopwatch",
+        ],
+    },
+    "coin-toss": {
+        title: "Coin Flip Simulator — Online Heads or Tails Flip (Free)",
+        description:
+            "Flip a virtual coin online. Animated heads/tails result, flip history, and streak stats. Make quick random decisions — no real coin needed. Free, instant.",
+        keywords: [
+            "coin flip",
+            "coin toss online",
+            "heads or tails",
+            "flip a coin online",
+            "virtual coin flip",
+            "random coin flip",
+            "coin toss simulator",
+            "heads tails decision",
+            "online coin flipper",
+        ],
+        faq: [
+            { q: "Is the coin flip truly random?", a: "Yes. Each flip uses Math.random(), which generates a cryptographically unpredictable value in modern browsers, giving a statistically fair 50/50 chance of heads or tails." },
+        ],
+    },
+    "dice-roll": {
+        title: "Dice Roller Online — Roll D4, D6, D8, D10, D12, D20 Dice",
+        description:
+            "Roll any standard RPG dice online: D4, D6, D8, D10, D12, D20, or D100. Multi-dice mode, custom modifiers, roll history. Perfect for D&D, board games, and tabletop RPGs.",
+        keywords: [
+            "dice roller online",
+            "roll dice online",
+            "d20 dice roller",
+            "d6 dice roll",
+            "rpg dice roller",
+            "dungeons and dragons dice",
+            "d&d dice roller",
+            "tabletop dice roller",
+            "virtual dice",
+            "dice simulator online",
+            "random dice roll",
+        ],
+        faq: [
+            { q: "Which dice types are supported?", a: "The dice roller supports D4, D6, D8, D10, D12, D20, and D100 (percentile). You can roll multiple dice of the same type simultaneously and view the sum and individual results." },
+            { q: "Can I add modifiers to my dice rolls?", a: "Yes. You can add a numeric modifier (positive or negative) that is added to the total after rolling, which is standard in D&D and other tabletop RPGs." },
+        ],
+    },
+    "spin-wheel": {
+        title: "Spin the Wheel — Random Picker & Decision Wheel Online",
+        description:
+            "Free customizable spinning wheel for random decisions. Add 2–12 options, spin to pick a winner, save your list. Great for classroom names, team selection, giveaways.",
+        keywords: [
+            "spin the wheel",
+            "random wheel spinner",
+            "spinning wheel picker",
+            "decision wheel online",
+            "random name picker wheel",
+            "wheel of fortune online",
+            "classroom name picker",
+            "random team selector",
+            "giveaway wheel spinner",
+            "yes no wheel",
+            "wheel picker free",
+        ],
+        faq: [
+            { q: "How many options can I add to the wheel?", a: "You can add between 2 and 12 options. Each option gets a unique colour segment, and the wheel picks a winner with a randomised full-rotation spin." },
+            { q: "Are my wheel options saved?", a: "Yes. Your options are saved in your browser's localStorage and restored the next time you open the tool." },
+        ],
+    },
+    "magic-8ball": {
+        title: "Magic 8-Ball Online — Ask a Question, Get Your Answer",
+        description:
+            "Ask the virtual Magic 8-Ball any yes/no question and shake it for a fortune. All 20 classic responses, response stats, question history. Free, no signup.",
+        keywords: [
+            "magic 8 ball online",
+            "virtual magic 8 ball",
+            "ask the magic 8 ball",
+            "online 8 ball",
+            "magic 8 ball decision",
+            "magic 8 ball game",
+            "yes no oracle",
+            "random decision maker",
+            "fortune teller online",
+        ],
+        faq: [
+            { q: "How many responses does the Magic 8-Ball have?", a: "The classic Magic 8-Ball has 20 responses: 10 positive (e.g. 'It is certain'), 5 neutral (e.g. 'Ask again later'), and 5 negative (e.g. 'Don't count on it'). This tool uses the same 20 authentic responses." },
+        ],
+    },
+    "typing-test": {
+        title: "Typing Speed Test — Measure WPM & Accuracy Online (Free)",
+        description:
+            "Test your typing speed in words per minute (WPM) and accuracy. Choose 15s, 30s, 1 min or 2 min tests. Real-time character highlighting and results history. Free.",
+        keywords: [
+            "typing speed test",
+            "wpm test online",
+            "typing test free",
+            "words per minute test",
+            "typing accuracy test",
+            "online typing test",
+            "typing speed checker",
+            "touch typing test",
+            "typing practice online",
+            "keyboard speed test",
+            "measure typing speed",
+        ],
+        faq: [
+            { q: "How is WPM calculated?", a: "WPM (words per minute) = (correct characters ÷ 5) ÷ (elapsed minutes). Dividing by 5 normalises characters to standard 'words', which is the internationally accepted formula." },
+            { q: "What counts as an error?", a: "Any character that does not match the target text at the same position counts as an error. Errors are shown in red and reduce your accuracy percentage, but they do not count towards your WPM." },
+        ],
+    },
+
+    // ===== Text & Utilities =====
+    "sticky-notes": {
+        title: "Sticky Notes Online — Browser-Based Note Keeper (Free)",
+        description:
+            "Create, organise and colour-code sticky notes that persist in your browser. No account needed — notes are saved locally in your browser. Fast, private, offline-ready.",
+        keywords: [
+            "sticky notes online",
+            "browser sticky notes",
+            "online notepad",
+            "virtual sticky notes",
+            "local sticky notes",
+            "browser notepad free",
+            "private notes online",
+            "colour coded notes",
+            "digital sticky notes",
+        ],
+    },
+    "rich-text-editor": {
+        title: "Rich Text Editor Online — WYSIWYG HTML Editor (Free)",
+        description:
+            "Feature-rich WYSIWYG browser editor: bold, italic, headings, lists, tables, links. Auto-saves to localStorage. Export as HTML or plain text. No signup required.",
+        keywords: [
+            "rich text editor online",
+            "wysiwyg editor online",
+            "online html editor",
+            "browser text editor",
+            "free online editor",
+            "rich text format editor",
+            "online word processor",
+            "html wysiwyg editor",
+            "rtf editor online",
+            "text formatting online",
         ],
     },
 };
