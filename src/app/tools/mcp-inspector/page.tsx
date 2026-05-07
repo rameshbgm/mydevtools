@@ -174,12 +174,58 @@ function jsonToHeaders(json: string): McpHeader[] | null {
     }
 }
 
+/**
+ * Parse a Streamable-HTTP MCP response. Per spec, the server may answer with either
+ * `application/json` (a single JSON-RPC envelope) or `text/event-stream` (one or more
+ * `data:` events, each carrying a JSON-RPC envelope). We pick the last data event that
+ * decodes to a JSON-RPC response, which matches what the official inspector does.
+ */
+function parseMcpResponse(text: string, contentType: string): unknown {
+    const isSse = contentType.includes("text/event-stream") || /^(event|data):/m.test(text);
+    if (isSse) {
+        const lines = text.split(/\r?\n/);
+        let lastParsed: unknown = null;
+        for (const line of lines) {
+            if (!line.startsWith("data:")) continue;
+            const payload = line.slice(5).trim();
+            if (!payload || payload === "[DONE]") continue;
+            try {
+                lastParsed = JSON.parse(payload);
+            } catch { /* keep scanning */ }
+        }
+        if (lastParsed !== null) return lastParsed;
+        throw new Error("SSE response had no parseable data event");
+    }
+    if (!text) return { jsonrpc: "2.0", result: null };
+    try {
+        return JSON.parse(text);
+    } catch {
+        throw new Error(`Non-JSON response: ${text.slice(0, 200)}`);
+    }
+}
+
+/**
+ * Build the standard request headers for a Streamable-HTTP MCP call:
+ *   - merge user-configured headers (preserved as-is, including auth)
+ *   - force JSON content type and SSE-or-JSON Accept
+ *   - echo the Mcp-Session-Id from a previous response, when we have one
+ */
+function buildMcpHeaders(userHeaders: Record<string, string>, sessionId?: string): Record<string, string> {
+    return {
+        ...userHeaders,
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+        ...(sessionId ? { "Mcp-Session-Id": sessionId } : {}),
+    };
+}
+
 async function mcpFetchDirect(
     url: string,
     headers: Record<string, string>,
     body: unknown,
     timeoutMs: number,
-): Promise<unknown> {
+    sessionId?: string,
+): Promise<{ data: unknown; sessionId?: string }> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -187,7 +233,7 @@ async function mcpFetchDirect(
     try {
         res = await fetch(url, {
             method: "POST",
-            headers,
+            headers: buildMcpHeaders(headers, sessionId),
             body: JSON.stringify(body),
             signal: controller.signal,
         });
@@ -198,14 +244,21 @@ async function mcpFetchDirect(
     }
     clearTimeout(timer);
 
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    const nextSessionId = res.headers.get("mcp-session-id") || sessionId;
+
+    if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} ${res.statusText}${txt ? ": " + txt.slice(0, 300) : ""}`);
+    }
+
+    // 202 Accepted: notification or async response; nothing to parse.
+    if (res.status === 202) {
+        return { data: { jsonrpc: "2.0", id: (body as any)?.id ?? null, result: null }, sessionId: nextSessionId };
+    }
 
     const text = await res.text();
-    try {
-        return JSON.parse(text);
-    } catch {
-        throw new Error(`Non-JSON response: ${text.slice(0, 200)}`);
-    }
+    const contentType = res.headers.get("content-type") || "";
+    return { data: parseMcpResponse(text, contentType), sessionId: nextSessionId };
 }
 
 async function mcpFetchViaProxy(
@@ -214,14 +267,15 @@ async function mcpFetchViaProxy(
     body: unknown,
     timeoutMs: number,
     sslFields: Record<string, unknown> = {},
-): Promise<unknown> {
+    sessionId?: string,
+): Promise<{ data: unknown; sessionId?: string }> {
     const res = await fetch("/api/proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             url,
             method: "POST",
-            headers,
+            headers: buildMcpHeaders(headers, sessionId),
             body: JSON.stringify(body),
             bodyIsBase64: false,
             timeout: timeoutMs,
@@ -231,14 +285,19 @@ async function mcpFetchViaProxy(
     });
     const proxy = await res.json();
     if (proxy.error) throw new Error(proxy.error);
+
+    const respHeaders = (proxy.headers ?? {}) as Record<string, string>;
+    const nextSessionId = respHeaders["mcp-session-id"] || sessionId;
+    const contentType = respHeaders["content-type"] || "";
+
     if (proxy.status < 200 || proxy.status >= 300) {
-        throw new Error(`HTTP ${proxy.status}: ${proxy.statusText || proxy.body?.slice?.(0, 120)}`);
+        const snippet = typeof proxy.body === "string" ? proxy.body.slice(0, 200) : "";
+        throw new Error(`HTTP ${proxy.status}: ${proxy.statusText || snippet}`);
     }
-    try {
-        return JSON.parse(proxy.body);
-    } catch {
-        throw new Error(`Non-JSON response from server: ${proxy.body?.slice?.(0, 200)}`);
+    if (proxy.status === 202) {
+        return { data: { jsonrpc: "2.0", id: (body as any)?.id ?? null, result: null }, sessionId: nextSessionId };
     }
+    return { data: parseMcpResponse(proxy.body || "", contentType), sessionId: nextSessionId };
 }
 
 function isLikelyCorsError(err: unknown): boolean {
@@ -307,24 +366,25 @@ async function mcpFetch(
     mode: ConnectionMode = "direct",
     proxyAddress: string = "",
     proxySessionToken: string = "",
-): Promise<{ data: unknown; usedProxy: boolean; corsFallback: boolean }> {
+    sessionId?: string,
+): Promise<{ data: unknown; usedProxy: boolean; corsFallback: boolean; sessionId?: string }> {
     const applied = applyConnectionMode(url, headers, mode, proxyAddress, proxySessionToken);
     const hasSslConfig = sslFields.sslVerify === true ||
         !!sslFields.sslCaCert || !!sslFields.sslClientCert || !!sslFields.sslClientKey;
 
     // Hard-routed through /api/proxy: explicit user choice or SSL options that the browser cannot honour.
     if (applied.forceServerProxy || hasSslConfig) {
-        const data = await mcpFetchViaProxy(applied.url, applied.headers, body, timeoutMs, sslFields);
-        return { data, usedProxy: true, corsFallback: false };
+        const r = await mcpFetchViaProxy(applied.url, applied.headers, body, timeoutMs, sslFields, sessionId);
+        return { data: r.data, usedProxy: true, corsFallback: false, sessionId: r.sessionId };
     }
     try {
-        const data = await mcpFetchDirect(applied.url, applied.headers, body, timeoutMs);
-        return { data, usedProxy: false, corsFallback: false };
+        const r = await mcpFetchDirect(applied.url, applied.headers, body, timeoutMs, sessionId);
+        return { data: r.data, usedProxy: false, corsFallback: false, sessionId: r.sessionId };
     } catch (err) {
         // Auto-fallback only in "direct" mode. "direct-strict" and "via-mcp-proxy" surface the error.
         if (applied.mode === "direct" && isLikelyCorsError(err)) {
-            const data = await mcpFetchViaProxy(applied.url, applied.headers, body, timeoutMs, sslFields);
-            return { data, usedProxy: true, corsFallback: true };
+            const r = await mcpFetchViaProxy(applied.url, applied.headers, body, timeoutMs, sslFields, sessionId);
+            return { data: r.data, usedProxy: true, corsFallback: true, sessionId: r.sessionId };
         }
         if (isLikelyCorsError(err)) {
             const original = err instanceof Error ? err.message : String(err);
@@ -369,6 +429,7 @@ export default function McpInspectorPage() {
 
     const [connected, setConnected] = useState(false);
     const [connecting, setConnecting] = useState(false);
+    const [sessionId, setSessionId] = useState<string | undefined>(undefined);
     const [tools, setTools] = useState<McpTool[]>([]);
     const [selectedTool, setSelectedTool] = useState<McpTool | null>(null);
     const [callArgs, setCallArgs] = useState("{}");
@@ -431,63 +492,71 @@ export default function McpInspectorPage() {
 
         setConnecting(true);
         setConnected(false);
+        setSessionId(undefined);
         setTools([]);
         setSelectedTool(null);
         setLastResult("");
         setLastError("");
 
         try {
-            const headers: Record<string, string> = { "Content-Type": "application/json" };
+            // User-configured headers + OAuth — passed through on every request below.
+            const headers: Record<string, string> = {};
             config.headers.filter(h => h.key).forEach(h => { headers[h.key] = h.value; });
-            if (config.proxySessionToken) headers["x-session-token"] = config.proxySessionToken;
-            // OAuth 2.0 access token, if present, takes precedence as the Authorization header.
             if (config.oauth.accessToken && !headers["Authorization"]) {
                 headers["Authorization"] = `Bearer ${config.oauth.accessToken}`;
             }
 
-            const base = config.transport === "sse"
-                ? config.serverUrl.replace(/\/sse$/, "")
-                : config.serverUrl.replace(/\/$/, "");
+            // Use the URL exactly as the user typed it. Don't strip /sse or append /.
+            const url = config.serverUrl.trim();
 
             let viaProxy = false;
             let corsHit = false;
-            if (config.transport === "sse") {
-                // initialize handshake
-                const init = await mcpFetch(`${base}/`, headers,
-                    { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "mydevtools-mcp-inspector", version: "1.3" } } },
-                    config.requestTimeoutMs,
-                    sslFields(config),
-                    config.connectionMode,
-                    config.proxyAddress,
-                    config.proxySessionToken,
-                );
-                viaProxy = viaProxy || init.usedProxy;
-                corsHit = corsHit || init.corsFallback;
-                // tools/list
-                const list = await mcpFetch(`${base}/`, headers,
-                    { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
-                    config.requestTimeoutMs,
-                    sslFields(config),
-                    config.connectionMode,
-                    config.proxyAddress,
-                    config.proxySessionToken,
-                );
-                viaProxy = viaProxy || list.usedProxy;
-                corsHit = corsHit || list.corsFallback;
-                setTools((list.data as any)?.result?.tools || []);
-            } else {
-                const list = await mcpFetch(`${base}/`, headers,
-                    { jsonrpc: "2.0", id: 1, method: "tools/list", params: {} },
-                    config.requestTimeoutMs,
-                    sslFields(config),
-                    config.connectionMode,
-                    config.proxyAddress,
-                    config.proxySessionToken,
-                );
-                viaProxy = viaProxy || list.usedProxy;
-                corsHit = corsHit || list.corsFallback;
-                setTools((list.data as any)?.result?.tools || []);
-            }
+
+            // 1. initialize — captures Mcp-Session-Id
+            const init = await mcpFetch(url, headers,
+                { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "mydevtools-mcp-inspector", version: "1.3" } } },
+                config.requestTimeoutMs,
+                sslFields(config),
+                config.connectionMode,
+                config.proxyAddress,
+                config.proxySessionToken,
+            );
+            viaProxy = viaProxy || init.usedProxy;
+            corsHit = corsHit || init.corsFallback;
+            const sid = init.sessionId;
+            setSessionId(sid);
+
+            const initData = init.data as any;
+            if (initData?.error) throw new Error(`initialize: ${initData.error.message || JSON.stringify(initData.error)}`);
+
+            // 2. notifications/initialized — required by spec; servers usually 202 here.
+            await mcpFetch(url, headers,
+                { jsonrpc: "2.0", method: "notifications/initialized", params: {} },
+                config.requestTimeoutMs,
+                sslFields(config),
+                config.connectionMode,
+                config.proxyAddress,
+                config.proxySessionToken,
+                sid,
+            ).catch(() => undefined);
+
+            // 3. tools/list — uses the session
+            const list = await mcpFetch(url, headers,
+                { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
+                config.requestTimeoutMs,
+                sslFields(config),
+                config.connectionMode,
+                config.proxyAddress,
+                config.proxySessionToken,
+                sid,
+            );
+            viaProxy = viaProxy || list.usedProxy;
+            corsHit = corsHit || list.corsFallback;
+            if (list.sessionId) setSessionId(list.sessionId);
+
+            const listData = list.data as any;
+            if (listData?.error) throw new Error(`tools/list: ${listData.error.message || JSON.stringify(listData.error)}`);
+            setTools(listData?.result?.tools || []);
 
             setProxyInUse(viaProxy);
             setCorsFallback(corsHit);
@@ -508,6 +577,7 @@ export default function McpInspectorPage() {
 
     const handleDisconnect = () => {
         setConnected(false);
+        setSessionId(undefined);
         setTools([]);
         setSelectedTool(null);
         setProxyInUse(false);
@@ -658,20 +728,16 @@ export default function McpInspectorPage() {
 
         const start = Date.now();
         try {
-            const headers: Record<string, string> = { "Content-Type": "application/json" };
+            const headers: Record<string, string> = {};
             config.headers.filter(h => h.key).forEach(h => { headers[h.key] = h.value; });
-            if (config.proxySessionToken) headers["x-session-token"] = config.proxySessionToken;
             if (config.oauth.accessToken && !headers["Authorization"]) {
                 headers["Authorization"] = `Bearer ${config.oauth.accessToken}`;
             }
 
-            const base = config.transport === "sse"
-                ? config.serverUrl.replace(/\/sse$/, "")
-                : config.serverUrl.replace(/\/$/, "");
-
+            const url = config.serverUrl.trim();
             const effectiveTimeout = Math.min(config.requestTimeoutMs, config.maxTotalTimeoutMs);
             const result = await mcpFetch(
-                `${base}/`,
+                url,
                 headers,
                 { jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name: selectedTool.name, arguments: parsedArgs } },
                 effectiveTimeout,
@@ -679,8 +745,10 @@ export default function McpInspectorPage() {
                 config.connectionMode,
                 config.proxyAddress,
                 config.proxySessionToken,
+                sessionId,
             );
             if (result.usedProxy) setProxyInUse(true);
+            if (result.sessionId && result.sessionId !== sessionId) setSessionId(result.sessionId);
             const json = result.data as any;
 
             const durationMs = Date.now() - start;
