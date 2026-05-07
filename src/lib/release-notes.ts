@@ -56,6 +56,49 @@ export interface ReleaseNote {
 const ENTRIES: ReleaseNote[] = [
     {
         date: "2026-05-07",
+        version: "1.3.1",
+        kind: "fix",
+        title: "V1.3.1 — antd v6 fixes, CORS auto-retry, Rich Text Editor UX",
+        summary:
+            "Sweep of antd v6 deprecation warnings, transparent CORS auto-fallback for SOAP Client and WSDL Parser, WSDL request headers support, Rich Text Editor formatting reliability and notepad UX, and a pkcs12 hydration fix.",
+        sections: [
+            {
+                label: "SOAP Client — CORS auto-retry",
+                bullets: [
+                    "Direct browser fetches that fail with a network/CORS error now **automatically retry through the server proxy** — no need to toggle 'Force server proxy' manually.",
+                    "Fixed `Space direction=\"vertical\"` → `orientation=\"vertical\"` antd v6 deprecation in the SSL tab.",
+                ],
+            },
+            {
+                label: "WSDL Parser — request headers & merged XSD",
+                bullets: [
+                    "New collapsible **Request Headers** section on the WSDL input panel — configure headers in form or JSON mode, applied to every WSDL and XSD fetch.",
+                    "WSDL and XSD fetches now **auto-fallback through the server proxy** on CORS failure (same pattern as SOAP Client).",
+                    "**External XSD** section is now collapsed inside the WSDL input area rather than a separate tab — less clutter, optional by default.",
+                ],
+            },
+            {
+                label: "Rich Text Editor — formatting & UX",
+                bullets: [
+                    "All toolbar buttons now use `onMouseDown` with `preventDefault` to keep editor focus and selection intact — formatting commands (Bold, Italic, lists, alignment, colours) now work reliably.",
+                    "Toolbar link button saves the selection on `mousedown` so the selected text is correctly linkified after the modal opens.",
+                    "Editor area restyled as a **document canvas**: white paper background, increased padding, max-width constraint, and a subtle box-shadow separating it from the toolbar.",
+                    "Removed 'Start typing here…' default placeholder — new documents open with an empty editor.",
+                ],
+            },
+            {
+                label: "antd v6 deprecation fixes",
+                bullets: [
+                    "`gzip-tools`: replaced static `message.success` import with `messageService` to avoid 'cannot consume context' warning; `Alert message=` → `title=`.",
+                    "`ssh-key-generator`: `Alert message=` → `title=`.",
+                    "`pkcs12-tool`: added `mounted` guard around `Input.Password` to suppress `data-sharkid` browser-extension hydration mismatch.",
+                    "`SslConfigSection`: `Alert message=` → `title=`; `Space direction=` → `orientation=` (fixed in previous patch, documented here).",
+                ],
+            },
+        ],
+    },
+    {
+        date: "2026-05-07",
         version: "1.3",
         kind: "feature",
         title: "V1.3 — AI protocol tooling, Fun & Games expansion, persistence & polish",

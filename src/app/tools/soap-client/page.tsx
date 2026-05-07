@@ -279,15 +279,40 @@ export default function SoapClientPage() {
                     : (data.body ?? "");
                 Object.assign(respHeaders, data.headers ?? {});
             } else {
-                const response = await fetch(endpoint, {
-                    method: "POST",
-                    headers: requestHeaders,
-                    body: requestBody,
-                    signal: controller.signal,
-                });
-                respStatus = response.status;
-                respText = await response.text();
-                response.headers.forEach((value, key) => { respHeaders[key] = value; });
+                try {
+                    const response = await fetch(endpoint, {
+                        method: "POST",
+                        headers: requestHeaders,
+                        body: requestBody,
+                        signal: controller.signal,
+                    });
+                    respStatus = response.status;
+                    respText = await response.text();
+                    response.headers.forEach((value, key) => { respHeaders[key] = value; });
+                } catch (corsErr) {
+                    if (!(corsErr instanceof TypeError)) throw corsErr;
+                    // CORS or network error — transparently retry through the server proxy
+                    const proxyRes = await fetch("/api/proxy", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            url: endpoint,
+                            method: "POST",
+                            headers: requestHeaders,
+                            body: requestBody,
+                            bodyIsBase64: false,
+                            timeout: timeout * 1000,
+                            followRedirects: true,
+                            ...buildSslProxyFields(sslConfig),
+                        }),
+                        signal: controller.signal,
+                    });
+                    const data = await proxyRes.json();
+                    if (data.error) throw new Error(data.error);
+                    respStatus = data.status ?? 0;
+                    respText = data.bodyIsBase64 ? atob(data.body) : (data.body ?? "");
+                    Object.assign(respHeaders, data.headers ?? {});
+                }
             }
 
             clearTimeout(timeoutId);
@@ -619,7 +644,7 @@ export default function SoapClientPage() {
                                     key: "ssl",
                                     label: <><SafetyCertificateOutlined /> SSL</>,
                                     children: (
-                                        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                                        <Space orientation="vertical" size={12} style={{ width: "100%" }}>
                                             <Alert
                                                 type="info"
                                                 showIcon

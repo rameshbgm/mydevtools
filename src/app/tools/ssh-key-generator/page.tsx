@@ -228,7 +228,7 @@ export default function SSHKeyGeneratorPage() {
                 <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <Alert
                         type="info"
-                        message="Browser-Generated SSH Keys"
+                        title="Browser-Generated SSH Keys"
                         description="Keys are generated securely in your browser using Web Crypto API. For production use, consider using ssh-keygen on your system for full OpenSSH format support."
                         showIcon
                     />

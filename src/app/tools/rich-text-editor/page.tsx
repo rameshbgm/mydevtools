@@ -72,7 +72,7 @@ function defaultDoc(title = "Untitled Document"): RichDoc {
     return {
         id: uid(),
         title,
-        content: "<p>Start typing here…</p>",
+        content: "<p><br></p>",
         createdAt: Date.now(),
         updatedAt: Date.now(),
     };
@@ -273,7 +273,7 @@ export default function RichTextEditorPage() {
             ),
     }));
 
-    // Small toolbar button helper
+    // Small toolbar button helper — onMouseDown preventDefault keeps editor focus + selection intact
     const TB = ({
         tip,
         cmd,
@@ -290,6 +290,7 @@ export default function RichTextEditorPage() {
                 size="small"
                 disabled={sourceView}
                 icon={children}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => exec(cmd, val)}
             />
         </Tooltip>
@@ -340,8 +341,8 @@ export default function RichTextEditorPage() {
                     gap: 4,
                     padding: "8px 10px",
                     background: "var(--wb-surface-2)",
-                    borderLeft: "1px solid var(--wb-border)",
-                    borderRight: "1px solid var(--wb-border)",
+                    border: "1px solid var(--wb-border)",
+                    borderTop: "none",
                     alignItems: "center",
                     minHeight: 44,
                 }}
@@ -382,6 +383,7 @@ export default function RichTextEditorPage() {
                         size="small"
                         disabled={sourceView}
                         style={{ position: "relative", overflow: "hidden" }}
+                        onMouseDown={(e) => e.preventDefault()}
                     >
                         <FontColorsOutlined />
                         <input
@@ -406,6 +408,7 @@ export default function RichTextEditorPage() {
                         size="small"
                         disabled={sourceView}
                         style={{ position: "relative", overflow: "hidden" }}
+                        onMouseDown={(e) => e.preventDefault()}
                     >
                         <BgColorsOutlined />
                         <input
@@ -449,7 +452,8 @@ export default function RichTextEditorPage() {
                         size="small"
                         icon={<LinkOutlined />}
                         disabled={sourceView}
-                        onClick={() => { saveRange(); setLinkOpen(true); }}
+                        onMouseDown={(e) => { e.preventDefault(); saveRange(); }}
+                        onClick={() => setLinkOpen(true)}
                     />
                 </Tooltip>
                 <TB tip="Remove Link"     cmd="unlink">               <LinkOutlined />  </TB>
@@ -469,13 +473,14 @@ export default function RichTextEditorPage() {
                             size="small"
                             icon={<CodeOutlined />}
                             type={sourceView ? "primary" : "default"}
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() => { if (!sourceView) flush(); setSourceView(v => !v); }}
                         >
                             Source
                         </Button>
                     </Tooltip>
                     <Dropdown menu={exportMenu}>
-                        <Button size="small" icon={<DownloadOutlined />}>
+                        <Button size="small" icon={<DownloadOutlined />} onMouseDown={(e) => e.preventDefault()}>
                             Export
                         </Button>
                     </Dropdown>
@@ -489,6 +494,7 @@ export default function RichTextEditorPage() {
                     borderTop: "none",
                     borderRadius: "0 0 8px 8px",
                     overflow: "hidden",
+                    boxShadow: "inset 0 2px 4px rgba(0,0,0,0.06)",
                 }}
             >
                 {sourceView ? (
@@ -513,13 +519,16 @@ export default function RichTextEditorPage() {
                         onInput={flush}
                         onBlur={flush}
                         style={{
-                            minHeight: 480,
-                            padding: "20px 28px",
+                            minHeight: 520,
+                            padding: "32px 48px",
                             outline: "none",
-                            background: "var(--wb-surface-1)",
-                            color: "var(--wb-text-body)",
+                            background: "#ffffff",
+                            color: "#1a1a1a",
                             fontSize: 15,
-                            lineHeight: 1.75,
+                            lineHeight: 1.8,
+                            maxWidth: 860,
+                            margin: "0 auto",
+                            boxShadow: "0 1px 6px rgba(0,0,0,0.08)",
                         }}
                     />
                 )}

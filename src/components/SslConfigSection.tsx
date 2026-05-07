@@ -45,13 +45,13 @@ export default function SslConfigSection({ value, onChange, compact }: Props) {
     const update = (patch: Partial<SslConfig>) => onChange({ ...value, ...patch });
 
     return (
-        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+        <Space orientation="vertical" size={12} style={{ width: "100%" }}>
             {!compact && (
                 <Alert
                     type="info"
                     showIcon
                     icon={<SafetyCertificateOutlined />}
-                    message="SSL / TLS configuration"
+                    title="SSL / TLS configuration"
                     description="These options are applied when the request is made through the server proxy (i.e. when the browser cannot reach the host directly due to CORS or cert errors). They have no effect on direct browser fetches."
                     style={{ fontSize: 12 }}
                 />

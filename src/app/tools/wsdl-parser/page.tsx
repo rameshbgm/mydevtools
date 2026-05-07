@@ -19,6 +19,8 @@ import {
     Empty,
     Divider,
     Badge,
+    Segmented,
+    Switch,
 } from "antd";
 import { messageService as message } from "@/lib/messageService";
 import {
@@ -34,6 +36,8 @@ import {
     PlusOutlined,
     DeleteOutlined,
     ImportOutlined,
+    DownOutlined,
+    UpOutlined,
 } from "@ant-design/icons";
 import type { DataNode } from "antd/es/tree";
 import ToolPageLayout from "@/components/ToolPageLayout";
@@ -375,12 +379,57 @@ export default function WsdlParserPage() {
     const [error, setError] = useState<string | null>(null);
     const [selectedOperation, setSelectedOperation] = useState<WSDLOperation | null>(null);
     const [activeTab, setActiveTab] = useState("overview");
-    const [inputTab, setInputTab] = useState("wsdl");
 
     // External XSD imports
     const [xsdEntries, setXsdEntries] = useState<XsdEntry[]>([]);
     const [xsdUrl, setXsdUrl] = useState("");
     const [xsdLoading, setXsdLoading] = useState(false);
+    const [showXsd, setShowXsd] = useState(false);
+
+    // HTTP headers for WSDL / XSD fetch
+    const [headers, setHeaders] = useState<{ key: string; value: string; enabled: boolean }[]>([]);
+    const [headerMode, setHeaderMode] = useState<"form" | "json">("form");
+    const [headerJson, setHeaderJson] = useState("{}");
+    const [showHeaders, setShowHeaders] = useState(false);
+
+    const headersToJson = (hdrs: typeof headers) => {
+        const obj: Record<string, string> = {};
+        hdrs.filter(h => h.enabled && h.key).forEach(h => { obj[h.key] = h.value; });
+        return Object.keys(obj).length ? JSON.stringify(obj, null, 2) : "{}";
+    };
+    const jsonToHeaders = (json: string) => {
+        try {
+            const obj = JSON.parse(json);
+            if (typeof obj !== "object" || obj === null || Array.isArray(obj)) return null;
+            return Object.entries(obj).map(([key, value]) => ({ key, value: String(value), enabled: true }));
+        } catch { return null; }
+    };
+    const switchHeaderMode = (mode: "form" | "json") => {
+        if (mode === "json") setHeaderJson(headersToJson(headers));
+        else { const parsed = jsonToHeaders(headerJson); if (parsed) setHeaders(parsed); }
+        setHeaderMode(mode);
+    };
+    const addHeader = () => setHeaders(prev => [...prev, { key: "", value: "", enabled: true }]);
+    const updateHeader = (i: number, field: string, val: string | boolean) =>
+        setHeaders(prev => prev.map((h, idx) => idx === i ? { ...h, [field]: val } : h));
+    const removeHeader = (i: number) => setHeaders(prev => prev.filter((_, idx) => idx !== i));
+
+    const buildFetchHeaders = () => {
+        const obj: Record<string, string> = {};
+        headers.filter(h => h.enabled && h.key).forEach(h => { obj[h.key] = h.value; });
+        return obj;
+    };
+
+    const proxyFetch = async (url: string, requestHeaders: Record<string, string>): Promise<string> => {
+        const res = await fetch("/api/proxy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url, method: "GET", headers: requestHeaders }),
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        return data.bodyIsBase64 ? atob(data.body) : (data.body ?? "");
+    };
 
     const addXsdEntry = () => {
         setXsdEntries(prev => [...prev, { id: String(++xsdIdCounter), label: `XSD ${prev.length + 1}`, content: "" }]);
@@ -398,9 +447,16 @@ export default function WsdlParserPage() {
         if (!xsdUrl.trim()) { message.warning("Enter an XSD URL"); return; }
         setXsdLoading(true);
         try {
-            const res = await fetch(xsdUrl);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const text = await res.text();
+            const reqHeaders = buildFetchHeaders();
+            let text: string;
+            try {
+                const res = await fetch(xsdUrl, { headers: reqHeaders });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                text = await res.text();
+            } catch (corsErr) {
+                if (!(corsErr instanceof TypeError)) throw corsErr;
+                text = await proxyFetch(xsdUrl, reqHeaders);
+            }
             const newId = String(++xsdIdCounter);
             const label = xsdUrl.split("/").pop()?.split("?")[0] || `XSD ${xsdEntries.length + 1}`;
             setXsdEntries(prev => [...prev, { id: newId, label, content: text }]);
@@ -434,9 +490,16 @@ export default function WsdlParserPage() {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(wsdlUrl);
-            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            const text = await response.text();
+            const reqHeaders = buildFetchHeaders();
+            let text: string;
+            try {
+                const response = await fetch(wsdlUrl, { headers: reqHeaders });
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                text = await response.text();
+            } catch (corsErr) {
+                if (!(corsErr instanceof TypeError)) throw corsErr;
+                text = await proxyFetch(wsdlUrl, reqHeaders);
+            }
             setWsdlInput(text);
             const parsed = parseWSDL(text, xsdEntries);
             setParsedWsdl(parsed);
@@ -529,121 +592,157 @@ export default function WsdlParserPage() {
                             </Button>
                         }
                     >
-                        <Tabs
-                            activeKey={inputTab}
-                            onChange={setInputTab}
+                        {/* URL + headers */}
+                        <Space.Compact style={{ width: "100%", marginBottom: 8 }}>
+                            <Input
+                                placeholder="Enter WSDL URL..."
+                                value={wsdlUrl}
+                                onChange={(e) => setWsdlUrl(e.target.value)}
+                                onPressEnter={handleFetchWsdl}
+                                prefix={<LinkOutlined />}
+                            />
+                            <Button onClick={handleFetchWsdl} loading={loading} icon={<DownloadOutlined />}>
+                                Fetch
+                            </Button>
+                        </Space.Compact>
+
+                        {/* Headers toggle */}
+                        <Button
                             size="small"
-                            items={[
-                                {
-                                    key: "wsdl",
-                                    label: "WSDL",
-                                    children: (
-                                        <>
-                                            <Space.Compact style={{ width: "100%", marginBottom: 16 }}>
-                                                <Input
-                                                    placeholder="Enter WSDL URL..."
-                                                    value={wsdlUrl}
-                                                    onChange={(e) => setWsdlUrl(e.target.value)}
-                                                    onPressEnter={handleFetchWsdl}
-                                                    prefix={<LinkOutlined />}
-                                                />
-                                                <Button onClick={handleFetchWsdl} loading={loading} icon={<DownloadOutlined />}>
-                                                    Fetch
-                                                </Button>
-                                            </Space.Compact>
-                                            <Divider style={{ margin: "12px 0" }}>Or paste WSDL XML</Divider>
-                                            <CodeEditor
-                                                value={wsdlInput}
-                                                onChange={(v) => setWsdlInput(v || "")}
-                                                language="xml"
-                                                height={360}
-                                            />
-                                        </>
-                                    ),
-                                },
-                                {
-                                    key: "xsd",
-                                    label: (
-                                        <Space size={4}>
-                                            <ImportOutlined />
-                                            External XSD
-                                            {xsdEntries.length > 0 && (
-                                                <Badge count={xsdEntries.length} size="small" color="#722ed1" />
-                                            )}
-                                        </Space>
-                                    ),
-                                    children: (
-                                        <div>
-                                            <Space.Compact style={{ width: "100%", marginBottom: 12 }}>
-                                                <Input
-                                                    placeholder="Fetch XSD by URL (CORS permitting)..."
-                                                    value={xsdUrl}
-                                                    onChange={(e) => setXsdUrl(e.target.value)}
-                                                    onPressEnter={fetchXsd}
-                                                    prefix={<LinkOutlined />}
-                                                />
-                                                <Button onClick={fetchXsd} loading={xsdLoading} icon={<DownloadOutlined />}>
-                                                    Fetch
-                                                </Button>
-                                            </Space.Compact>
+                            type="text"
+                            icon={showHeaders ? <UpOutlined /> : <DownOutlined />}
+                            onClick={() => setShowHeaders(v => !v)}
+                            style={{ marginBottom: showHeaders ? 8 : 12, color: "var(--wb-text-secondary)" }}
+                        >
+                            Request Headers {headers.filter(h => h.enabled && h.key).length > 0 && `(${headers.filter(h => h.enabled && h.key).length})`}
+                        </Button>
 
-                                            <Button
-                                                size="small"
-                                                icon={<PlusOutlined />}
-                                                onClick={addXsdEntry}
-                                                style={{ marginBottom: 12 }}
-                                            >
-                                                Add XSD paste area
-                                            </Button>
-
-                                            {xsdEntries.length === 0 && (
-                                                <Empty
-                                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                                    description={
-                                                        <Text type="secondary" style={{ fontSize: 12 }}>
-                                                            Add external XSD files here to resolve{" "}
-                                                            <Text code style={{ fontSize: 11 }}>&lt;xsd:import&gt;</Text> references in your WSDL.
-                                                            Each added schema will be merged into the type tree on Parse.
-                                                        </Text>
-                                                    }
-                                                />
-                                            )}
-
-                                            {xsdEntries.map((entry, idx) => (
-                                                <Card
-                                                    key={entry.id}
+                        {showHeaders && (
+                            <div style={{ marginBottom: 12, padding: 10, border: "1px solid var(--wb-border)", borderRadius: 6 }}>
+                                <div style={{ marginBottom: 8 }}>
+                                    <Segmented
+                                        size="small"
+                                        value={headerMode}
+                                        onChange={(v) => switchHeaderMode(v as "form" | "json")}
+                                        options={[{ label: "Form", value: "form" }, { label: "JSON", value: "json" }]}
+                                    />
+                                </div>
+                                {headerMode === "form" ? (
+                                    <>
+                                        {headers.map((h, i) => (
+                                            <Space key={i} style={{ display: "flex", marginBottom: 6 }}>
+                                                <Switch
                                                     size="small"
-                                                    style={{ marginBottom: 12 }}
-                                                    title={
-                                                        <Text style={{ fontSize: 12 }}>
-                                                            <ImportOutlined style={{ marginRight: 6, color: "#722ed1" }} />
-                                                            {entry.label}
-                                                        </Text>
-                                                    }
-                                                    extra={
-                                                        <Button
-                                                            size="small"
-                                                            danger
-                                                            type="text"
-                                                            icon={<DeleteOutlined />}
-                                                            onClick={() => removeXsdEntry(entry.id)}
-                                                        />
-                                                    }
-                                                >
-                                                    <TextArea
-                                                        value={entry.content}
-                                                        onChange={(e) => updateXsdContent(entry.id, e.target.value)}
-                                                        placeholder={`Paste XSD ${idx + 1} content here...`}
-                                                        rows={6}
-                                                        style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 11 }}
-                                                    />
-                                                </Card>
-                                            ))}
-                                        </div>
-                                    ),
-                                },
-                            ]}
+                                                    checked={h.enabled}
+                                                    onChange={(v) => updateHeader(i, "enabled", v)}
+                                                />
+                                                <Input
+                                                    size="small"
+                                                    placeholder="Header name"
+                                                    value={h.key}
+                                                    onChange={(e) => updateHeader(i, "key", e.target.value)}
+                                                    style={{ width: 160 }}
+                                                />
+                                                <Input
+                                                    size="small"
+                                                    placeholder="Value"
+                                                    value={h.value}
+                                                    onChange={(e) => updateHeader(i, "value", e.target.value)}
+                                                    style={{ width: 200 }}
+                                                />
+                                                <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => removeHeader(i)} />
+                                            </Space>
+                                        ))}
+                                        <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addHeader} block>
+                                            Add Header
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <TextArea
+                                        value={headerJson}
+                                        onChange={e => {
+                                            setHeaderJson(e.target.value);
+                                            const parsed = jsonToHeaders(e.target.value);
+                                            if (parsed) setHeaders(parsed);
+                                        }}
+                                        rows={4}
+                                        style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 11 }}
+                                        placeholder={'{\n  "Authorization": "Bearer ..."\n}'}
+                                    />
+                                )}
+                            </div>
+                        )}
+
+                        <Divider style={{ margin: "12px 0" }}>Or paste WSDL XML</Divider>
+                        <CodeEditor
+                            value={wsdlInput}
+                            onChange={(v) => setWsdlInput(v || "")}
+                            language="xml"
+                            height={300}
                         />
+
+                        {/* External XSD — optional collapsible section */}
+                        <div style={{ marginTop: 12 }}>
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={showXsd ? <UpOutlined /> : <DownOutlined />}
+                                onClick={() => setShowXsd(v => !v)}
+                                style={{ color: "var(--wb-text-secondary)" }}
+                            >
+                                <ImportOutlined style={{ marginRight: 4, color: "#722ed1" }} />
+                                External XSD {xsdEntries.length > 0 && <Badge count={xsdEntries.length} size="small" color="#722ed1" style={{ marginLeft: 6 }} />}
+                            </Button>
+                        </div>
+
+                        {showXsd && (
+                            <div style={{ marginTop: 8 }}>
+                                <Space.Compact style={{ width: "100%", marginBottom: 10 }}>
+                                    <Input
+                                        size="small"
+                                        placeholder="Fetch XSD by URL (CORS fallback via proxy)..."
+                                        value={xsdUrl}
+                                        onChange={(e) => setXsdUrl(e.target.value)}
+                                        onPressEnter={fetchXsd}
+                                        prefix={<LinkOutlined />}
+                                    />
+                                    <Button size="small" onClick={fetchXsd} loading={xsdLoading} icon={<DownloadOutlined />}>
+                                        Fetch
+                                    </Button>
+                                </Space.Compact>
+                                <Button size="small" icon={<PlusOutlined />} onClick={addXsdEntry} style={{ marginBottom: 10 }}>
+                                    Add XSD paste area
+                                </Button>
+                                {xsdEntries.length === 0 && (
+                                    <Empty
+                                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                        description={
+                                            <Text type="secondary" style={{ fontSize: 12 }}>
+                                                Add external XSD files to resolve{" "}
+                                                <Text code style={{ fontSize: 11 }}>&lt;xsd:import&gt;</Text> references.
+                                            </Text>
+                                        }
+                                    />
+                                )}
+                                {xsdEntries.map((entry, idx) => (
+                                    <Card
+                                        key={entry.id}
+                                        size="small"
+                                        style={{ marginBottom: 10 }}
+                                        title={<Text style={{ fontSize: 12 }}><ImportOutlined style={{ marginRight: 6, color: "#722ed1" }} />{entry.label}</Text>}
+                                        extra={<Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={() => removeXsdEntry(entry.id)} />}
+                                    >
+                                        <TextArea
+                                            value={entry.content}
+                                            onChange={(e) => updateXsdContent(entry.id, e.target.value)}
+                                            placeholder={`Paste XSD ${idx + 1} content here...`}
+                                            rows={5}
+                                            style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 11 }}
+                                        />
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
                     </Card>
                 </Col>
 
