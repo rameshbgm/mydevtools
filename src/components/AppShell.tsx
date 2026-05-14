@@ -14,6 +14,7 @@ import {
     Tag,
     Drawer,
     Grid,
+    Popover,
 } from "antd";
 import { setMessageInstance } from "@/lib/messageService";
 import {
@@ -25,6 +26,7 @@ import {
     CodeOutlined,
     SearchOutlined,
     DatabaseOutlined,
+    StarOutlined,
 } from "@ant-design/icons";
 import {
     getToolsByCategory,
@@ -414,6 +416,371 @@ function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
     );
 }
 
+// ─── Bookmark Button & Panel ─────────────────────────────────────────────────
+
+interface BookmarkButtonProps {
+    darkMode: boolean;
+    currentToolId: string | null;
+    onNavigate: (path: string) => void;
+}
+
+function BookmarkButton({ darkMode, currentToolId, onNavigate }: BookmarkButtonProps) {
+    const {
+        bookmarks,
+        addBookmarkMenu,
+        removeBookmarkMenu,
+        renameBookmarkMenu,
+        addToolToBookmark,
+        removeToolFromBookmark,
+    } = useAppStore();
+
+    const [open, setOpen] = useState(false);
+    const [activeMenuId, setActiveMenuId] = useState<string | null>(bookmarks[0]?.id ?? null);
+    const [addQuery, setAddQuery] = useState("");
+    const [editingMenuId, setEditingMenuId] = useState<string | null>(null);
+    const [editNameValue, setEditNameValue] = useState("");
+    const [newMenuInput, setNewMenuInput] = useState(false);
+    const [newMenuName, setNewMenuName] = useState("");
+    const addInputRef = useRef<HTMLInputElement>(null);
+
+    const activeMenu = useMemo(
+        () => bookmarks.find((m) => m.id === activeMenuId) ?? bookmarks[0] ?? null,
+        [bookmarks, activeMenuId]
+    );
+
+    useEffect(() => {
+        if (!activeMenuId && bookmarks.length > 0) {
+            setActiveMenuId(bookmarks[0].id);
+        } else if (activeMenuId && !bookmarks.find((m) => m.id === activeMenuId)) {
+            setActiveMenuId(bookmarks[0]?.id ?? null);
+        }
+    }, [bookmarks, activeMenuId]);
+
+    const commitNewMenu = (name: string) => {
+        const trimmed = name.trim();
+        if (trimmed && bookmarks.length < 3) {
+            const newId = `bm-${Date.now().toString(36)}`;
+            addBookmarkMenu(trimmed, newId);
+            setActiveMenuId(newId);
+        }
+        setNewMenuInput(false);
+        setNewMenuName("");
+    };
+
+    const handleRemoveMenu = (id: string) => {
+        removeBookmarkMenu(id);
+        if (activeMenuId === id) {
+            setActiveMenuId(bookmarks.filter((m) => m.id !== id)[0]?.id ?? null);
+        }
+    };
+
+    const addResults = useMemo(() => {
+        if (!addQuery.trim() || !activeMenu) return [];
+        const q = addQuery.toLowerCase();
+        return toolsRegistry
+            .filter(
+                (t) =>
+                    !activeMenu.toolIds.includes(t.id) &&
+                    (t.name.toLowerCase().includes(q) ||
+                        t.category.toLowerCase().includes(q) ||
+                        t.tags.some((tag) => tag.toLowerCase().includes(q)))
+            )
+            .slice(0, 6);
+    }, [addQuery, activeMenu]);
+
+    const totalPinned = bookmarks.reduce((sum, m) => sum + m.toolIds.length, 0);
+
+    const accent   = darkMode ? "#22d3ee" : "#0891b2";
+    const bg       = darkMode ? "#1a1a1a" : "#ffffff";
+    const border   = darkMode ? "#303030" : "#e5e7eb";
+    const textPrimary = darkMode ? "#e5e5e5" : "#171717";
+    const textMuted   = darkMode ? "#737373" : "#9a9a9a";
+    const hoverBg  = darkMode ? "rgba(34,211,238,0.08)" : "rgba(8,145,178,0.06)";
+    const inputBg  = darkMode ? "#111" : "#f9fafb";
+    const shadow   = darkMode ? "0 8px 32px rgba(0,0,0,0.55)" : "0 8px 32px rgba(0,0,0,0.12)";
+
+    const currentToolDef = currentToolId
+        ? toolsRegistry.find((t) => t.id === currentToolId) ?? null
+        : null;
+    const currentInMenu = !!activeMenu?.toolIds.includes(currentToolId ?? "");
+
+    const panelContent = (
+        <div style={{ width: 340, userSelect: "none" }}>
+            {/* ── Browser-tab style menu row ── */}
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 2, marginBottom: 14, borderBottom: `1px solid ${border}` }}>
+                {bookmarks.map((menu) => {
+                    const isActive = menu.id === activeMenu?.id;
+                    return (
+                        <div
+                            key={menu.id}
+                            onClick={() => { if (editingMenuId !== menu.id) { setActiveMenuId(menu.id); setAddQuery(""); } }}
+                            style={{
+                                display: "flex", alignItems: "center", gap: 4,
+                                padding: "6px 8px 6px 10px",
+                                borderRadius: "7px 7px 0 0",
+                                border: `1px solid ${isActive ? border : "transparent"}`,
+                                borderBottom: isActive ? `1px solid ${bg}` : "1px solid transparent",
+                                background: isActive ? bg : "transparent",
+                                cursor: "pointer", marginBottom: isActive ? -1 : 0,
+                                transition: "all 0.15s", maxWidth: 120, flexShrink: 1,
+                            }}
+                        >
+                            {editingMenuId === menu.id ? (
+                                <input
+                                    aria-label="Rename bookmark menu"
+                                    autoFocus
+                                    value={editNameValue}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => setEditNameValue(e.target.value)}
+                                    onBlur={() => {
+                                        if (editNameValue.trim()) renameBookmarkMenu(menu.id, editNameValue.trim());
+                                        setEditingMenuId(null);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        e.stopPropagation();
+                                        if (e.key === "Enter") { if (editNameValue.trim()) renameBookmarkMenu(menu.id, editNameValue.trim()); setEditingMenuId(null); }
+                                        else if (e.key === "Escape") setEditingMenuId(null);
+                                    }}
+                                    style={{ width: 72, border: `1px solid ${accent}`, borderRadius: 4, padding: "1px 5px", fontSize: 11.5, background: bg, color: textPrimary, outline: "none", fontWeight: 600 }}
+                                />
+                            ) : (
+                                <span
+                                    onDoubleClick={(e) => { e.stopPropagation(); setEditingMenuId(menu.id); setEditNameValue(menu.name); }}
+                                    title={`${menu.name} · ${menu.toolIds.length}/10 (double-click to rename)`}
+                                    style={{ fontSize: 12, fontWeight: 600, color: isActive ? textPrimary : textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 80 }}
+                                >
+                                    {menu.name}
+                                </span>
+                            )}
+                            <button
+                                type="button"
+                                aria-label={`Remove ${menu.name} bookmark menu`}
+                                onClick={(e) => { e.stopPropagation(); handleRemoveMenu(menu.id); }}
+                                onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "#ef4444")}
+                                onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = textMuted)}
+                                style={{ width: 14, height: 14, border: "none", background: "transparent", color: textMuted, cursor: "pointer", fontSize: 13, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, borderRadius: 3, flexShrink: 0 }}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    );
+                })}
+
+                {/* New menu tab — either + button or name input */}
+                {bookmarks.length < 3 && !newMenuInput && (
+                    <Tooltip title="New bookmark menu (max 3)">
+                        <button
+                            type="button"
+                            onClick={() => setNewMenuInput(true)}
+                            style={{ padding: "5px 10px", borderRadius: "7px 7px 0 0", border: "1px solid transparent", borderBottom: "none", background: "transparent", color: textMuted, fontSize: 17, cursor: "pointer", lineHeight: 1, marginBottom: 0 }}
+                        >
+                            +
+                        </button>
+                    </Tooltip>
+                )}
+                {newMenuInput && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 4px 6px", marginBottom: -1 }}>
+                        <input
+                            autoFocus
+                            aria-label="New bookmark menu name"
+                            value={newMenuName}
+                            onChange={(e) => setNewMenuName(e.target.value)}
+                            onBlur={() => commitNewMenu(newMenuName)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") commitNewMenu(newMenuName);
+                                else if (e.key === "Escape") { setNewMenuInput(false); setNewMenuName(""); }
+                            }}
+                            placeholder="Menu name…"
+                            style={{ width: 96, border: `1px solid ${accent}`, borderRadius: 5, padding: "3px 8px", fontSize: 12, background: inputBg, color: textPrimary, outline: "none" }}
+                        />
+                    </div>
+                )}
+            </div>
+
+            {/* ── Empty state ── */}
+            {bookmarks.length === 0 && !newMenuInput && (
+                <div style={{ textAlign: "center", padding: "24px 0 20px" }}>
+                    <StarOutlined style={{ fontSize: 28, color: textMuted, marginBottom: 10, display: "block" }} />
+                    <div style={{ fontSize: 13, color: textPrimary, fontWeight: 500, marginBottom: 4 }}>Bookmark your favorite tools</div>
+                    <div style={{ fontSize: 12, color: textMuted, marginBottom: 16 }}>Up to 3 menus · 10 tools each</div>
+                    <button
+                        type="button"
+                        onClick={() => setNewMenuInput(true)}
+                        style={{ padding: "7px 18px", borderRadius: 8, border: `1px solid ${accent}`, background: `${accent}1a`, color: accent, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}
+                    >
+                        Create first menu
+                    </button>
+                </div>
+            )}
+
+            {/* ── Active menu content ── */}
+            {activeMenu && (
+                <>
+                    {/* Count label */}
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
+                        {activeMenu.toolIds.length}/10 tools pinned
+                    </div>
+
+                    {/* Quick-pin current tool */}
+                    {currentToolDef && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (currentInMenu) removeToolFromBookmark(activeMenu.id, currentToolDef.id);
+                                else if (activeMenu.toolIds.length < 10) addToolToBookmark(activeMenu.id, currentToolDef.id);
+                            }}
+                            disabled={activeMenu.toolIds.length >= 10 && !currentInMenu}
+                            style={{
+                                display: "flex", alignItems: "center", gap: 8,
+                                width: "100%", padding: "7px 10px", borderRadius: 8,
+                                border: `1px solid ${currentInMenu ? accent : border}`,
+                                background: currentInMenu ? `${accent}18` : "transparent",
+                                color: currentInMenu ? accent : textPrimary,
+                                fontSize: 12, fontWeight: 500, textAlign: "left",
+                                cursor: activeMenu.toolIds.length >= 10 && !currentInMenu ? "not-allowed" : "pointer",
+                                marginBottom: 10,
+                                opacity: activeMenu.toolIds.length >= 10 && !currentInMenu ? 0.45 : 1,
+                                transition: "all 0.15s",
+                            }}
+                        >
+                            <span style={{ fontSize: 15, lineHeight: 1 }}>{currentInMenu ? "★" : "☆"}</span>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {currentInMenu ? "Pinned — click to unpin" : `Pin "${currentToolDef.name}"`}
+                            </span>
+                        </button>
+                    )}
+
+                    {/* Pinned tools list */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 1, maxHeight: 220, overflowY: "auto", marginBottom: 10 }}>
+                        {activeMenu.toolIds.length === 0 && (
+                            <div style={{ padding: "14px 0", textAlign: "center", color: textMuted, fontSize: 12 }}>
+                                No tools pinned — search below to add
+                            </div>
+                        )}
+                        {activeMenu.toolIds.map((toolId) => {
+                            const tool = toolsRegistry.find((t) => t.id === toolId);
+                            if (!tool) return null;
+                            const Icon = tool.icon;
+                            return (
+                                <div
+                                    key={toolId}
+                                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 7, cursor: "pointer", transition: "background 0.12s" }}
+                                    onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = hoverBg)}
+                                    onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
+                                >
+                                    <span
+                                        onClick={() => { onNavigate(toolPath(tool)); setOpen(false); }}
+                                        style={{ width: 28, height: 28, borderRadius: 7, background: `${tool.color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                                    >
+                                        <Icon style={{ fontSize: 13, color: tool.color }} />
+                                    </span>
+                                    <span
+                                        onClick={() => { onNavigate(toolPath(tool)); setOpen(false); }}
+                                        style={{ flex: 1, fontSize: 12.5, color: textPrimary, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                                    >
+                                        {tool.name}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        aria-label={`Remove tool from bookmark`}
+                                        onClick={() => removeToolFromBookmark(activeMenu.id, toolId)}
+                                        onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "#ef4444")}
+                                        onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = textMuted)}
+                                        style={{ width: 20, height: 20, border: "none", background: "transparent", color: textMuted, cursor: "pointer", fontSize: 16, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, borderRadius: 4, padding: 0 }}
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Add tool search */}
+                    {activeMenu.toolIds.length < 10 ? (
+                        <div style={{ position: "relative" }}>
+                            <input
+                                ref={addInputRef}
+                                aria-label="Search tools to add to bookmark"
+                                value={addQuery}
+                                onChange={(e) => setAddQuery(e.target.value)}
+                                placeholder="Search to add a tool…"
+                                onFocus={(e) => (e.currentTarget.style.borderColor = accent)}
+                                onBlur={(e) => (e.currentTarget.style.borderColor = border)}
+                                style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: `1px solid ${border}`, background: inputBg, color: textPrimary, fontSize: 12, outline: "none", boxSizing: "border-box" }}
+                            />
+                            {addResults.length > 0 && (
+                                <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: bg, border: `1px solid ${border}`, borderRadius: 8, overflow: "hidden", zIndex: 1000, boxShadow: shadow }}>
+                                    {addResults.map((tool) => {
+                                        const Icon = tool.icon;
+                                        return (
+                                            <div
+                                                key={tool.id}
+                                                onMouseDown={(e) => { e.preventDefault(); addToolToBookmark(activeMenu.id, tool.id); setAddQuery(""); addInputRef.current?.focus(); }}
+                                                onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = hoverBg)}
+                                                onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
+                                                style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", cursor: "pointer", transition: "background 0.12s" }}
+                                            >
+                                                <span style={{ width: 24, height: 24, borderRadius: 6, background: `${tool.color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                                    <Icon style={{ fontSize: 12, color: tool.color }} />
+                                                </span>
+                                                <span style={{ flex: 1, fontSize: 12, color: textPrimary, fontWeight: 500 }}>{tool.name}</span>
+                                                <span style={{ fontSize: 10.5, color: textMuted }}>{tool.category}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div style={{ fontSize: 11.5, color: textMuted, textAlign: "center", padding: "4px 0" }}>
+                            Menu is full · 10/10 tools pinned
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
+    );
+
+    return (
+        <Popover
+            open={open}
+            onOpenChange={setOpen}
+            trigger="click"
+            placement="bottomLeft"
+            arrow={false}
+            content={panelContent}
+            styles={{ body: { padding: "16px" } }}
+        >
+            <Tooltip title="Bookmarks" open={open ? false : undefined}>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                        type="text"
+                        icon={
+                            <StarOutlined
+                                style={{
+                                    fontSize: 17,
+                                    color: open || totalPinned > 0
+                                        ? (darkMode ? "#22d3ee" : "#0891b2")
+                                        : undefined,
+                                }}
+                            />
+                        }
+                        style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 10,
+                            background: open || totalPinned > 0
+                                ? (darkMode ? "rgba(34,211,238,0.12)" : "rgba(8,145,178,0.1)")
+                                : "transparent",
+                            flexShrink: 0,
+                        }}
+                    />
+                </motion.div>
+            </Tooltip>
+        </Popover>
+    );
+}
+
 // ─── App Shell ───────────────────────────────────────────────────────────────
 
 export default function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -450,11 +817,12 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
         return () => window.removeEventListener("keydown", handler);
     }, []);
 
+    const currentToolId = useMemo(() => getToolIdFromPublicPath(pathname), [pathname]);
+
     const activeCategory = useMemo(() => {
-        const tid = getToolIdFromPublicPath(pathname);
-        if (!tid) return null;
-        return toolsRegistry.find((t) => t.id === tid)?.category ?? null;
-    }, [pathname]);
+        if (!currentToolId) return null;
+        return toolsRegistry.find((t) => t.id === currentToolId)?.category ?? null;
+    }, [currentToolId]);
 
     const [openKey, setOpenKey] = useState<string | null>(activeCategory);
     const [lastCategory, setLastCategory] = useState<string | null>(activeCategory);
@@ -852,24 +1220,11 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 />
                             </Tooltip>
 
-                            <Tooltip title="Memory & Storage Manager">
-                                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                    <Button
-                                        type="text"
-                                        icon={<DatabaseOutlined style={{ fontSize: 17, color: darkMode ? "#22d3ee" : "#0891b2" }} />}
-                                        onClick={() => navigate("/memory")}
-                                        style={{
-                                            width: 40,
-                                            height: 40,
-                                            borderRadius: 10,
-                                            background: darkMode
-                                                ? "rgba(34, 211, 238, 0.12)"
-                                                : "rgba(8, 145, 178, 0.1)",
-                                            flexShrink: 0,
-                                        }}
-                                    />
-                                </motion.div>
-                            </Tooltip>
+                            <BookmarkButton
+                                darkMode={darkMode}
+                                currentToolId={currentToolId}
+                                onNavigate={navigate}
+                            />
 
                             {/* Center: search trigger */}
                             <div
@@ -885,6 +1240,24 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                             </div>
 
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                <Tooltip title="Memory & Storage Manager">
+                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                        <Button
+                                            type="text"
+                                            icon={<DatabaseOutlined style={{ fontSize: 17, color: darkMode ? "#22d3ee" : "#0891b2" }} />}
+                                            onClick={() => navigate("/memory")}
+                                            style={{
+                                                width: 40,
+                                                height: 40,
+                                                borderRadius: 10,
+                                                background: darkMode
+                                                    ? "rgba(34, 211, 238, 0.12)"
+                                                    : "rgba(8, 145, 178, 0.1)",
+                                                flexShrink: 0,
+                                            }}
+                                        />
+                                    </motion.div>
+                                </Tooltip>
                                 <Tooltip title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                         <Button

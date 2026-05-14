@@ -997,6 +997,20 @@ function CertificateInspectorPageContent() {
                     "Converting PEM to DER for Java truststore",
                     "Inspecting certificate bundles",
                 ],
+                serverNotice: {
+                    route: "fetch-cert",
+                    purpose: "The 'Fetch from URL' button is the only feature that contacts a server. Browsers cannot open raw TLS sockets to a remote host, so the server opens a TLS connection on your behalf, captures the certificate chain, and returns the PEM blocks.",
+                    sentFields: [
+                        "Hostname (e.g. example.com)",
+                        "Port number (default 443)",
+                    ],
+                    extra: (
+                        <Typography.Paragraph style={{ fontSize: 12, marginBottom: 0 }}>
+                            <Text strong>Local-only alternative:</Text> paste a PEM/DER cert or use the Upload button —
+                            those paths run 100% in your browser and never touch the server.
+                        </Typography.Paragraph>
+                    ),
+                },
             }}
         >
             {/* ── Shared Input Section ── */}

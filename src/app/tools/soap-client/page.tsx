@@ -21,6 +21,8 @@ import {
     Badge,
     InputNumber,
     Collapse,
+    Segmented,
+    Switch,
 } from "antd";
 import { messageService as message } from "@/lib/messageService";
 import {
@@ -33,9 +35,11 @@ import {
     PlusOutlined,
     DeleteOutlined,
     FileTextOutlined,
+    SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import SslConfigSection, { DEFAULT_SSL_CONFIG, buildSslProxyFields, type SslConfig } from "@/components/SslConfigSection";
 
 const { Text, Paragraph, Title } = Typography;
 const { TextArea } = Input;
@@ -168,6 +172,37 @@ export default function SoapClientPage() {
     const [headers, setHeaders] = useState<SoapHeader[]>([
         { key: "Content-Type", value: "text/xml; charset=utf-8", enabled: true },
     ]);
+    const [headerMode, setHeaderMode] = useState<"form" | "json">("form");
+    const [headerJson, setHeaderJson] = useState("{}");
+
+    // SSL/TLS configuration (proxied requests)
+    const [sslConfig, setSslConfig] = useState<SslConfig>(DEFAULT_SSL_CONFIG);
+    const [useProxy, setUseProxy] = useState(false);
+
+    const soapHeadersToJson = (hdrs: SoapHeader[]): string => {
+        const obj: Record<string, string> = {};
+        hdrs.filter(h => h.enabled && h.key).forEach(h => { obj[h.key] = h.value; });
+        return Object.keys(obj).length === 0 ? "{}" : JSON.stringify(obj, null, 2);
+    };
+
+    const jsonToSoapHeaders = (json: string): SoapHeader[] | null => {
+        try {
+            const obj = JSON.parse(json);
+            if (typeof obj !== "object" || obj === null || Array.isArray(obj)) return null;
+            return Object.entries(obj).map(([key, value]) => ({ key, value: String(value), enabled: true }));
+        } catch {
+            return null;
+        }
+    };
+
+    const switchHeaderMode = (mode: "form" | "json") => {
+        if (mode === "json") setHeaderJson(soapHeadersToJson(headers));
+        else {
+            const parsed = jsonToSoapHeaders(headerJson);
+            if (parsed !== null) setHeaders(parsed);
+        }
+        setHeaderMode(mode);
+    };
 
     // Send SOAP request
     const handleSend = async () => {
@@ -210,28 +245,84 @@ export default function SoapClientPage() {
                 requestHeaders["SOAPAction"] = `"${soapAction}"`;
             }
 
-            const response = await fetch(endpoint, {
-                method: "POST",
-                headers: requestHeaders,
-                body: requestBody,
-                signal: controller.signal,
-            });
+            // Auto-route through the server proxy when the user has any SSL config set
+            // (verify toggle, custom CA, or mTLS certs) — those only apply server-side.
+            const sslConfigured = sslConfig.sslVerify || !!sslConfig.sslCaCert.trim() ||
+                !!sslConfig.sslClientCert.trim() || !!sslConfig.sslClientKey.trim();
+            const shouldProxy = useProxy || sslConfigured;
+
+            let respStatus: number;
+            let respText: string;
+            const respHeaders: Record<string, string> = {};
+
+            if (shouldProxy) {
+                const proxyRes = await fetch("/api/proxy", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        url: endpoint,
+                        method: "POST",
+                        headers: requestHeaders,
+                        body: requestBody,
+                        bodyIsBase64: false,
+                        timeout: timeout * 1000,
+                        followRedirects: true,
+                        ...buildSslProxyFields(sslConfig),
+                    }),
+                    signal: controller.signal,
+                });
+                const data = await proxyRes.json();
+                if (data.error) throw new Error(data.error);
+                respStatus = data.status ?? 0;
+                respText = data.bodyIsBase64
+                    ? atob(data.body)
+                    : (data.body ?? "");
+                Object.assign(respHeaders, data.headers ?? {});
+            } else {
+                try {
+                    const response = await fetch(endpoint, {
+                        method: "POST",
+                        headers: requestHeaders,
+                        body: requestBody,
+                        signal: controller.signal,
+                    });
+                    respStatus = response.status;
+                    respText = await response.text();
+                    response.headers.forEach((value, key) => { respHeaders[key] = value; });
+                } catch (corsErr) {
+                    if (!(corsErr instanceof TypeError)) throw corsErr;
+                    // CORS or network error — transparently retry through the server proxy
+                    const proxyRes = await fetch("/api/proxy", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            url: endpoint,
+                            method: "POST",
+                            headers: requestHeaders,
+                            body: requestBody,
+                            bodyIsBase64: false,
+                            timeout: timeout * 1000,
+                            followRedirects: true,
+                            ...buildSslProxyFields(sslConfig),
+                        }),
+                        signal: controller.signal,
+                    });
+                    const data = await proxyRes.json();
+                    if (data.error) throw new Error(data.error);
+                    respStatus = data.status ?? 0;
+                    respText = data.bodyIsBase64 ? atob(data.body) : (data.body ?? "");
+                    Object.assign(respHeaders, data.headers ?? {});
+                }
+            }
 
             clearTimeout(timeoutId);
             const elapsed = Date.now() - startTime;
 
-            const responseText = await response.text();
-            const formattedResponse = formatXml(responseText);
+            const formattedResponse = formatXml(respText);
 
-            setStatus(response.status);
+            setStatus(respStatus);
             setDuration(elapsed);
             setResponseBody(formattedResponse);
-
-            // Capture response headers
-            const respHeaders: Record<string, string> = {};
-            response.headers.forEach((value, key) => {
-                respHeaders[key] = value;
-            });
             setResponseHeaders(respHeaders);
 
             // Add to history
@@ -242,15 +333,15 @@ export default function SoapClientPage() {
                 soapAction,
                 body: requestBody,
                 response: formattedResponse,
-                status: response.status,
+                status: respStatus,
                 duration: elapsed,
             };
             setHistory(prev => [historyEntry, ...prev.slice(0, 49)]);
 
-            if (response.ok) {
-                message.success(`Request completed in ${elapsed}ms`);
+            if (respStatus >= 200 && respStatus < 300) {
+                message.success(`Request completed in ${elapsed}ms${shouldProxy ? " (via proxy)" : ""}`);
             } else {
-                message.warning(`Request returned status ${response.status}`);
+                message.warning(`Request returned status ${respStatus}`);
             }
 
             setActiveTab("response");
@@ -489,37 +580,97 @@ export default function SoapClientPage() {
                                     label: `Headers (${headers.filter(h => h.enabled).length})`,
                                     children: (
                                         <div>
-                                            {headers.map((header, index) => (
-                                                <Space key={index} style={{ display: "flex", marginBottom: 8 }}>
-                                                    <Input
-                                                        placeholder="Header name"
-                                                        value={header.key}
-                                                        onChange={(e) => updateHeader(index, "key", e.target.value)}
-                                                        style={{ width: 200 }}
+                                            <div style={{ marginBottom: 12 }}>
+                                                <Segmented
+                                                    size="small"
+                                                    value={headerMode}
+                                                    onChange={(v) => switchHeaderMode(v as "form" | "json")}
+                                                    options={[
+                                                        { label: "Form", value: "form" },
+                                                        { label: "JSON", value: "json" },
+                                                    ]}
+                                                />
+                                            </div>
+                                            {headerMode === "form" ? (
+                                                <>
+                                                    {headers.map((header, index) => (
+                                                        <Space key={index} style={{ display: "flex", marginBottom: 8 }}>
+                                                            <Input
+                                                                placeholder="Header name"
+                                                                value={header.key}
+                                                                onChange={(e) => updateHeader(index, "key", e.target.value)}
+                                                                style={{ width: 200 }}
+                                                            />
+                                                            <Input
+                                                                placeholder="Value"
+                                                                value={header.value}
+                                                                onChange={(e) => updateHeader(index, "value", e.target.value)}
+                                                                style={{ width: 250 }}
+                                                            />
+                                                            <Button
+                                                                type="text"
+                                                                danger
+                                                                icon={<DeleteOutlined />}
+                                                                onClick={() => removeHeader(index)}
+                                                            />
+                                                        </Space>
+                                                    ))}
+                                                    <Button type="dashed" icon={<PlusOutlined />} onClick={addHeader} block>
+                                                        Add Header
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <div>
+                                                    <Input.TextArea
+                                                        value={headerJson}
+                                                        onChange={e => {
+                                                            setHeaderJson(e.target.value);
+                                                            const parsed = jsonToSoapHeaders(e.target.value);
+                                                            if (parsed !== null) setHeaders(parsed);
+                                                        }}
+                                                        rows={6}
+                                                        style={{ fontFamily: "monospace", fontSize: 12 }}
+                                                        placeholder={'{\n  "Authorization": "Bearer xxx"\n}'}
                                                     />
-                                                    <Input
-                                                        placeholder="Value"
-                                                        value={header.value}
-                                                        onChange={(e) => updateHeader(index, "value", e.target.value)}
-                                                        style={{ width: 250 }}
-                                                    />
-                                                    <Button
-                                                        type="text"
-                                                        danger
-                                                        icon={<DeleteOutlined />}
-                                                        onClick={() => removeHeader(index)}
-                                                    />
-                                                </Space>
-                                            ))}
-                                            <Button
-                                                type="dashed"
-                                                icon={<PlusOutlined />}
-                                                onClick={addHeader}
-                                                block
-                                            >
-                                                Add Header
-                                            </Button>
+                                                    <Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: "block" }}>
+                                                        JSON object — auto-syncs to form when valid
+                                                    </Text>
+                                                </div>
+                                            )}
                                         </div>
+                                    ),
+                                },
+                                {
+                                    key: "ssl",
+                                    label: <><SafetyCertificateOutlined /> SSL</>,
+                                    children: (
+                                        <Space orientation="vertical" size={12} style={{ width: "100%" }}>
+                                            <Alert
+                                                type="info"
+                                                showIcon
+                                                message="SSL options apply when the request goes through the server proxy"
+                                                description="Enable 'Force server proxy' below to route every request through the proxy, or leave it off and the proxy will be used automatically when you configure any SSL option."
+                                                style={{ fontSize: 12 }}
+                                            />
+                                            <div style={{
+                                                display: "flex", alignItems: "center", justifyContent: "space-between",
+                                                gap: 12, padding: "4px 0",
+                                            }}>
+                                                <div>
+                                                    <Text strong style={{ fontSize: 13 }}>Force server proxy</Text>
+                                                    <div>
+                                                        <Text type="secondary" style={{ fontSize: 11 }}>
+                                                            Always route through /api/proxy (avoids browser CORS for any host).
+                                                        </Text>
+                                                    </div>
+                                                </div>
+                                                <Switch
+                                                    checked={useProxy}
+                                                    onChange={setUseProxy}
+                                                />
+                                            </div>
+                                            <SslConfigSection value={sslConfig} onChange={setSslConfig} compact />
+                                        </Space>
                                     ),
                                 },
                                 {

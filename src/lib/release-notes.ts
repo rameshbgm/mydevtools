@@ -16,7 +16,7 @@
  * Public-facing version number shown in the topbar. Bump on a meaningful
  * shipping milestone — does NOT need to match individual entries below.
  */
-export const APP_VERSION = "1.2";
+export const APP_VERSION = "1.3";
 
 export type ReleaseKind = "feature" | "fix" | "security" | "ui" | "perf";
 
@@ -54,6 +54,130 @@ export interface ReleaseNote {
  * V1.0 — initial public release of the toolkit (80+ tools).
  */
 const ENTRIES: ReleaseNote[] = [
+    {
+        date: "2026-05-07",
+        version: "1.3.1",
+        kind: "fix",
+        title: "V1.3.1 — antd v6 fixes, CORS auto-retry, Rich Text Editor UX",
+        summary:
+            "Sweep of antd v6 deprecation warnings, transparent CORS auto-fallback for SOAP Client and WSDL Parser, WSDL request headers support, Rich Text Editor formatting reliability and notepad UX, and a pkcs12 hydration fix.",
+        sections: [
+            {
+                label: "SOAP Client — CORS auto-retry",
+                bullets: [
+                    "Direct browser fetches that fail with a network/CORS error now **automatically retry through the server proxy** — no need to toggle 'Force server proxy' manually.",
+                    "Fixed `Space direction=\"vertical\"` → `orientation=\"vertical\"` antd v6 deprecation in the SSL tab.",
+                ],
+            },
+            {
+                label: "WSDL Parser — request headers & merged XSD",
+                bullets: [
+                    "New collapsible **Request Headers** section on the WSDL input panel — configure headers in form or JSON mode, applied to every WSDL and XSD fetch.",
+                    "WSDL and XSD fetches now **auto-fallback through the server proxy** on CORS failure (same pattern as SOAP Client).",
+                    "**External XSD** section is now collapsed inside the WSDL input area rather than a separate tab — less clutter, optional by default.",
+                ],
+            },
+            {
+                label: "Rich Text Editor — formatting & UX",
+                bullets: [
+                    "All toolbar buttons now use `onMouseDown` with `preventDefault` to keep editor focus and selection intact — formatting commands (Bold, Italic, lists, alignment, colours) now work reliably.",
+                    "Toolbar link button saves the selection on `mousedown` so the selected text is correctly linkified after the modal opens.",
+                    "Editor area restyled as a **document canvas**: white paper background, increased padding, max-width constraint, and a subtle box-shadow separating it from the toolbar.",
+                    "Removed 'Start typing here…' default placeholder — new documents open with an empty editor.",
+                ],
+            },
+            {
+                label: "antd v6 deprecation fixes",
+                bullets: [
+                    "`gzip-tools`: replaced static `message.success` import with `messageService` to avoid 'cannot consume context' warning; `Alert message=` → `title=`.",
+                    "`ssh-key-generator`: `Alert message=` → `title=`.",
+                    "`pkcs12-tool`: added `mounted` guard around `Input.Password` to suppress `data-sharkid` browser-extension hydration mismatch.",
+                    "`SslConfigSection`: `Alert message=` → `title=`; `Space direction=` → `orientation=` (fixed in previous patch, documented here).",
+                ],
+            },
+        ],
+    },
+    {
+        date: "2026-05-07",
+        version: "1.3",
+        kind: "feature",
+        title: "V1.3 — AI protocol tooling, Fun & Games expansion, persistence & polish",
+        summary:
+            "Protocol tooling for the AI era (MCP Inspector, A2A Inspector), a full Fun & Games expansion (Spin the Wheel, Magic 8-Ball, Typing Speed Test), two new persistent-text utilities (Sticky Notes, Rich Text Editor), enhanced WSDL/XSD import, and a reliability sweep fixing antd v6 deprecations and SSR hydration mismatches across the toolkit.",
+        sections: [
+            {
+                label: "MCP Inspector (new tool)",
+                bullets: [
+                    "Connect to any MCP server over **stdio**, **SSE**, or **HTTP** transport from the browser.",
+                    "Four connection modes: **direct** (auto-fallback), **direct-strict** (no fallback), **via-server-proxy** (CORS-safe), and **via-mcp-proxy** (tunnels through `npx @modelcontextprotocol/inspector`).",
+                    "Set **custom headers**, **request timeout**, **maximum total timeout**, and optionally **reset timeout on progress** for long-running tool calls.",
+                    "**OAuth 2.0** PKCE flow with configurable client ID and redirect URL; **SSL/TLS** toggle and inspector proxy token fields.",
+                    "**Diagnose** button runs a connectivity pre-flight and surfaces CORS, auth, and transport errors before you start calling tools.",
+                    "Full tool listing, schema display, and interactive **call panel** — fill arguments, fire the call, inspect the raw result.",
+                ],
+            },
+            {
+                label: "A2A Protocol Inspector (new tool)",
+                bullets: [
+                    "Connect to any local or remote **Agent2Agent** agent by URL and inspect its **Agent Card** (name, description, capabilities, skills).",
+                    "Supports both current A2A spec (`message/send` + `message/stream`) and legacy protocol (`tasks/send` + `agent.json`).",
+                    "**Spec compliance checker** — validates the card against the A2A spec and surfaces missing or malformed fields.",
+                    "**Streaming responses** — live-streamed via `fetch` + `ReadableStream`; task lifecycle, **contextId** tracking, and skill testing with structured input.",
+                    "**Debug console** — shows every raw **JSON-RPC 2.0** request and response with syntax highlighting and copy-to-clipboard.",
+                    "Persistent connection history and per-session message log.",
+                ],
+            },
+            {
+                label: "WSDL Parser — external XSD support",
+                bullets: [
+                    "New **Import XSD** tab: paste an external XSD document or load one by URL to resolve `<xsd:import>` / `<xsd:include>` references that point outside the WSDL.",
+                    "Multiple XSD documents can be added to the import set; the parser resolves types across all of them before rendering the schema tree.",
+                ],
+            },
+            {
+                label: "Spin the Wheel (new tool)",
+                bullets: [
+                    "Customisable SVG spinning wheel with 2–12 entries, full-rotation Framer Motion animation, and a winner spotlight on landing.",
+                    "Add, rename, or remove items freely; entries persist in **localStorage** across reloads.",
+                    "12-colour palette auto-assigned to segments; winner highlight with gold border and animated reveal card.",
+                ],
+            },
+            {
+                label: "Magic 8-Ball (new tool)",
+                bullets: [
+                    "All 20 classic responses (10 positive, 5 neutral, 5 negative — same distribution as the original toy).",
+                    "Animated SVG ball with radial-gradient 3D sheen and Framer Motion shake; fortune text rendered inside the triangle window.",
+                    "Per-session response stats with animated progress bars and question history tracking last 8 entries.",
+                ],
+            },
+            {
+                label: "Typing Speed Test (new tool)",
+                bullets: [
+                    "Measures **WPM** (words per minute) and accuracy in real time using the standard correctChars ÷ 5 ÷ minutes formula.",
+                    "Hidden textarea captures keystrokes; visible display highlights characters green (correct), red (error), purple (cursor), and faded (pending).",
+                    "Four durations (15 s / 30 s / 60 s / 2 min); timer starts on first keystroke, auto-finishes when the passage is fully typed.",
+                    "Results history shows last 5 tests with WPM, accuracy, and error count.",
+                ],
+            },
+            {
+                label: "Sticky Notes & Rich Text Editor (new tools)",
+                bullets: [
+                    "**Sticky Notes**: multi-board note management with colour themes and persistence in **localStorage**.",
+                    "**Rich Text Editor**: WYSIWYG editing with export options, also persisted locally so content survives page reloads.",
+                ],
+            },
+            {
+                label: "Antd v6 compatibility & SSR reliability",
+                bullets: [
+                    "Fixed `Space direction=\"vertical\"` → `orientation=\"vertical\"` deprecation (MCP Inspector, Coin Toss).",
+                    "Fixed `Statistic valueStyle` → `styles={{ content }}` and `Progress trailColor` → `railColor` deprecations (Coin Toss, Stopwatch).",
+                    "Resolved **SSR hydration mismatch** in Timer's `RingTicks` SVG: `Math.sin`/`Math.cos` coordinates rounded to 4 decimal places so Node.js and browser V8 emit identical strings.",
+                    "Added `mounted` guards on antd `InputNumber`/`Input`/`Select` fields in Timer and Dice Roll to prevent browser-extension (`data-sharkid`) attribute injection from causing React hydration warnings.",
+                    "Fixed MCP Inspector hydration: `localStorage` read moved from `useState` initialiser to `useEffect` so server and client see the same initial state.",
+                ],
+            },
+        ],
+    },
     {
         date: "2026-05-04",
         version: "1.2",

@@ -155,8 +155,7 @@ function LiveCheckTab() {
                     </Button>
                 </div>
                 <Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
-                    Fetches the full certificate chain directly from the server — leaf + all intermediates + root CA.
-                    Everything is processed locally; no external services involved.
+                    Once the chain is fetched, all validation (signature checks, expiry, hostname match) runs in your browser.
                 </Text>
             </Card>
 
@@ -410,7 +409,7 @@ function ChainValidatorTab() {
                     </Button>
                 </div>
                 <Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
-                    Fetches the live certificate chain and populates the textarea below for validation.
+                    Once fetched, all chain validation runs in your browser.
                 </Text>
             </Card>
 
@@ -533,6 +532,19 @@ function CertificateChainValidatorContent() {
                     "Auditing certificate expiry, SANs, and key strength",
                     "SSL pinning — get the exact SHA-256 fingerprint",
                 ],
+                serverNotice: {
+                    route: "fetch-cert",
+                    purpose: "The 'Fetch from URL' / 'Inspect' buttons are the only features that contact a server. Browsers cannot open raw TLS sockets, so the server opens a TLS connection on your behalf, walks the full chain (leaf → intermediates → root), and returns PEM blocks. All chain validation, signature checks, expiry, and hostname matching then run in your browser.",
+                    sentFields: [
+                        "Hostname",
+                        "Port number (default 443)",
+                    ],
+                    extra: (
+                        <Text style={{ fontSize: 12 }}>
+                            <Text strong>Local-only alternative:</Text> paste PEM blocks into the Chain Validator tab — that path runs 100% in your browser.
+                        </Text>
+                    ),
+                },
             }}
         >
             <Tabs

@@ -25,6 +25,32 @@ function formatTime(seconds: number): string {
     return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
 }
 
+const r4 = (n: number) => Math.round(n * 1e4) / 1e4;
+
+// SVG tick marks overlay on the progress ring
+function RingTicks({ size, color }: { size: number; color: string }) {
+    const cx = size / 2;
+    const r = size / 2 - 8;
+    return (
+        <svg width={size} height={size} style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}>
+            {Array.from({ length: 60 }, (_, i) => {
+                const angle = (i / 60) * 2 * Math.PI - Math.PI / 2;
+                const isMajor = i % 5 === 0;
+                const innerR = r - (isMajor ? 11 : 5);
+                const x1 = r4(cx + innerR * Math.cos(angle));
+                const y1 = r4(cx + innerR * Math.sin(angle));
+                const x2 = r4(cx + r * Math.cos(angle));
+                const y2 = r4(cx + r * Math.sin(angle));
+                return (
+                    <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+                        stroke={color} strokeWidth={isMajor ? 2.5 : 1}
+                        strokeOpacity={isMajor ? 0.45 : 0.15} strokeLinecap="round" />
+                );
+            })}
+        </svg>
+    );
+}
+
 function playAlarmChime(): void {
     try {
         const ctx = new AudioContext();
@@ -50,11 +76,15 @@ function playAlarmChime(): void {
 export default function TimerPage() {
     const { darkMode } = useAppStore();
 
+    const [mounted, setMounted] = useState<boolean>(false);
+    useEffect(() => { setMounted(true); }, []);
+
     const [totalSeconds, setTotalSeconds] = useState<number>(1500);
     const [remainingSeconds, setRemainingSeconds] = useState<number>(1500);
     const [isRunning, setIsRunning] = useState<boolean>(false);
     const [isComplete, setIsComplete] = useState<boolean>(false);
     const [timerLabel, setTimerLabel] = useState<string>("");
+    const [sessions, setSessions] = useState<number>(0);
 
     const [inputHours, setInputHours] = useState<number>(0);
     const [inputMinutes, setInputMinutes] = useState<number>(25);
@@ -77,6 +107,7 @@ export default function TimerPage() {
                         clearTimer();
                         setIsRunning(false);
                         setIsComplete(true);
+                        setSessions(s => s + 1);
                         playAlarmChime();
                         return 0;
                     }
@@ -186,19 +217,16 @@ export default function TimerPage() {
                                                 strokeWidth={6}
                                                 format={() => null}
                                             />
+                                            <RingTicks size={240} color="#10b981" />
                                             <div style={{ position: "absolute", textAlign: "center" }}>
-                                                <div
-                                                    style={{
-                                                        fontSize: 72,
-                                                        fontWeight: 700,
-                                                        fontVariantNumeric: "tabular-nums",
-                                                        color: "#10b981",
-                                                        lineHeight: 1,
-                                                        letterSpacing: "-2px",
-                                                    }}
-                                                >
+                                                <div style={{ fontSize: 64, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#10b981", lineHeight: 1, letterSpacing: "-2px" }}>
                                                     {formatTime(0)}
                                                 </div>
+                                                {sessions > 0 && (
+                                                    <Text style={{ fontSize: 12, color: "#10b981", opacity: 0.75 }}>
+                                                        Session {sessions}
+                                                    </Text>
+                                                )}
                                             </div>
                                         </div>
 
@@ -244,6 +272,13 @@ export default function TimerPage() {
                                 >
                                     <Space orientation="vertical" size={24} style={{ width: "100%" }}>
                                         <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                                            {isRunning && (
+                                                <motion.div
+                                                    style={{ position: "absolute", width: 252, height: 252, borderRadius: "50%", background: `radial-gradient(circle, ${strokeColor}18 0%, transparent 70%)` }}
+                                                    animate={{ scale: [1, 1.04, 1], opacity: [0.6, 1, 0.6] }}
+                                                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                                />
+                                            )}
                                             <Progress
                                                 type="circle"
                                                 percent={progressPercent}
@@ -252,19 +287,16 @@ export default function TimerPage() {
                                                 strokeWidth={6}
                                                 format={() => null}
                                             />
+                                            <RingTicks size={240} color={isRunning ? strokeColor : (darkMode ? "#ffffff" : "#000000")} />
                                             <div style={{ position: "absolute", textAlign: "center" }}>
-                                                <div
-                                                    style={{
-                                                        fontSize: 72,
-                                                        fontWeight: 700,
-                                                        fontVariantNumeric: "tabular-nums",
-                                                        color: textColor,
-                                                        lineHeight: 1,
-                                                        letterSpacing: "-2px",
-                                                    }}
-                                                >
+                                                <div style={{ fontSize: 64, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: textColor, lineHeight: 1, letterSpacing: "-2px" }}>
                                                     {formatTime(remainingSeconds)}
                                                 </div>
+                                                {sessions > 0 && (
+                                                    <Text style={{ fontSize: 12, color: strokeColor, opacity: 0.8 }}>
+                                                        {sessions} session{sessions !== 1 ? "s" : ""} done
+                                                    </Text>
+                                                )}
                                             </div>
                                         </div>
 
@@ -379,6 +411,7 @@ export default function TimerPage() {
                             styles={{ body: { paddingTop: 12 } }}
                         >
                             <Space orientation="vertical" size={12} style={{ width: "100%" }}>
+                                {mounted && (
                                 <Space wrap>
                                     <Space orientation="vertical" size={2}>
                                         <Text style={{ color: secondaryColor, fontSize: 12 }}>Hours</Text>
@@ -411,6 +444,7 @@ export default function TimerPage() {
                                         />
                                     </Space>
                                 </Space>
+                                )}
                                 <Button
                                     block
                                     onClick={applyCustomDuration}
@@ -437,6 +471,7 @@ export default function TimerPage() {
                             }}
                             styles={{ body: { paddingTop: 12 } }}
                         >
+                            {mounted && (
                             <Input
                                 placeholder='e.g. "Pomodoro", "Break", "Presentation"'
                                 value={timerLabel}
@@ -445,6 +480,7 @@ export default function TimerPage() {
                                 maxLength={60}
                                 allowClear
                             />
+                            )}
                         </Card>
 
                         {isRunning && (

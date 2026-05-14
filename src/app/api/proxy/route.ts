@@ -16,6 +16,11 @@ interface ProxyRequest {
     bodyIsBase64: boolean;
     timeout: number;
     followRedirects: boolean;
+    // SSL / TLS configuration (all optional, all only apply to https URLs)
+    sslVerify?: boolean;      // strict cert validation; default false (current behavior — accept self-signed)
+    sslCaCert?: string;       // PEM-encoded CA bundle to trust
+    sslClientCert?: string;   // PEM-encoded client cert (mTLS)
+    sslClientKey?: string;    // PEM-encoded private key (mTLS)
 }
 
 interface ProxyResponse {
@@ -89,8 +94,15 @@ async function proxyRequest(req: ProxyRequest, parsed: URL, redirectCount: numbe
             path: parsed.pathname + parsed.search,
             method: (req.method || "GET").toUpperCase(),
             headers: outHeaders,
-            rejectUnauthorized: false,  // allow self-signed and expired certs
+            // Default to lenient (false) for backward compatibility with existing tools.
+            // A request can opt into strict cert validation by sending sslVerify: true.
+            rejectUnauthorized: req.sslVerify === true,
         };
+        if (isHttps) {
+            if (req.sslCaCert) options.ca = req.sslCaCert;
+            if (req.sslClientCert) options.cert = req.sslClientCert;
+            if (req.sslClientKey) options.key = req.sslClientKey;
+        }
 
         const clientReq = lib.request(options, (res) => {
             // Handle redirects

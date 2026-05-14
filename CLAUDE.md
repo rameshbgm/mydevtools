@@ -26,3 +26,28 @@
 - Prefer **`var(--wb-*)`** over ad-hoc colours; keep WCAG‑friendly contrast in both themes.
 
 Behaviour (routing, registry, persistence) stays in **`lib/`** and **`store.ts`** — passes should not remove features.
+
+## SSR / hydration patterns
+
+Next.js runs components on the server first. Three patterns are established in this codebase — follow them when adding tools:
+
+| Problem | Pattern |
+|---------|---------|
+| `localStorage` in `useState` initialiser | `useState(DEFAULT_VALUE)` + patch in `useEffect` after mount |
+| antd `InputNumber` / `Input` / `Select` generating internal `<input>` elements that browser extensions (e.g. Shark `data-sharkid`) mutate client-side | Wrap the component tree with `{mounted && (...)}` — no SSR output means no hydration comparison |
+| SVG `Math.sin`/`Math.cos` coordinates serialise to different decimal precision in Node.js vs browser V8 | Round to 4 decimal places: `const r4 = (n: number) => Math.round(n * 1e4) / 1e4` |
+
+The `mounted` guard pattern:
+
+```tsx
+const [mounted, setMounted] = useState(false);
+useEffect(() => { setMounted(true); }, []);
+// ...
+{mounted && <Select ... />}
+```
+
+## Tool counts (v1.3)
+
+**90 tools across 14 categories.** Fun & Games: 7 (coin-toss, dice-roll, timer, stopwatch, spin-wheel, magic-8ball, typing-test). Artificial Intelligence: 2 (mcp-inspector, a2a-inspector). Text & Utilities: 11 (includes sticky-notes, rich-text-editor).
+
+When adding a tool: extend **`tools-registry.ts`** → **`tool-url-table.ts`** → **`seo-content.ts`** → create **`src/app/tools/[id]/page.tsx`** + **`layout.tsx`**.

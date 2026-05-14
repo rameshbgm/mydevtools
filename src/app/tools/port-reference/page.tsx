@@ -71,6 +71,7 @@ const PORT_DATABASE: PortInfo[] = [
     { port: 587, protocol: "TCP", service: "SMTP-Submit", description: "Email message submission (STARTTLS)", category: "Email", security: "secure" },
     { port: 636, protocol: "TCP", service: "LDAPS", description: "LDAP over SSL", category: "Directory Services", security: "secure" },
     { port: 993, protocol: "TCP", service: "IMAPS", description: "IMAP over SSL", category: "Email", security: "secure" },
+    { port: 853, protocol: "TCP", service: "DoT", description: "DNS-over-TLS (RFC 7858)", category: "Network Infrastructure", security: "secure" },
     { port: 995, protocol: "TCP", service: "POP3S", description: "POP3 over SSL", category: "Email", security: "secure" },
 
     // Registered Ports (1024-49151)
@@ -121,9 +122,35 @@ const PORT_DATABASE: PortInfo[] = [
     { port: 10000, protocol: "TCP", service: "Webmin", description: "Webmin web-based admin", category: "System Administration" },
     { port: 11211, protocol: "TCP", service: "Memcached", description: "Memcached caching", category: "Cache" },
     { port: 15672, protocol: "TCP", service: "RabbitMQ", description: "RabbitMQ management UI", category: "Message Queue" },
+    { port: 1883, protocol: "TCP", service: "MQTT", description: "Message Queuing Telemetry Transport (IoT)", category: "Message Queue", security: "insecure" },
+    { port: 8883, protocol: "TCP", service: "MQTT-TLS", description: "MQTT over TLS", category: "Message Queue", security: "secure" },
+    { port: 5353, protocol: "UDP", service: "mDNS", description: "Multicast DNS / Bonjour / Zeroconf", category: "Network Infrastructure" },
+    { port: 4789, protocol: "UDP", service: "VXLAN", description: "Virtual Extensible LAN overlay encapsulation", category: "Network Infrastructure" },
+    { port: 51820, protocol: "UDP", service: "WireGuard", description: "WireGuard VPN", category: "VPN", security: "secure" },
+    { port: 50051, protocol: "TCP", service: "gRPC", description: "Common default for gRPC services", category: "API" },
     { port: 27017, protocol: "TCP", service: "MongoDB", description: "MongoDB database", category: "Database" },
     { port: 27018, protocol: "TCP", service: "MongoDB Shard", description: "MongoDB shardsvr", category: "Database" },
     { port: 27019, protocol: "TCP", service: "MongoDB Config", description: "MongoDB configsvr", category: "Database" },
+    // Observability & cloud-native
+    { port: 3000, protocol: "TCP", service: "Grafana / Dev", description: "Grafana UI and many dev servers (Node, Rails)", category: "Monitoring" },
+    { port: 5044, protocol: "TCP", service: "Logstash", description: "Logstash Beats input", category: "Monitoring" },
+    { port: 5601, protocol: "TCP", service: "Kibana", description: "Kibana web UI", category: "Monitoring" },
+    { port: 8086, protocol: "TCP", service: "InfluxDB", description: "InfluxDB HTTP API", category: "Database" },
+    { port: 9100, protocol: "TCP", service: "Node Exporter", description: "Prometheus Node Exporter", category: "Monitoring" },
+    { port: 9093, protocol: "TCP", service: "Alertmanager", description: "Prometheus Alertmanager", category: "Monitoring" },
+    { port: 4317, protocol: "TCP", service: "OTLP gRPC", description: "OpenTelemetry Protocol over gRPC", category: "Monitoring" },
+    { port: 4318, protocol: "TCP", service: "OTLP HTTP", description: "OpenTelemetry Protocol over HTTP", category: "Monitoring" },
+    // HashiCorp
+    { port: 8200, protocol: "TCP", service: "Vault", description: "HashiCorp Vault API", category: "Security", security: "secure" },
+    { port: 8500, protocol: "TCP", service: "Consul", description: "HashiCorp Consul HTTP API", category: "Distributed Systems" },
+    { port: 4646, protocol: "TCP", service: "Nomad", description: "HashiCorp Nomad HTTP API", category: "Container Orchestration" },
+    // Container / orchestration
+    { port: 2375, protocol: "TCP", service: "Docker", description: "Docker daemon API (unencrypted — disable in production)", category: "Container Orchestration", security: "insecure" },
+    { port: 2376, protocol: "TCP", service: "Docker TLS", description: "Docker daemon API over TLS", category: "Container Orchestration", security: "secure" },
+    { port: 10250, protocol: "TCP", service: "Kubelet", description: "Kubernetes kubelet API", category: "Container Orchestration", security: "secure" },
+    // Game / media
+    { port: 25565, protocol: "TCP", service: "Minecraft", description: "Minecraft Java Edition server (default)", category: "Game" },
+    { port: 32400, protocol: "TCP", service: "Plex", description: "Plex Media Server", category: "Media" },
 ];
 
 // Get unique categories

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, Tabs, Input, Button, Space, App, Upload, Alert, Typography, Tag, Descriptions } from "antd";
 import {
     LockOutlined,
@@ -63,9 +63,12 @@ export default function Pkcs12Page() {
 
 function ReadPkcs12() {
     const { message } = App.useApp();
+    const [mounted, setMounted] = useState(false);
     const [bytes, setBytes] = useState<Uint8Array | null>(null);
     const [filename, setFilename] = useState("");
     const [password, setPassword] = useState("");
+
+    useEffect(() => { setMounted(true); }, []);
     const [loading, setLoading] = useState(false);
     const [bundle, setBundle] = useState<Pkcs12Bundle | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -108,11 +111,13 @@ function ReadPkcs12() {
                 <Upload accept=".p12,.pfx" beforeUpload={handleUpload} showUploadList={false} maxCount={1}>
                     <Button icon={<UploadOutlined />} size="large">{filename || "Upload .p12 or .pfx"}</Button>
                 </Upload>
-                <Input.Password
-                    placeholder="Keystore password (empty if none)"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
+                {mounted && (
+                    <Input.Password
+                        placeholder="Keystore password (empty if none)"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
+                )}
                 <Button type="primary" icon={<LockOutlined />} onClick={handleRead} loading={loading} disabled={!bytes}>
                     Unlock & Inspect
                 </Button>

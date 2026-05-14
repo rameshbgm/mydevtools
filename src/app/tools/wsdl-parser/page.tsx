@@ -18,6 +18,9 @@ import {
     Alert,
     Empty,
     Divider,
+    Badge,
+    Segmented,
+    Switch,
 } from "antd";
 import { messageService as message } from "@/lib/messageService";
 import {
@@ -30,12 +33,17 @@ import {
     DatabaseOutlined,
     FileTextOutlined,
     BranchesOutlined,
+    PlusOutlined,
+    DeleteOutlined,
+    ImportOutlined,
+    DownOutlined,
+    UpOutlined,
 } from "@ant-design/icons";
 import type { DataNode } from "antd/es/tree";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 
-const { Text, Paragraph, Title } = Typography;
+const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -83,6 +91,14 @@ interface WSDLType {
     name: string;
     type: "element" | "complexType" | "simpleType";
     content?: string;
+    sourceNs?: string;
+    fromXsd?: boolean;
+}
+
+interface XsdEntry {
+    id: string;
+    label: string;
+    content: string;
 }
 
 interface ParsedWSDL {
@@ -94,6 +110,7 @@ interface ParsedWSDL {
     types: WSDLType[];
     imports: { namespace: string; location?: string }[];
     rawXml: string;
+    xsdResolved: number;
 }
 
 // ─── Sample WSDL ─────────────────────────────────────────────────────
@@ -158,35 +175,63 @@ const SAMPLE_WSDL = `<?xml version="1.0" encoding="UTF-8"?>
     </service>
 </definitions>`;
 
+// ─── XSD Type extraction helper ──────────────────────────────────────
+
+function extractTypesFromSchema(schema: Element, fromXsd = false): WSDLType[] {
+    const types: WSDLType[] = [];
+    const sourceNs = schema.getAttribute("targetNamespace") || undefined;
+
+    const elements = schema.getElementsByTagNameNS("http://www.w3.org/2001/XMLSchema", "element");
+    for (let j = 0; j < elements.length; j++) {
+        const el = elements[j];
+        if (el.parentElement === schema) {
+            types.push({ name: el.getAttribute("name") || "", type: "element", content: el.outerHTML, sourceNs, fromXsd });
+        }
+    }
+
+    const complexTypes = schema.getElementsByTagNameNS("http://www.w3.org/2001/XMLSchema", "complexType");
+    for (let j = 0; j < complexTypes.length; j++) {
+        const ct = complexTypes[j];
+        if (ct.parentElement === schema && ct.getAttribute("name")) {
+            types.push({ name: ct.getAttribute("name") || "", type: "complexType", content: ct.outerHTML, sourceNs, fromXsd });
+        }
+    }
+
+    const simpleTypes = schema.getElementsByTagNameNS("http://www.w3.org/2001/XMLSchema", "simpleType");
+    for (let j = 0; j < simpleTypes.length; j++) {
+        const st = simpleTypes[j];
+        if (st.parentElement === schema && st.getAttribute("name")) {
+            types.push({ name: st.getAttribute("name") || "", type: "simpleType", content: st.outerHTML, sourceNs, fromXsd });
+        }
+    }
+
+    return types;
+}
+
 // ─── WSDL Parser ─────────────────────────────────────────────────────
 
-function parseWSDL(xmlString: string): ParsedWSDL {
+function parseWSDL(xmlString: string, xsdEntries: XsdEntry[]): ParsedWSDL {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xmlString, "text/xml");
 
-    // Check for parsing errors
     const parseError = doc.querySelector("parsererror");
-    if (parseError) {
-        throw new Error("Invalid XML: " + parseError.textContent);
-    }
+    if (parseError) throw new Error("Invalid XML: " + parseError.textContent);
 
     const root = doc.documentElement;
     const targetNamespace = root.getAttribute("targetNamespace") || "";
-
-    // Helper to get local name without namespace prefix
     const getLocalName = (name: string) => name.includes(":") ? name.split(":")[1] : name;
 
-    // Parse services
+    // Services
     const services: WSDLService[] = [];
     const serviceElements = root.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "service");
     for (let i = 0; i < serviceElements.length; i++) {
         const svc = serviceElements[i];
         const ports: WSDLPort[] = [];
         const portElements = svc.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "port");
-
         for (let j = 0; j < portElements.length; j++) {
             const port = portElements[j];
-            const addressEl = port.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/soap/", "address")[0] ||
+            const addressEl =
+                port.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/soap/", "address")[0] ||
                 port.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/soap12/", "address")[0];
             ports.push({
                 name: port.getAttribute("name") || "",
@@ -194,37 +239,27 @@ function parseWSDL(xmlString: string): ParsedWSDL {
                 address: addressEl?.getAttribute("location") || "",
             });
         }
-
         const docEl = svc.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "documentation")[0];
-        services.push({
-            name: svc.getAttribute("name") || "",
-            documentation: docEl?.textContent || undefined,
-            ports,
-        });
+        services.push({ name: svc.getAttribute("name") || "", documentation: docEl?.textContent || undefined, ports });
     }
 
-    // Parse bindings
+    // Bindings
     const bindings: WSDLBinding[] = [];
     const bindingElements = root.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "binding");
     for (let i = 0; i < bindingElements.length; i++) {
         const binding = bindingElements[i];
-        const soapBinding = binding.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/soap/", "binding")[0] ||
+        const soapBinding =
+            binding.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/soap/", "binding")[0] ||
             binding.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/soap12/", "binding")[0];
-
         const operations: WSDLOperation[] = [];
         const opElements = binding.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "operation");
-
         for (let j = 0; j < opElements.length; j++) {
             const op = opElements[j];
-            const soapOp = op.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/soap/", "operation")[0] ||
+            const soapOp =
+                op.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/soap/", "operation")[0] ||
                 op.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/soap12/", "operation")[0];
-            operations.push({
-                name: op.getAttribute("name") || "",
-                soapAction: soapOp?.getAttribute("soapAction") || undefined,
-                faults: [],
-            });
+            operations.push({ name: op.getAttribute("name") || "", soapAction: soapOp?.getAttribute("soapAction") || undefined, faults: [] });
         }
-
         bindings.push({
             name: binding.getAttribute("name") || "",
             type: getLocalName(binding.getAttribute("type") || ""),
@@ -234,21 +269,19 @@ function parseWSDL(xmlString: string): ParsedWSDL {
         });
     }
 
-    // Parse portTypes
+    // PortTypes
     const portTypes: WSDLPortType[] = [];
     const portTypeElements = root.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "portType");
     for (let i = 0; i < portTypeElements.length; i++) {
         const pt = portTypeElements[i];
         const operations: WSDLOperation[] = [];
         const opElements = pt.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "operation");
-
         for (let j = 0; j < opElements.length; j++) {
             const op = opElements[j];
             const docEl = op.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "documentation")[0];
             const inputEl = op.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "input")[0];
             const outputEl = op.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "output")[0];
             const faultEls = op.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "fault");
-
             operations.push({
                 name: op.getAttribute("name") || "",
                 documentation: docEl?.textContent || undefined,
@@ -257,21 +290,16 @@ function parseWSDL(xmlString: string): ParsedWSDL {
                 faults: Array.from(faultEls).map(f => getLocalName(f.getAttribute("message") || "")),
             });
         }
-
-        portTypes.push({
-            name: pt.getAttribute("name") || "",
-            operations,
-        });
+        portTypes.push({ name: pt.getAttribute("name") || "", operations });
     }
 
-    // Parse messages
+    // Messages
     const messages: WSDLMessage[] = [];
     const messageElements = root.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "message");
     for (let i = 0; i < messageElements.length; i++) {
         const msg = messageElements[i];
         const parts: { name: string; element?: string; type?: string }[] = [];
         const partElements = msg.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "part");
-
         for (let j = 0; j < partElements.length; j++) {
             const part = partElements[j];
             parts.push({
@@ -280,90 +308,53 @@ function parseWSDL(xmlString: string): ParsedWSDL {
                 type: part.getAttribute("type") ? getLocalName(part.getAttribute("type")!) : undefined,
             });
         }
-
-        messages.push({
-            name: msg.getAttribute("name") || "",
-            parts,
-        });
+        messages.push({ name: msg.getAttribute("name") || "", parts });
     }
 
-    // Parse types (simplified)
+    // Types — inline WSDL schemas first
     const types: WSDLType[] = [];
     const typesEl = root.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "types")[0];
     if (typesEl) {
         const schemas = typesEl.getElementsByTagNameNS("http://www.w3.org/2001/XMLSchema", "schema");
         for (let i = 0; i < schemas.length; i++) {
-            const schema = schemas[i];
+            types.push(...extractTypesFromSchema(schemas[i], false));
+        }
+    }
 
-            // Elements
-            const elements = schema.getElementsByTagNameNS("http://www.w3.org/2001/XMLSchema", "element");
-            for (let j = 0; j < elements.length; j++) {
-                const el = elements[j];
-                if (el.parentElement === schema) { // Only top-level elements
-                    types.push({
-                        name: el.getAttribute("name") || "",
-                        type: "element",
-                        content: el.outerHTML,
-                    });
-                }
-            }
-
-            // Complex types
-            const complexTypes = schema.getElementsByTagNameNS("http://www.w3.org/2001/XMLSchema", "complexType");
-            for (let j = 0; j < complexTypes.length; j++) {
-                const ct = complexTypes[j];
-                if (ct.parentElement === schema && ct.getAttribute("name")) {
-                    types.push({
-                        name: ct.getAttribute("name") || "",
-                        type: "complexType",
-                        content: ct.outerHTML,
-                    });
-                }
-            }
-
-            // Simple types
-            const simpleTypes = schema.getElementsByTagNameNS("http://www.w3.org/2001/XMLSchema", "simpleType");
-            for (let j = 0; j < simpleTypes.length; j++) {
-                const st = simpleTypes[j];
-                if (st.parentElement === schema && st.getAttribute("name")) {
-                    types.push({
-                        name: st.getAttribute("name") || "",
-                        type: "simpleType",
-                        content: st.outerHTML,
-                    });
-                }
+    // Types — external XSD imports (de-duplicate by name+type+ns)
+    let xsdResolved = 0;
+    const seen = new Set(types.map(t => `${t.name}::${t.type}::${t.sourceNs || ""}`));
+    for (const xsdEntry of xsdEntries) {
+        if (!xsdEntry.content.trim()) continue;
+        const xsdDoc = parser.parseFromString(xsdEntry.content, "text/xml");
+        const xsdErr = xsdDoc.querySelector("parsererror");
+        if (xsdErr) continue; // skip malformed XSD silently
+        const root2 = xsdDoc.documentElement;
+        const extracted = extractTypesFromSchema(root2, true);
+        for (const t of extracted) {
+            const key = `${t.name}::${t.type}::${t.sourceNs || ""}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                types.push(t);
+                xsdResolved++;
             }
         }
     }
 
-    // Parse imports
+    // WSDL-level imports
     const imports: { namespace: string; location?: string }[] = [];
     const importElements = root.getElementsByTagNameNS("http://schemas.xmlsoap.org/wsdl/", "import");
     for (let i = 0; i < importElements.length; i++) {
         const imp = importElements[i];
-        imports.push({
-            namespace: imp.getAttribute("namespace") || "",
-            location: imp.getAttribute("location") || undefined,
-        });
+        imports.push({ namespace: imp.getAttribute("namespace") || "", location: imp.getAttribute("location") || undefined });
     }
 
-    return {
-        targetNamespace,
-        services,
-        bindings,
-        portTypes,
-        messages,
-        types,
-        imports,
-        rawXml: xmlString,
-    };
+    return { targetNamespace, services, bindings, portTypes, messages, types, imports, rawXml: xmlString, xsdResolved };
 }
 
 // ─── Generate Sample Request ─────────────────────────────────────────
 
 function generateSampleRequest(operation: WSDLOperation, messages: WSDLMessage[], targetNs: string): string {
-    const inputMsg = messages.find(m => m.name === operation.input);
-
     return `<?xml version="1.0" encoding="UTF-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
                xmlns:tns="${targetNs}">
@@ -378,6 +369,8 @@ function generateSampleRequest(operation: WSDLOperation, messages: WSDLMessage[]
 
 // ─── Component ───────────────────────────────────────────────────────
 
+let xsdIdCounter = 0;
+
 export default function WsdlParserPage() {
     const [wsdlInput, setWsdlInput] = useState(SAMPLE_WSDL);
     const [wsdlUrl, setWsdlUrl] = useState("");
@@ -387,40 +380,128 @@ export default function WsdlParserPage() {
     const [selectedOperation, setSelectedOperation] = useState<WSDLOperation | null>(null);
     const [activeTab, setActiveTab] = useState("overview");
 
-    // Parse WSDL
+    // External XSD imports
+    const [xsdEntries, setXsdEntries] = useState<XsdEntry[]>([]);
+    const [xsdUrl, setXsdUrl] = useState("");
+    const [xsdLoading, setXsdLoading] = useState(false);
+    const [showXsd, setShowXsd] = useState(false);
+
+    // HTTP headers for WSDL / XSD fetch
+    const [headers, setHeaders] = useState<{ key: string; value: string; enabled: boolean }[]>([]);
+    const [headerMode, setHeaderMode] = useState<"form" | "json">("form");
+    const [headerJson, setHeaderJson] = useState("{}");
+    const [showHeaders, setShowHeaders] = useState(false);
+
+    const headersToJson = (hdrs: typeof headers) => {
+        const obj: Record<string, string> = {};
+        hdrs.filter(h => h.enabled && h.key).forEach(h => { obj[h.key] = h.value; });
+        return Object.keys(obj).length ? JSON.stringify(obj, null, 2) : "{}";
+    };
+    const jsonToHeaders = (json: string) => {
+        try {
+            const obj = JSON.parse(json);
+            if (typeof obj !== "object" || obj === null || Array.isArray(obj)) return null;
+            return Object.entries(obj).map(([key, value]) => ({ key, value: String(value), enabled: true }));
+        } catch { return null; }
+    };
+    const switchHeaderMode = (mode: "form" | "json") => {
+        if (mode === "json") setHeaderJson(headersToJson(headers));
+        else { const parsed = jsonToHeaders(headerJson); if (parsed) setHeaders(parsed); }
+        setHeaderMode(mode);
+    };
+    const addHeader = () => setHeaders(prev => [...prev, { key: "", value: "", enabled: true }]);
+    const updateHeader = (i: number, field: string, val: string | boolean) =>
+        setHeaders(prev => prev.map((h, idx) => idx === i ? { ...h, [field]: val } : h));
+    const removeHeader = (i: number) => setHeaders(prev => prev.filter((_, idx) => idx !== i));
+
+    const buildFetchHeaders = () => {
+        const obj: Record<string, string> = {};
+        headers.filter(h => h.enabled && h.key).forEach(h => { obj[h.key] = h.value; });
+        return obj;
+    };
+
+    const proxyFetch = async (url: string, requestHeaders: Record<string, string>): Promise<string> => {
+        const res = await fetch("/api/proxy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url, method: "GET", headers: requestHeaders }),
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        return data.bodyIsBase64 ? atob(data.body) : (data.body ?? "");
+    };
+
+    const addXsdEntry = () => {
+        setXsdEntries(prev => [...prev, { id: String(++xsdIdCounter), label: `XSD ${prev.length + 1}`, content: "" }]);
+    };
+
+    const updateXsdContent = (id: string, content: string) => {
+        setXsdEntries(prev => prev.map(e => e.id === id ? { ...e, content } : e));
+    };
+
+    const removeXsdEntry = (id: string) => {
+        setXsdEntries(prev => prev.filter(e => e.id !== id));
+    };
+
+    const fetchXsd = async () => {
+        if (!xsdUrl.trim()) { message.warning("Enter an XSD URL"); return; }
+        setXsdLoading(true);
+        try {
+            const reqHeaders = buildFetchHeaders();
+            let text: string;
+            try {
+                const res = await fetch(xsdUrl, { headers: reqHeaders });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                text = await res.text();
+            } catch (corsErr) {
+                if (!(corsErr instanceof TypeError)) throw corsErr;
+                text = await proxyFetch(xsdUrl, reqHeaders);
+            }
+            const newId = String(++xsdIdCounter);
+            const label = xsdUrl.split("/").pop()?.split("?")[0] || `XSD ${xsdEntries.length + 1}`;
+            setXsdEntries(prev => [...prev, { id: newId, label, content: text }]);
+            setXsdUrl("");
+            message.success(`Fetched ${label}`);
+        } catch (err: any) {
+            message.error(`Failed to fetch XSD: ${err.message}`);
+        } finally {
+            setXsdLoading(false);
+        }
+    };
+
     const handleParse = () => {
         setError(null);
         setSelectedOperation(null);
-
         try {
-            const parsed = parseWSDL(wsdlInput);
+            const parsed = parseWSDL(wsdlInput, xsdEntries);
             setParsedWsdl(parsed);
-            message.success("WSDL parsed successfully!");
+            const msg = parsed.xsdResolved > 0
+                ? `WSDL parsed — ${parsed.xsdResolved} external type(s) resolved from XSD imports`
+                : "WSDL parsed successfully!";
+            message.success(msg);
         } catch (err: any) {
             setError(err.message);
             setParsedWsdl(null);
         }
     };
 
-    // Fetch WSDL from URL
     const handleFetchWsdl = async () => {
-        if (!wsdlUrl.trim()) {
-            message.warning("Please enter a WSDL URL");
-            return;
-        }
-
+        if (!wsdlUrl.trim()) { message.warning("Please enter a WSDL URL"); return; }
         setLoading(true);
         setError(null);
-
         try {
-            const response = await fetch(wsdlUrl);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const reqHeaders = buildFetchHeaders();
+            let text: string;
+            try {
+                const response = await fetch(wsdlUrl, { headers: reqHeaders });
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                text = await response.text();
+            } catch (corsErr) {
+                if (!(corsErr instanceof TypeError)) throw corsErr;
+                text = await proxyFetch(wsdlUrl, reqHeaders);
             }
-            const text = await response.text();
             setWsdlInput(text);
-
-            const parsed = parseWSDL(text);
+            const parsed = parseWSDL(text, xsdEntries);
             setParsedWsdl(parsed);
             message.success("WSDL fetched and parsed!");
         } catch (err: any) {
@@ -430,10 +511,8 @@ export default function WsdlParserPage() {
         }
     };
 
-    // Build tree data for services
     const treeData = useMemo((): DataNode[] => {
         if (!parsedWsdl) return [];
-
         return parsedWsdl.services.map(service => ({
             title: <Text strong><ApiOutlined /> {service.name}</Text>,
             key: `service-${service.name}`,
@@ -458,7 +537,6 @@ export default function WsdlParserPage() {
         }));
     }, [parsedWsdl]);
 
-    // Generate sample request for selected operation
     const sampleRequest = useMemo(() => {
         if (!selectedOperation || !parsedWsdl) return "";
         return generateSampleRequest(selectedOperation, parsedWsdl.messages, parsedWsdl.targetNamespace);
@@ -480,17 +558,17 @@ export default function WsdlParserPage() {
                 whyUse: "SOAP is still the lingua franca for banking, insurance, healthcare (HL7), tax authorities, and telecom OSS/BSS systems. Even with modern REST replacements, integrating with these services means reading a WSDL — and a 5,000-line XML file is brutal without tooling. This parser saves the back-and-forth between the WSDL, the XSD imports, and your IDE.",
                 howToUse: [
                     "Paste a WSDL document into the editor, or enter a remote URL to fetch (CORS permitting)",
+                    "If the WSDL references external XSD files, switch to the 'External XSD' tab and paste or fetch each schema",
                     "Click 'Parse' to load the service tree — services, ports, bindings, operations",
                     "Drill into any operation to see its input message, output message, and SOAP fault types",
-                    "Inspect the linked XSD types to understand the request/response shape",
                     "Generate a sample SOAP envelope and copy it straight into the SOAP Client tool",
                 ],
                 tips: [
                     "Remote WSDLs hosted without CORS headers won't load in the browser — paste the XML directly instead",
                     "Check `<soap:binding transport>` to confirm SOAP 1.1 (HTTP) vs SOAP 1.2 — they have different envelope namespaces",
-                    "`<wsdl:import>` and `<xsd:import>` pull in additional schemas — fetch and inline them to see the full picture",
+                    "`<wsdl:import>` and `<xsd:import>` pull in additional schemas — use the External XSD tab to paste them and resolve all types",
                     "Operation style (document/literal vs rpc/encoded) changes how the body is wrapped — most modern services use document/literal-wrapped",
-                    "WS-Policy attachments describe security and transactional requirements — look for `<wsp:Policy>` blocks",
+                    "Multiple XSD files can be imported simultaneously; the parser de-duplicates types by name, kind, and namespace",
                     "Use the XSD Validator tool to verify a sample message before sending it to the service",
                 ],
                 useCases: [
@@ -509,42 +587,162 @@ export default function WsdlParserPage() {
                     <Card
                         title="WSDL Input"
                         extra={
-                            <Space>
-                                <Button
-                                    type="primary"
-                                    onClick={handleParse}
-                                    icon={<FileTextOutlined />}
-                                >
-                                    Parse
-                                </Button>
-                            </Space>
+                            <Button type="primary" onClick={handleParse} icon={<FileTextOutlined />}>
+                                Parse
+                            </Button>
                         }
                     >
-                        {/* URL Input */}
-                        <Space.Compact style={{ width: "100%", marginBottom: 16 }}>
+                        {/* URL + headers */}
+                        <Space.Compact style={{ width: "100%", marginBottom: 8 }}>
                             <Input
                                 placeholder="Enter WSDL URL..."
                                 value={wsdlUrl}
                                 onChange={(e) => setWsdlUrl(e.target.value)}
+                                onPressEnter={handleFetchWsdl}
                                 prefix={<LinkOutlined />}
                             />
-                            <Button
-                                onClick={handleFetchWsdl}
-                                loading={loading}
-                                icon={<DownloadOutlined />}
-                            >
+                            <Button onClick={handleFetchWsdl} loading={loading} icon={<DownloadOutlined />}>
                                 Fetch
                             </Button>
                         </Space.Compact>
 
-                        <Divider style={{ margin: "12px 0" }}>Or paste WSDL XML</Divider>
+                        {/* Headers toggle */}
+                        <Button
+                            size="small"
+                            type="text"
+                            icon={showHeaders ? <UpOutlined /> : <DownOutlined />}
+                            onClick={() => setShowHeaders(v => !v)}
+                            style={{ marginBottom: showHeaders ? 8 : 12, color: "var(--wb-text-secondary)" }}
+                        >
+                            Request Headers {headers.filter(h => h.enabled && h.key).length > 0 && `(${headers.filter(h => h.enabled && h.key).length})`}
+                        </Button>
 
+                        {showHeaders && (
+                            <div style={{ marginBottom: 12, padding: 10, border: "1px solid var(--wb-border)", borderRadius: 6 }}>
+                                <div style={{ marginBottom: 8 }}>
+                                    <Segmented
+                                        size="small"
+                                        value={headerMode}
+                                        onChange={(v) => switchHeaderMode(v as "form" | "json")}
+                                        options={[{ label: "Form", value: "form" }, { label: "JSON", value: "json" }]}
+                                    />
+                                </div>
+                                {headerMode === "form" ? (
+                                    <>
+                                        {headers.map((h, i) => (
+                                            <Space key={i} style={{ display: "flex", marginBottom: 6 }}>
+                                                <Switch
+                                                    size="small"
+                                                    checked={h.enabled}
+                                                    onChange={(v) => updateHeader(i, "enabled", v)}
+                                                />
+                                                <Input
+                                                    size="small"
+                                                    placeholder="Header name"
+                                                    value={h.key}
+                                                    onChange={(e) => updateHeader(i, "key", e.target.value)}
+                                                    style={{ width: 160 }}
+                                                />
+                                                <Input
+                                                    size="small"
+                                                    placeholder="Value"
+                                                    value={h.value}
+                                                    onChange={(e) => updateHeader(i, "value", e.target.value)}
+                                                    style={{ width: 200 }}
+                                                />
+                                                <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => removeHeader(i)} />
+                                            </Space>
+                                        ))}
+                                        <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addHeader} block>
+                                            Add Header
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <TextArea
+                                        value={headerJson}
+                                        onChange={e => {
+                                            setHeaderJson(e.target.value);
+                                            const parsed = jsonToHeaders(e.target.value);
+                                            if (parsed) setHeaders(parsed);
+                                        }}
+                                        rows={4}
+                                        style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 11 }}
+                                        placeholder={'{\n  "Authorization": "Bearer ..."\n}'}
+                                    />
+                                )}
+                            </div>
+                        )}
+
+                        <Divider style={{ margin: "12px 0" }}>Or paste WSDL XML</Divider>
                         <CodeEditor
                             value={wsdlInput}
                             onChange={(v) => setWsdlInput(v || "")}
                             language="xml"
-                            height={400}
+                            height={300}
                         />
+
+                        {/* External XSD — optional collapsible section */}
+                        <div style={{ marginTop: 12 }}>
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={showXsd ? <UpOutlined /> : <DownOutlined />}
+                                onClick={() => setShowXsd(v => !v)}
+                                style={{ color: "var(--wb-text-secondary)" }}
+                            >
+                                <ImportOutlined style={{ marginRight: 4, color: "#722ed1" }} />
+                                External XSD {xsdEntries.length > 0 && <Badge count={xsdEntries.length} size="small" color="#722ed1" style={{ marginLeft: 6 }} />}
+                            </Button>
+                        </div>
+
+                        {showXsd && (
+                            <div style={{ marginTop: 8 }}>
+                                <Space.Compact style={{ width: "100%", marginBottom: 10 }}>
+                                    <Input
+                                        size="small"
+                                        placeholder="Fetch XSD by URL (CORS fallback via proxy)..."
+                                        value={xsdUrl}
+                                        onChange={(e) => setXsdUrl(e.target.value)}
+                                        onPressEnter={fetchXsd}
+                                        prefix={<LinkOutlined />}
+                                    />
+                                    <Button size="small" onClick={fetchXsd} loading={xsdLoading} icon={<DownloadOutlined />}>
+                                        Fetch
+                                    </Button>
+                                </Space.Compact>
+                                <Button size="small" icon={<PlusOutlined />} onClick={addXsdEntry} style={{ marginBottom: 10 }}>
+                                    Add XSD paste area
+                                </Button>
+                                {xsdEntries.length === 0 && (
+                                    <Empty
+                                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                        description={
+                                            <Text type="secondary" style={{ fontSize: 12 }}>
+                                                Add external XSD files to resolve{" "}
+                                                <Text code style={{ fontSize: 11 }}>&lt;xsd:import&gt;</Text> references.
+                                            </Text>
+                                        }
+                                    />
+                                )}
+                                {xsdEntries.map((entry, idx) => (
+                                    <Card
+                                        key={entry.id}
+                                        size="small"
+                                        style={{ marginBottom: 10 }}
+                                        title={<Text style={{ fontSize: 12 }}><ImportOutlined style={{ marginRight: 6, color: "#722ed1" }} />{entry.label}</Text>}
+                                        extra={<Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={() => removeXsdEntry(entry.id)} />}
+                                    >
+                                        <TextArea
+                                            value={entry.content}
+                                            onChange={(e) => updateXsdContent(entry.id, e.target.value)}
+                                            placeholder={`Paste XSD ${idx + 1} content here...`}
+                                            rows={5}
+                                            style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 11 }}
+                                        />
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
                     </Card>
                 </Col>
 
@@ -575,20 +773,17 @@ export default function WsdlParserPage() {
                                                     <Descriptions.Item label="Target Namespace">
                                                         <Text code copyable>{parsedWsdl.targetNamespace}</Text>
                                                     </Descriptions.Item>
-                                                    <Descriptions.Item label="Services">
-                                                        {parsedWsdl.services.length}
-                                                    </Descriptions.Item>
-                                                    <Descriptions.Item label="Port Types">
-                                                        {parsedWsdl.portTypes.length}
-                                                    </Descriptions.Item>
-                                                    <Descriptions.Item label="Bindings">
-                                                        {parsedWsdl.bindings.length}
-                                                    </Descriptions.Item>
-                                                    <Descriptions.Item label="Messages">
-                                                        {parsedWsdl.messages.length}
-                                                    </Descriptions.Item>
+                                                    <Descriptions.Item label="Services">{parsedWsdl.services.length}</Descriptions.Item>
+                                                    <Descriptions.Item label="Port Types">{parsedWsdl.portTypes.length}</Descriptions.Item>
+                                                    <Descriptions.Item label="Bindings">{parsedWsdl.bindings.length}</Descriptions.Item>
+                                                    <Descriptions.Item label="Messages">{parsedWsdl.messages.length}</Descriptions.Item>
                                                     <Descriptions.Item label="Types">
                                                         {parsedWsdl.types.length}
+                                                        {parsedWsdl.xsdResolved > 0 && (
+                                                            <Tag color="purple" style={{ marginLeft: 8 }}>
+                                                                +{parsedWsdl.xsdResolved} from XSD
+                                                            </Tag>
+                                                        )}
                                                     </Descriptions.Item>
                                                 </Descriptions>
 
@@ -627,9 +822,7 @@ export default function WsdlParserPage() {
                                                             <div key={port.name} style={{ marginTop: 8, paddingLeft: 16 }}>
                                                                 <Text><BranchesOutlined /> {port.name}</Text>
                                                                 <br />
-                                                                <Text type="secondary" style={{ fontSize: 12 }}>
-                                                                    Binding: {port.binding}
-                                                                </Text>
+                                                                <Text type="secondary" style={{ fontSize: 12 }}>Binding: {port.binding}</Text>
                                                                 <br />
                                                                 <Text type="secondary" style={{ fontSize: 12 }}>
                                                                     Address: <Text code copyable style={{ fontSize: 11 }}>{port.address}</Text>
@@ -655,11 +848,7 @@ export default function WsdlParserPage() {
                                                         title: "Operation",
                                                         dataIndex: "name",
                                                         render: (name, record) => (
-                                                            <Button
-                                                                type="link"
-                                                                size="small"
-                                                                onClick={() => setSelectedOperation(record)}
-                                                            >
+                                                            <Button type="link" size="small" onClick={() => setSelectedOperation(record)}>
                                                                 <FunctionOutlined /> {name}
                                                             </Button>
                                                         ),
@@ -707,7 +896,7 @@ export default function WsdlParserPage() {
                                                 columns={[
                                                     { title: "Name", dataIndex: "name" },
                                                     {
-                                                        title: "Type",
+                                                        title: "Kind",
                                                         dataIndex: "type",
                                                         render: (type) => (
                                                             <Tag color={type === "element" ? "blue" : type === "complexType" ? "purple" : "green"}>
@@ -715,14 +904,19 @@ export default function WsdlParserPage() {
                                                             </Tag>
                                                         ),
                                                     },
+                                                    {
+                                                        title: "Source",
+                                                        dataIndex: "fromXsd",
+                                                        render: (fromXsd, rec: WSDLType) => fromXsd
+                                                            ? <Tag color="orange" icon={<ImportOutlined />}>XSD</Tag>
+                                                            : <Tag>WSDL</Tag>,
+                                                    },
                                                 ]}
                                                 pagination={false}
                                                 scroll={{ y: 300 }}
                                                 expandable={{
                                                     expandedRowRender: (record) => (
-                                                        <pre style={{ fontSize: 11, margin: 0, overflow: "auto" }}>
-                                                            {record.content}
-                                                        </pre>
+                                                        <pre style={{ fontSize: 11, margin: 0, overflow: "auto" }}>{record.content}</pre>
                                                     ),
                                                 }}
                                             />
@@ -737,7 +931,6 @@ export default function WsdlParserPage() {
                         </Card>
                     )}
 
-                    {/* Selected Operation Details */}
                     {selectedOperation && parsedWsdl && (
                         <Card
                             title={<><FunctionOutlined /> {selectedOperation.name}</>}
@@ -756,26 +949,16 @@ export default function WsdlParserPage() {
                                 <Paragraph type="secondary">{selectedOperation.documentation}</Paragraph>
                             )}
                             <Descriptions size="small" column={1}>
-                                <Descriptions.Item label="Input Message">
-                                    <Tag>{selectedOperation.input}</Tag>
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Output Message">
-                                    <Tag>{selectedOperation.output}</Tag>
-                                </Descriptions.Item>
+                                <Descriptions.Item label="Input Message"><Tag>{selectedOperation.input}</Tag></Descriptions.Item>
+                                <Descriptions.Item label="Output Message"><Tag>{selectedOperation.output}</Tag></Descriptions.Item>
                                 {selectedOperation.soapAction && (
                                     <Descriptions.Item label="SOAP Action">
                                         <Text code copyable>{selectedOperation.soapAction}</Text>
                                     </Descriptions.Item>
                                 )}
                             </Descriptions>
-
                             <Divider>Sample SOAP Request</Divider>
-                            <CodeEditor
-                                value={sampleRequest}
-                                language="xml"
-                                height={200}
-                                readOnly
-                            />
+                            <CodeEditor value={sampleRequest} language="xml" height={200} readOnly />
                         </Card>
                     )}
                 </Col>

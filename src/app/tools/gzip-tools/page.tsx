@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, Segmented, Statistic, Alert } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, Segmented, Statistic, Alert } from "antd";
+import { messageService as message } from "@/lib/messageService";
 import { CompressOutlined, CopyOutlined, SwapOutlined, ExpandAltOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
@@ -225,7 +226,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit.`);
                         {error && (
                             <Alert
                                 type="error"
-                                message="Error"
+                                title="Error"
                                 description={error}
                                 showIcon
                                 style={{ marginTop: 16 }}

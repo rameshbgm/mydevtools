@@ -18,6 +18,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { getToolIdFromPublicPath, dashboardCategoryHashId } from "@/lib/category-routes";
 import { toolsRegistry } from "@/lib/tools-registry";
+import ServerProxyNotice, { type ServerRouteId } from "@/components/ServerProxyNotice";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -69,6 +70,12 @@ interface ToolPageLayoutProps {
         howToUse?: string[];
         tips?: string[];
         useCases?: string[];
+        serverNotice?: {
+            route: ServerRouteId;
+            purpose: string;
+            sentFields: string[];
+            extra?: React.ReactNode;
+        };
     };
 }
 
@@ -209,6 +216,7 @@ export default function ToolPageLayout({
                     <Collapse
                         ghost
                         className="wb-tool-learn-collapse"
+                        defaultActiveKey={undefined}
                         items={[
                             {
                                 key: "learn-more",
@@ -312,6 +320,14 @@ export default function ToolPageLayout({
                                                         ))}
                                                     </ul>
                                                 </div>
+                                            )}
+                                            {learnMore.serverNotice && (
+                                                <ServerProxyNotice
+                                                    route={learnMore.serverNotice.route}
+                                                    purpose={learnMore.serverNotice.purpose}
+                                                    sentFields={learnMore.serverNotice.sentFields}
+                                                    extra={learnMore.serverNotice.extra}
+                                                />
                                             )}
                                         </div>
                                     </Card>

@@ -23,13 +23,24 @@ const MIME_TYPES: MimeType[] = [
     { type: "text/xml", extensions: [".xml"], category: "Text" },
     { type: "text/markdown", extensions: [".md", ".markdown"], category: "Text" },
     { type: "text/calendar", extensions: [".ics"], category: "Text" },
+    { type: "text/event-stream", extensions: [], category: "Text" },
+    { type: "text/yaml", extensions: [".yaml", ".yml"], category: "Text" },
 
     // Application
     { type: "application/json", extensions: [".json"], category: "Application" },
+    { type: "application/ld+json", extensions: [".jsonld"], category: "Application" },
+    { type: "application/problem+json", extensions: [], category: "Application" },
+    { type: "application/vnd.api+json", extensions: [], category: "Application" },
+    { type: "application/manifest+json", extensions: [".webmanifest"], category: "Application" },
     { type: "application/xml", extensions: [".xml"], category: "Application" },
     { type: "application/pdf", extensions: [".pdf"], category: "Application" },
+    { type: "application/yaml", extensions: [".yaml", ".yml"], category: "Application" },
+    { type: "application/toml", extensions: [".toml"], category: "Application" },
     { type: "application/zip", extensions: [".zip"], category: "Application" },
     { type: "application/gzip", extensions: [".gz", ".gzip"], category: "Application" },
+    { type: "application/zstd", extensions: [".zst"], category: "Application" },
+    { type: "application/x-bzip2", extensions: [".bz2"], category: "Application" },
+    { type: "application/x-xz", extensions: [".xz"], category: "Application" },
     { type: "application/x-tar", extensions: [".tar"], category: "Application" },
     { type: "application/x-rar-compressed", extensions: [".rar"], category: "Application" },
     { type: "application/x-7z-compressed", extensions: [".7z"], category: "Application" },
@@ -38,6 +49,8 @@ const MIME_TYPES: MimeType[] = [
     { type: "application/javascript", extensions: [".js"], category: "Application" },
     { type: "application/typescript", extensions: [".ts"], category: "Application" },
     { type: "application/wasm", extensions: [".wasm"], category: "Application" },
+    { type: "application/epub+zip", extensions: [".epub"], category: "Application" },
+    { type: "application/x-sh", extensions: [".sh"], category: "Application" },
 
     // Microsoft Office
     { type: "application/msword", extensions: [".doc"], category: "Office" },
@@ -57,6 +70,9 @@ const MIME_TYPES: MimeType[] = [
     { type: "image/bmp", extensions: [".bmp"], category: "Image" },
     { type: "image/tiff", extensions: [".tiff", ".tif"], category: "Image" },
     { type: "image/avif", extensions: [".avif"], category: "Image" },
+    { type: "image/heic", extensions: [".heic"], category: "Image" },
+    { type: "image/heif", extensions: [".heif"], category: "Image" },
+    { type: "image/jxl", extensions: [".jxl"], category: "Image" },
 
     // Audio
     { type: "audio/mpeg", extensions: [".mp3"], category: "Audio" },
@@ -65,6 +81,7 @@ const MIME_TYPES: MimeType[] = [
     { type: "audio/webm", extensions: [".weba"], category: "Audio" },
     { type: "audio/aac", extensions: [".aac"], category: "Audio" },
     { type: "audio/flac", extensions: [".flac"], category: "Audio" },
+    { type: "audio/opus", extensions: [".opus"], category: "Audio" },
     { type: "audio/midi", extensions: [".mid", ".midi"], category: "Audio" },
 
     // Video
@@ -74,6 +91,8 @@ const MIME_TYPES: MimeType[] = [
     { type: "video/quicktime", extensions: [".mov"], category: "Video" },
     { type: "video/x-msvideo", extensions: [".avi"], category: "Video" },
     { type: "video/x-matroska", extensions: [".mkv"], category: "Video" },
+    { type: "video/3gpp", extensions: [".3gp"], category: "Video" },
+    { type: "video/x-flv", extensions: [".flv"], category: "Video" },
 
     // Fonts
     { type: "font/woff", extensions: [".woff"], category: "Font" },

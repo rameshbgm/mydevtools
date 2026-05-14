@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Badge, Button, Card, Collapse, Empty, Modal, Tag, Typography } from "antd";
+import { App, Badge, Button, Card, Collapse, Empty, Modal, Tag, Typography } from "antd";
 import {
     CheckCircleOutlined,
     ClearOutlined,
@@ -37,11 +37,29 @@ const STORAGE_CATALOGUE: StorageEntry[] = [
     {
         id: "app-prefs",
         label: "App Preferences",
-        description: "Your theme preference, sidebar state, and recently visited tools.",
+        description: "Theme, sidebar state, recently visited tools, and bookmark menus.",
         keys: ["devtools-hub-storage"],
         type: "preferences",
         icon: "⚙️",
         color: "#6366f1",
+    },
+    {
+        id: "mcp-inspector",
+        label: "MCP Inspector",
+        description: "MCP server connection config (URL, transport, connection mode, custom headers, OAuth 2.0, timeouts, MCP proxy address/token, SSL/TLS) and call history.",
+        keys: ["mcp-inspector-config", "mcp-inspector-history"],
+        type: "tool-data",
+        icon: "⚡",
+        color: "#6366f1",
+    },
+    {
+        id: "a2a-inspector",
+        label: "A2A Inspector",
+        description: "Agent URL, protocol version, auth, custom headers, SSL/TLS config, and timeout used in the A2A inspector.",
+        keys: ["a2a-inspector-config", "a2a-inspector-url"],
+        type: "tool-data",
+        icon: "🤖",
+        color: "#0891b2",
     },
     {
         id: "api-builder",
@@ -60,6 +78,24 @@ const STORAGE_CATALOGUE: StorageEntry[] = [
         type: "database",
         icon: "✅",
         color: "#f59e0b",
+    },
+    {
+        id: "sticky-notes",
+        label: "Sticky Notes",
+        description: "Your saved sticky notes — titles, content, colors, and pin state.",
+        keys: ["wb-sticky-notes-v1"],
+        type: "tool-data",
+        icon: "📌",
+        color: "#f59e0b",
+    },
+    {
+        id: "rich-text-editor",
+        label: "Rich Text Editor",
+        description: "Your saved documents — titles, formatted content (HTML), and timestamps.",
+        keys: ["wb-rich-text-docs-v1"],
+        type: "tool-data",
+        icon: "📝",
+        color: "#0891b2",
     },
 ];
 
@@ -184,6 +220,7 @@ function DataPreviewModal({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MemoryPage() {
+    const { modal } = App.useApp();
     const { darkMode, clearRecentTools } = useAppStore();
     const [lsSnapshot, setLsSnapshot] = useState<Record<string, string>>({});
     const [idbEntries, setIdbEntries] = useState<Record<string, boolean>>({});
@@ -235,7 +272,7 @@ export default function MemoryPage() {
 
     // ── Clear ALL ─────────────────────────────────────────────────────────────
     const clearAll = useCallback(() => {
-        Modal.confirm({
+        modal.confirm({
             title: "Clear all stored data?",
             icon: <ExclamationCircleOutlined style={{ color: "#ef4444" }} />,
             content: "This will permanently delete your preferences, saved API requests, history, environments, and task data. This cannot be undone.",
@@ -251,7 +288,7 @@ export default function MemoryPage() {
                 await refresh();
             },
         });
-    }, [clearRecentTools, refresh]);
+    }, [modal, clearRecentTools, refresh]);
 
     // ── Export ────────────────────────────────────────────────────────────────
     const exportData = useCallback(() => {
