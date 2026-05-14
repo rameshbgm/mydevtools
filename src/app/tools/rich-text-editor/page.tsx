@@ -26,6 +26,7 @@ import {
     UndoOutlined,
     RedoOutlined,
     LinkOutlined,
+    DisconnectOutlined,
     MinusOutlined,
     ClearOutlined,
     CodeOutlined,
@@ -36,6 +37,7 @@ import {
     FileTextOutlined,
     FontColorsOutlined,
     BgColorsOutlined,
+    EditOutlined,
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
@@ -79,23 +81,23 @@ function defaultDoc(title = "Untitled Document"): RichDoc {
 }
 
 const BLOCK_FORMATS = [
-    { value: "p",          label: "Normal"      },
-    { value: "h1",         label: "Heading 1"   },
-    { value: "h2",         label: "Heading 2"   },
-    { value: "h3",         label: "Heading 3"   },
-    { value: "h4",         label: "Heading 4"   },
-    { value: "blockquote", label: "Blockquote"  },
-    { value: "pre",        label: "Code Block"  },
+    { value: "p", label: "Normal" },
+    { value: "h1", label: "Heading 1" },
+    { value: "h2", label: "Heading 2" },
+    { value: "h3", label: "Heading 3" },
+    { value: "h4", label: "Heading 4" },
+    { value: "blockquote", label: "Blockquote" },
+    { value: "pre", label: "Code Block" },
 ];
 
 const FONT_SIZES = [
-    { value: "1", label: "8pt"  },
-    { value: "2", label: "10pt" },
-    { value: "3", label: "12pt" },
-    { value: "4", label: "14pt" },
-    { value: "5", label: "18pt" },
-    { value: "6", label: "24pt" },
-    { value: "7", label: "36pt" },
+    { value: "1", label: "8 pt" },
+    { value: "2", label: "10 pt" },
+    { value: "3", label: "12 pt" },
+    { value: "4", label: "14 pt" },
+    { value: "5", label: "18 pt" },
+    { value: "6", label: "24 pt" },
+    { value: "7", label: "36 pt" },
 ];
 
 export default function RichTextEditorPage() {
@@ -122,6 +124,20 @@ export default function RichTextEditorPage() {
         }
     }, []);
 
+    // Persist the editor's selection whenever it changes — toolbar buttons restore from here
+    useEffect(() => {
+        const handler = () => {
+            const sel = window.getSelection();
+            if (!sel || sel.rangeCount === 0) return;
+            const range = sel.getRangeAt(0);
+            if (editorRef.current && editorRef.current.contains(range.commonAncestorContainer)) {
+                savedRangeRef.current = range.cloneRange();
+            }
+        };
+        document.addEventListener("selectionchange", handler);
+        return () => document.removeEventListener("selectionchange", handler);
+    }, []);
+
     const activeDoc = docs.find(d => d.id === activeId);
 
     const updateDoc = useCallback((id: string, patch: Partial<RichDoc>) => {
@@ -134,13 +150,11 @@ export default function RichTextEditorPage() {
         });
     }, []);
 
-    // Flush contentEditable HTML to state
     const flush = useCallback(() => {
         if (!editorRef.current || !activeId || sourceView) return;
         updateDoc(activeId, { content: editorRef.current.innerHTML });
     }, [activeId, sourceView, updateDoc]);
 
-    // Sync editor when switching document or toggling source view
     useEffect(() => {
         if (sourceView || !editorRef.current || !activeDoc) return;
         if (editorRef.current.innerHTML !== activeDoc.content) {
@@ -154,12 +168,21 @@ export default function RichTextEditorPage() {
         .trim()
         .split(/\s+/)
         .filter(Boolean).length;
-
     const charCount = (activeDoc?.content ?? "").replace(/<[^>]*>/g, "").length;
+
+    const restoreSelection = () => {
+        if (!editorRef.current) return;
+        editorRef.current.focus();
+        if (!savedRangeRef.current) return;
+        const sel = window.getSelection();
+        if (!sel) return;
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+    };
 
     const exec = useCallback((cmd: string, val?: string) => {
         if (!editorRef.current) return;
-        editorRef.current.focus();
+        restoreSelection();
         if (["foreColor", "hiliteColor", "backColor"].includes(cmd)) {
             document.execCommand("styleWithCSS", false, "true");
         }
@@ -167,17 +190,7 @@ export default function RichTextEditorPage() {
         flush();
     }, [flush]);
 
-    const saveRange = () => {
-        const sel = window.getSelection();
-        if (sel?.rangeCount) savedRangeRef.current = sel.getRangeAt(0).cloneRange();
-    };
-
     const insertLink = () => {
-        if (savedRangeRef.current) {
-            const sel = window.getSelection();
-            sel?.removeAllRanges();
-            sel?.addRange(savedRangeRef.current);
-        }
         if (linkUrl) {
             const url = linkUrl.startsWith("http") ? linkUrl : `https://${linkUrl}`;
             exec("createLink", url);
@@ -232,8 +245,8 @@ export default function RichTextEditorPage() {
 
     const exportMenu: MenuProps = {
         items: [
-            { key: "html", label: "Export as HTML",       icon: <CodeOutlined />     },
-            { key: "txt",  label: "Export as Plain Text", icon: <FileTextOutlined /> },
+            { key: "html", label: "Export as HTML", icon: <CodeOutlined /> },
+            { key: "txt", label: "Export as Plain Text", icon: <FileTextOutlined /> },
         ],
         onClick: ({ key }) => exportDoc(key as "html" | "txt"),
     };
@@ -248,52 +261,82 @@ export default function RichTextEditorPage() {
         setRenaming(null);
     };
 
-    const tabItems = docs.map(doc => ({
-        key: doc.id,
-        closable: docs.length > 1,
-        label:
-            renaming === doc.id ? (
+    const tabItems = docs.map(doc => {
+        const isActive = doc.id === activeId;
+        const isRenaming = renaming === doc.id;
+        return {
+            key: doc.id,
+            closable: docs.length > 1,
+            label: isRenaming ? (
                 <Input
                     size="small"
                     value={renameVal}
                     onChange={e => setRenameVal(e.target.value)}
                     onBlur={confirmRename}
                     onPressEnter={confirmRename}
-                    style={{ width: 120, fontSize: 12 }}
+                    onKeyDown={e => { if (e.key === "Escape") setRenaming(null); }}
+                    style={{ width: 160, fontSize: 12 }}
                     autoFocus
                     onClick={e => e.stopPropagation()}
                 />
             ) : (
                 <span
-                    onDoubleClick={e => { e.stopPropagation(); startRename(doc.id, doc.title); }}
-                    title="Double-click to rename"
+                    onClick={e => {
+                        // Click on the already-active tab → enter inline rename
+                        if (isActive) {
+                            e.stopPropagation();
+                            startRename(doc.id, doc.title);
+                        }
+                    }}
+                    onDoubleClick={e => {
+                        e.stopPropagation();
+                        startRename(doc.id, doc.title);
+                    }}
+                    title={isActive ? "Click to rename" : doc.title}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
                 >
-                    {doc.title}
+                    <FileTextOutlined style={{ fontSize: 11, opacity: 0.65 }} />
+                    <span>{doc.title}</span>
+                    {isActive && (
+                        <EditOutlined
+                            style={{ fontSize: 10, opacity: 0.5, marginLeft: 2 }}
+                        />
+                    )}
                 </span>
             ),
-    }));
+        };
+    });
 
-    // Small toolbar button helper — onMouseDown preventDefault keeps editor focus + selection intact
-    const TB = ({
-        tip,
-        cmd,
-        val,
-        children,
-    }: {
-        tip: string;
-        cmd: string;
-        val?: string;
-        children: React.ReactNode;
+    // Toolbar button helper
+    const TB = ({ tip, cmd, val, children }: {
+        tip: string; cmd: string; val?: string; children: React.ReactNode;
     }) => (
         <Tooltip title={tip}>
             <Button
                 size="small"
+                type="text"
                 disabled={sourceView}
                 icon={children}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => exec(cmd, val)}
+                style={{ width: 32, height: 32, borderRadius: 6 }}
             />
         </Tooltip>
+    );
+
+    const VDivider = () => (
+        <span
+            aria-hidden
+            style={{
+                display: "inline-block",
+                width: 1,
+                height: 22,
+                background: "var(--wb-card-border)",
+                margin: "0 6px",
+                alignSelf: "center",
+                flexShrink: 0,
+            }}
+        />
     );
 
     return (
@@ -308,7 +351,7 @@ export default function RichTextEditorPage() {
                 howToUse: [
                     "Use the toolbar to format selected text: headings, bold, italic, lists, links, colors, and more.",
                     "Click the '+' at the end of the tab bar to open a new document.",
-                    "Double-click a tab title to rename the document.",
+                    "Click the active tab title (or double-click any tab) to rename inline.",
                     "Toggle 'Source' to inspect or paste raw HTML directly.",
                     "Click 'Export' to download as an HTML file or plain text.",
                 ],
@@ -320,241 +363,312 @@ export default function RichTextEditorPage() {
                 ],
             }}
         >
-            {/* Document tabs */}
-            <Tabs
-                type="editable-card"
-                activeKey={activeId}
-                onChange={key => { flush(); setActiveId(key); setSourceView(false); }}
-                onEdit={(key, action) => {
-                    if (action === "add") addDoc();
-                    if (action === "remove") removeDoc(key as string);
-                }}
-                items={tabItems}
-                style={{ marginBottom: 0 }}
-            />
-
-            {/* Toolbar */}
+            {/* Editor shell — single elevated card */}
             <div
                 style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 4,
-                    padding: "8px 10px",
-                    background: "var(--wb-surface-2)",
-                    border: "1px solid var(--wb-border)",
-                    borderTop: "none",
-                    alignItems: "center",
-                    minHeight: 44,
+                    background: "var(--wb-card-solid-bg)",
+                    border: "1px solid var(--wb-card-border)",
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    boxShadow: "0 4px 24px rgba(0, 0, 0, 0.08)",
                 }}
             >
-                {/* Block format */}
-                <Select
-                    size="small"
-                    style={{ width: 128 }}
-                    defaultValue="p"
-                    options={BLOCK_FORMATS}
-                    disabled={sourceView}
-                    onChange={v => exec("formatBlock", v)}
-                    popupMatchSelectWidth={false}
-                />
-
-                {/* Font size */}
-                <Select
-                    size="small"
-                    style={{ width: 88 }}
-                    defaultValue="4"
-                    options={FONT_SIZES}
-                    disabled={sourceView}
-                    onChange={v => exec("fontSize", v)}
-                    popupMatchSelectWidth={false}
-                />
-
-                <span aria-hidden style={{ display: "inline-block", width: 1, height: 20, background: "var(--wb-border)", margin: "0 4px", alignSelf: "center", flexShrink: 0 }} />
-
-                {/* Text style */}
-                <TB tip="Bold (Ctrl+B)"       cmd="bold">          <BoldOutlined />          </TB>
-                <TB tip="Italic (Ctrl+I)"     cmd="italic">        <ItalicOutlined />        </TB>
-                <TB tip="Underline (Ctrl+U)"  cmd="underline">     <UnderlineOutlined />     </TB>
-                <TB tip="Strikethrough"       cmd="strikeThrough"> <StrikethroughOutlined /> </TB>
-
-                {/* Text color — native color picker hidden inside button */}
-                <Tooltip title="Text Color">
-                    <Button
+                {/* Document tabs */}
+                <div style={{ padding: "10px 12px 0", background: "var(--wb-card-solid-bg)" }}>
+                    <Tabs
+                        type="editable-card"
                         size="small"
-                        disabled={sourceView}
-                        style={{ position: "relative", overflow: "hidden" }}
-                        onMouseDown={(e) => e.preventDefault()}
-                    >
-                        <FontColorsOutlined />
-                        <input
-                            type="color"
-                            disabled={sourceView}
-                            style={{
-                                position: "absolute",
-                                inset: 0,
-                                opacity: 0,
-                                width: "100%",
-                                height: "100%",
-                                cursor: "pointer",
-                            }}
-                            onInput={e => exec("foreColor", (e.target as HTMLInputElement).value)}
-                        />
-                    </Button>
-                </Tooltip>
-
-                {/* Highlight color */}
-                <Tooltip title="Highlight Color">
-                    <Button
-                        size="small"
-                        disabled={sourceView}
-                        style={{ position: "relative", overflow: "hidden" }}
-                        onMouseDown={(e) => e.preventDefault()}
-                    >
-                        <BgColorsOutlined />
-                        <input
-                            type="color"
-                            defaultValue="#ffff00"
-                            disabled={sourceView}
-                            style={{
-                                position: "absolute",
-                                inset: 0,
-                                opacity: 0,
-                                width: "100%",
-                                height: "100%",
-                                cursor: "pointer",
-                            }}
-                            onInput={e => exec("hiliteColor", (e.target as HTMLInputElement).value)}
-                        />
-                    </Button>
-                </Tooltip>
-
-                <span aria-hidden style={{ display: "inline-block", width: 1, height: 20, background: "var(--wb-border)", margin: "0 4px", alignSelf: "center", flexShrink: 0 }} />
-
-                {/* Alignment */}
-                <TB tip="Align Left"   cmd="justifyLeft">   <AlignLeftOutlined />   </TB>
-                <TB tip="Align Center" cmd="justifyCenter"> <AlignCenterOutlined /> </TB>
-                <TB tip="Align Right"  cmd="justifyRight">  <AlignRightOutlined />  </TB>
-                <TB tip="Justify"      cmd="justifyFull">   <MenuOutlined />        </TB>
-
-                <span aria-hidden style={{ display: "inline-block", width: 1, height: 20, background: "var(--wb-border)", margin: "0 4px", alignSelf: "center", flexShrink: 0 }} />
-
-                {/* Lists & indent */}
-                <TB tip="Ordered List"   cmd="insertOrderedList">   <OrderedListOutlined />   </TB>
-                <TB tip="Unordered List" cmd="insertUnorderedList"> <UnorderedListOutlined /> </TB>
-                <TB tip="Indent"         cmd="indent">              <MenuFoldOutlined />      </TB>
-                <TB tip="Outdent"        cmd="outdent">             <MenuUnfoldOutlined />    </TB>
-
-                <span aria-hidden style={{ display: "inline-block", width: 1, height: 20, background: "var(--wb-border)", margin: "0 4px", alignSelf: "center", flexShrink: 0 }} />
-
-                {/* Link / HR */}
-                <Tooltip title="Insert Link">
-                    <Button
-                        size="small"
-                        icon={<LinkOutlined />}
-                        disabled={sourceView}
-                        onMouseDown={(e) => { e.preventDefault(); saveRange(); }}
-                        onClick={() => setLinkOpen(true)}
+                        activeKey={activeId}
+                        onChange={key => { flush(); setActiveId(key); setSourceView(false); }}
+                        onEdit={(key, action) => {
+                            if (action === "add") addDoc();
+                            if (action === "remove") removeDoc(key as string);
+                        }}
+                        items={tabItems}
+                        style={{ marginBottom: 0 }}
                     />
-                </Tooltip>
-                <TB tip="Remove Link"     cmd="unlink">               <LinkOutlined />  </TB>
-                <TB tip="Horizontal Rule" cmd="insertHorizontalRule"> <MinusOutlined /> </TB>
+                </div>
 
-                <span aria-hidden style={{ display: "inline-block", width: 1, height: 20, background: "var(--wb-border)", margin: "0 4px", alignSelf: "center", flexShrink: 0 }} />
+                {/* Toolbar */}
+                <div
+                    style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 2,
+                        padding: "10px 14px",
+                        background: "var(--wb-card-solid-bg)",
+                        borderTop: "1px solid var(--wb-card-border)",
+                        borderBottom: "1px solid var(--wb-card-border)",
+                        alignItems: "center",
+                    }}
+                >
+                    <Select
+                        size="small"
+                        style={{ width: 132 }}
+                        defaultValue="p"
+                        options={BLOCK_FORMATS}
+                        disabled={sourceView}
+                        onChange={v => exec("formatBlock", v)}
+                        popupMatchSelectWidth={false}
+                    />
+                    <span style={{ width: 6 }} />
+                    <Select
+                        size="small"
+                        style={{ width: 80 }}
+                        defaultValue="4"
+                        options={FONT_SIZES}
+                        disabled={sourceView}
+                        onChange={v => exec("fontSize", v)}
+                        popupMatchSelectWidth={false}
+                    />
 
-                {/* History */}
-                <TB tip="Undo (Ctrl+Z)" cmd="undo"> <UndoOutlined /> </TB>
-                <TB tip="Redo (Ctrl+Y)" cmd="redo"> <RedoOutlined /> </TB>
-                <TB tip="Clear Formatting" cmd="removeFormat"> <ClearOutlined /> </TB>
+                    <VDivider />
 
-                {/* Source + Export pushed right */}
-                <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-                    <Tooltip title={sourceView ? "Back to WYSIWYG" : "View / edit raw HTML"}>
+                    <TB tip="Bold (Ctrl+B)" cmd="bold"><BoldOutlined /></TB>
+                    <TB tip="Italic (Ctrl+I)" cmd="italic"><ItalicOutlined /></TB>
+                    <TB tip="Underline (Ctrl+U)" cmd="underline"><UnderlineOutlined /></TB>
+                    <TB tip="Strikethrough" cmd="strikeThrough"><StrikethroughOutlined /></TB>
+
+                    <Tooltip title="Text Color">
                         <Button
                             size="small"
-                            icon={<CodeOutlined />}
-                            type={sourceView ? "primary" : "default"}
+                            type="text"
+                            disabled={sourceView}
+                            style={{ width: 32, height: 32, position: "relative", overflow: "hidden", borderRadius: 6 }}
                             onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => { if (!sourceView) flush(); setSourceView(v => !v); }}
                         >
-                            Source
+                            <FontColorsOutlined />
+                            <input
+                                type="color"
+                                aria-label="Text color"
+                                title="Text color"
+                                disabled={sourceView}
+                                style={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    opacity: 0,
+                                    width: "100%",
+                                    height: "100%",
+                                    cursor: "pointer",
+                                }}
+                                onInput={e => exec("foreColor", (e.target as HTMLInputElement).value)}
+                            />
                         </Button>
                     </Tooltip>
-                    <Dropdown menu={exportMenu}>
-                        <Button size="small" icon={<DownloadOutlined />} onMouseDown={(e) => e.preventDefault()}>
-                            Export
+                    <Tooltip title="Highlight Color">
+                        <Button
+                            size="small"
+                            type="text"
+                            disabled={sourceView}
+                            style={{ width: 32, height: 32, position: "relative", overflow: "hidden", borderRadius: 6 }}
+                            onMouseDown={(e) => e.preventDefault()}
+                        >
+                            <BgColorsOutlined />
+                            <input
+                                type="color"
+                                aria-label="Highlight color"
+                                title="Highlight color"
+                                defaultValue="#ffff00"
+                                disabled={sourceView}
+                                style={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    opacity: 0,
+                                    width: "100%",
+                                    height: "100%",
+                                    cursor: "pointer",
+                                }}
+                                onInput={e => exec("hiliteColor", (e.target as HTMLInputElement).value)}
+                            />
                         </Button>
-                    </Dropdown>
-                </div>
-            </div>
+                    </Tooltip>
 
-            {/* Editor / source area */}
-            <div
-                style={{
-                    border: "1px solid var(--wb-border)",
-                    borderTop: "none",
-                    borderRadius: "0 0 8px 8px",
-                    overflow: "hidden",
-                    boxShadow: "inset 0 2px 4px rgba(0,0,0,0.06)",
-                }}
-            >
-                {sourceView ? (
-                    <Input.TextArea
-                        value={activeDoc?.content ?? ""}
-                        onChange={e => activeDoc && updateDoc(activeDoc.id, { content: e.target.value })}
-                        style={{
-                            fontFamily: "var(--font-mono, monospace)",
-                            fontSize: 13,
-                            borderRadius: 0,
-                            resize: "vertical",
-                            background: "var(--wb-surface-1)",
-                            color: "var(--wb-text-body)",
-                        }}
-                        autoSize={{ minRows: 22 }}
-                    />
-                ) : (
-                    <div
-                        ref={editorRef}
-                        contentEditable
-                        suppressContentEditableWarning
-                        onInput={flush}
-                        onBlur={flush}
-                        style={{
-                            minHeight: 520,
-                            padding: "32px 48px",
-                            outline: "none",
-                            background: "#ffffff",
-                            color: "#1a1a1a",
-                            fontSize: 15,
-                            lineHeight: 1.8,
-                            maxWidth: 860,
-                            margin: "0 auto",
-                            boxShadow: "0 1px 6px rgba(0,0,0,0.08)",
-                        }}
-                    />
-                )}
+                    <VDivider />
+
+                    <TB tip="Align Left" cmd="justifyLeft"><AlignLeftOutlined /></TB>
+                    <TB tip="Align Center" cmd="justifyCenter"><AlignCenterOutlined /></TB>
+                    <TB tip="Align Right" cmd="justifyRight"><AlignRightOutlined /></TB>
+                    <TB tip="Justify" cmd="justifyFull"><MenuOutlined /></TB>
+
+                    <VDivider />
+
+                    <TB tip="Ordered List" cmd="insertOrderedList"><OrderedListOutlined /></TB>
+                    <TB tip="Unordered List" cmd="insertUnorderedList"><UnorderedListOutlined /></TB>
+                    <TB tip="Indent" cmd="indent"><MenuFoldOutlined /></TB>
+                    <TB tip="Outdent" cmd="outdent"><MenuUnfoldOutlined /></TB>
+
+                    <VDivider />
+
+                    <Tooltip title="Insert Link">
+                        <Button
+                            size="small"
+                            type="text"
+                            icon={<LinkOutlined />}
+                            disabled={sourceView}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => setLinkOpen(true)}
+                            style={{ width: 32, height: 32, borderRadius: 6 }}
+                        />
+                    </Tooltip>
+                    <TB tip="Remove Link" cmd="unlink"><DisconnectOutlined /></TB>
+                    <TB tip="Horizontal Rule" cmd="insertHorizontalRule"><MinusOutlined /></TB>
+
+                    <VDivider />
+
+                    <TB tip="Undo (Ctrl+Z)" cmd="undo"><UndoOutlined /></TB>
+                    <TB tip="Redo (Ctrl+Y)" cmd="redo"><RedoOutlined /></TB>
+                    <TB tip="Clear Formatting" cmd="removeFormat"><ClearOutlined /></TB>
+
+                    <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                        <Tooltip title={sourceView ? "Back to WYSIWYG" : "View / edit raw HTML"}>
+                            <Button
+                                size="small"
+                                icon={<CodeOutlined />}
+                                type={sourceView ? "primary" : "default"}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => { if (!sourceView) flush(); setSourceView(v => !v); }}
+                            >
+                                Source
+                            </Button>
+                        </Tooltip>
+                        <Dropdown menu={exportMenu}>
+                            <Button
+                                size="small"
+                                icon={<DownloadOutlined />}
+                                onMouseDown={(e) => e.preventDefault()}
+                            >
+                                Export
+                            </Button>
+                        </Dropdown>
+                    </div>
+                </div>
+
+                {/* Document canvas */}
+                <div
+                    style={{
+                        background: "var(--wb-content-bg)",
+                        padding: "28px 16px",
+                    }}
+                >
+                    {sourceView ? (
+                        <Input.TextArea
+                            value={activeDoc?.content ?? ""}
+                            onChange={e => activeDoc && updateDoc(activeDoc.id, { content: e.target.value })}
+                            style={{
+                                fontFamily: "var(--font-geist-mono), monospace",
+                                fontSize: 13,
+                                background: "var(--wb-card-solid-bg)",
+                                color: "var(--wb-text-body)",
+                                border: "1px solid var(--wb-card-border)",
+                                borderRadius: 10,
+                                maxWidth: 920,
+                                margin: "0 auto",
+                                display: "block",
+                            }}
+                            autoSize={{ minRows: 22 }}
+                        />
+                    ) : (
+                        <div
+                            ref={editorRef}
+                            contentEditable
+                            suppressContentEditableWarning
+                            spellCheck
+                            onInput={flush}
+                            onBlur={flush}
+                            className="rte-canvas"
+                            style={{
+                                minHeight: 560,
+                                padding: "56px 72px",
+                                outline: "none",
+                                background: "var(--wb-card-solid-bg)",
+                                color: "var(--wb-text-body)",
+                                fontFamily: "var(--font-geist-sans), system-ui, -apple-system, sans-serif",
+                                fontSize: 15,
+                                lineHeight: 1.75,
+                                maxWidth: 920,
+                                margin: "0 auto",
+                                borderRadius: 10,
+                                border: "1px solid var(--wb-card-border)",
+                                boxShadow: "0 6px 24px rgba(0, 0, 0, 0.08)",
+                            }}
+                        />
+                    )}
+                </div>
 
                 {/* Status bar */}
                 <div
                     style={{
                         display: "flex",
-                        gap: 16,
-                        padding: "5px 16px",
-                        background: "var(--wb-surface-2)",
-                        borderTop: "1px solid var(--wb-border)",
+                        gap: 18,
+                        padding: "8px 18px",
+                        background: "var(--wb-card-solid-bg)",
+                        borderTop: "1px solid var(--wb-card-border)",
                         fontSize: 12,
-                        color: "var(--wb-text-secondary, #8c8c8c)",
+                        color: "var(--wb-text-muted)",
                         userSelect: "none",
+                        alignItems: "center",
                     }}
                 >
-                    <Text style={{ fontSize: 12 }}>Words: {wordCount}</Text>
-                    <Text style={{ fontSize: 12 }}>Characters: {charCount}</Text>
+                    <Text style={{ fontSize: 12, color: "var(--wb-text-muted)" }}>
+                        Words <span style={{ color: "var(--wb-text-body)", fontWeight: 600 }}>{wordCount}</span>
+                    </Text>
+                    <Text style={{ fontSize: 12, color: "var(--wb-text-muted)" }}>
+                        Characters <span style={{ color: "var(--wb-text-body)", fontWeight: 600 }}>{charCount}</span>
+                    </Text>
                     {activeDoc && (
-                        <Text style={{ fontSize: 12, marginLeft: "auto" }}>
+                        <Text
+                            style={{
+                                fontSize: 12,
+                                marginLeft: "auto",
+                                color: "var(--wb-text-muted)",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                            }}
+                        >
+                            <span
+                                style={{
+                                    width: 6,
+                                    height: 6,
+                                    background: "var(--wb-accent)",
+                                    borderRadius: "50%",
+                                    display: "inline-block",
+                                }}
+                            />
                             Auto-saved · {new Date(activeDoc.updatedAt).toLocaleTimeString()}
                         </Text>
                     )}
                 </div>
             </div>
+
+            {/* Editor content styling — applies inside the contentEditable div */}
+            <style jsx global>{`
+                .rte-canvas h1 { font-size: 2rem; font-weight: 700; margin: 1.2em 0 0.6em; color: var(--wb-text-heading); line-height: 1.25; }
+                .rte-canvas h2 { font-size: 1.6rem; font-weight: 700; margin: 1.1em 0 0.5em; color: var(--wb-text-heading); line-height: 1.3; }
+                .rte-canvas h3 { font-size: 1.3rem; font-weight: 600; margin: 1em 0 0.5em; color: var(--wb-text-heading); }
+                .rte-canvas h4 { font-size: 1.1rem; font-weight: 600; margin: 1em 0 0.4em; color: var(--wb-text-heading); }
+                .rte-canvas p { margin: 0 0 0.8em; }
+                .rte-canvas blockquote {
+                    margin: 1em 0; padding: 0.5em 1em;
+                    border-left: 3px solid var(--wb-accent);
+                    color: var(--wb-text-muted); font-style: italic;
+                    background: var(--wb-accent-soft); border-radius: 4px;
+                }
+                .rte-canvas pre {
+                    margin: 1em 0; padding: 12px 14px;
+                    background: var(--wb-content-bg);
+                    border: 1px solid var(--wb-card-border);
+                    border-radius: 6px;
+                    font-family: var(--font-geist-mono), monospace;
+                    font-size: 13px; line-height: 1.5;
+                    overflow-x: auto;
+                }
+                .rte-canvas a { color: var(--wb-accent); text-decoration: underline; }
+                .rte-canvas ul, .rte-canvas ol { margin: 0.6em 0 0.8em; padding-left: 1.6em; }
+                .rte-canvas li { margin: 0.25em 0; }
+                .rte-canvas hr { border: none; border-top: 1px solid var(--wb-card-border); margin: 1.5em 0; }
+                .rte-canvas:focus { outline: none; }
+            `}</style>
 
             {/* Insert link modal */}
             <Modal
