@@ -749,7 +749,7 @@ function BookmarkButton({ darkMode, currentToolId, onNavigate }: BookmarkButtonP
             placement="bottomLeft"
             arrow={false}
             content={panelContent}
-            styles={{ body: { padding: "16px" } }}
+            styles={{ content: { padding: "16px" } }}
         >
             <Tooltip title="Bookmarks" open={open ? false : undefined}>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
