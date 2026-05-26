@@ -16,7 +16,7 @@
  * Public-facing version number shown in the topbar. Bump on a meaningful
  * shipping milestone — does NOT need to match individual entries below.
  */
-export const APP_VERSION = "1.3";
+export const APP_VERSION = "1.4";
 
 export type ReleaseKind = "feature" | "fix" | "security" | "ui" | "perf";
 
@@ -54,6 +54,59 @@ export interface ReleaseNote {
  * V1.0 — initial public release of the toolkit (80+ tools).
  */
 const ENTRIES: ReleaseNote[] = [
+    {
+        date: "2026-05-27",
+        version: "1.4",
+        kind: "feature",
+        title: "V1.4 — Networking, Diff, Image & Media, Data Conversion (14 new tools)",
+        summary:
+            "Four new directions land fully implemented: Networking & Web (Webhook Receiver, WebSocket Tester, CORS Tester, DNS Lookup), Diff & Compare additions (Image Diff, CSV Diff), a new Image & Media category (Image Compressor, SVG Optimizer, Favicon Generator, Color Palette Extractor, EXIF Viewer), and Data Conversion additions (Mock Data Generator, TOML Converter, TOON Converter). All 14 ship functional — no placeholders.",
+        sections: [
+            {
+                label: "New category — Image & Media (5 tools, all client-side)",
+                bullets: [
+                    "**Image Compressor** — Canvas re-encode with quality slider, JPEG/WebP/PNG output, optional max-dimension resize, live before/after preview.",
+                    "**SVG Optimizer** — strips editor metadata (Inkscape/Sketch/Figma), collapses whitespace, rounds numeric precision with a 0–6 decimal slider, side-by-side rendered preview.",
+                    "**Favicon Generator** — produces 7 sizes (16/32/48/96/180/192/512) from one source, with HTML head snippet and PWA manifest scaffolds.",
+                    "**Color Palette Extractor** — k-means in RGB space at 200px downsample, configurable palette size 3–16, HEX/RGB/HSL per swatch.",
+                    "**EXIF Viewer** — in-browser EXIF parser for JPEG/TIFF; groups Camera/Lens/Capture/Image/GPS tags, decodes GPS to decimal lat/lon with map link.",
+                ],
+            },
+            {
+                label: "Networking & Web (4 tools)",
+                bullets: [
+                    "**Webhook Receiver** — generates a unique inbound URL, captures any HTTP request, surfaces method/headers/query/body live. Uses a new `/api/webhook/[sessionId]` endpoint with in-memory store (1h idle TTL, 200 requests/session).",
+                    "**WebSocket Tester** — real ws/wss client with connection state, text frame send, timestamped history.",
+                    "**CORS Tester** — sends real fetch from browser, classifies failures as preflight vs simple-request, decodes them into plain English.",
+                    "**DNS Lookup** — DoH client (Cloudflare/Google), parallel A/AAAA/CNAME/MX/TXT/NS/SOA/CAA/SRV lookups, zone-file-format copy.",
+                ],
+            },
+            {
+                label: "Diff & Compare (2 tools)",
+                bullets: [
+                    "**CSV Diff** — RFC 4180 parser, key-column row matching, column-level change highlighting, copyable audit report.",
+                    "**Image Diff** — pixel-by-pixel comparison with side-by-side, overlay (with opacity slider) and difference modes; tolerance slider and changed-pixel stats.",
+                ],
+            },
+            {
+                label: "Data Conversion (3 tools)",
+                bullets: [
+                    "**Mock Data Generator** — schema builder with 15 field types, seedable Mulberry32 RNG for reproducible fixtures, JSON/CSV/SQL output.",
+                    "**TOML Converter** — TOML ↔ JSON ↔ YAML with a minimal in-file TOML parser (sections, scalars, arrays of scalars).",
+                    "**TOON Converter** — JSON or XML → TOON (Token-Oriented Object Notation). Tabular array detection emits CSV-like rows instead of repeating keys; live characters-saved and approximate tokens-saved badges for LLM prompt budgeting.",
+                ],
+            },
+            {
+                label: "Infrastructure",
+                bullets: [
+                    "New **Image & Media** category — colour, icon, description, order, union type.",
+                    "New `/api/webhook/[sessionId]` and `/api/webhook/[sessionId]/events` routes (long-poll); shared in-memory store at `src/lib/webhook-store.ts`.",
+                    "`ServerProxyNotice` extended with two new route ids (`proxy-stream`, `webhook`).",
+                    "All 14 tools added to `tool-url-table.ts`, `tools-registry.ts` and `seo-content.ts` — full SEO + structured data from day one.",
+                ],
+            },
+        ],
+    },
     {
         date: "2026-05-07",
         version: "1.3.1",

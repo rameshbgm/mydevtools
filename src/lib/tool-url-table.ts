@@ -99,5 +99,23 @@ export const TOOL_ID_TO_CATEGORY = {
   "port-reference": "Reference",
   "ip-ranges-reference": "Reference",
   "rfc-standards": "Reference",
+  // ===== v1.4: Networking & Web =====
+  "webhook-receiver": "Network",
+  "websocket-tester": "Network",
+  "cors-tester": "Network",
+  "dns-lookup": "Network",
+  // ===== v1.4: Diff & Compare additions =====
+  "image-diff": "Diff & Compare",
+  "csv-diff": "Diff & Compare",
+  // ===== v1.4: Image & Media (new category) =====
+  "image-compressor": "Image & Media",
+  "svg-optimizer": "Image & Media",
+  "favicon-generator": "Image & Media",
+  "color-palette-extractor": "Image & Media",
+  "exif-viewer": "Image & Media",
+  // ===== v1.4: Data Conversion additions =====
+  "mock-data-generator": "Data Converters",
+  "toml-converter": "Data Converters",
+  "toon-converter": "Data Converters",
 } as const;
 export type ToolIdForRoute = keyof typeof TOOL_ID_TO_CATEGORY;

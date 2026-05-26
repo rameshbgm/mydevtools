@@ -1595,6 +1595,230 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "text formatting online",
         ],
     },
+
+    // ===== v1.4 — Networking & Web =====
+    "webhook-receiver": {
+        title: "Webhook Receiver Online — Inspect Inbound HTTP Requests in Real Time",
+        description:
+            "Free webhook tester: generate a unique inbound URL, watch incoming HTTP requests stream in live with full headers, body and timing. No signup, sessions auto-expire.",
+        keywords: [
+            "webhook receiver",
+            "webhook tester online",
+            "webhook inspector",
+            "webhook url generator",
+            "http callback debugger",
+            "requestbin alternative",
+            "ngrok alternative webhook",
+            "inspect incoming webhooks",
+            "webhook capture",
+        ],
+    },
+    "websocket-tester": {
+        title: "WebSocket Tester Online — Connect, Send, Inspect ws/wss Frames",
+        description:
+            "Free WebSocket client in your browser. Connect to ws:// and wss:// endpoints, send text and JSON messages, watch frames stream in with timestamps and latency.",
+        keywords: [
+            "websocket tester",
+            "websocket client online",
+            "ws tester",
+            "wss tester",
+            "websocket debugger",
+            "websocket inspector",
+            "online websocket client",
+            "test websocket connection",
+            "websocket frame viewer",
+        ],
+    },
+    "cors-tester": {
+        title: "CORS Tester Online — Debug Access-Control Headers & Preflight",
+        description:
+            "Send cross-origin requests from any origin, inspect preflight and actual response headers, and get plain-English explanations when CORS fails. Free, runs locally.",
+        keywords: [
+            "cors tester",
+            "cors checker online",
+            "cors debugger",
+            "test cors headers",
+            "access-control-allow-origin tester",
+            "preflight tester",
+            "cors error explanation",
+            "cors policy checker",
+        ],
+    },
+    "dns-lookup": {
+        title: "DNS Lookup Online — A, AAAA, MX, TXT, NS, SOA Records",
+        description:
+            "Free DNS lookup tool: resolve A, AAAA, CNAME, MX, TXT, NS, SOA records for any hostname using public DNS-over-HTTPS resolvers. No signup, JSON-friendly output.",
+        keywords: [
+            "dns lookup online",
+            "dig online",
+            "nslookup online",
+            "mx record lookup",
+            "txt record lookup",
+            "dns record checker",
+            "doh dns lookup",
+            "dns query tool",
+            "resolve dns records",
+        ],
+    },
+
+    // ===== v1.4 — Diff & Compare additions =====
+    "image-diff": {
+        title: "Image Diff Online — Pixel-Perfect Visual Comparison Tool",
+        description:
+            "Compare two images pixel by pixel. Side-by-side, overlay and difference modes, adjustable tolerance, runs entirely client-side. Perfect for visual regression tests.",
+        keywords: [
+            "image diff online",
+            "image compare tool",
+            "pixel diff",
+            "visual diff",
+            "image comparison",
+            "screenshot diff",
+            "visual regression",
+            "compare two images online",
+        ],
+    },
+    "csv-diff": {
+        title: "CSV Diff Online — Row-Keyed Spreadsheet Comparison",
+        description:
+            "Compare two CSV files with column-level change highlighting. Detects added, removed and modified rows by key column. Free, private, runs entirely in your browser.",
+        keywords: [
+            "csv diff",
+            "csv compare online",
+            "spreadsheet diff",
+            "compare csv files",
+            "csv comparison tool",
+            "csv row diff",
+            "csv changes",
+            "diff spreadsheet",
+        ],
+    },
+    // ===== v1.4 — Image & Media =====
+    "image-compressor": {
+        title: "Image Compressor Online — Shrink JPEG, PNG, WebP in Browser",
+        description:
+            "Compress images directly in your browser with a quality slider and live before/after preview. Supports JPEG, PNG and WebP. Files never leave your device.",
+        keywords: [
+            "image compressor online",
+            "compress jpeg online",
+            "compress png online",
+            "compress webp",
+            "shrink image online",
+            "image optimizer",
+            "reduce image size",
+            "online image compressor free",
+        ],
+    },
+    "svg-optimizer": {
+        title: "SVG Optimizer Online — Minify and Clean SVG Markup",
+        description:
+            "Optimize SVG markup by stripping editor metadata, collapsing transforms and rounding numeric precision. Configurable, fast, runs entirely in your browser.",
+        keywords: [
+            "svg optimizer online",
+            "svg minifier",
+            "svg cleaner",
+            "svgo online",
+            "shrink svg",
+            "compress svg",
+            "svg optimization",
+            "clean svg markup",
+        ],
+    },
+    "favicon-generator": {
+        title: "Favicon Generator Online — Full Icon Set From One Image",
+        description:
+            "Generate a complete favicon pack (16, 32, 48, 192, 512, apple-touch-icon) plus manifest.json from a single source image. Free, private, no upload.",
+        keywords: [
+            "favicon generator online",
+            "favicon maker",
+            "apple touch icon generator",
+            "favicon ico generator",
+            "manifest.json generator",
+            "favicon pack",
+            "favicon converter",
+            "favicon resizer",
+        ],
+    },
+    "color-palette-extractor": {
+        title: "Color Palette Extractor — Dominant Colors From Any Image",
+        description:
+            "Extract the dominant colours from any image and copy them as HEX, RGB or HSL. K-means clustering, configurable palette size, runs entirely in your browser.",
+        keywords: [
+            "color palette extractor",
+            "dominant colors image",
+            "image color picker",
+            "palette from image",
+            "extract colors online",
+            "image swatch generator",
+            "hex from image",
+        ],
+    },
+    "exif-viewer": {
+        title: "EXIF Viewer Online — Inspect Photo Metadata Privately",
+        description:
+            "View EXIF, GPS and IPTC metadata embedded in JPEG and TIFF photos. Runs entirely on-device — your photos never leave your browser. Free, no signup.",
+        keywords: [
+            "exif viewer online",
+            "exif reader",
+            "photo metadata viewer",
+            "jpeg exif viewer",
+            "gps exif reader",
+            "iptc viewer",
+            "image metadata online",
+            "inspect photo metadata",
+        ],
+    },
+
+    // ===== v1.4 — Data Conversion additions =====
+    "mock-data-generator": {
+        title: "Mock Data Generator — Fake JSON, CSV & SQL Test Data",
+        description:
+            "Generate realistic fake data (names, emails, dates, lorem) as JSON, CSV or SQL inserts. Configurable schema, seedable for reproducible test fixtures.",
+        keywords: [
+            "mock data generator",
+            "fake data generator",
+            "test data generator",
+            "json mock data",
+            "csv mock data",
+            "sql insert generator",
+            "fixtures generator",
+            "seed data generator",
+        ],
+    },
+    "toml-converter": {
+        title: "TOML Converter — Convert TOML ↔ JSON ↔ YAML Online",
+        description:
+            "Convert between TOML, JSON and YAML config formats. Useful for migrating projects between Cargo, pyproject.toml, package.json and GitHub Actions configs.",
+        keywords: [
+            "toml converter",
+            "toml to json",
+            "toml to yaml",
+            "json to toml",
+            "yaml to toml",
+            "convert toml online",
+            "toml parser online",
+            "pyproject converter",
+        ],
+    },
+    "toon-converter": {
+        title: "TOON Converter — JSON & XML to TOON Online (Token-Saver)",
+        description:
+            "Convert JSON or XML to TOON (Token-Oriented Object Notation), a compact format designed for LLM prompts. Live character savings vs JSON — runs entirely in your browser.",
+        keywords: [
+            "toon converter",
+            "json to toon",
+            "xml to toon",
+            "toon format",
+            "token oriented object notation",
+            "llm token saver",
+            "compact json",
+            "json compression",
+            "prompt token reducer",
+        ],
+        faq: [
+            { q: "What is TOON?", a: "TOON (Token-Oriented Object Notation) is a compact data format designed to reduce token counts in LLM prompts. It uses indentation instead of braces, declares array shapes upfront (e.g., users[2]{id,name}:) and drops quotes on unambiguous strings. Typical savings vs JSON are 30–50% for tabular data." },
+            { q: "Is TOON lossless from JSON?", a: "Yes for typical JSON: objects, arrays, strings, numbers, booleans, and null all round-trip. Keys are preserved exactly. Strings that look like numbers or booleans are quoted to avoid ambiguity." },
+        ],
+    },
 };
 
 export function getSeoContent(toolId: string): ToolSeoContent | undefined {
