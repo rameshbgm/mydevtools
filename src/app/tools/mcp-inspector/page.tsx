@@ -1026,7 +1026,7 @@ export default function McpInspectorPage() {
                                                         </Space>
                                                     }
                                                     description={
-                                                        <Space direction="vertical" size={6} style={{ width: "100%" }}>
+                                                        <Space orientation="vertical" size={6} style={{ width: "100%" }}>
                                                             {diagnosticResult.steps.map((step, i) => (
                                                                 <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
                                                                     {step.ok

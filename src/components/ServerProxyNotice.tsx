@@ -49,7 +49,7 @@ export default function ServerProxyNotice({ route, purpose, sentFields, extra }:
                 </Text>
             }
             description={
-                <Space direction="vertical" size={6} style={{ width: "100%" }}>
+                <Space orientation="vertical" size={6} style={{ width: "100%" }}>
                     <Paragraph style={{ fontSize: 12, marginBottom: 0 }}>
                         <Text strong>Why:</Text> {purpose}
                     </Paragraph>
