@@ -5,25 +5,39 @@ import { Button, Input, Card, Space, message, Segmented } from "antd";
 import { copyToClipboard } from "@/lib/clipboard";
 import { SwapOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { TextArea } = Input;
+
+interface ShareState { input: string; mode: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "base64", version: 1 };
 
 export default function Base64Page() {
     const [input, setInput] = useState("");
     const [output, setOutput] = useState("");
     const [mode, setMode] = useState<string>("Encode");
 
-    const handleAction = () => {
+    const handleAction = (overrideMode?: string, overrideInput?: string) => {
+        const m = overrideMode ?? mode;
+        const src = overrideInput ?? input;
         try {
-            if (mode === "Encode") {
-                setOutput(btoa(unescape(encodeURIComponent(input))));
+            if (m === "Encode") {
+                setOutput(btoa(unescape(encodeURIComponent(src))));
             } else {
-                setOutput(decodeURIComponent(escape(atob(input))));
+                setOutput(decodeURIComponent(escape(atob(src))));
             }
         } catch {
-            message.error("Invalid input for " + mode.toLowerCase());
+            message.error("Invalid input for " + m.toLowerCase());
         }
     };
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setInput(s.input); setMode(s.mode);
+        handleAction(s.mode, s.input);
+    });
 
     return (
         <ToolPageLayout
@@ -54,11 +68,23 @@ export default function Base64Page() {
                 ]
             }}
         >
-            <Space style={{ marginBottom: 16 }}>
+            <ToolBridgeBanner
+                accepts={["text", "base64"]}
+                onAccept={(p) => {
+                    setInput(p.data);
+                    const inferredMode = p.kind === "base64" ? "Decode" : "Encode";
+                    setMode(inferredMode);
+                    handleAction(inferredMode, p.data);
+                }}
+            />
+
+            <Space style={{ marginBottom: 16 }} wrap>
                 <Segmented options={["Encode", "Decode"]} value={mode} onChange={(v) => setMode(v as string)} />
-                <Button type="primary" onClick={handleAction}>{mode}</Button>
+                <Button type="primary" onClick={() => handleAction()}>{mode}</Button>
                 <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output)}>Copy Output</Button>
                 <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); }}>Clear</Button>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, mode })} />
+                <SendToButton data={output} kind={mode === "Encode" ? "base64" : "text"} sourceToolId="base64" />
             </Space>
 
             <div className="tool-split-pane" style={{ gap: 16 }}>

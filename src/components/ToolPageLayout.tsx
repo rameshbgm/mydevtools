@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId, useMemo } from "react";
+import React, { useEffect, useId, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Typography, Breadcrumb, Collapse, Card, Tag } from "antd";
 import {
@@ -92,6 +92,15 @@ export default function ToolPageLayout({
     const toolId = getToolIdFromPublicPath(pathname);
     const regTool = toolId ? toolsRegistry.find((t) => t.id === toolId) : undefined;
     const category = regTool?.category;
+
+    // Universal SSR-hydration guard for every tool's interactive body.
+    // antd Input/Select/Segmented internals get mutated by browser extensions
+    // (Shark injects `data-sharkid`), which trips React's hydration check
+    // because the server didn't emit that attribute. Rendering `children`
+    // client-only fixes it for all 104 tools at once. The SEO content
+    // (breadcrumb, title, learnMore) above still SSRs normally.
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
 
     const breadcrumbItems = useMemo(() => {
         const items: {
@@ -343,7 +352,9 @@ export default function ToolPageLayout({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.3 }}
             >
-                {children}
+                {mounted ? children : (
+                    <div style={{ minHeight: 320 }} aria-hidden />
+                )}
             </motion.div>
         </motion.div>
     );

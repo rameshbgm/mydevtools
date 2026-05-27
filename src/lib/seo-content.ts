@@ -1708,6 +1708,23 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "online image compressor free",
         ],
     },
+    "image-resizer": {
+        title: "Image Resizer Online — Resize JPEG, PNG, WebP by Pixel or Percent",
+        description:
+            "Resize images directly in your browser with pixel, percentage, or preset dimensions. Fit, fill or stretch modes, JPEG/PNG/WebP output. No upload — runs locally.",
+        keywords: [
+            "image resizer online",
+            "resize image online",
+            "resize jpeg",
+            "resize png",
+            "resize webp",
+            "image scaler",
+            "scale image online",
+            "thumbnail generator",
+            "image dimension changer",
+            "photo resizer",
+        ],
+    },
     "svg-optimizer": {
         title: "SVG Optimizer Online — Minify and Clean SVG Markup",
         description:

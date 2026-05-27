@@ -16,7 +16,7 @@
  * Public-facing version number shown in the topbar. Bump on a meaningful
  * shipping milestone — does NOT need to match individual entries below.
  */
-export const APP_VERSION = "1.4";
+export const APP_VERSION = "1.5";
 
 export type ReleaseKind = "feature" | "fix" | "security" | "ui" | "perf";
 
@@ -54,6 +54,52 @@ export interface ReleaseNote {
  * V1.0 — initial public release of the toolkit (80+ tools).
  */
 const ENTRIES: ReleaseNote[] = [
+    {
+        date: "2026-05-27",
+        version: "1.5",
+        kind: "feature",
+        title: "V1.5 — Cross-tool pipelines, shareable URLs, PWA polish, browser extension",
+        summary:
+            "Four foundation moves that change how the toolkit feels: tools can now hand off output to each other, every input has a Share button that round-trips to a URL fragment, the PWA manifest finally exists on disk with an install button surfaced in the footer, and a Manifest V3 browser extension lets you right-click any selection on any page to open it in a tool.",
+        sections: [
+            {
+                label: "Cross-tool pipelines",
+                bullets: [
+                    "New typed `ToolPayload` contract (`kind`, `data`, `sourceToolId`, `label`) in `src/lib/tool-bridge.ts` — payloads route through `sessionStorage` with a 1-minute TTL so the handoff survives client navigation.",
+                    "`SendToButton` drops into any tool's output header; the dropdown is auto-populated from the tool registry based on what the target accepts.",
+                    "`ToolBridgeBanner` reads a pending payload on the receiver's mount and auto-imports (configurable). Old payloads are cleared without applying so they never surprise the user.",
+                    "5 flagship tools wired as reference: **JSON Formatter, Base64, URL Encoder, Hash Generator, JWT Decoder**. ~10 lines per tool to adopt — the other 99 tools can follow incrementally.",
+                ],
+            },
+            {
+                label: "Shareable URLs",
+                bullets: [
+                    "`src/lib/shareable-state.ts` — typed `ShareSchema<T>` + `useShareableState` hook. State serialises to `JSON → deflate-raw → base64url` and lives in the URL **fragment** (never sent to a server, even for the public site).",
+                    "`ShareButton` opens a modal that builds the link on demand (always reflects current input), shows char count, and warns when sensitive fields are present (JWT decoder uses this).",
+                    "Schema versioning enforced — a link with `v: 2` ignored by a tool still on `v: 1`, no silent state corruption.",
+                    "Same 5 flagship tools restore state on mount via the share URL.",
+                ],
+            },
+            {
+                label: "PWA polish",
+                bullets: [
+                    "**Fixed**: `/manifest.webmanifest` was referenced from `src/app/layout.tsx` but didn't exist on disk. Created the file with full metadata, 7 icon entries, 4 shortcuts (JSON / JWT / API Builder / Base64).",
+                    "`PwaInstallButton` surfaces the deferred `beforeinstallprompt` event when the browser fires it and auto-hides in `display-mode: standalone`. Added to the footer.",
+                    "Service worker already existed (`public/sw.js`, network-first navigation + runtime cache). No changes needed.",
+                ],
+            },
+            {
+                label: "Browser extension (Manifest V3)",
+                bullets: [
+                    "New `extension/` directory — plain JS, no bundler, so users can audit every line before installing.",
+                    "Right-click any selected text → submenu with: Format JSON · Decode JWT · Base64 encode/decode · URL encode/decode · Generate hashes · Test with regex.",
+                    "Reuses the same share-URL format as the main app — handoff is a single round trip with no extra protocol.",
+                    "Toolbar popup with quick-launch shortcuts and a self-hosted origin override (for users running mydevtools privately).",
+                    "Zero telemetry, zero `host_permissions` — the extension only sees what you select.",
+                ],
+            },
+        ],
+    },
     {
         date: "2026-05-27",
         version: "1.4",

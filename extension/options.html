@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>mydevtools — Options</title>
+    <style>
+        body { font-family: system-ui; padding: 24px; max-width: 540px; margin: 0 auto; }
+        h1 { font-size: 18px; }
+        label { display: block; font-size: 12px; opacity: 0.7; margin: 12px 0 4px; }
+        input { width: 100%; padding: 8px; font-family: ui-monospace, monospace; box-sizing: border-box; }
+        button { margin-top: 12px; padding: 8px 16px; cursor: pointer; }
+        p { font-size: 13px; opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <h1>mydevtools — Options</h1>
+    <p>Configure where the right-click menu opens your tools.</p>
+    <label for="site">Site origin</label>
+    <input id="site" type="text" placeholder="https://mydevtools.com" />
+    <p style="font-size:11px;opacity:0.6;">Leave blank to use the public site. Set this to your self-hosted instance if you run mydevtools privately.</p>
+    <button id="save">Save</button>
+    <script src="options.js"></script>
+</body>
+</html>

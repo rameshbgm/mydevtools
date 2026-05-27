@@ -1078,6 +1078,15 @@ export const toolsRegistry: ToolDefinition[] = [
         color: "#0ea5e9",
     },
     {
+        id: "image-resizer",
+        name: "Image Resizer",
+        description: "Resize JPEG, PNG and WebP by pixels, percentage, or preset — fit, fill or stretch, all in your browser",
+        icon: PictureOutlined,
+        category: "Image & Media",
+        tags: ["image", "resize", "scale", "dimensions", "thumbnail", "jpeg", "png", "webp"],
+        color: "#0284c7",
+    },
+    {
         id: "svg-optimizer",
         name: "SVG Optimizer",
         description: "Shrink SVG markup by stripping editor metadata, collapsing transforms and rounding numeric precision",

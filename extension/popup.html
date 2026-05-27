@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>mydevtools</title>
+    <style>
+        :root { color-scheme: light dark; }
+        body {
+            width: 280px;
+            margin: 0;
+            padding: 16px;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            font-size: 13px;
+            background: #ffffff;
+            color: #111;
+        }
+        @media (prefers-color-scheme: dark) {
+            body { background: #1a1a1a; color: #f0f0f0; }
+            a { color: #22d3ee; }
+            input { background: #0f0f0f; color: #f0f0f0; border-color: #333; }
+        }
+        h1 {
+            font-size: 16px;
+            margin: 0 0 6px;
+            background: linear-gradient(90deg, #0891b2, #6366f1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p { margin: 0 0 12px; opacity: 0.75; }
+        .quick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 14px; }
+        .quick a {
+            padding: 8px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            text-decoration: none;
+            color: inherit;
+            text-align: center;
+            transition: background 0.15s;
+        }
+        @media (prefers-color-scheme: dark) {
+            .quick a { background: #2a2a2a; }
+        }
+        .quick a:hover { background: #e8f5fa; }
+        label { display: block; font-size: 11px; opacity: 0.6; margin-bottom: 4px; }
+        input {
+            width: 100%;
+            padding: 6px 8px;
+            font-size: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: ui-monospace, "SF Mono", monospace;
+        }
+        small { display: block; margin-top: 4px; font-size: 10px; opacity: 0.5; }
+        button {
+            margin-top: 6px;
+            padding: 5px 10px;
+            font-size: 11px;
+            border: 1px solid #0891b2;
+            background: #0891b2;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>mydevtools</h1>
+    <p>Right-click selected text on any page to open it in a tool.</p>
+    <div class="quick">
+        <a href="#" data-path="/formatters/json-formatter">JSON Formatter</a>
+        <a href="#" data-path="/cryptography/jwt-decoder">JWT Decoder</a>
+        <a href="#" data-path="/api-and-web-services/api-request-builder">API Builder</a>
+        <a href="#" data-path="/cryptography/hash-generator">Hash Gen</a>
+    </div>
+    <label for="site">Site origin (for self-hosted)</label>
+    <input id="site" type="text" placeholder="https://mydevtools.com" />
+    <button id="save">Save</button>
+    <small>Default is the public site. Change if you're self-hosting.</small>
+    <script src="popup.js"></script>
+</body>
+</html>

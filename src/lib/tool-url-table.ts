@@ -109,6 +109,7 @@ export const TOOL_ID_TO_CATEGORY = {
   "csv-diff": "Diff & Compare",
   // ===== v1.4: Image & Media (new category) =====
   "image-compressor": "Image & Media",
+  "image-resizer": "Image & Media",
   "svg-optimizer": "Image & Media",
   "favicon-generator": "Image & Media",
   "color-palette-extractor": "Image & Media",

@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { toolsRegistry } from "@/lib/tools-registry";
 import { APP_VERSION } from "@/lib/release-notes";
+import PwaInstallButton from "./PwaInstallButton";
 
 const { Text } = Typography;
 
@@ -152,6 +153,7 @@ export default function AppFooter() {
                     <Text type="secondary" style={{ fontSize: 12 }}>
                         100% client-side · no data leaves your browser
                     </Text>
+                    <PwaInstallButton />
                 </div>
             </div>
         </footer>

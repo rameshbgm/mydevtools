@@ -5,22 +5,36 @@ import { Button, Input, Card, Space, message, Segmented } from "antd";
 import { copyToClipboard } from "@/lib/clipboard";
 import { LinkOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { TextArea } = Input;
+
+interface ShareState { input: string; mode: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "url-encoder", version: 1 };
 
 export default function UrlEncoderPage() {
     const [input, setInput] = useState("https://example.com/path?name=John Doe&city=New York");
     const [output, setOutput] = useState("");
     const [mode, setMode] = useState<string>("Encode");
 
-    const handleAction = () => {
+    const handleAction = (overrideMode?: string, overrideInput?: string) => {
+        const m = overrideMode ?? mode;
+        const src = overrideInput ?? input;
         try {
-            if (mode === "Encode") setOutput(encodeURIComponent(input));
-            else setOutput(decodeURIComponent(input));
+            if (m === "Encode") setOutput(encodeURIComponent(src));
+            else setOutput(decodeURIComponent(src));
         } catch {
             message.error("Invalid input");
         }
     };
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setInput(s.input); setMode(s.mode);
+        handleAction(s.mode, s.input);
+    });
 
     return (
         <ToolPageLayout
@@ -51,11 +65,18 @@ export default function UrlEncoderPage() {
                 ]
             }}
         >
-            <Space style={{ marginBottom: 16 }}>
+            <ToolBridgeBanner
+                accepts={["text", "url"]}
+                onAccept={(p) => { setInput(p.data); handleAction(undefined, p.data); }}
+            />
+
+            <Space style={{ marginBottom: 16 }} wrap>
                 <Segmented options={["Encode", "Decode"]} value={mode} onChange={(v) => setMode(v as string)} />
-                <Button type="primary" onClick={handleAction}>{mode}</Button>
+                <Button type="primary" onClick={() => handleAction()}>{mode}</Button>
                 <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output)}>Copy</Button>
                 <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); }}>Clear</Button>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, mode })} />
+                <SendToButton data={output} kind={mode === "Encode" ? "url" : "text"} sourceToolId="url-encoder" />
             </Space>
             <div className="tool-split-pane" style={{ gap: 16 }}>
                 <Card size="small" title="Input">
