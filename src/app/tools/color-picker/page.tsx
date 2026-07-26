@@ -116,7 +116,7 @@ export default function ColorPickerPage() {
                                 key={f.label}
                                 size="small"
                                 title={f.label}
-                                extra={<Button size="small" type="text" icon={<CopyOutlined />} onClick={() => copyToClipboard(f.value, `${f.label} copied!`)} />}
+                                extra={<Button aria-label="Copy" size="small" type="text" icon={<CopyOutlined />} onClick={() => copyToClipboard(f.value, `${f.label} copied!`)} />}
                             >
                                 <Text code style={{ fontSize: 14 }}>{f.value}</Text>
                             </Card>

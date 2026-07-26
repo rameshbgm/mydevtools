@@ -14,16 +14,16 @@ dirs.forEach((dir) => {
 
     let content = fs.readFileSync(pagePath, "utf8");
 
-    // Remove generateMetadata function
-    const metadataFunctionRegex = /\n\nexport async function generateMetadata\(\): Promise<Metadata> \{[\s\S]*?\n\}/;
+    // Remove generateMetadata function (tolerant of CRLF line endings)
+    const metadataFunctionRegex = /\r?\n\r?\nexport async function generateMetadata\(\): Promise<Metadata> \{[\s\S]*?\r?\n\}/;
     if (content.match(metadataFunctionRegex)) {
         content = content.replace(metadataFunctionRegex, "");
         removed++;
     }
 
     // Remove Metadata import if it's the only thing from that import
-    content = content.replace(/import { Metadata } from "next";\n\n/, "");
-    content = content.replace(/\nimport { Metadata } from "next";/, "");
+    content = content.replace(/import \{ Metadata \} from "next";\r?\n\r?\n/, "");
+    content = content.replace(/\r?\nimport \{ Metadata \} from "next";/, "");
 
     fs.writeFileSync(pagePath, content);
 });

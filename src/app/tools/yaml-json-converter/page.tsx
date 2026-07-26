@@ -1,11 +1,16 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Row, Col, Button, Space, message, Alert, Segmented } from "antd";
+import { Card, Row, Col, Button, Space, Alert, Segmented } from "antd";
 import { SwapOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import { copyToClipboard } from "@/lib/clipboard";
 import YAML from "yaml";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const SAMPLE_YAML = `# Application Configuration
 server:
@@ -68,6 +73,9 @@ const SAMPLE_JSON = `{
   }
 }`;
 
+interface ShareState { mode: "yaml-to-json" | "json-to-yaml"; yamlInput: string; jsonInput: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "yaml-json-converter", version: 1 };
+
 export default function YamlJsonConverterPage() {
     const [mode, setMode] = useState<"yaml-to-json" | "json-to-yaml">("yaml-to-json");
     const [yamlInput, setYamlInput] = useState(SAMPLE_YAML);
@@ -97,10 +105,7 @@ export default function YamlJsonConverterPage() {
         }
     }, [input, mode]);
 
-    const copyOutput = () => {
-        navigator.clipboard.writeText(output);
-        message.success(`${mode === "yaml-to-json" ? "JSON" : "YAML"} copied!`);
-    };
+    const copyOutput = () => copyToClipboard(output, `${mode === "yaml-to-json" ? "JSON" : "YAML"} copied!`);
 
     const swapContent = () => {
         if (output && !conversionError) {
@@ -112,6 +117,12 @@ export default function YamlJsonConverterPage() {
             setMode(mode === "yaml-to-json" ? "json-to-yaml" : "yaml-to-json");
         }
     };
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setMode(s.mode);
+        setYamlInput(s.yamlInput);
+        setJsonInput(s.jsonInput);
+    });
 
     return (
         <ToolPageLayout
@@ -142,9 +153,18 @@ export default function YamlJsonConverterPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner
+                accepts={["json", "text"]}
+                onAccept={(p) => {
+                    if (p.kind === "json") { setMode("json-to-yaml"); setJsonInput(p.data); }
+                    else if (mode === "yaml-to-json") setYamlInput(p.data);
+                    else setJsonInput(p.data);
+                }}
+            />
+
             <Row gutter={[24, 24]}>
                 <Col xs={24}>
-                    <Space style={{ width: "100%", justifyContent: "center" }}>
+                    <Space style={{ width: "100%", justifyContent: "center" }} wrap>
                         <Segmented
                             value={mode}
                             onChange={(v) => setMode(v as "yaml-to-json" | "json-to-yaml")}
@@ -159,6 +179,8 @@ export default function YamlJsonConverterPage() {
                                 Swap
                             </Button>
                         )}
+                        <ShareButton schema={SHARE_SCHEMA} getState={() => ({ mode, yamlInput, jsonInput })} size="middle" />
+                        <SendToButton data={output} kind={mode === "yaml-to-json" ? "json" : "text"} sourceToolId="yaml-json-converter" size="middle" />
                     </Space>
                 </Col>
 
@@ -192,7 +214,7 @@ export default function YamlJsonConverterPage() {
                         }
                     >
                         {conversionError ? (
-                            <Alert type="error" message={conversionError} showIcon style={{ marginBottom: 16 }} />
+                            <Alert type="error" title={conversionError} showIcon style={{ marginBottom: 16 }} />
                         ) : null}
                         <CodeEditor
                             value={output}

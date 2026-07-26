@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, Alert, Tag, Collapse, List } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, Alert, Tag, Collapse } from "antd";
+import SimpleList from "@/components/SimpleList";
 import { CheckCircleOutlined, CloseCircleOutlined, WarningOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
@@ -203,7 +204,7 @@ export default function HtmlValidatorPage() {
                                 type="success"
                                 showIcon
                                 icon={<CheckCircleOutlined />}
-                                message="Valid HTML"
+                                title="Valid HTML"
                                 description={
                                     <Space wrap>
                                         <Tag color="green">{result.stats.elements} elements</Tag>
@@ -218,31 +219,29 @@ export default function HtmlValidatorPage() {
                                     <Alert
                                         type="error"
                                         showIcon
-                                        message={`${errors.length} Error${errors.length > 1 ? "s" : ""}`}
+                                        title={`${errors.length} Error${errors.length > 1 ? "s" : ""}`}
                                     />
                                 )}
                                 {warnings.length > 0 && (
                                     <Alert
                                         type="warning"
                                         showIcon
-                                        message={`${warnings.length} Warning${warnings.length > 1 ? "s" : ""}`}
+                                        title={`${warnings.length} Warning${warnings.length > 1 ? "s" : ""}`}
                                     />
                                 )}
-                                <List
+                                <SimpleList
                                     size="small"
                                     dataSource={result.issues}
                                     renderItem={(item) => (
-                                        <List.Item>
-                                            <Space>
-                                                {item.type === "error" ? (
-                                                    <CloseCircleOutlined style={{ color: "#f5222d" }} />
-                                                ) : (
-                                                    <WarningOutlined style={{ color: "#faad14" }} />
-                                                )}
-                                                <Text>{item.message}</Text>
-                                                {item.line && <Tag>Line {item.line}</Tag>}
-                                            </Space>
-                                        </List.Item>
+                                        <Space>
+                                            {item.type === "error" ? (
+                                                <CloseCircleOutlined style={{ color: "#f5222d" }} />
+                                            ) : (
+                                                <WarningOutlined style={{ color: "#faad14" }} />
+                                            )}
+                                            <Text>{item.message}</Text>
+                                            {item.line && <Tag>Line {item.line}</Tag>}
+                                        </Space>
                                     )}
                                 />
                             </Space>

@@ -16,7 +16,7 @@
  * Public-facing version number shown in the topbar. Bump on a meaningful
  * shipping milestone — does NOT need to match individual entries below.
  */
-export const APP_VERSION = "1.3";
+export const APP_VERSION = "1.4";
 
 export type ReleaseKind = "feature" | "fix" | "security" | "ui" | "perf";
 
@@ -43,6 +43,10 @@ export interface ReleaseNote {
  * Release notes — newest entry FIRST. The exported array is sorted on
  * load so out-of-order appends still render correctly.
  *
+ * V1.4 — 14 new tools across Networking, Diff, Image & Media and Data
+ *        Conversion, plus cross-tool pipelines, shareable URLs, PWA
+ *        install, the browser extension, and the key-free AI category.
+ *
  * V1.2 — workshop workspace UI, canonical routes on Next.js 16 proxy,
  *        landing/marketing polish, Timer + Stopwatch, 90 audited tools,
  *        routing + lint + converter hardening (see shipped notes).
@@ -54,6 +58,129 @@ export interface ReleaseNote {
  * V1.0 — initial public release of the toolkit (80+ tools).
  */
 const ENTRIES: ReleaseNote[] = [
+    {
+        date: "2026-05-27",
+        version: "1.4",
+        kind: "feature",
+        title: "V1.4 — 14 new tools, cross-tool pipelines, shareable URLs, PWA + browser extension",
+        summary:
+            "Four new tool directions land fully implemented: Networking & Web (Webhook Receiver, WebSocket Tester, CORS Tester, DNS Lookup), Diff & Compare additions (Image Diff, CSV Diff), a new Image & Media category (Image Compressor, SVG Optimizer, Favicon Generator, Color Palette Extractor, EXIF Viewer), and Data Conversion additions (Mock Data Generator, TOML Converter, TOON Converter) — all 14 functional, no placeholders. The same release changes how the toolkit feels: tools hand off output to each other, every input has a Share button that round-trips to a URL fragment, the PWA manifest ships with an install button, and a Manifest V3 browser extension opens any selection in a tool. The AI category grows to 6 tools — all key-free, server-free, and local.",
+        sections: [
+            {
+                label: "New category — Image & Media (5 tools, all client-side)",
+                bullets: [
+                    "**Image Compressor** — Canvas re-encode with quality slider, JPEG/WebP/PNG output, optional max-dimension resize, live before/after preview.",
+                    "**SVG Optimizer** — strips editor metadata (Inkscape/Sketch/Figma), collapses whitespace, rounds numeric precision with a 0–6 decimal slider, side-by-side rendered preview.",
+                    "**Favicon Generator** — produces 7 sizes (16/32/48/96/180/192/512) from one source, with HTML head snippet and PWA manifest scaffolds.",
+                    "**Color Palette Extractor** — k-means in RGB space at 200px downsample, configurable palette size 3–16, HEX/RGB/HSL per swatch.",
+                    "**EXIF Viewer** — in-browser EXIF parser for JPEG/TIFF; groups Camera/Lens/Capture/Image/GPS tags, decodes GPS to decimal lat/lon with map link.",
+                ],
+            },
+            {
+                label: "Networking & Web (4 tools)",
+                bullets: [
+                    "**Webhook Receiver** — generates a unique inbound URL, captures any HTTP request, surfaces method/headers/query/body live. Uses a new `/api/webhook/[sessionId]` endpoint with in-memory store (1h idle TTL, 200 requests/session).",
+                    "**WebSocket Tester** — real ws/wss client with connection state, text frame send, timestamped history.",
+                    "**CORS Tester** — sends real fetch from browser, classifies failures as preflight vs simple-request, decodes them into plain English.",
+                    "**DNS Lookup** — DoH client (Cloudflare/Google), parallel A/AAAA/CNAME/MX/TXT/NS/SOA/CAA/SRV lookups, zone-file-format copy.",
+                ],
+            },
+            {
+                label: "Diff & Compare (2 tools)",
+                bullets: [
+                    "**CSV Diff** — RFC 4180 parser, key-column row matching, column-level change highlighting, copyable audit report.",
+                    "**Image Diff** — pixel-by-pixel comparison with side-by-side, overlay (with opacity slider) and difference modes; tolerance slider and changed-pixel stats.",
+                ],
+            },
+            {
+                label: "Data Conversion (3 tools)",
+                bullets: [
+                    "**Mock Data Generator** — schema builder with 15 field types, seedable Mulberry32 RNG for reproducible fixtures, JSON/CSV/SQL output.",
+                    "**TOML Converter** — TOML ↔ JSON ↔ YAML with a minimal in-file TOML parser (sections, scalars, arrays of scalars).",
+                    "**TOON Converter** — JSON or XML → TOON (Token-Oriented Object Notation). Tabular array detection emits CSV-like rows instead of repeating keys; live characters-saved and approximate tokens-saved badges for LLM prompt budgeting.",
+                ],
+            },
+            {
+                label: "Generators (1 tool)",
+                bullets: [
+                    "**Credit Card Generator** — Luhn-valid test card numbers across 14 brands (Visa, Mastercard, American Express, Discover, JCB, Diners Club, Maestro, UnionPay, RuPay, Elo, Hipercard, Mir, Troy, InterPayment), each with a brand-correct IIN prefix, supported length, matching CVV width, future expiry and holder name. Numbers render on a card-style face and export as plain text, CSV or JSON. Brand data and the Luhn helpers moved to a shared `src/lib/credit-card.ts` that the Credit Card Validator now imports, so detection and checksum logic live in one place.",
+                ],
+            },
+            {
+                label: "Infrastructure",
+                bullets: [
+                    "New **Image & Media** category — colour, icon, description, order, union type.",
+                    "New `/api/webhook/[sessionId]` and `/api/webhook/[sessionId]/events` routes (long-poll); shared in-memory store at `src/lib/webhook-store.ts`.",
+                    "`ServerProxyNotice` extended with two new route ids (`proxy-stream`, `webhook`).",
+                    "All 14 tools added to `tool-url-table.ts`, `tools-registry.ts` and `seo-content.ts` — full SEO + structured data from day one.",
+                ],
+            },
+            {
+                label: "Cross-tool pipelines",
+                bullets: [
+                    "New typed `ToolPayload` contract (`kind`, `data`, `sourceToolId`, `label`) in `src/lib/tool-bridge.ts` — payloads route through `sessionStorage` with a 1-minute TTL so the handoff survives client navigation.",
+                    "`SendToButton` drops into any tool's output header; the dropdown is auto-populated from the tool registry based on what the target accepts.",
+                    "`ToolBridgeBanner` reads a pending payload on the receiver's mount and auto-imports (configurable). Old payloads are cleared without applying so they never surprise the user.",
+                    "5 flagship tools wired as reference: **JSON Formatter, Base64, URL Encoder, Hash Generator, JWT Decoder**. ~10 lines per tool to adopt — the other 99 tools can follow incrementally.",
+                ],
+            },
+            {
+                label: "Shareable URLs",
+                bullets: [
+                    "`src/lib/shareable-state.ts` — typed `ShareSchema<T>` + `useShareableState` hook. State serialises to `JSON → deflate-raw → base64url` and lives in the URL **fragment** (never sent to a server, even for the public site).",
+                    "`ShareButton` opens a modal that builds the link on demand (always reflects current input), shows char count, and warns when sensitive fields are present (JWT decoder uses this).",
+                    "Schema versioning enforced — a link with `v: 2` ignored by a tool still on `v: 1`, no silent state corruption.",
+                    "Same 5 flagship tools restore state on mount via the share URL.",
+                ],
+            },
+            {
+                label: "PWA polish",
+                bullets: [
+                    "**Fixed**: `/manifest.webmanifest` was referenced from `src/app/layout.tsx` but didn't exist on disk. Created the file with full metadata, 7 icon entries, 4 shortcuts (JSON / JWT / API Builder / Base64).",
+                    "`PwaInstallButton` surfaces the deferred `beforeinstallprompt` event when the browser fires it and auto-hides in `display-mode: standalone`. Added to the footer.",
+                    "Service worker already existed (`public/sw.js`, network-first navigation + runtime cache). No changes needed.",
+                ],
+            },
+            {
+                label: "Browser extension (Manifest V3)",
+                bullets: [
+                    "New `extension/` directory — plain JS, no bundler, so users can audit every line before installing.",
+                    "Right-click any selected text → submenu with: Format JSON · Decode JWT · Base64 encode/decode · URL encode/decode · Generate hashes · Test with regex.",
+                    "Reuses the same share-URL format as the main app — handoff is a single round trip with no extra protocol.",
+                    "Toolbar popup with quick-launch shortcuts and a self-hosted origin override (for users running mydevtools privately).",
+                    "Zero telemetry, zero `host_permissions` — the extension only sees what you select.",
+                ],
+            },
+            {
+                label: "Honest AI, no keys required",
+                bullets: [
+                    "**Semantic Search Playground** replaces the old keyword-matching `rag-search` demo with real sentence embeddings (all-MiniLM-L6-v2, WebGPU/WASM via `@huggingface/transformers`) — genuine meaning-based search, computed entirely in your browser. Model loads only on explicit click, never automatically.",
+                    "**LLM Token Counter** — exact BPE token counts for GPT models via `gpt-tokenizer`, labeled estimates for Claude/Llama, plus a context-budget bar.",
+                    "**Fine-Tuning Dataset Validator** — validates JSONL datasets against OpenAI or Anthropic message schemas, line by line, entirely client-side.",
+                    "**Agent Card / MCP Manifest Generator** — builds a valid A2A `agent-card.json` or MCP server config with live validation, sendable straight into the existing A2A/MCP inspectors.",
+                    "Deleted `code-explainer` and `text-summarizer` — both were regex/heuristic demos mislabeled as AI, unreachable from navigation since they were written.",
+                ],
+            },
+            {
+                label: "Pipeline adoption + a live bug fix",
+                bullets: [
+                    "17 of 24 declared `BRIDGE_TARGETS` were silently dropping payloads sent via \"Send to\" — every one is now wired or the row was removed. Formatters, validators, converters, and diff tools all participate now (~30 tools total, up from the original 5).",
+                    "TOON Converter gained a real decoder (TOON → JSON/XML, not just the reverse), a direction toggle, and swapped its character-based \"savings\" claim for actual token counts.",
+                    "A new `scripts/check-parity.js` guard runs on every build, catching registry/SEO/orphan-tool drift and unwired bridge targets before they ship again.",
+                ],
+            },
+            {
+                label: "Cross-cutting fixes",
+                bullets: [
+                    "Every tool page now shows a **Related tools** section and renders **FAQ** content inline (previously JSON-LD only) — both computed from existing registry/SEO data, zero per-page changes.",
+                    "Deleted ~2,500 lines of inert `generateMetadata` exports left over in client components from before the SEO layout pattern existed.",
+                    "34 pages moved off raw `navigator.clipboard` onto the shared helper with its `execCommand` fallback — copy no longer silently fails in non-secure contexts.",
+                    "95 icon-only buttons across 31 pages gained `aria-label`s.",
+                    "\"100% Client-Side\" tagline retired in favor of \"Client-side by default\" — accurate for the 8 tools that do hit a server route (already disclosed per-tool, just not reflected site-wide).",
+                ],
+            },
+        ],
+    },
     {
         date: "2026-05-07",
         version: "1.3.1",

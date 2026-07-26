@@ -40,6 +40,7 @@ import {
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SslConfigSection, { DEFAULT_SSL_CONFIG, buildSslProxyFields, type SslConfig } from "@/components/SslConfigSection";
+import { copyToClipboard as sharedCopy } from "@/lib/clipboard";
 
 const { Text, Paragraph, Title } = Typography;
 const { TextArea } = Input;
@@ -411,10 +412,7 @@ export default function SoapClientPage() {
     };
 
     // Copy to clipboard
-    const copyToClipboard = (text: string, label: string) => {
-        navigator.clipboard.writeText(text);
-        message.success(`${label} copied!`);
-    };
+    const copyToClipboard = (text: string, label: string) => sharedCopy(text, `${label} copied!`);
 
     // Generate cURL command
     const generateCurl = useMemo(() => {
@@ -607,7 +605,7 @@ export default function SoapClientPage() {
                                                                 onChange={(e) => updateHeader(index, "value", e.target.value)}
                                                                 style={{ width: 250 }}
                                                             />
-                                                            <Button
+                                                            <Button aria-label="Delete"
                                                                 type="text"
                                                                 danger
                                                                 icon={<DeleteOutlined />}
@@ -648,7 +646,7 @@ export default function SoapClientPage() {
                                             <Alert
                                                 type="info"
                                                 showIcon
-                                                message="SSL options apply when the request goes through the server proxy"
+                                                title="SSL options apply when the request goes through the server proxy"
                                                 description="Enable 'Force server proxy' below to route every request through the proxy, or leave it off and the proxy will be used automatically when you configure any SSL option."
                                                 style={{ fontSize: 12 }}
                                             />
@@ -738,7 +736,7 @@ export default function SoapClientPage() {
                         {error && !loading && (
                             <Alert
                                 type="error"
-                                message="Request Failed"
+                                title="Request Failed"
                                 description={error}
                                 showIcon
                             />

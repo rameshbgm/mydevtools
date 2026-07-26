@@ -13,6 +13,7 @@ import {
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { TextArea } = Input;
 const { Text, Title } = Typography;
@@ -264,11 +265,6 @@ export default function JWSToolPage() {
         }
     }, [jwsToVerify, verifySecret, publicKey]);
 
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
-        message.success("Copied to clipboard!");
-    };
-
     const tabItems = [
         {
             key: "sign",
@@ -444,7 +440,7 @@ export default function JWSToolPage() {
                     {verifyResult && (
                         <Alert
                             type={verifyResult.valid ? "success" : "error"}
-                            message={verifyResult.valid ? "Signature Valid" : "Signature Invalid"}
+                            title={verifyResult.valid ? "Signature Valid" : "Signature Invalid"}
                             description={
                                 verifyResult.valid ? (
                                     <div>

@@ -12,6 +12,8 @@ import {
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
 import { showErrorModal } from "@/lib/errorModal";
+import { downloadText } from "@/lib/download";
+import { copyToClipboard as sharedCopy } from "@/lib/clipboard";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -175,20 +177,10 @@ export default function SSHKeyGeneratorPage() {
         }
     }, [keyType, rsaKeySize, ecCurve, comment, passphrase]);
 
-    const copyToClipboard = (text: string, label: string) => {
-        navigator.clipboard.writeText(text);
-        message.success(`${label} copied to clipboard!`);
-    };
+    const copyToClipboard = (text: string, label: string) => sharedCopy(text, `${label} copied to clipboard!`);
 
-    const downloadKey = (content: string, filename: string, isPrivate: boolean) => {
-        const blob = new Blob([content], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = isPrivate ? filename : filename + ".pub";
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    const downloadKey = (content: string, filename: string, isPrivate: boolean) =>
+        downloadText(content, isPrivate ? filename : filename + ".pub", "text/plain");
 
     return (
         <ToolPageLayout
@@ -374,7 +366,7 @@ export default function SSHKeyGeneratorPage() {
                                         <div>
                                             <Alert
                                                 type="warning"
-                                                message="Never share your private key!"
+                                                title="Never share your private key!"
                                                 description="Save this to ~/.ssh/id_rsa and set permissions: chmod 600 ~/.ssh/id_rsa"
                                                 showIcon
                                                 style={{ marginBottom: 12 }}

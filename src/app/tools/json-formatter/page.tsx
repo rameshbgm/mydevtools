@@ -12,12 +12,19 @@ import {
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { Text } = Typography;
 
 const SAMPLE = `{"name":"mydevtools","version":"1.0.0","features":["json-formatter","xml-formatter","diff-tools"],"config":{"theme":"dark","language":"en"}}`;
 
 type Mode = "Prettify" | "Minify" | "Validate";
+
+interface ShareState { input: string; mode: Mode; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "json-formatter", version: 1 };
 
 export default function JsonFormatterPage() {
     const { message } = App.useApp();
@@ -59,6 +66,13 @@ export default function JsonFormatterPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => { if (input) run(mode, input); }, [mode]);
 
+    // Restore from a shareable URL on mount.
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setInput(s.input);
+        setMode(s.mode);
+        run(s.mode, s.input);
+    });
+
     return (
         <ToolPageLayout
             title="JSON Formatter"
@@ -88,6 +102,11 @@ export default function JsonFormatterPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner
+                accepts={["json", "text"]}
+                onAccept={(p) => { setInput(p.data); run(mode, p.data); }}
+            />
+
             <Space style={{ marginBottom: 16 }} wrap>
                 <Segmented<Mode>
                     options={["Prettify", "Minify", "Validate"]}
@@ -103,6 +122,8 @@ export default function JsonFormatterPage() {
                 )}
                 <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output || input)}>Copy</Button>
                 <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setValidState(null); }}>Clear</Button>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, mode })} size="middle" />
+                <SendToButton data={output || input} kind="json" sourceToolId="json-formatter" size="middle" />
             </Space>
 
             <div className="tool-split-pane" style={{ gap: 16 }}>

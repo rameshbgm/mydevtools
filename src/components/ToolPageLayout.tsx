@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId, useMemo } from "react";
+import React, { useEffect, useId, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Typography, Breadcrumb, Collapse, Card, Tag } from "antd";
 import {
@@ -16,8 +16,9 @@ import {
 } from "@ant-design/icons";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { getToolIdFromPublicPath, dashboardCategoryHashId } from "@/lib/category-routes";
+import { getToolIdFromPublicPath, dashboardCategoryHashId, toolPath } from "@/lib/category-routes";
 import { toolsRegistry } from "@/lib/tools-registry";
+import { SEO_CONTENT } from "@/lib/seo-content";
 import ServerProxyNotice, { type ServerRouteId } from "@/components/ServerProxyNotice";
 
 const { Title, Text, Paragraph } = Typography;
@@ -92,6 +93,29 @@ export default function ToolPageLayout({
     const toolId = getToolIdFromPublicPath(pathname);
     const regTool = toolId ? toolsRegistry.find((t) => t.id === toolId) : undefined;
     const category = regTool?.category;
+
+    // ponytail: category+tag lookup from existing registry data — add a curated
+    // `related` registry field only if a hand-picked order is ever demanded.
+    const relatedTools = useMemo(() => {
+        if (!regTool) return [];
+        return toolsRegistry
+            .filter((t) => t.id !== regTool.id && t.category === regTool.category)
+            .map((t) => ({ tool: t, score: t.tags.filter((tag) => regTool.tags.includes(tag)).length }))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 6)
+            .map((x) => x.tool);
+    }, [regTool]);
+
+    const faq = toolId ? SEO_CONTENT[toolId]?.faq : undefined;
+
+    // Universal SSR-hydration guard for every tool's interactive body.
+    // antd Input/Select/Segmented internals get mutated by browser extensions
+    // (Shark injects `data-sharkid`), which trips React's hydration check
+    // because the server didn't emit that attribute. Rendering `children`
+    // client-only fixes it for all 104 tools at once. The SEO content
+    // (breadcrumb, title, learnMore) above still SSRs normally.
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
 
     const breadcrumbItems = useMemo(() => {
         const items: {
@@ -343,8 +367,47 @@ export default function ToolPageLayout({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.3 }}
             >
-                {children}
+                {mounted ? children : (
+                    <div style={{ minHeight: 320 }} aria-hidden />
+                )}
             </motion.div>
+
+            {faq && faq.length > 0 && (
+                <div style={{ marginTop: 32 }}>
+                    <Title level={4} style={{ marginBottom: 12, color: "var(--wb-text-heading)" }}>
+                        Frequently asked questions
+                    </Title>
+                    <Collapse
+                        ghost
+                        className="wb-tool-learn-collapse"
+                        items={faq.map((item, i) => ({
+                            key: `faq-${i}`,
+                            label: <Text strong style={{ fontSize: 14 }}>{item.q}</Text>,
+                            children: <Paragraph className="wb-learn-body">{item.a}</Paragraph>,
+                        }))}
+                    />
+                </div>
+            )}
+
+            {relatedTools.length > 0 && (
+                <div style={{ marginTop: 32 }}>
+                    <Title level={4} style={{ marginBottom: 12, color: "var(--wb-text-heading)" }}>
+                        Related tools
+                    </Title>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                        {relatedTools.map((t) => (
+                            <Link key={t.id} href={toolPath(t)}>
+                                <Card size="small" hoverable style={{ minWidth: 160 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                        <t.icon style={{ fontSize: 16, color: t.color }} />
+                                        <Text strong style={{ fontSize: 13 }}>{t.name}</Text>
+                                    </div>
+                                </Card>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            )}
         </motion.div>
     );
 }

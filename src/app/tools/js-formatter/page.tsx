@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, InputNumber, Switch, Select } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, InputNumber, Switch, Select } from "antd";
 import { CodeOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import { copyToClipboard } from "@/lib/clipboard";
 import beautify from "js-beautify";
 
 const beautifyJs = (beautify as unknown as { js: (input: string, opts?: Record<string, unknown>) => string }).js;
@@ -50,15 +51,9 @@ export default function JsFormatterPage() {
             .trim();
     }, [input]);
 
-    const copyFormatted = () => {
-        navigator.clipboard.writeText(formatted);
-        message.success("Formatted JavaScript copied!");
-    };
+    const copyFormatted = () => copyToClipboard(formatted, "Formatted JavaScript copied!");
 
-    const copyMinified = () => {
-        navigator.clipboard.writeText(minified);
-        message.success("Minified JavaScript copied!");
-    };
+    const copyMinified = () => copyToClipboard(minified, "Minified JavaScript copied!");
 
     const stats = useMemo(() => {
         const originalSize = new Blob([input]).size;

@@ -38,6 +38,7 @@ import {
     Html5Outlined,
     CompressOutlined,
     QrcodeOutlined,
+    DollarOutlined,
     CheckCircleOutlined,
     CreditCardOutlined,
     NodeIndexOutlined,
@@ -57,6 +58,13 @@ import {
     DeploymentUnitOutlined,
     PushpinOutlined,
     FormOutlined,
+    PictureOutlined,
+    DisconnectOutlined,
+    BugOutlined,
+    EyeOutlined,
+    AppstoreOutlined,
+    InboxOutlined,
+    DotChartOutlined,
 } from "@ant-design/icons";
 import React from "react";
 
@@ -83,6 +91,7 @@ export type ToolCategory =
     | "Certificates & Keys"
     | "API & Web Services"
     | "Network"
+    | "Image & Media"
     | "Generators"
     | "Text & Utilities"
     | "Fun & Games"
@@ -100,6 +109,7 @@ export const CATEGORY_ORDER: ToolCategory[] = [
     "Formatters",
     "Fun & Games",
     "Generators",
+    "Image & Media",
     "Network",
     "Text & Utilities",
     "Validators",
@@ -116,6 +126,7 @@ export const CATEGORY_COLORS: Record<ToolCategory, string> = {
     "Certificates & Keys": "#eb2f96",
     "API & Web Services": "#13c2c2",
     Network: "#1890ff",
+    "Image & Media": "#0ea5e9",
     Generators: "#597ef7",
     "Text & Utilities": "#52c41a",
     "Fun & Games": "#f97316",
@@ -133,6 +144,7 @@ export const CATEGORY_ICONS: Record<ToolCategory, IconComponent> = {
     "Certificates & Keys": SafetyCertificateOutlined,
     "API & Web Services": CloudServerOutlined,
     Network: WifiOutlined,
+    "Image & Media": PictureOutlined,
     Generators: BuildOutlined,
     "Text & Utilities": ToolOutlined,
     "Fun & Games": ThunderboltOutlined,
@@ -149,11 +161,12 @@ export const CATEGORY_DESCRIPTIONS: Record<ToolCategory, string> = {
     Cryptography: "Hashing, HMAC, JWT, JWS, JWE, and JWK key generation",
     "Certificates & Keys": "X.509 certificates, SSH keys, PKI tooling, and SSL inspection",
     "API & Web Services": "REST, SOAP, WSDL: build and inspect web service requests",
-    Network: "IP, subnet, MAC address tooling and lookups",
+    Network: "IP, subnet, MAC, DNS, CORS, WebSocket and webhook tooling",
+    "Image & Media": "Compress, optimise, inspect and convert images in your browser",
     Generators: "Create UUIDs, passwords, code stubs, QR codes, and more",
     "Text & Utilities": "Text manipulation, time, color, number bases, and productivity",
     "Fun & Games": "Coin toss, dice rolls, timers, and other playful utilities",
-    "Artificial Intelligence": "AI-powered protocol inspectors: MCP and Agent-to-Agent",
+    "Artificial Intelligence": "Protocol inspectors, token/dataset tooling, and semantic search — all local, no API key required",
     Reference: "Lookup guides for HTTP codes, MIME types, ports, and RFCs",
 };
 
@@ -224,6 +237,15 @@ export const toolsRegistry: ToolDefinition[] = [
         category: "Formatters",
         tags: ["yaml", "format", "prettify", "validate", "config"],
         color: "#cb171e",
+    },
+    {
+        id: "mermaid-formatter",
+        name: "Mermaid Formatter",
+        description: "Format, validate and beautify Mermaid diagrams and flowcharts",
+        icon: FileMarkdownOutlined,
+        category: "Formatters",
+        tags: ["mermaid", "format", "diagram", "flowchart", "validate", "graph", "chart"],
+        color: "#667eea",
     },
 
     // ===== Validators =====
@@ -703,6 +725,15 @@ export const toolsRegistry: ToolDefinition[] = [
         color: "#52c41a",
     },
     {
+        id: "credit-card-generator",
+        name: "Credit Card Generator",
+        description: "Generate Luhn-valid test card numbers for every major brand with CVV and expiry",
+        icon: CreditCardOutlined,
+        category: "Generators",
+        tags: ["credit", "card", "generate", "test", "luhn", "cvv", "payment"],
+        color: "#0891b2",
+    },
+    {
         id: "lorem-ipsum",
         name: "Lorem Ipsum Generator",
         description: "Generate placeholder text in paragraphs, sentences, or words",
@@ -784,6 +815,15 @@ export const toolsRegistry: ToolDefinition[] = [
         category: "Text & Utilities",
         tags: ["markdown", "preview", "md"],
         color: "#1677ff",
+    },
+    {
+        id: "mermaid-viewer",
+        name: "Mermaid Viewer",
+        description: "Render and preview Mermaid diagrams with live editing, theme support, and SVG export",
+        icon: EyeOutlined,
+        category: "Text & Utilities",
+        tags: ["mermaid", "diagram", "flowchart", "preview", "render", "svg", "chart"],
+        color: "#667eea",
     },
     {
         id: "case-converter",
@@ -886,6 +926,42 @@ export const toolsRegistry: ToolDefinition[] = [
         tags: ["a2a", "agent", "protocol", "jsonrpc", "ai", "multi-agent", "chat", "inspect"],
         color: "#0891b2",
     },
+    {
+        id: "token-counter",
+        name: "LLM Token Counter",
+        description: "Count tokens and estimate context-window usage across GPT, Claude, and open models",
+        icon: NumberOutlined,
+        category: "Artificial Intelligence",
+        tags: ["tokens", "llm", "gpt", "claude", "context window", "tokenizer", "ai", "cost", "budget"],
+        color: "#13c2c2",
+    },
+    {
+        id: "jsonl-validator",
+        name: "Fine-Tuning Dataset Validator",
+        description: "Validate JSONL fine-tuning datasets against OpenAI or Anthropic message schemas — entirely in your browser",
+        icon: FileProtectOutlined,
+        category: "Artificial Intelligence",
+        tags: ["jsonl", "fine-tuning", "dataset", "openai", "anthropic", "validator", "ai", "training data"],
+        color: "#722ed1",
+    },
+    {
+        id: "agent-manifest-generator",
+        name: "Agent Card / MCP Manifest Generator",
+        description: "Build a valid A2A agent-card.json or MCP server config, then send it straight to the A2A or MCP inspector to test",
+        icon: RobotOutlined,
+        category: "Artificial Intelligence",
+        tags: ["a2a", "agent card", "mcp", "manifest", "generator", "ai", "agent", "config"],
+        color: "#0891b2",
+    },
+    {
+        id: "rag-search",
+        name: "Semantic Search Playground",
+        description: "Real embedding-based search over your own text, computed entirely in your browser — no server, no API key",
+        icon: DatabaseOutlined,
+        category: "Artificial Intelligence",
+        tags: ["semantic search", "embeddings", "rag", "vector search", "ai", "webgpu", "similarity"],
+        color: "#9254de",
+    },
 
     // ===== Reference =====
     {
@@ -914,6 +990,15 @@ export const toolsRegistry: ToolDefinition[] = [
         category: "Reference",
         tags: ["port", "network", "tcp", "udp", "protocol", "service", "reference"],
         color: "#13c2c2",
+    },
+    {
+        id: "model-pricing-reference",
+        name: "Model & Pricing Comparison",
+        description: "Compare context windows, output limits and per-token pricing across major LLM providers",
+        icon: DollarOutlined,
+        category: "Reference",
+        tags: ["llm", "pricing", "model", "ai", "cost", "comparison", "context window", "tokens", "reference"],
+        color: "#fa8c16",
     },
     {
         id: "ip-ranges-reference",
@@ -996,6 +1081,148 @@ export const toolsRegistry: ToolDefinition[] = [
         category: "Fun & Games",
         tags: ["typing", "wpm", "speed", "accuracy", "keyboard", "practice", "benchmark"],
         color: "#06b6d4",
+    },
+
+    // ===== v1.4 — Networking & Web =====
+    {
+        id: "webhook-receiver",
+        name: "Webhook Receiver",
+        description: "Generate a unique inbound URL, capture incoming HTTP requests in real time, and inspect headers and body",
+        icon: InboxOutlined,
+        category: "Network",
+        tags: ["webhook", "receiver", "inspector", "http", "callback", "debug", "tunnel"],
+        color: "#0891b2",
+    },
+    {
+        id: "websocket-tester",
+        name: "WebSocket Tester",
+        description: "Connect to ws:// and wss:// endpoints, send messages, watch frames stream in with timestamped history",
+        icon: DisconnectOutlined,
+        category: "Network",
+        tags: ["websocket", "ws", "wss", "socket", "realtime", "tester", "debug"],
+        color: "#06b6d4",
+    },
+    {
+        id: "cors-tester",
+        name: "CORS Tester",
+        description: "Send preflight and actual requests from any origin, watch CORS headers and explain failures in plain English",
+        icon: BugOutlined,
+        category: "Network",
+        tags: ["cors", "preflight", "origin", "access-control", "tester", "http", "debug"],
+        color: "#22d3ee",
+    },
+    {
+        id: "dns-lookup",
+        name: "DNS Lookup",
+        description: "Resolve A, AAAA, CNAME, MX, TXT, NS, SOA records for any hostname using public DNS-over-HTTPS resolvers",
+        icon: GlobalOutlined,
+        category: "Network",
+        tags: ["dns", "lookup", "resolve", "mx", "txt", "ns", "soa", "doh", "domain", "whois"],
+        color: "#1890ff",
+    },
+
+    // ===== v1.4 — Diff & Compare additions =====
+    {
+        id: "image-diff",
+        name: "Image Diff",
+        description: "Pixel-perfect visual comparison: side-by-side, overlay, and difference modes with adjustable tolerance",
+        icon: PictureOutlined,
+        category: "Diff & Compare",
+        tags: ["image", "diff", "compare", "pixel", "visual", "regression", "screenshot"],
+        color: "#fa541c",
+    },
+    {
+        id: "csv-diff",
+        name: "CSV Diff",
+        description: "Row-keyed CSV comparison with column-level change highlighting — handles added, removed, and modified rows",
+        icon: FileExcelOutlined,
+        category: "Diff & Compare",
+        tags: ["csv", "diff", "compare", "spreadsheet", "row", "column", "data"],
+        color: "#fa8c16",
+    },
+    // ===== v1.4 — Image & Media (new category) =====
+    {
+        id: "image-compressor",
+        name: "Image Compressor",
+        description: "Compress JPEG, PNG and WebP in your browser with quality slider and live before/after preview",
+        icon: CompressOutlined,
+        category: "Image & Media",
+        tags: ["image", "compress", "jpeg", "png", "webp", "optimize", "lossy", "size"],
+        color: "#0ea5e9",
+    },
+    {
+        id: "image-resizer",
+        name: "Image Resizer",
+        description: "Resize JPEG, PNG and WebP by pixels, percentage, or preset — fit, fill or stretch, all in your browser",
+        icon: PictureOutlined,
+        category: "Image & Media",
+        tags: ["image", "resize", "scale", "dimensions", "thumbnail", "jpeg", "png", "webp"],
+        color: "#0284c7",
+    },
+    {
+        id: "svg-optimizer",
+        name: "SVG Optimizer",
+        description: "Shrink SVG markup by stripping editor metadata, collapsing transforms and rounding numeric precision",
+        icon: ScissorOutlined,
+        category: "Image & Media",
+        tags: ["svg", "optimize", "minify", "vector", "shrink", "clean", "svgo"],
+        color: "#38bdf8",
+    },
+    {
+        id: "favicon-generator",
+        name: "Favicon Generator",
+        description: "Generate a full favicon set (16, 32, 48, 192, 512, apple-touch-icon) from a single source image",
+        icon: AppstoreOutlined,
+        category: "Image & Media",
+        tags: ["favicon", "icon", "apple-touch-icon", "manifest", "generator", "png", "ico"],
+        color: "#0284c7",
+    },
+    {
+        id: "color-palette-extractor",
+        name: "Color Palette Extractor",
+        description: "Extract the dominant colours from any image — outputs HEX, RGB and HSL values ready to copy",
+        icon: DotChartOutlined,
+        category: "Image & Media",
+        tags: ["color", "palette", "extract", "dominant", "image", "hex", "rgb", "swatch"],
+        color: "#0369a1",
+    },
+    {
+        id: "exif-viewer",
+        name: "EXIF Viewer",
+        description: "Inspect EXIF, GPS and IPTC metadata embedded in JPEG and TIFF photos — entirely on-device",
+        icon: EyeOutlined,
+        category: "Image & Media",
+        tags: ["exif", "metadata", "jpeg", "tiff", "gps", "photo", "iptc", "camera", "viewer"],
+        color: "#0c4a6e",
+    },
+
+    // ===== v1.4 — Data Conversion additions =====
+    {
+        id: "mock-data-generator",
+        name: "Mock Data Generator",
+        description: "Generate fake but realistic data (names, emails, dates, lorem) as JSON, CSV or SQL inserts",
+        icon: BuildOutlined,
+        category: "Data Converters",
+        tags: ["mock", "fake", "data", "generator", "fixtures", "seed", "test", "json", "csv"],
+        color: "#f59e0b",
+    },
+    {
+        id: "toml-converter",
+        name: "TOML Converter",
+        description: "Convert between TOML, JSON and YAML — useful for migrating between config-file formats",
+        icon: SwapOutlined,
+        category: "Data Converters",
+        tags: ["toml", "json", "yaml", "convert", "config", "transform"],
+        color: "#a16207",
+    },
+    {
+        id: "toon-converter",
+        name: "TOON Converter",
+        description: "Convert JSON or XML to TOON (Token-Oriented Object Notation) — a compact, LLM-friendly format with live character savings",
+        icon: CompressOutlined,
+        category: "Data Converters",
+        tags: ["toon", "json", "xml", "convert", "tokens", "llm", "compact", "compression"],
+        color: "#7c3aed",
     },
 ];
 

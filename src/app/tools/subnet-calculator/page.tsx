@@ -19,7 +19,7 @@ import {
     Tooltip,
     Divider,
 } from "antd";
-import { messageService as message } from "@/lib/messageService";
+import { copyToClipboard } from "@/lib/clipboard";
 import {
     ClusterOutlined,
     CopyOutlined,
@@ -221,10 +221,7 @@ export default function SubnetCalculatorPage() {
 
     const subnetInfo = useMemo(() => calculateSubnet(inputIP, cidr), [inputIP, cidr]);
 
-    const handleCopy = (text: string, label: string) => {
-        navigator.clipboard.writeText(text);
-        message.success(`${label} copied!`);
-    };
+    const handleCopy = (text: string, label: string) => copyToClipboard(text, `${label} copied!`);
 
     const handleCopyAll = () => {
         if (!subnetInfo.isValid) return;
@@ -239,8 +236,7 @@ Last Host: ${subnetInfo.lastHost}
 Total Hosts: ${subnetInfo.totalHosts.toLocaleString()}
 Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
 
-        navigator.clipboard.writeText(text);
-        message.success("All subnet info copied!");
+        copyToClipboard(text, "All subnet info copied!");
     };
 
     const columns = [
@@ -370,7 +366,7 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                             {!subnetInfo.isValid && (
                                 <Alert
                                     type="error"
-                                    message="Invalid Input"
+                                    title="Invalid Input"
                                     description="Please enter a valid IPv4 address and subnet."
                                 />
                             )}
@@ -407,7 +403,7 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                                     <Descriptions.Item label="IP Address">
                                         <Space>
                                             <Tag color="blue">{inputIP}/{cidr}</Tag>
-                                            <Button
+                                            <Button aria-label="Copy"
                                                 size="small"
                                                 icon={<CopyOutlined />}
                                                 onClick={() => handleCopy(`${inputIP}/${cidr}`, "CIDR")}
@@ -420,7 +416,7 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                                     <Descriptions.Item label="Network Address">
                                         <Space>
                                             <Text code>{subnetInfo.networkAddress}</Text>
-                                            <Button
+                                            <Button aria-label="Copy"
                                                 size="small"
                                                 icon={<CopyOutlined />}
                                                 onClick={() => handleCopy(subnetInfo.networkAddress, "Network")}
@@ -430,7 +426,7 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                                     <Descriptions.Item label="Broadcast Address">
                                         <Space>
                                             <Text code>{subnetInfo.broadcastAddress}</Text>
-                                            <Button
+                                            <Button aria-label="Copy"
                                                 size="small"
                                                 icon={<CopyOutlined />}
                                                 onClick={() => handleCopy(subnetInfo.broadcastAddress, "Broadcast")}
@@ -440,7 +436,7 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                                     <Descriptions.Item label="Subnet Mask">
                                         <Space>
                                             <Text code>{subnetInfo.subnetMask}</Text>
-                                            <Button
+                                            <Button aria-label="Copy"
                                                 size="small"
                                                 icon={<CopyOutlined />}
                                                 onClick={() => handleCopy(subnetInfo.subnetMask, "Subnet mask")}
@@ -453,7 +449,7 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                                             <Tooltip title="Used in ACLs and OSPF">
                                                 <InfoCircleOutlined style={{ color: "#1890ff" }} />
                                             </Tooltip>
-                                            <Button
+                                            <Button aria-label="Copy"
                                                 size="small"
                                                 icon={<CopyOutlined />}
                                                 onClick={() => handleCopy(subnetInfo.wildcardMask, "Wildcard")}
@@ -463,7 +459,7 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                                     <Descriptions.Item label="First Usable Host">
                                         <Space>
                                             <Text code>{subnetInfo.firstHost}</Text>
-                                            <Button
+                                            <Button aria-label="Copy"
                                                 size="small"
                                                 icon={<CopyOutlined />}
                                                 onClick={() => handleCopy(subnetInfo.firstHost, "First host")}
@@ -473,7 +469,7 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                                     <Descriptions.Item label="Last Usable Host">
                                         <Space>
                                             <Text code>{subnetInfo.lastHost}</Text>
-                                            <Button
+                                            <Button aria-label="Copy"
                                                 size="small"
                                                 icon={<CopyOutlined />}
                                                 onClick={() => handleCopy(subnetInfo.lastHost, "Last host")}

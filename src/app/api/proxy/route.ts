@@ -1,12 +1,31 @@
 // Server-side HTTP proxy for the API Request Builder.
 // Bypasses browser CORS restrictions and TLS certificate validation errors
 // by making all outbound requests from Node.js rather than the browser.
+//
+// PRIVACY INVARIANT — DO NOT BREAK
+// ────────────────────────────────
+// This route MUST NOT log any of:
+//   • the target URL
+//   • request headers (Authorization / Cookie / API keys leak here)
+//   • request body (PII / secrets)
+//   • response body
+//   • response headers (Set-Cookie / Location leak here)
+// Only request *failures* may be returned to the caller, and even then only
+// the error message (which we generated ourselves) goes back — never the
+// upstream payload. This guarantee is surfaced in the tool UI via
+// ServerProxyNotice. If you find yourself wanting to console.log() something
+// from this file, add it behind a build-time DEBUG flag and route only
+// non-sensitive context (status codes, byte counts) through it.
 
 import http from "http";
 import https from "https";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+
+// Hard cap on the response body we'll buffer. Anything larger is truncated
+// with a synthetic header so the UI can warn the user.
+const MAX_RESPONSE_BYTES = 25 * 1024 * 1024; // 25 MB
 
 interface ProxyRequest {
     url: string;
@@ -135,7 +154,25 @@ async function proxyRequest(req: ProxyRequest, parsed: URL, redirectCount: numbe
             }
 
             const chunks: Buffer[] = [];
-            res.on("data", (chunk: Buffer) => chunks.push(chunk));
+            let bytesReceived = 0;
+            let truncated = false;
+            res.on("data", (chunk: Buffer) => {
+                bytesReceived += chunk.byteLength;
+                if (bytesReceived > MAX_RESPONSE_BYTES) {
+                    if (!truncated) {
+                        // Keep only the bytes up to the cap so the user sees a
+                        // partial preview instead of nothing.
+                        const overshoot = bytesReceived - MAX_RESPONSE_BYTES;
+                        if (overshoot < chunk.byteLength) {
+                            chunks.push(chunk.subarray(0, chunk.byteLength - overshoot));
+                        }
+                        truncated = true;
+                    }
+                    // discard further chunks but keep socket draining
+                    return;
+                }
+                chunks.push(chunk);
+            });
             res.on("end", () => {
                 const raw = Buffer.concat(chunks);
                 const timing = Date.now() - startTime;
@@ -145,6 +182,9 @@ async function proxyRequest(req: ProxyRequest, parsed: URL, redirectCount: numbe
                     if (v !== undefined) {
                         responseHeaders[k] = Array.isArray(v) ? v.join(", ") : v;
                     }
+                }
+                if (truncated) {
+                    responseHeaders["x-mydevtools-truncated"] = `response was truncated at ${MAX_RESPONSE_BYTES} bytes`;
                 }
 
                 const contentType = responseHeaders["content-type"] ?? "";
@@ -163,7 +203,7 @@ async function proxyRequest(req: ProxyRequest, parsed: URL, redirectCount: numbe
                     headers: responseHeaders,
                     body: isText ? raw.toString("utf-8") : raw.toString("base64"),
                     bodyIsBase64: !isText,
-                    size: raw.byteLength,
+                    size: bytesReceived, // report the real upstream size, not just what we kept
                     timing,
                 });
             });

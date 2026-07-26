@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, Alert, Table, Tag, Select } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, Alert, Table, Tag, Select } from "antd";
 import { NodeIndexOutlined, CopyOutlined, ClearOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text, Paragraph } = Typography;
 
@@ -123,8 +124,7 @@ export default function XPathTesterPage() {
 
     const copyResults = () => {
         const text = result.results.map((r) => r.value).join("\n");
-        navigator.clipboard.writeText(text);
-        message.success("Results copied!");
+        copyToClipboard(text, "Results copied!");
     };
 
     return (
@@ -203,9 +203,9 @@ export default function XPathTesterPage() {
                         }
                     >
                         {!result.success ? (
-                            <Alert type="error" message={result.error} showIcon />
+                            <Alert type="error" title={result.error} showIcon />
                         ) : result.results.length === 0 ? (
-                            <Alert type="info" message="No matches found" showIcon />
+                            <Alert type="info" title="No matches found" showIcon />
                         ) : (
                             <Table
                                 size="small"

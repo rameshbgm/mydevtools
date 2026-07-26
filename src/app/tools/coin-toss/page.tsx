@@ -357,7 +357,7 @@ export default function CoinTossPage() {
                                 size="small"
                                 title={<Text style={{ fontSize: 12, fontWeight: 600 }}>Recent flips</Text>}
                                 extra={
-                                    <Button
+                                    <Button aria-label="Reset"
                                         type="text"
                                         size="small"
                                         icon={<ReloadOutlined />}

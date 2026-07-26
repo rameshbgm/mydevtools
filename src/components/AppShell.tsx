@@ -15,6 +15,7 @@ import {
     Drawer,
     Grid,
     Popover,
+    Modal,
 } from "antd";
 import { setMessageInstance } from "@/lib/messageService";
 import {
@@ -27,6 +28,9 @@ import {
     SearchOutlined,
     DatabaseOutlined,
     StarOutlined,
+    HeartFilled,
+    LinkedinFilled,
+    GithubOutlined,
 } from "@ant-design/icons";
 import {
     getToolsByCategory,
@@ -804,13 +808,24 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
     );
 
     const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+    const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
-    // ⌘K / Ctrl+K global shortcut
+    // ⌘K / Ctrl+K opens the command palette; "?" (outside inputs) opens the
+    // shortcuts help modal.
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "k") {
                 e.preventDefault();
                 setCommandOpen((v) => !v);
+                return;
+            }
+            if (e.key === "?" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                const target = e.target as HTMLElement;
+                const isTyping = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+                if (!isTyping) {
+                    e.preventDefault();
+                    setShortcutsOpen((v) => !v);
+                }
             }
         };
         window.addEventListener("keydown", handler);
@@ -1126,6 +1141,29 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                     )}
                 </AnimatePresence>
 
+                <Modal
+                    title="Keyboard shortcuts"
+                    open={shortcutsOpen}
+                    onCancel={() => setShortcutsOpen(false)}
+                    footer={null}
+                    width={420}
+                >
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {[
+                            { keys: "⌘K / Ctrl K", desc: "Open the command palette" },
+                            { keys: "?", desc: "Toggle this shortcuts help" },
+                            { keys: "Esc", desc: "Close the command palette" },
+                            { keys: "↑ / ↓", desc: "Navigate command palette results" },
+                            { keys: "Enter", desc: "Open the selected tool" },
+                        ].map((s) => (
+                            <div key={s.keys} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <Text type="secondary" style={{ fontSize: 13 }}>{s.desc}</Text>
+                                <Tag style={{ fontFamily: "var(--font-geist-mono)" }}>{s.keys}</Tag>
+                            </div>
+                        ))}
+                    </div>
+                </Modal>
+
                 <Layout className="wb-shell-layout" style={{ minHeight: "100vh" }} suppressHydrationWarning>
                     {!isMobile && (
                         <Sider
@@ -1220,25 +1258,6 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                 />
                             </Tooltip>
 
-                            <BookmarkButton
-                                darkMode={darkMode}
-                                currentToolId={currentToolId}
-                                onNavigate={navigate}
-                            />
-
-                            {/* Center: search trigger */}
-                            <div
-                                style={{
-                                    flex: 1,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    minWidth: 0,
-                                }}
-                            >
-                                {searchTrigger}
-                            </div>
-
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                                 <Tooltip title="Memory & Storage Manager">
                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -1282,6 +1301,114 @@ export default function AppShell({ children }: Readonly<{ children: React.ReactN
                                     </motion.div>
                                 </Tooltip>
                             </div>
+
+                            <BookmarkButton
+                                darkMode={darkMode}
+                                currentToolId={currentToolId}
+                                onNavigate={navigate}
+                            />
+
+                            {/* Center: search trigger */}
+                            <div
+                                style={{
+                                    flex: 1,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    minWidth: 0,
+                                }}
+                            >
+                                {searchTrigger}
+                            </div>
+
+                            {!isMobile && (
+                                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                                        <Text style={{ color: "var(--wb-text-body)" }}>Made with</Text>
+                                        <motion.span
+                                            animate={{ scale: [1, 1.25, 1] }}
+                                            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                                            style={{ display: "inline-flex" }}
+                                        >
+                                            <HeartFilled style={{ color: "#ec4899", fontSize: 14 }} />
+                                        </motion.span>
+                                        <Text style={{ color: "var(--wb-text-body)" }}>by</Text>
+                                        <a
+                                            href="https://rameshsnotebook.com/"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                fontWeight: 600,
+                                                background: "var(--gradient-brand)",
+                                                WebkitBackgroundClip: "text",
+                                                backgroundClip: "text",
+                                                WebkitTextFillColor: "transparent",
+                                                color: "transparent",
+                                                textDecoration: "none",
+                                                whiteSpace: "nowrap",
+                                            }}
+                                        >
+                                            Ramesh Maharaddi
+                                        </a>
+                                    </div>
+
+                                    <Tooltip title="LinkedIn">
+                                        <motion.a
+                                            href="https://www.linkedin.com/in/rameshbgm/"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            whileHover={{ y: -2, scale: 1.08 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            aria-label="LinkedIn profile"
+                                            style={{
+                                                width: 34,
+                                                height: 34,
+                                                borderRadius: 9,
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                background: darkMode
+                                                    ? "rgba(10, 102, 194, 0.15)"
+                                                    : "rgba(10, 102, 194, 0.08)",
+                                                border: `1px solid ${darkMode ? "rgba(10, 102, 194, 0.3)" : "rgba(10, 102, 194, 0.18)"}`,
+                                                color: "#0a66c2",
+                                                textDecoration: "none",
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            <LinkedinFilled style={{ fontSize: 16 }} />
+                                        </motion.a>
+                                    </Tooltip>
+
+                                    <Tooltip title="GitHub">
+                                        <motion.a
+                                            href="https://github.com/rameshbgm/mydevtools"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            whileHover={{ y: -2, scale: 1.08 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            aria-label="GitHub profile"
+                                            style={{
+                                                width: 34,
+                                                height: 34,
+                                                borderRadius: 9,
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                background: darkMode
+                                                    ? "rgba(255, 255, 255, 0.06)"
+                                                    : "rgba(0, 0, 0, 0.04)",
+                                                border: `1px solid ${darkMode ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.10)"}`,
+                                                color: darkMode ? "#e5e5e5" : "#171717",
+                                                textDecoration: "none",
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            <GithubOutlined style={{ fontSize: 16 }} />
+                                        </motion.a>
+                                    </Tooltip>
+                                </div>
+                            )}
                         </Header>
 
                         <Content

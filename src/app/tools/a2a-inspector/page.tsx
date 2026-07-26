@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
     Card, Input, Button, Typography, Row, Col, Space, Tabs, Tag,
-    Alert, Empty, Divider, Badge, Descriptions, List, Spin, Tooltip,
+    Alert, Empty, Divider, Badge, Descriptions, Spin, Tooltip,
     Select, Collapse, Segmented, InputNumber, Switch, Form, Radio,
 } from "antd";
 import {
@@ -19,6 +19,8 @@ import { useAppStore } from "@/lib/store";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SslConfigSection, { DEFAULT_SSL_CONFIG, buildSslProxyFields, type SslConfig } from "@/components/SslConfigSection";
+import { copyToClipboard } from "@/lib/clipboard";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -564,21 +566,34 @@ export default function A2aInspectorPage() {
 
         const url = applyAuthToUrl(baseUrl + "/", auth);
         const headers = { ...buildRequestHeaders(), "Accept": "text/event-stream" };
+        const useProxy = shouldUseProxy();
 
-        // Streaming through the proxy isn't supported (proxy buffers the full body).
-        // For SSE we always go direct browser-to-agent; the agent must allow CORS.
-        if (shouldUseProxy()) {
-            throw new Error(
-                "Streaming requires a direct browser connection. Switch Connection Type to 'Direct (auto-fallback)' or 'Direct (strict)' and remove SSL options to stream."
-            );
-        }
+        // /api/proxy-stream pipes SSE chunks through server-side, so the same
+        // data: framing parser below works whether we go direct or via proxy.
+        const callProxyStream = () => fetch("/api/proxy-stream", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                url, method: "POST", headers,
+                body: JSON.stringify(body), bodyIsBase64: false,
+                timeout: Math.max(requestTimeoutMs, 600000),
+                ...buildSslProxyFields(sslConfig),
+            }),
+            signal,
+        });
 
         let res: Response;
-        try {
-            res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
-        } catch (err) {
-            if (looksLikeNetworkError(err)) throw new Error(buildCorsErrorMessage(err));
-            throw err;
+        if (useProxy) {
+            res = await callProxyStream();
+        } else {
+            try {
+                res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
+            } catch (err) {
+                if (!looksLikeNetworkError(err)) throw err;
+                if (!corsFallbackAllowed()) throw new Error(buildCorsErrorMessage(err));
+                res = await callProxyStream();
+                setCorsFallbackUsed(true);
+            }
         }
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         if (!res.body) throw new Error("No response body");
@@ -715,7 +730,7 @@ export default function A2aInspectorPage() {
             if (directOk) {
                 recommendation = "Direct connection works. Use 'Direct (strict)' for the lowest latency. Streaming will work.";
             } else if (proxyOk && !directOk) {
-                recommendation = "Direct fetch is blocked (likely CORS). Use 'Via Server Proxy' for reliable access — note that streaming will not work in proxy mode. To enable direct connections, configure the agent to send Access-Control-Allow-Origin: *.";
+                recommendation = "Direct fetch is blocked (likely CORS). Use 'Via Server Proxy' for reliable access — streaming is supported through the proxy via SSE pass-through. To enable direct connections, configure the agent to send Access-Control-Allow-Origin: *.";
             } else if (!proxyOk) {
                 recommendation = "Neither direct nor proxy reached the agent. Check the URL, that the agent is running, and (if HTTPS) the SSL settings.";
             }
@@ -834,6 +849,55 @@ export default function A2aInspectorPage() {
         };
     }
 
+    // Streaming events arrive frequently as small deltas. Treat status.message.parts
+    // as an incremental delta to APPEND, and artifact parts as the final canonical
+    // text to REPLACE with — otherwise the inspector would duplicate the message.
+    function extractStreamEvent(data: unknown): {
+        deltaText: string;
+        finalText: string | null;
+        state: string | undefined;
+        taskId: string | undefined;
+        contextId: string | undefined;
+    } {
+        const r = data as Record<string, unknown> | undefined;
+        if (!r) return { deltaText: "", finalText: null, state: undefined, taskId: undefined, contextId: undefined };
+
+        const status = r.status as Record<string, unknown> | undefined;
+        const state = typeof status?.state === "string" ? status.state : undefined;
+
+        const collectText = (parts: unknown): string => Array.isArray(parts)
+            ? (parts as Array<Record<string, unknown>>)
+                .filter(p => (p.kind === "text" || p.type === "text") && typeof p.text === "string")
+                .map(p => p.text as string)
+                .join("")
+            : "";
+
+        // Delta = message parts on the in-flight status (or direct .parts for plain Message events).
+        const statusMsg = status?.message as Record<string, unknown> | undefined;
+        let deltaText = collectText(statusMsg?.parts);
+        if (!deltaText) deltaText = collectText(r.parts);
+
+        // Final = artifact parts joined; only emitted at the end of the task.
+        const artifacts = r.artifacts as Array<Record<string, unknown>> | undefined;
+        let finalText: string | null = null;
+        if (Array.isArray(artifacts) && artifacts.length > 0) {
+            const txt = artifacts
+                .flatMap(a => Array.isArray(a.parts) ? (a.parts as Array<Record<string, unknown>>) : [])
+                .filter(p => (p.kind === "text" || p.type === "text") && typeof p.text === "string")
+                .map(p => p.text as string)
+                .join("");
+            if (txt) finalText = txt;
+        }
+
+        return {
+            deltaText,
+            finalText,
+            state,
+            taskId: typeof r.id === "string" ? r.id : (typeof r.taskId === "string" ? r.taskId : undefined),
+            contextId: typeof r.contextId === "string" ? r.contextId : undefined,
+        };
+    }
+
     const sendChatMessage = async () => {
         if (!inputText.trim() || sending) return;
         const text = inputText.trim();
@@ -902,13 +966,28 @@ export default function A2aInspectorPage() {
                 : { id: genUuid(), message: agentMessage };
 
             await rpcStream(protocolInfo.streamMethod, params, (data) => {
-                const { text: chunkText, taskId, contextId } = extractAgentText(data);
-                if (contextId) setChatContextId(contextId);
-                setStreamingMessages(prev => prev.map(m =>
-                    m.id === agentMsgId
-                        ? { ...m, content: m.content ? m.content + "\n" + chunkText : chunkText, taskId, contextId }
-                        : m
-                ));
+                const evt = extractStreamEvent(data);
+                if (evt.contextId) setChatContextId(evt.contextId);
+                setStreamingMessages(prev => prev.map(m => {
+                    if (m.id !== agentMsgId) return m;
+                    // Final artifact replaces the streamed content (otherwise the
+                    // canonical text would be appended after the deltas, doubling it).
+                    // Deltas are concatenated without a separator — SSE events arrive
+                    // as small chunks and any newlines in the agent's own text are
+                    // preserved inside the chunk itself.
+                    let content = m.content;
+                    if (evt.finalText !== null) {
+                        content = evt.finalText;
+                    } else if (evt.deltaText) {
+                        content = (content || "") + evt.deltaText;
+                    }
+                    return {
+                        ...m,
+                        content,
+                        taskId: evt.taskId ?? m.taskId,
+                        contextId: evt.contextId ?? m.contextId,
+                    };
+                }));
             }, controller.signal);
 
             setStreamingMessages(prev => prev.map(m =>
@@ -1025,7 +1104,7 @@ export default function A2aInspectorPage() {
                 howToUse: [
                     "Enter the agent's base URL (the root, not the card path — the inspector appends /.well-known/agent-card.json automatically)",
                     "Choose the Protocol Version: 'Current (A2A v1)' uses message/send + message/stream and agent-card.json; 'Legacy Draft' uses tasks/send + tasks/get and agent.json — switch if you get a 404 on discovery",
-                    "Set the Connection Type: 'Direct (auto-fallback)' tries a browser fetch and retries via /api/proxy on CORS failure; 'Direct (strict)' surfaces errors and is required for streaming; 'Via Server Proxy' always routes server-side (no streaming support)",
+                    "Set the Connection Type: 'Direct (auto-fallback)' tries a browser fetch and retries via /api/proxy on CORS failure; 'Direct (strict)' surfaces errors; 'Via Server Proxy' always routes server-side — streaming is supported through /api/proxy-stream which pipes SSE events back chunk-by-chunk",
                     "Click Diagnose to test direct fetch, OPTIONS preflight, and proxy connectivity — it recommends the best Connection Type before you start",
                     "Open the Authentication panel to configure Bearer token, HTTP Basic, API Key, or OAuth 2.0 — values are applied to every request",
                     "Add Custom Headers for any non-standard headers the agent requires",
@@ -1040,7 +1119,7 @@ export default function A2aInspectorPage() {
                     "Streaming uses fetch + ReadableStream instead of EventSource so custom Authorization headers are honoured",
                     "The 'current' spec uses /.well-known/agent-card.json and parts with 'kind: text'; the legacy draft uses /.well-known/agent.json and parts with 'type: text' — the inspector falls back to agent.json automatically and warns if it succeeds",
                     "Context IDs (contextId) persist across chat turns so the agent can maintain conversation state — visible in the Debug tab",
-                    "SSL/TLS configuration (CA bundle, client cert, mTLS key) routes traffic through the server-side proxy; streaming via proxy is not supported (SSE requires a persistent streaming connection)",
+                    "SSL/TLS configuration (CA bundle, client cert, mTLS key) routes traffic through the server-side proxy; streaming continues to work via /api/proxy-stream which keeps a persistent SSE pipe between server and browser",
                     "CORS fallback (orange badge) means the browser direct fetch was blocked — add 'Access-Control-Allow-Origin: *' to the agent to eliminate the extra hop",
                     "The Debug tab shows every outbound request and inbound response in raw JSON-RPC format — useful for validating payload structure against the spec",
                     "Compliance checks on the card tab flag missing required fields (name, url, version) and warn on optional ones (skills, capabilities, securitySchemes)",
@@ -1058,6 +1137,24 @@ export default function A2aInspectorPage() {
                 ],
             }}
         >
+            <ToolBridgeBanner
+                accepts={["json"]}
+                onAccept={(p) => {
+                    try {
+                        const parsed = JSON.parse(p.data);
+                        if (!parsed || typeof parsed !== "object" || typeof parsed.name !== "string" || typeof parsed.url !== "string") {
+                            message.error("Payload doesn't look like an agent card (missing name/url)");
+                            return;
+                        }
+                        setAgentCard(parsed);
+                        if (typeof parsed.url === "string") setAgentUrl(parsed.url.replace(/\/$/, "").replace(/\/(a2a)?$/, "") || parsed.url);
+                        message.success("Agent card loaded — skills and capabilities are populated below without fetching");
+                    } catch {
+                        message.error("Payload isn't valid JSON");
+                    }
+                }}
+            />
+
             {/* URL bar + protocol */}
             <Card size="small" style={{ marginBottom: 12 }}>
                 <Row gutter={[8, 8]} align="middle">
@@ -1124,8 +1221,8 @@ export default function A2aInspectorPage() {
                                 title={
                                     <div style={{ fontSize: 12 }}>
                                         <div><b>Direct (auto-fallback):</b> browser → agent. Auto-retries via /api/proxy on CORS failure.</div>
-                                        <div style={{ marginTop: 4 }}><b>Direct (strict):</b> direct only — surfaces CORS errors. Required for streaming.</div>
-                                        <div style={{ marginTop: 4 }}><b>Via Server Proxy:</b> always /api/proxy. Bypasses browser CORS; required for SSL/TLS options. Streaming will not work.</div>
+                                        <div style={{ marginTop: 4 }}><b>Direct (strict):</b> direct only — surfaces CORS errors instead of falling back.</div>
+                                        <div style={{ marginTop: 4 }}><b>Via Server Proxy:</b> always server-side. Bypasses browser CORS; required for SSL/TLS options. Streaming uses /api/proxy-stream and works the same as direct.</div>
                                     </div>
                                 }
                             >
@@ -1143,7 +1240,7 @@ export default function A2aInspectorPage() {
                 {cardError && (
                     <Alert
                         type="error"
-                        message={cardError}
+                        title={cardError}
                         showIcon
                         closable
                         onClose={() => setCardError("")}
@@ -1157,7 +1254,7 @@ export default function A2aInspectorPage() {
                         closable
                         onClose={() => setDiagnosticResult(null)}
                         style={{ marginTop: 8 }}
-                        message={
+                        title={
                             <Space>
                                 <Text strong>Connection Diagnostic</Text>
                                 {diagnosticResult.crossOrigin
@@ -1166,7 +1263,7 @@ export default function A2aInspectorPage() {
                             </Space>
                         }
                         description={
-                            <Space direction="vertical" size={6} style={{ width: "100%" }}>
+                            <Space orientation="vertical" size={6} style={{ width: "100%" }}>
                                 {diagnosticResult.steps.map((step, i) => (
                                     <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
                                         {step.ok
@@ -1246,12 +1343,12 @@ export default function A2aInspectorPage() {
                                         key: "ssl",
                                         label: <><SafetyCertificateOutlined /> SSL / TLS</>,
                                         children: (
-                                            <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                                            <Space orientation="vertical" size={12} style={{ width: "100%" }}>
                                                 <Alert
                                                     type="info"
                                                     showIcon
-                                                    message="SSL options auto-route through /api/proxy"
-                                                    description="When any SSL option is set, requests are sent server-side regardless of Connection Type. Streaming is incompatible with SSL options — switch back to plain Direct mode and remove SSL settings to stream."
+                                                    title="SSL options auto-route through /api/proxy"
+                                                    description="When any SSL option is set, requests are sent server-side regardless of Connection Type. Streaming is still supported (chunks are piped back via /api/proxy-stream) with your SSL/TLS configuration applied server-side."
                                                     style={{ fontSize: 12 }}
                                                 />
                                                 <SslConfigSection value={sslConfig} onChange={setSslConfig} compact />
@@ -1347,7 +1444,7 @@ export default function A2aInspectorPage() {
                                             )}
                                             {agentCard.securitySchemes && (
                                                 <Descriptions.Item label="Security">
-                                                    <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                                                    <Space orientation="vertical" size={4} style={{ width: "100%" }}>
                                                         {Object.entries(agentCard.securitySchemes).map(([name, scheme]) => (
                                                             <div key={name}>
                                                                 <Tag color="gold" icon={<LockOutlined />}>{name}</Tag>
@@ -1414,11 +1511,15 @@ export default function A2aInspectorPage() {
                                         }
                                         style={{ marginBottom: 12 }}
                                     >
-                                        <List
-                                            size="small"
-                                            dataSource={compliance}
-                                            renderItem={check => (
-                                                <List.Item style={{ padding: "4px 0" }}>
+                                        <div>
+                                            {compliance.map((check, i) => (
+                                                <div
+                                                    key={`${check.field}-${i}`}
+                                                    style={{
+                                                        padding: "4px 0",
+                                                        borderBottom: i < compliance.length - 1 ? "1px solid var(--wb-border, rgba(140,140,140,0.18))" : undefined,
+                                                    }}
+                                                >
                                                     <Space style={{ width: "100%" }}>
                                                         {check.status === "ok" && <CheckCircleOutlined style={{ color: "#22c55e", flexShrink: 0 }} />}
                                                         {check.status === "warn" && <WarningOutlined style={{ color: "#f59e0b", flexShrink: 0 }} />}
@@ -1426,19 +1527,19 @@ export default function A2aInspectorPage() {
                                                         <Text code style={{ fontSize: 11, flexShrink: 0 }}>{check.field}</Text>
                                                         <Text type="secondary" style={{ fontSize: 11, flex: 1 }}>{check.note}</Text>
                                                     </Space>
-                                                </List.Item>
-                                            )}
-                                        />
+                                                </div>
+                                            ))}
+                                        </div>
                                     </Card>
 
                                     <Card
                                         size="small"
                                         title="Raw card JSON"
                                         extra={
-                                            <Button
+                                            <Button aria-label="Copy"
                                                 size="small"
                                                 icon={<CopyOutlined />}
-                                                onClick={() => { navigator.clipboard.writeText(cardJson); message.success("Copied!"); }}
+                                                onClick={() => copyToClipboard(cardJson)}
                                             />
                                         }
                                     >
@@ -1452,7 +1553,7 @@ export default function A2aInspectorPage() {
                                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                                     description={
                                         loadingCard
-                                            ? <Spin tip="Loading agent card…" />
+                                            ? <Spin description="Loading agent card…" />
                                             : "Enter an agent URL above and click 'Discover'"
                                     }
                                 />
@@ -1478,12 +1579,12 @@ export default function A2aInspectorPage() {
                             <Row gutter={[16, 16]}>
                                 <Col xs={24} lg={10}>
                                     <Card size="small" title="Choose skill">
-                                        <List
-                                            dataSource={agentCard.skills}
-                                            renderItem={(skill) => {
+                                        <div>
+                                            {agentCard.skills.map((skill) => {
                                                 const selected = skill.id === selectedSkillId;
                                                 return (
-                                                    <List.Item
+                                                    <div
+                                                        key={skill.id}
                                                         onClick={() => setSelectedSkillId(skill.id)}
                                                         style={{
                                                             cursor: "pointer",
@@ -1501,10 +1602,10 @@ export default function A2aInspectorPage() {
                                                                 <Text style={{ fontSize: 11 }}>{skill.description}</Text>
                                                             )}
                                                         </div>
-                                                    </List.Item>
+                                                    </div>
                                                 );
-                                            }}
-                                        />
+                                            })}
+                                        </div>
                                     </Card>
                                 </Col>
                                 <Col xs={24} lg={14}>
@@ -1526,7 +1627,7 @@ export default function A2aInspectorPage() {
                                         }
                                     >
                                         {selectedSkillId ? (
-                                            <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                                            <Space orientation="vertical" size={12} style={{ width: "100%" }}>
                                                 {(() => {
                                                     const skill = agentCard.skills?.find(s => s.id === selectedSkillId);
                                                     return skill?.examples?.length ? (
@@ -1635,11 +1736,11 @@ export default function A2aInspectorPage() {
                         label: <Space size={4}><FileTextOutlined />Tasks</Space>,
                         children: (
                             <Card size="small" title="Task lookup & cancel">
-                                <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                                <Space orientation="vertical" size={12} style={{ width: "100%" }}>
                                     <Alert
                                         type="info"
                                         showIcon
-                                        message="Task IDs are returned by message/send (current spec) or from the chat tab's response"
+                                        title="Task IDs are returned by message/send (current spec) or from the chat tab's response"
                                         style={{ fontSize: 12 }}
                                     />
                                     <Space.Compact style={{ width: "100%" }}>
@@ -1731,10 +1832,10 @@ export default function A2aInspectorPage() {
                                                             {new Date(entry.ts).toLocaleTimeString()}
                                                         </Text>
                                                         <Tooltip title="Copy">
-                                                            <Button
+                                                            <Button aria-label="Copy"
                                                                 size="small" type="text" icon={<CopyOutlined />}
                                                                 style={{ padding: "0 4px" }}
-                                                                onClick={() => { navigator.clipboard.writeText(payloadStr); message.success("Copied!"); }}
+                                                                onClick={() => copyToClipboard(payloadStr)}
                                                             />
                                                         </Tooltip>
                                                     </div>
@@ -1778,13 +1879,13 @@ function AuthPanel({ value, onChange, card }: AuthPanelProps) {
         : [];
 
     return (
-        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+        <Space orientation="vertical" size={12} style={{ width: "100%" }}>
             {securityHints.length > 0 && (
                 <Alert
                     type="info"
                     showIcon
                     icon={<LockOutlined />}
-                    message="Agent declares the following security schemes"
+                    title="Agent declares the following security schemes"
                     description={securityHints.join(" · ")}
                     style={{ fontSize: 12 }}
                 />
@@ -1863,7 +1964,7 @@ function AuthPanel({ value, onChange, card }: AuthPanelProps) {
                     <Alert
                         type="warning"
                         showIcon
-                        message="Browser-side OAuth 2.0 flows require server support."
+                        title="Browser-side OAuth 2.0 flows require server support."
                         description="Paste a pre-obtained access token below — it will be sent as 'Authorization: <tokenType> <accessToken>'."
                         style={{ marginBottom: 12, fontSize: 12 }}
                     />
@@ -1900,7 +2001,7 @@ interface HeadersPanelProps {
 
 function HeadersPanel({ headers, mode, json, onModeChange, onAdd, onUpdate, onRemove, onJsonChange }: HeadersPanelProps) {
     return (
-        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+        <Space orientation="vertical" size={12} style={{ width: "100%" }}>
             <Segmented
                 size="small"
                 value={mode}
@@ -1930,7 +2031,7 @@ function HeadersPanel({ headers, mode, json, onModeChange, onAdd, onUpdate, onRe
                                 onChange={e => onUpdate(h.id, { value: e.target.value })}
                                 style={{ flex: 1 }}
                             />
-                            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => onRemove(h.id)} />
+                            <Button aria-label="Delete" type="text" danger icon={<DeleteOutlined />} onClick={() => onRemove(h.id)} />
                         </Space>
                     ))}
                     <Button type="dashed" icon={<PlusOutlined />} onClick={onAdd} block>
@@ -1996,7 +2097,7 @@ function ChatPanel({
             }
         >
             {streamingNotice && (
-                <Alert type="warning" showIcon message={streamingNotice} style={{ marginBottom: 8, fontSize: 12 }} />
+                <Alert type="warning" showIcon title={streamingNotice} style={{ marginBottom: 8, fontSize: 12 }} />
             )}
             <div style={{ height: 420, overflowY: "auto", padding: "8px 0", marginBottom: 12 }}>
                 {messages.length === 0 && (

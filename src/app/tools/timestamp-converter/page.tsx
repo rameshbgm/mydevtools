@@ -73,21 +73,21 @@ export default function TimestampConverterPage() {
                         <Text type="secondary">Unix (seconds)</Text>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <Title level={4} style={{ margin: 0 }}>{currentTs}</Title>
-                            <Button size="small" icon={<CopyOutlined />} onClick={copyCurrentTs} />
+                            <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={copyCurrentTs} />
                         </div>
                     </div>
                     <div>
                         <Text type="secondary">ISO 8601</Text>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <Title level={4} style={{ margin: 0 }}>{now.toISOString()}</Title>
-                            <Button size="small" icon={<CopyOutlined />} onClick={copyIso} />
+                            <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={copyIso} />
                         </div>
                     </div>
                     <div>
                         <Text type="secondary">Local</Text>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <Title level={4} style={{ margin: 0 }}>{now.toLocaleString()}</Title>
-                            <Button size="small" icon={<CopyOutlined />} onClick={copyLocal} />
+                            <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={copyLocal} />
                         </div>
                     </div>
                 </Space>
@@ -101,7 +101,7 @@ export default function TimestampConverterPage() {
                         onChange={(e) => setTimestamp(e.target.value)}
                         placeholder="e.g. 1700000000"
                         style={{ fontFamily: "var(--font-geist-mono)", marginBottom: 8 }}
-                        suffix={<Button size="small" type="text" icon={<CopyOutlined />} onClick={() => copyToClipboard(timestamp)} />}
+                        suffix={<Button aria-label="Copy" size="small" type="text" icon={<CopyOutlined />} onClick={() => copyToClipboard(timestamp)} />}
                     />
                     <Button type="primary" onClick={tsToDate} block>Convert to Date</Button>
                 </Card>
@@ -112,7 +112,7 @@ export default function TimestampConverterPage() {
                         onChange={(e) => setDateStr(e.target.value)}
                         placeholder="e.g. 2024-01-01T00:00:00Z"
                         style={{ fontFamily: "var(--font-geist-mono)", marginBottom: 8 }}
-                        suffix={<Button size="small" type="text" icon={<CopyOutlined />} onClick={() => copyToClipboard(dateStr)} />}
+                        suffix={<Button aria-label="Copy" size="small" type="text" icon={<CopyOutlined />} onClick={() => copyToClipboard(dateStr)} />}
                     />
                     <Button type="primary" onClick={dateToTs} block>Convert to Timestamp</Button>
                 </Card>

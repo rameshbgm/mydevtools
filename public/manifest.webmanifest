@@ -1,0 +1,88 @@
+{
+    "name": "mydevtools — Free Developer Tools",
+    "short_name": "mydevtools",
+    "description": "100+ free, privacy-first developer tools that run entirely in your browser. Format, validate, convert, encode, generate and inspect — no uploads, no tracking.",
+    "id": "/",
+    "start_url": "/?source=pwa",
+    "scope": "/",
+    "display": "standalone",
+    "display_override": ["window-controls-overlay", "standalone", "browser"],
+    "orientation": "any",
+    "theme_color": "#0891b2",
+    "background_color": "#ffffff",
+    "lang": "en",
+    "dir": "ltr",
+    "categories": ["developer", "productivity", "utilities"],
+    "icons": [
+        {
+            "src": "/icons/favicon-16.png",
+            "sizes": "16x16",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/favicon-32.png",
+            "sizes": "32x32",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "JSON Formatter",
+            "short_name": "JSON",
+            "description": "Prettify, minify and validate JSON",
+            "url": "/formatters/json-formatter",
+            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "JWT Decoder",
+            "short_name": "JWT",
+            "description": "Decode and inspect JSON Web Tokens",
+            "url": "/cryptography/jwt-decoder",
+            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "API Request Builder",
+            "short_name": "API",
+            "description": "Postman-style HTTP client",
+            "url": "/api-and-web-services/api-request-builder",
+            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Base64 Encode/Decode",
+            "short_name": "Base64",
+            "description": "Encode and decode Base64 strings",
+            "url": "/encoding-and-decoding/base64",
+            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+        }
+    ],
+    "prefer_related_applications": false
+}

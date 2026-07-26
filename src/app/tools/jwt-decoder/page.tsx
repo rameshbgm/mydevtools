@@ -26,6 +26,10 @@ import {
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import { copyToClipboard } from "@/lib/clipboard";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema as ShareSchemaT } from "@/lib/shareable-state";
 
 const { Text } = Typography;
 
@@ -94,6 +98,9 @@ function expiryLabel(exp: unknown): { label: string; expired: boolean } | null {
 
 // ── component ─────────────────────────────────────────────────────────────────
 
+interface ShareState { token: string; }
+const SHARE_SCHEMA: ShareSchemaT<ShareState> = { toolId: "jwt-decoder", version: 1 };
+
 export default function JwtDecoderPage() {
     const { message } = App.useApp();
     const [token, setToken] = useState(SAMPLE_TOKEN);
@@ -122,6 +129,8 @@ export default function JwtDecoderPage() {
     }, []);
 
     useEffect(() => { decode(token); }, []);
+
+    useShareableState(SHARE_SCHEMA, (s) => { setToken(s.token); decode(s.token); });
 
     const handleReEncode = () => {
         try {
@@ -173,8 +182,33 @@ export default function JwtDecoderPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner
+                accepts={["text"]}
+                onAccept={(p) => { setToken(p.data); decode(p.data); }}
+            />
+
             {/* Token Input */}
-            <Card size="small" style={{ marginBottom: 16 }}>
+            <Card
+                size="small"
+                style={{ marginBottom: 16 }}
+                extra={
+                    <Space>
+                        <ShareButton
+                            schema={SHARE_SCHEMA}
+                            getState={() => ({ token })}
+                            sensitiveFieldHint="JWT tokens often carry sensitive claims (user IDs, scopes). Only share with people you trust."
+                        />
+                        {decoded && (
+                            <SendToButton
+                                data={JSON.stringify(decoded.payload, null, 2)}
+                                kind="json"
+                                sourceToolId="jwt-decoder"
+                                label="JWT payload"
+                            />
+                        )}
+                    </Space>
+                }
+            >
                 <Text type="secondary" style={{ display: "block", marginBottom: 6, fontSize: 12 }}>
                     Paste a JWT token
                 </Text>
@@ -246,7 +280,7 @@ export default function JwtDecoderPage() {
                                             </Space>
                                         }
                                         extra={
-                                            <Button size="small" icon={<CopyOutlined />}
+                                            <Button aria-label="Copy" size="small" icon={<CopyOutlined />}
                                                 onClick={() => copyToClipboard(JSON.stringify(decoded.header, null, 2))} />
                                         }
                                     >
@@ -265,7 +299,7 @@ export default function JwtDecoderPage() {
                                             </Space>
                                         }
                                         extra={
-                                            <Button size="small" icon={<CopyOutlined />}
+                                            <Button aria-label="Copy" size="small" icon={<CopyOutlined />}
                                                 onClick={() => copyToClipboard(JSON.stringify(decoded.payload, null, 2))} />
                                         }
                                     >
@@ -276,7 +310,7 @@ export default function JwtDecoderPage() {
                                     <Card
                                         size="small"
                                         title={<Space><Tag color="red">Signature</Tag><Text type="secondary" style={{ fontSize: 11 }}>BASE64URL</Text></Space>}
-                                        extra={<Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(decoded.signature)} />}
+                                        extra={<Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(decoded.signature)} />}
                                     >
                                         <Text code style={{ fontSize: 12, wordBreak: "break-all" }}>
                                             {decoded.signature}

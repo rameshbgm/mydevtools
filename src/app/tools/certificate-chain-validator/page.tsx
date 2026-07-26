@@ -168,7 +168,7 @@ function LiveCheckTab() {
                     type={chainResult.valid ? "success" : "warning"}
                     icon={chainResult.valid ? <CheckCircleOutlined /> : <WarningOutlined />}
                     showIcon
-                    message={
+                    title={
                         chainResult.valid
                             ? `Chain is valid — ${certs.length} certificate${certs.length === 1 ? "" : "s"} from ${fetchedHost}`
                             : `${chainResult.issues.length} issue${chainResult.issues.length === 1 ? "" : "s"} found in chain`
@@ -276,19 +276,19 @@ function LiveCheckTab() {
                                                 <Descriptions.Item label={<Space>SHA-256 <Tag color="success" style={{ fontSize: 10 }}>recommended</Tag></Space>}>
                                                     <Space>
                                                         <Text code style={{ fontSize: 11, wordBreak: "break-all" }}>{cert.fps.sha256}</Text>
-                                                        <Button size="small" icon={<CopyOutlined />} onClick={() => copy(cert.fps!.sha256, "SHA-256 copied")} />
+                                                        <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => copy(cert.fps!.sha256, "SHA-256 copied")} />
                                                     </Space>
                                                 </Descriptions.Item>
                                                 <Descriptions.Item label="SHA-1">
                                                     <Space>
                                                         <Text code style={{ fontSize: 11, wordBreak: "break-all" }}>{cert.fps.sha1}</Text>
-                                                        <Button size="small" icon={<CopyOutlined />} onClick={() => copy(cert.fps!.sha1, "SHA-1 copied")} />
+                                                        <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => copy(cert.fps!.sha1, "SHA-1 copied")} />
                                                     </Space>
                                                 </Descriptions.Item>
                                                 <Descriptions.Item label={<Space>MD5 <Tag color="warning" style={{ fontSize: 10 }}>legacy</Tag></Space>}>
                                                     <Space>
                                                         <Text code style={{ fontSize: 11, wordBreak: "break-all" }}>{cert.fps.md5}</Text>
-                                                        <Button size="small" icon={<CopyOutlined />} onClick={() => copy(cert.fps!.md5, "MD5 copied")} />
+                                                        <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => copy(cert.fps!.md5, "MD5 copied")} />
                                                     </Space>
                                                 </Descriptions.Item>
                                             </Descriptions>
@@ -312,7 +312,7 @@ function LiveCheckTab() {
                                     </Card>
                                 </Space>
                             ) : (
-                                <Alert type="warning" message="Could not parse this certificate" showIcon />
+                                <Alert type="warning" title="Could not parse this certificate" showIcon />
                             ),
                         }]}
                     />
@@ -446,7 +446,7 @@ function ChainValidatorTab() {
                         type={result.valid ? "success" : "error"}
                         icon={result.valid ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
                         showIcon
-                        message={result.valid ? "Chain is valid" : `${result.issues.length} issue${result.issues.length === 1 ? "" : "s"} found`}
+                        title={result.valid ? "Chain is valid" : `${result.issues.length} issue${result.issues.length === 1 ? "" : "s"} found`}
                         description={
                             !result.valid && (
                                 <ul style={{ margin: "8px 0 0 0", paddingLeft: 20 }}>

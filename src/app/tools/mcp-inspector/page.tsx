@@ -18,6 +18,8 @@ import { useAppStore } from "@/lib/store";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SslConfigSection, { type SslConfig } from "@/components/SslConfigSection";
+import { copyToClipboard } from "@/lib/clipboard";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
 import type { ColumnsType } from "antd/es/table/interface";
 
 const { Text, Paragraph } = Typography;
@@ -874,6 +876,38 @@ export default function McpInspectorPage() {
                 },
             }}
         >
+            <ToolBridgeBanner
+                accepts={["json"]}
+                onAccept={(p) => {
+                    try {
+                        const parsed = JSON.parse(p.data);
+                        const servers = parsed?.mcpServers;
+                        if (!servers || typeof servers !== "object" || Object.keys(servers).length === 0) {
+                            message.error("Payload doesn't look like an MCP config (missing mcpServers)");
+                            return;
+                        }
+                        const [, entry] = Object.entries(servers)[0] as [string, Record<string, unknown>];
+                        setConfig((prev) => {
+                            if (typeof entry.url === "string") {
+                                return { ...prev, transport: "sse", serverUrl: entry.url };
+                            }
+                            if (typeof entry.command === "string") {
+                                return {
+                                    ...prev,
+                                    transport: "stdio",
+                                    command: entry.command,
+                                    args: Array.isArray(entry.args) ? entry.args.join(" ") : "",
+                                };
+                            }
+                            return prev;
+                        });
+                        message.success("MCP server config loaded into the connection form below");
+                    } catch {
+                        message.error("Payload isn't valid JSON");
+                    }
+                }}
+            />
+
             <Tabs
                 activeKey={activeTab}
                 onChange={setActiveTab}
@@ -1017,7 +1051,7 @@ export default function McpInspectorPage() {
                                                     closable
                                                     onClose={() => setDiagnosticResult(null)}
                                                     style={{ marginTop: 12 }}
-                                                    message={
+                                                    title={
                                                         <Space>
                                                             <Text strong>Connection Diagnostic</Text>
                                                             {diagnosticResult.crossOrigin
@@ -1026,7 +1060,7 @@ export default function McpInspectorPage() {
                                                         </Space>
                                                     }
                                                     description={
-                                                        <Space direction="vertical" size={6} style={{ width: "100%" }}>
+                                                        <Space orientation="vertical" size={6} style={{ width: "100%" }}>
                                                             {diagnosticResult.steps.map((step, i) => (
                                                                 <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
                                                                     {step.ok
@@ -1062,7 +1096,7 @@ export default function McpInspectorPage() {
                                                         size="small"
                                                         icon={<CopyOutlined />}
                                                         style={{ marginTop: 4 }}
-                                                        onClick={() => { navigator.clipboard.writeText(buildCliCommand(config)); message.success("Copied!"); }}
+                                                        onClick={() => copyToClipboard(buildCliCommand(config))}
                                                     >
                                                         Copy command
                                                     </Button>
@@ -1115,7 +1149,7 @@ export default function McpInspectorPage() {
                                                                                 <Input placeholder="Value" value={h.value} onChange={e => updateHeader(h.id, "value", e.target.value)} />
                                                                             </Col>
                                                                             <Col span={2}>
-                                                                                <Button danger type="text" icon={<DeleteOutlined />} onClick={() => removeHeader(h.id)} />
+                                                                                <Button aria-label="Delete" danger type="text" icon={<DeleteOutlined />} onClick={() => removeHeader(h.id)} />
                                                                             </Col>
                                                                         </Row>
                                                                     ))}
@@ -1276,7 +1310,7 @@ export default function McpInspectorPage() {
                                                         <Alert
                                                             type="info"
                                                             showIcon
-                                                            message="Run the official inspector locally to get these values"
+                                                            title="Run the official inspector locally to get these values"
                                                             description={
                                                                 <div>
                                                                     <Text code style={{ fontSize: 11 }}>npx @modelcontextprotocol/inspector</Text>
@@ -1488,13 +1522,10 @@ export default function McpInspectorPage() {
                                                     }
                                                     style={{ marginTop: 8 }}
                                                     extra={
-                                                        <Button
+                                                        <Button aria-label="Copy"
                                                             size="small"
                                                             icon={<CopyOutlined />}
-                                                            onClick={() => {
-                                                                navigator.clipboard.writeText(lastResult || lastError);
-                                                                message.success("Copied!");
-                                                            }}
+                                                            onClick={() => copyToClipboard(lastResult || lastError)}
                                                         />
                                                     }
                                                 >

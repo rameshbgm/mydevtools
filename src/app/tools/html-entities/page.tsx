@@ -1,9 +1,14 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, Segmented, Table, Tag } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, Segmented, Table, Tag } from "antd";
 import { Html5Outlined, CopyOutlined, SwapOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { copyToClipboard } from "@/lib/clipboard";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -85,6 +90,9 @@ function decodeHtmlEntities(text: string): string {
     return result;
 }
 
+interface ShareState { input: string; mode: Mode; encodeType: EncodeType; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "html-entities", version: 1 };
+
 export default function HtmlEntitiesPage() {
     const [input, setInput] = useState('<div class="example">Hello & welcome!</div>');
     const [mode, setMode] = useState<Mode>("encode");
@@ -97,10 +105,13 @@ export default function HtmlEntitiesPage() {
             : decodeHtmlEntities(input);
     }, [input, mode, encodeType]);
 
-    const copyOutput = () => {
-        navigator.clipboard.writeText(output);
-        message.success("Copied to clipboard!");
-    };
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setInput(s.input);
+        setMode(s.mode);
+        setEncodeType(s.encodeType);
+    });
+
+    const copyOutput = () => copyToClipboard(output, "Copied to clipboard!");
 
     const swapContent = () => {
         setInput(output);
@@ -140,10 +151,12 @@ export default function HtmlEntitiesPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner accepts={["text", "html"]} onAccept={(p) => setInput(p.data)} />
+
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card>
-                        <Space style={{ marginBottom: 16 }}>
+                        <Space style={{ marginBottom: 16 }} wrap>
                             <Segmented
                                 value={mode}
                                 onChange={(v) => setMode(v as Mode)}
@@ -166,6 +179,8 @@ export default function HtmlEntitiesPage() {
                             <Button icon={<SwapOutlined />} onClick={swapContent}>
                                 Swap
                             </Button>
+                            <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, mode, encodeType })} size="middle" />
+                            <SendToButton data={output} kind={mode === "encode" ? "html" : "text"} sourceToolId="html-entities" size="middle" />
                         </Space>
 
                         <Row gutter={16}>

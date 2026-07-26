@@ -32,6 +32,7 @@ import {
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text } = Typography;
 
@@ -575,10 +576,7 @@ export default function IPAddressToolsPage() {
         return null;
     }, [inputIP, ipv6Prefix, ipInfo.version]);
 
-    const handleCopy = (text: string, label: string) => {
-        navigator.clipboard.writeText(text);
-        message.success(`${label} copied!`);
-    };
+    const handleCopy = (text: string, label: string) => copyToClipboard(text, `${label} copied!`);
 
     const handleConvert = useCallback(() => {
         let result = "";
@@ -765,7 +763,7 @@ export default function IPAddressToolsPage() {
                                                                 <Text type="secondary">Compressed:</Text>
                                                                 <Space>
                                                                     <Text code>{ipInfo.compressed}</Text>
-                                                                    <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.compressed!, "Compressed")} />
+                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.compressed!, "Compressed")} />
                                                                 </Space>
                                                             </div>
                                                         )}
@@ -774,7 +772,7 @@ export default function IPAddressToolsPage() {
                                                                 <Text type="secondary">Expanded:</Text>
                                                                 <Space>
                                                                     <Text code style={{ fontSize: 11 }}>{ipInfo.expanded}</Text>
-                                                                    <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.expanded!, "Expanded")} />
+                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.expanded!, "Expanded")} />
                                                                 </Space>
                                                             </div>
                                                         )}
@@ -782,7 +780,7 @@ export default function IPAddressToolsPage() {
                                                             <Text type="secondary">Hexadecimal:</Text>
                                                             <Space>
                                                                 <Text code style={{ fontSize: 11 }}>{ipInfo.hexadecimal}</Text>
-                                                                <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.hexadecimal, "Hex")} />
+                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.hexadecimal, "Hex")} />
                                                             </Space>
                                                         </div>
                                                         {ipInfo.version === "IPv4" && (
@@ -790,7 +788,7 @@ export default function IPAddressToolsPage() {
                                                                 <Text type="secondary">Decimal:</Text>
                                                                 <Space>
                                                                     <Text code>{ipInfo.decimal}</Text>
-                                                                    <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.decimal, "Decimal")} />
+                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.decimal, "Decimal")} />
                                                                 </Space>
                                                             </div>
                                                         )}
@@ -798,7 +796,7 @@ export default function IPAddressToolsPage() {
                                                             <Text type="secondary">Binary:</Text>
                                                             <Space>
                                                                 <Text code style={{ fontSize: 10, wordBreak: "break-all" }}>{ipInfo.binary}</Text>
-                                                                <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.binary, "Binary")} />
+                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.binary, "Binary")} />
                                                             </Space>
                                                         </div>
                                                         {ipInfo.reversePtr && (
@@ -806,7 +804,7 @@ export default function IPAddressToolsPage() {
                                                                 <Text type="secondary">Reverse PTR:</Text>
                                                                 <Space>
                                                                     <Text code style={{ fontSize: 10, wordBreak: "break-all" }}>{ipInfo.reversePtr}</Text>
-                                                                    <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.reversePtr!, "PTR")} />
+                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.reversePtr!, "PTR")} />
                                                                 </Space>
                                                             </div>
                                                         )}
@@ -815,7 +813,7 @@ export default function IPAddressToolsPage() {
                                                                 <Text type="secondary">IPv6 Mapped:</Text>
                                                                 <Space>
                                                                     <Text code>{ipv4ToIPv6(inputIP)}</Text>
-                                                                    <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipv4ToIPv6(inputIP)!, "IPv6 Mapped")} />
+                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipv4ToIPv6(inputIP)!, "IPv6 Mapped")} />
                                                                 </Space>
                                                             </div>
                                                         )}
@@ -829,7 +827,7 @@ export default function IPAddressToolsPage() {
                                         <Alert
                                             style={{ marginTop: 16 }}
                                             type="error"
-                                            message="Invalid IP Address"
+                                            title="Invalid IP Address"
                                             description="Enter a valid IPv4 (e.g., 192.168.1.1) or IPv6 (e.g., 2001:db8::1) address"
                                             showIcon
                                         />
@@ -934,25 +932,25 @@ export default function IPAddressToolsPage() {
                                                         <Descriptions.Item label="Network Address">
                                                             <Space>
                                                                 <Text code>{subnetInfo.networkAddress}</Text>
-                                                                <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.networkAddress, "Network")} />
+                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.networkAddress, "Network")} />
                                                             </Space>
                                                         </Descriptions.Item>
                                                         <Descriptions.Item label="Broadcast Address">
                                                             <Space>
                                                                 <Text code>{subnetInfo.broadcastAddress}</Text>
-                                                                <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.broadcastAddress, "Broadcast")} />
+                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.broadcastAddress, "Broadcast")} />
                                                             </Space>
                                                         </Descriptions.Item>
                                                         <Descriptions.Item label="Subnet Mask">
                                                             <Space>
                                                                 <Text code>{subnetInfo.subnetMask}</Text>
-                                                                <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.subnetMask, "Subnet Mask")} />
+                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.subnetMask, "Subnet Mask")} />
                                                             </Space>
                                                         </Descriptions.Item>
                                                         <Descriptions.Item label="Wildcard Mask">
                                                             <Space>
                                                                 <Text code>{subnetInfo.wildcardMask}</Text>
-                                                                <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.wildcardMask, "Wildcard")} />
+                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.wildcardMask, "Wildcard")} />
                                                             </Space>
                                                         </Descriptions.Item>
                                                     </Descriptions>
@@ -997,7 +995,7 @@ export default function IPAddressToolsPage() {
                                                 <Descriptions.Item label="Network">
                                                     <Space>
                                                         <Text code>{ipv6SubnetInfo.network}</Text>
-                                                        <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipv6SubnetInfo.network, "Network")} />
+                                                        <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipv6SubnetInfo.network, "Network")} />
                                                     </Space>
                                                 </Descriptions.Item>
                                                 <Descriptions.Item label="Address Space">
@@ -1065,7 +1063,7 @@ export default function IPAddressToolsPage() {
 
                                             <Alert
                                                 type="info"
-                                                message="Conversion Formats"
+                                                title="Conversion Formats"
                                                 description={
                                                     <ul style={{ margin: 0, paddingLeft: 20 }}>
                                                         <li><strong>Binary:</strong> 32 bits, optionally separated by dots</li>

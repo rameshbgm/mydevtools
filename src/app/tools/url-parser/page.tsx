@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, Table, Tag, Descriptions } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, Table, Tag, Descriptions } from "antd";
 import { GlobalOutlined, CopyOutlined, LinkOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text, Paragraph } = Typography;
 
@@ -61,10 +62,7 @@ export default function UrlParserPage() {
 
     const parsed = useMemo(() => parseURL(url), [url]);
 
-    const copyValue = (value: string, label: string) => {
-        navigator.clipboard.writeText(value);
-        message.success(`${label} copied!`);
-    };
+    const copyValue = (value: string, label: string) => copyToClipboard(value, `${label} copied!`);
 
     const buildUrl = () => {
         if (!parsed) return;
@@ -165,7 +163,7 @@ export default function UrlParserPage() {
                                                     {item.value}
                                                 </Text>
                                                 {item.value && item.value !== "(none)" && item.value !== "(default)" && (
-                                                    <Button
+                                                    <Button aria-label="Copy"
                                                         size="small"
                                                         type="text"
                                                         icon={<CopyOutlined />}
@@ -219,7 +217,7 @@ export default function UrlParserPage() {
                                                 title: "",
                                                 width: 50,
                                                 render: (_, record: { paramKey: string; value: string }) => (
-                                                    <Button
+                                                    <Button aria-label="Copy"
                                                         size="small"
                                                         type="text"
                                                         icon={<CopyOutlined />}

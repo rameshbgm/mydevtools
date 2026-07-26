@@ -579,7 +579,7 @@ export default function IPRangesReferencePage() {
                                 <Space orientation="vertical" style={{ width: "100%" }}>
                                     <Alert
                                         type="info"
-                                        message="Safe for examples"
+                                        title="Safe for examples"
                                         description="Use these in tutorials, docs, and training"
                                         style={{ padding: "8px 12px" }}
                                     />

@@ -17,6 +17,8 @@ import {
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
 import { showErrorModal } from "@/lib/errorModal";
+import { downloadText } from "@/lib/download";
+import { copyToClipboard as sharedCopy } from "@/lib/clipboard";
 
 const { TextArea } = Input;
 const { Text, Paragraph } = Typography;
@@ -490,20 +492,9 @@ function SelfSignedTab() {
         setOptions(prev => ({ ...prev, extKeyUsage: { ...prev.extKeyUsage, [key]: value } }));
     };
 
-    const copyToClipboard = (text: string, label: string) => {
-        navigator.clipboard.writeText(text);
-        message.success(`${label} copied to clipboard!`);
-    };
+    const copyToClipboard = (text: string, label: string) => sharedCopy(text, `${label} copied to clipboard!`);
 
-    const downloadFile = (content: string, filename: string) => {
-        const blob = new Blob([content], { type: "application/x-pem-file" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    const downloadFile = (content: string, filename: string) => downloadText(content, filename, "application/x-pem-file");
 
     return (
         <Card>
@@ -968,20 +959,9 @@ ${sanEntries.join("\n")}
         }
     }, [commonName, organization, organizationalUnit, locality, state, country, email, sanInput, keyAlgorithm, rsaKeySize, ecCurve, hashAlgorithm, generateOpensslCommand, message]);
 
-    const copyToClipboard = (text: string, label: string) => {
-        navigator.clipboard.writeText(text);
-        message.success(`${label} copied to clipboard!`);
-    };
+    const copyToClipboard = (text: string, label: string) => sharedCopy(text, `${label} copied to clipboard!`);
 
-    const downloadFile = (content: string, filename: string) => {
-        const blob = new Blob([content], { type: "application/x-pem-file" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    const downloadFile = (content: string, filename: string) => downloadText(content, filename, "application/x-pem-file");
 
     const filterCountryOption = (input: string, option?: { value: string; label: string }) => {
         if (!option) return false;
@@ -1084,7 +1064,7 @@ ${sanEntries.join("\n")}
                                 {csr && privateKey && (
                                     <div ref={outputRef}>
                                         <Divider />
-                                        <Alert type="warning" message="Important Security Notice" description="Keep your private key secure and never share it. Only submit the CSR to the Certificate Authority. The private key is required to install and use the issued certificate." showIcon style={{ marginBottom: 16 }} />
+                                        <Alert type="warning" title="Important Security Notice" description="Keep your private key secure and never share it. Only submit the CSR to the Certificate Authority. The private key is required to install and use the issued certificate." showIcon style={{ marginBottom: 16 }} />
                                         <Collapse defaultActiveKey={["csr", "key"]} items={[
                                             {
                                                 key: "csr",
@@ -1125,7 +1105,7 @@ ${sanEntries.join("\n")}
                     children: (
                         <Card>
                             <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-                                <Alert type="info" message="Generate CSR using OpenSSL" description="These commands work on Linux, macOS, and Windows (with OpenSSL installed). Copy and run in your terminal." showIcon />
+                                <Alert type="info" title="Generate CSR using OpenSSL" description="These commands work on Linux, macOS, and Windows (with OpenSSL installed). Copy and run in your terminal." showIcon />
                                 <Row gutter={16}>
                                     <Col xs={24} md={8}>
                                         <Card size="small" title={<><WindowsOutlined /> Windows</>}>

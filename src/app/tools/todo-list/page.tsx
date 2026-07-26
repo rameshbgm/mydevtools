@@ -60,6 +60,7 @@ import type { MenuProps } from "antd";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { downloadText } from "@/lib/download";
 import {
     checkIndexedDBSupport,
     getAllTodos,
@@ -492,13 +493,7 @@ export default function TodoListPage() {
     const handleExportJSON = useCallback(async () => {
         try {
             const data = await exportAllData();
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `todo-backup-${dayjs().format("YYYY-MM-DD-HHmmss")}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
+            downloadText(JSON.stringify(data, null, 2), `todo-backup-${dayjs().format("YYYY-MM-DD-HHmmss")}.json`, "application/json");
             message.success("Data exported successfully");
         } catch (err) {
             message.error("Failed to export data");
@@ -525,13 +520,7 @@ export default function TodoListPage() {
             ].join(","))
         ].join("\n");
 
-        const blob = new Blob([csv], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `todos-${dayjs().format("YYYY-MM-DD")}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+        downloadText(csv, `todos-${dayjs().format("YYYY-MM-DD")}.csv`, "text/csv");
         message.success("Exported to CSV");
     }, [todos, categoryMap, message]);
 
@@ -863,31 +852,31 @@ export default function TodoListPage() {
                     {currentView === "deleted" ? (
                         <>
                             <Tooltip title="Restore">
-                                <Button size="small" type="text" icon={<ReloadOutlined />} onClick={() => handleRestore(record.id)} />
+                                <Button aria-label="Reset" size="small" type="text" icon={<ReloadOutlined />} onClick={() => handleRestore(record.id)} />
                             </Tooltip>
                             <Popconfirm title="Permanently delete?" onConfirm={() => handleHardDelete(record.id)}>
                                 <Tooltip title="Delete Forever">
-                                    <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+                                    <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} />
                                 </Tooltip>
                             </Popconfirm>
                         </>
                     ) : currentView === "archived" ? (
                         <>
                             <Tooltip title="Unarchive">
-                                <Button size="small" type="text" icon={<InboxOutlined />} onClick={() => handleUnarchive(record.id)} />
+                                <Button aria-label="Archive" size="small" type="text" icon={<InboxOutlined />} onClick={() => handleUnarchive(record.id)} />
                             </Tooltip>
                         </>
                     ) : (
                         <>
                             <Tooltip title="Edit">
-                                <Button size="small" type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+                                <Button aria-label="Edit" size="small" type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
                             </Tooltip>
                             <Tooltip title="Archive">
-                                <Button size="small" type="text" icon={<InboxOutlined />} onClick={() => handleArchive(record.id)} />
+                                <Button aria-label="Archive" size="small" type="text" icon={<InboxOutlined />} onClick={() => handleArchive(record.id)} />
                             </Tooltip>
                             <Popconfirm title="Move to trash?" onConfirm={() => handleSoftDelete(record.id)}>
                                 <Tooltip title="Delete">
-                                    <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+                                    <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} />
                                 </Tooltip>
                             </Popconfirm>
                         </>
@@ -1054,7 +1043,7 @@ export default function TodoListPage() {
                                     <Button icon={<FolderOutlined />} onClick={handleAddCategory}>Categories</Button>
                                 </Tooltip>
                                 <Tooltip title="Settings">
-                                    <Button icon={<SettingOutlined />} onClick={() => setSettingsDrawerOpen(true)} />
+                                    <Button aria-label="Settings" icon={<SettingOutlined />} onClick={() => setSettingsDrawerOpen(true)} />
                                 </Tooltip>
                             </Space>
                         </Col>
@@ -1166,13 +1155,13 @@ export default function TodoListPage() {
                         <Col>
                             <Space.Compact>
                                 <Tooltip title="Export JSON (Full Backup)">
-                                    <Button icon={<DownloadOutlined />} onClick={handleExportJSON} />
+                                    <Button aria-label="Download" icon={<DownloadOutlined />} onClick={handleExportJSON} />
                                 </Tooltip>
                                 <Tooltip title="Export CSV">
-                                    <Button icon={<ExportOutlined />} onClick={handleExportCSV} />
+                                    <Button aria-label="Export" icon={<ExportOutlined />} onClick={handleExportCSV} />
                                 </Tooltip>
                                 <Tooltip title="Import JSON Backup">
-                                    <Button icon={<UploadOutlined />} onClick={handleImportClick} />
+                                    <Button aria-label="Upload" icon={<UploadOutlined />} onClick={handleImportClick} />
                                 </Tooltip>
                             </Space.Compact>
                         </Col>
@@ -1430,7 +1419,7 @@ export default function TodoListPage() {
                             </div>
                             <Alert
                                 type="info"
-                                message="Data Storage"
+                                title="Data Storage"
                                 description="All data is stored locally in your browser using IndexedDB. Export regularly to backup your data."
                                 showIcon
                             />
@@ -1497,13 +1486,13 @@ export default function TodoListPage() {
                                     style={{ marginBottom: 8 }}
                                     extra={
                                         <Space>
-                                            <Button size="small" type="text" icon={<EditOutlined />} onClick={() => {
+                                            <Button aria-label="Edit" size="small" type="text" icon={<EditOutlined />} onClick={() => {
                                                 handleEditCategory(cat);
                                                 setSelectedEmoji(cat.icon);
                                             }} />
                                             {!cat.isDefault && (
                                                 <Popconfirm title="Delete category?" onConfirm={() => handleDeleteCategory(cat.id)}>
-                                                    <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+                                                    <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} />
                                                 </Popconfirm>
                                             )}
                                         </Space>
@@ -1632,7 +1621,7 @@ function SubtaskList({ subtasks, onToggle, onDelete, onAdd }: SubtaskListProps) 
                     <Text style={{ flex: 1, textDecoration: st.done ? "line-through" : "none", opacity: st.done ? 0.5 : 1 }}>
                         {st.title}
                     </Text>
-                    <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => onDelete(st.id)} />
+                    <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => onDelete(st.id)} />
                 </div>
             ))}
             <Space.Compact style={{ width: "100%", marginTop: 8 }}>
@@ -1642,7 +1631,7 @@ function SubtaskList({ subtasks, onToggle, onDelete, onAdd }: SubtaskListProps) 
                     onChange={(e) => setNewSubtask(e.target.value)}
                     onPressEnter={handleAdd}
                 />
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} />
+                <Button aria-label="Add" type="primary" icon={<PlusOutlined />} onClick={handleAdd} />
             </Space.Compact>
         </div>
     );

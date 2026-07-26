@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, Segmented, Table, Tabs } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, Segmented, Table, Tabs } from "antd";
 import { TranslationOutlined, CopyOutlined, SwapOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -123,10 +124,7 @@ export default function UnicodeConverterPage() {
         }));
     }, [input, mode]);
 
-    const copyOutput = () => {
-        navigator.clipboard.writeText(output);
-        message.success("Copied to clipboard!");
-    };
+    const copyOutput = () => copyToClipboard(output, "Copied to clipboard!");
 
     const swapContent = () => {
         setInput(output);

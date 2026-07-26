@@ -12,6 +12,7 @@ import {
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -381,11 +382,6 @@ export default function JWEToolPage() {
         }
     }, [jweToDecrypt, decryptKey, privateKey]);
 
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
-        message.success("Copied to clipboard!");
-    };
-
     const tabItems = [
         {
             key: "encrypt",
@@ -556,7 +552,7 @@ export default function JWEToolPage() {
                     {decryptResult && (
                         <Alert
                             type={decryptResult.success ? "success" : "error"}
-                            message={decryptResult.success ? "Decryption Successful" : "Decryption Failed"}
+                            title={decryptResult.success ? "Decryption Successful" : "Decryption Failed"}
                             description={
                                 decryptResult.success ? (
                                     <div>

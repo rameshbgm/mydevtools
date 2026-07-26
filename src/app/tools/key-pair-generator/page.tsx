@@ -12,6 +12,8 @@ import {
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
 import { showErrorModal } from "@/lib/errorModal";
+import { downloadText } from "@/lib/download";
+import { copyToClipboard as sharedCopy } from "@/lib/clipboard";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -141,21 +143,12 @@ export default function KeyPairGeneratorPage() {
         }
     }, [algorithm, rsaKeySize, ecCurve, outputFormat]);
 
-    const copyToClipboard = (text: string, label: string) => {
-        navigator.clipboard.writeText(text);
-        message.success(`${label} copied to clipboard!`);
-    };
+    const copyToClipboard = (text: string, label: string) => sharedCopy(text, `${label} copied to clipboard!`);
 
     const downloadKey = (content: string, filename: string) => {
         const ext = outputFormat === "JWK" ? ".jwk" : ".pem";
         const type = outputFormat === "JWK" ? "application/json" : "application/x-pem-file";
-        const blob = new Blob([content], { type });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename + ext;
-        a.click();
-        URL.revokeObjectURL(url);
+        downloadText(content, filename + ext, type);
     };
 
     return (

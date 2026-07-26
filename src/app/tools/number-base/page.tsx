@@ -80,7 +80,7 @@ export default function NumberBasePage() {
                                 key={c.label}
                                 size="small"
                                 title={c.label}
-                                extra={<Button size="small" type="text" icon={<CopyOutlined />} onClick={() => copyToClipboard(c.value, `${c.label} copied!`)} />}
+                                extra={<Button aria-label="Copy" size="small" type="text" icon={<CopyOutlined />} onClick={() => copyToClipboard(c.value, `${c.label} copied!`)} />}
                             >
                                 <Text code style={{ fontSize: 16 }}>{c.value}</Text>
                             </Card>

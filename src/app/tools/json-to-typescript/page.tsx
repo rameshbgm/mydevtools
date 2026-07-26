@@ -6,6 +6,10 @@ import { CodeOutlined, CopyOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
@@ -93,6 +97,9 @@ function capitalize(str: string): string {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+interface ShareState { input: string; interfaceName: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "json-to-typescript", version: 1 };
+
 export default function JsonToTypescriptPage() {
     const { message } = App.useApp();
     const [input, setInput] = useState(SAMPLE_JSON);
@@ -111,6 +118,11 @@ export default function JsonToTypescriptPage() {
             setOutput("");
         }
     }, [input, interfaceName]);
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setInput(s.input);
+        setInterfaceName(s.interfaceName);
+    });
 
     return (
         <ToolPageLayout
@@ -141,6 +153,8 @@ export default function JsonToTypescriptPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner accepts={["json"]} onAccept={(p) => setInput(p.data)} />
+
             <Space style={{ marginBottom: 16 }} wrap>
                 <Text>Root Interface Name:</Text>
                 <Input
@@ -152,6 +166,8 @@ export default function JsonToTypescriptPage() {
                 <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output)} disabled={!output}>
                     Copy TypeScript
                 </Button>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, interfaceName })} size="middle" />
+                <SendToButton data={output} kind="text" sourceToolId="json-to-typescript" size="middle" />
             </Space>
 
             {error && (

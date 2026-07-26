@@ -3,11 +3,11 @@ import { ReactNode } from "react";
 import { generateToolMetadata, generateToolStructuredData } from "@/lib/metadata-generator";
 
 export async function generateMetadata(): Promise<Metadata> {
-    return generateToolMetadata({ toolId: "text-summarizer" });
+    return generateToolMetadata({ toolId: "toon-converter" });
 }
 
 export default function Layout({ children }: { children: ReactNode }) {
-    const structuredData = generateToolStructuredData("text-summarizer");
+    const structuredData = generateToolStructuredData("toon-converter");
     return (
         <>
             {structuredData && (

@@ -5,9 +5,16 @@ import { Button, Input, Card, Typography, App, Spin } from "antd";
 import { LockOutlined, CopyOutlined, ReloadOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { TextArea } = Input;
 const { Text } = Typography;
+
+interface ShareState { input: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "hash-generator", version: 1 };
 
 // Lazy load CryptoJS only when needed
 async function computeHashes(input: string): Promise<Record<string, string>> {
@@ -48,6 +55,8 @@ export default function HashGeneratorPage() {
 
     useEffect(() => { generate(); }, []);
 
+    useShareableState(SHARE_SCHEMA, (s) => { setInput(s.input); });
+
     const copyAll = () => {
         const text = Object.entries(hashes).map(([k, v]) => `${k}: ${v}`).join("\n");
         copyToClipboard(text, "All hashes copied!");
@@ -82,15 +91,22 @@ export default function HashGeneratorPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner
+                accepts={["text"]}
+                onAccept={(p) => setInput(p.data)}
+            />
+
             <Card size="small" title="Input Text" style={{ marginBottom: 16 }}>
                 <TextArea rows={4} value={input} onChange={(e) => setInput(e.target.value)} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
-                <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+                <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <Button type="primary" icon={<ReloadOutlined spin={loading} />} onClick={generate} loading={loading}>
                         Generate Hashes
                     </Button>
                     {Object.keys(hashes).length > 0 && (
                         <Button icon={<CopyOutlined />} onClick={copyAll}>Copy All</Button>
                     )}
+                    <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input })} />
+                    <SendToButton data={input} kind="text" sourceToolId="hash-generator" />
                 </div>
             </Card>
 
@@ -100,7 +116,7 @@ export default function HashGeneratorPage() {
                 <div className="tool-split-pane" style={{ gap: 12 }}>
                     {Object.entries(hashes).map(([algo, hash]) => (
                         <Card key={algo} size="small" title={algo} extra={
-                            <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(hash, `${algo} copied!`)} />
+                            <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(hash, `${algo} copied!`)} />
                         }>
                             <Text code copyable style={{ fontSize: 12, wordBreak: "break-all" }}>{hash}</Text>
                         </Card>

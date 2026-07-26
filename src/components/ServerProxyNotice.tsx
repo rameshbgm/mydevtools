@@ -8,7 +8,7 @@ const { Text, Paragraph } = Typography;
 
 const REPO_BASE = "https://github.com/rameshbgm/mydevtools/blob/main";
 
-export type ServerRouteId = "proxy" | "fetch-cert";
+export type ServerRouteId = "proxy" | "fetch-cert" | "proxy-stream" | "webhook";
 
 interface Props {
     /** Which server route the tool calls — controls the source-code link. */
@@ -24,6 +24,8 @@ interface Props {
 const ROUTE_FILE: Record<ServerRouteId, string> = {
     "proxy": "src/app/api/proxy/route.ts",
     "fetch-cert": "src/app/api/fetch-cert/route.ts",
+    "proxy-stream": "src/app/api/proxy-stream/route.ts",
+    "webhook": "src/app/api/webhook/[sessionId]/route.ts",
 };
 
 /**
@@ -49,7 +51,7 @@ export default function ServerProxyNotice({ route, purpose, sentFields, extra }:
                 </Text>
             }
             description={
-                <Space direction="vertical" size={6} style={{ width: "100%" }}>
+                <Space orientation="vertical" size={6} style={{ width: "100%" }}>
                     <Paragraph style={{ fontSize: 12, marginBottom: 0 }}>
                         <Text strong>Why:</Text> {purpose}
                     </Paragraph>

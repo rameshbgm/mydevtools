@@ -1,0 +1,27 @@
+{
+    "manifest_version": 3,
+    "name": "mydevtools — quick access",
+    "short_name": "mydevtools",
+    "version": "1.0.0",
+    "description": "Right-click any text to open it in the right mydevtools tool: format JSON, decode JWT, compute hashes, encode/decode, and more.",
+    "icons": {
+        "16": "icons/icon-16.png",
+        "32": "icons/icon-32.png",
+        "48": "icons/icon-48.png",
+        "128": "icons/icon-128.png"
+    },
+    "action": {
+        "default_title": "mydevtools",
+        "default_popup": "popup.html"
+    },
+    "permissions": ["contextMenus", "clipboardRead", "storage"],
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "host_permissions": [],
+    "options_ui": {
+        "page": "options.html",
+        "open_in_tab": false
+    }
+}

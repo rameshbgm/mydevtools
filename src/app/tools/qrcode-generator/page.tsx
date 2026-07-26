@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, message, Slider, ColorPicker, Select, Tabs, Segmented } from "antd";
 import { QrcodeOutlined, CopyOutlined, DownloadOutlined, BgColorsOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { downloadText } from "@/lib/download";
 import QRCode from "qrcode";
 
 const { Text, Paragraph } = Typography;
@@ -86,13 +87,7 @@ export default function QRCodeGeneratorPage() {
                 });
                 filename = "qrcode.svg";
                 mimeType = "image/svg+xml";
-                const blob = new Blob([data], { type: mimeType });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = filename;
-                a.click();
-                URL.revokeObjectURL(url);
+                downloadText(data, filename, mimeType);
             } else {
                 const dataUrl = await QRCode.toDataURL(content, {
                     width: size * 2, // Higher resolution for download
