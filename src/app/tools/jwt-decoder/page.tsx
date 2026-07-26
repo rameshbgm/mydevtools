@@ -280,7 +280,7 @@ export default function JwtDecoderPage() {
                                             </Space>
                                         }
                                         extra={
-                                            <Button size="small" icon={<CopyOutlined />}
+                                            <Button aria-label="Copy" size="small" icon={<CopyOutlined />}
                                                 onClick={() => copyToClipboard(JSON.stringify(decoded.header, null, 2))} />
                                         }
                                     >
@@ -299,7 +299,7 @@ export default function JwtDecoderPage() {
                                             </Space>
                                         }
                                         extra={
-                                            <Button size="small" icon={<CopyOutlined />}
+                                            <Button aria-label="Copy" size="small" icon={<CopyOutlined />}
                                                 onClick={() => copyToClipboard(JSON.stringify(decoded.payload, null, 2))} />
                                         }
                                     >
@@ -310,7 +310,7 @@ export default function JwtDecoderPage() {
                                     <Card
                                         size="small"
                                         title={<Space><Tag color="red">Signature</Tag><Text type="secondary" style={{ fontSize: 11 }}>BASE64URL</Text></Space>}
-                                        extra={<Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(decoded.signature)} />}
+                                        extra={<Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(decoded.signature)} />}
                                     >
                                         <Text code style={{ fontSize: 12, wordBreak: "break-all" }}>
                                             {decoded.signature}

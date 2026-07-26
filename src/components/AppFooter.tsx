@@ -100,7 +100,7 @@ export default function AppFooter() {
 
                     <Tooltip title="GitHub">
                         <motion.a
-                            href="https://github.com/rameshbgm"
+                            href="https://github.com/rameshbgm/mydevtools"
                             target="_blank"
                             rel="noopener noreferrer"
                             whileHover={{ y: -3, scale: 1.08 }}
@@ -151,7 +151,7 @@ export default function AppFooter() {
                     </Text>
                     <span className="footer-dot" />
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                        100% client-side · no data leaves your browser
+                        Client-side by default · see each tool for details
                     </Text>
                     <PwaInstallButton />
                 </div>

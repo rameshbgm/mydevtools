@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Space, Button, Alert, Table, Tag, message } from "antd";
+import { Card, Input, Typography, Row, Col, Space, Button, Alert, Table, Tag } from "antd";
 import { FileSearchOutlined, CopyOutlined, PlayCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import { copyToClipboard } from "@/lib/clipboard";
 import { JSONPath } from "jsonpath-plus";
 
 const { Text, Paragraph } = Typography;
@@ -72,10 +73,7 @@ export default function JsonPathTesterPage() {
     }, [json, path]);
 
     const copyResult = () => {
-        if (result) {
-            navigator.clipboard.writeText(JSON.stringify(result, null, 2));
-            message.success("Result copied to clipboard!");
-        }
+        if (result) copyToClipboard(JSON.stringify(result, null, 2), "Result copied to clipboard!");
     };
 
     const loadExample = (examplePath: string) => {
@@ -150,7 +148,7 @@ export default function JsonPathTesterPage() {
                         {error && (
                             <Alert
                                 type="error"
-                                message="Error"
+                                title="Error"
                                 description={error}
                                 showIcon
                                 style={{ marginBottom: 16 }}

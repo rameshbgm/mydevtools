@@ -7,6 +7,7 @@ import {
     CATEGORY_ORDER,
     type ToolCategory,
 } from "@/lib/tools-registry";
+import { APP_VERSION } from "@/lib/release-notes";
 import { triggerPwaInstallPrompt } from "@/lib/pwa-install-prompt";
 import { messageService } from "@/lib/messageService";
 
@@ -148,7 +149,7 @@ function HeroIllustration() {
                 <text x="128" y="124" fill="var(--lv-accent-2)">{"\"mytools\""}</text>
                 <text x="66" y="148" fill="var(--lv-accent)">{"\"version\""}</text>
                 <text x="128" y="148">: </text>
-                <text x="141" y="148" fill="var(--lv-accent-2)">{"\"1.2\""}</text>
+                <text x="141" y="148" fill="var(--lv-accent-2)">{`"${APP_VERSION}"`}</text>
                 <text x="66" y="172" fill="var(--lv-accent)">{"\"local\""}</text>
                 <text x="115" y="172">: </text>
                 <text x="128" y="172" fill="var(--lv-accent-2)">true</text>
@@ -573,7 +574,7 @@ export default function LandingMarketing({
                     >
                         <div className="lv-eyebrow">
                             <span className="lv-eyebrow-dot" />
-                            <span>v1.2 · {Math.max(stats.total, 80)}+ tools, all local</span>
+                            <span>v{APP_VERSION} · {Math.max(stats.total, 80)}+ tools, all local</span>
                         </div>
                         <h1 className="lv-hero-title">
                             The developer toolkit that <em>never leaves your tab.</em>
@@ -633,10 +634,6 @@ export default function LandingMarketing({
                                 <dd>
                                     <AnimatedCounter to={stats.categories} />
                                 </dd>
-                            </div>
-                            <div>
-                                <dt>Server calls</dt>
-                                <dd>0</dd>
                             </div>
                         </dl>
                     </motion.div>
@@ -1018,9 +1015,9 @@ function ScopedStyles() {
             }
             .lv-hero-stats {
                 display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+                grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 12px;
-                max-width: 460px;
+                max-width: 320px;
                 margin: 0;
                 padding: 0;
             }

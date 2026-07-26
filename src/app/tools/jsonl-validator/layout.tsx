@@ -3,11 +3,11 @@ import { ReactNode } from "react";
 import { generateToolMetadata, generateToolStructuredData } from "@/lib/metadata-generator";
 
 export async function generateMetadata(): Promise<Metadata> {
-    return generateToolMetadata({ toolId: "code-explainer" });
+    return generateToolMetadata({ toolId: "jsonl-validator" });
 }
 
 export default function Layout({ children }: { children: ReactNode }) {
-    const structuredData = generateToolStructuredData("code-explainer");
+    const structuredData = generateToolStructuredData("jsonl-validator");
     return (
         <>
             {structuredData && (

@@ -107,18 +107,18 @@ function toJson(rows: Record<string, unknown>[]): string {
 }
 
 function toCsv(fields: Field[], rows: Record<string, unknown>[]): string {
-    const header = fields.map((f) => f.name).join(",");
     const escape = (v: unknown): string => {
         const s = String(v);
-        if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+        if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
         return s;
     };
+    // Header goes through the same escaping — a field named `first,name`
+    // would otherwise emit an extra column and desync every row below it.
+    const header = fields.map((f) => escape(f.name)).join(",");
     const body = rows.map((r) => fields.map((f) => escape(r[f.name])).join(",")).join("\n");
     return `${header}\n${body}`;
 }
 
-// TODO(learning-mode): implement toSql below.
-// See the user-facing card in the right column for the spec + tradeoffs.
 function toSql(fields: Field[], rows: Record<string, unknown>[], table: string): string {
     if (rows.length === 0) return "";
     const cols = fields.map((f) => `"${f.name}"`).join(", ");
@@ -218,7 +218,7 @@ export default function MockDataGeneratorPage() {
                                         options={FIELD_TYPES}
                                         style={{ width: "50%" }}
                                     />
-                                    <Button
+                                    <Button aria-label="Delete"
                                         icon={<DeleteOutlined />}
                                         onClick={() => removeField(i)}
                                         disabled={fields.length <= 1}

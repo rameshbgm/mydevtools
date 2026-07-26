@@ -8,7 +8,7 @@
 // Contract — keep this small and typed. Any tool can produce or consume
 // these `kind`s; future kinds should be added here, not invented per tool.
 
-export type ToolPayloadKind = "text" | "json" | "xml" | "csv" | "base64" | "url" | "html" | "binary";
+export type ToolPayloadKind = "text" | "json" | "xml" | "csv" | "base64" | "url" | "html" | "binary" | "mermaid";
 
 export interface ToolPayload {
     kind: ToolPayloadKind;
@@ -92,7 +92,7 @@ export const BRIDGE_TARGETS: BridgeTarget[] = [
     { toolId: "json-to-typescript", label: "JSON → TypeScript", accepts: ["json"] },
     { toolId: "json-diff",       label: "JSON Diff (left side)", accepts: ["json", "text"] },
     { toolId: "yaml-json-converter", label: "YAML ↔ JSON",   accepts: ["json", "text"] },
-    { toolId: "toon-converter",  label: "→ TOON",             accepts: ["json", "xml"] },
+    { toolId: "toon-converter",  label: "TOON Converter",     accepts: ["json", "xml", "text"] },
     { toolId: "xml-formatter",   label: "XML Formatter",      accepts: ["xml", "text"] },
     { toolId: "xml-to-json",     label: "XML → JSON",         accepts: ["xml"] },
     { toolId: "xml-diff",        label: "XML Diff (left)",    accepts: ["xml", "text"] },
@@ -109,6 +109,12 @@ export const BRIDGE_TARGETS: BridgeTarget[] = [
     { toolId: "markdown-preview", label: "Markdown Preview",  accepts: ["text"] },
     { toolId: "csv-to-json",     label: "CSV → JSON",         accepts: ["csv", "text"] },
     { toolId: "csv-diff",        label: "CSV Diff (left)",    accepts: ["csv", "text"] },
+    { toolId: "mermaid-formatter", label: "Mermaid Formatter", accepts: ["mermaid", "text"] },
+    { toolId: "mermaid-viewer",  label: "Mermaid Viewer",     accepts: ["mermaid", "text"] },
+    { toolId: "token-counter",   label: "Token Counter",      accepts: ["text", "json"] },
+    { toolId: "jsonl-validator", label: "JSONL Validator",    accepts: ["text"] },
+    { toolId: "a2a-inspector",   label: "A2A Inspector",      accepts: ["json"] },
+    { toolId: "mcp-inspector",   label: "MCP Inspector",      accepts: ["json"] },
 ];
 
 export function targetsForKind(kind: ToolPayloadKind): BridgeTarget[] {

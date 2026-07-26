@@ -6,6 +6,10 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { CopyOutlined, ClearOutlined, FileTextOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { Text } = Typography;
 
@@ -41,6 +45,9 @@ function validateXml(xml: string): { valid: boolean; error: string } {
 
 type Mode = "Prettify" | "Minify" | "Validate";
 
+interface ShareState { input: string; mode: Mode; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "xml-formatter", version: 1 };
+
 export default function XmlFormatterPage() {
     const { message } = App.useApp();
     const [input, setInput] = useState(SAMPLE);
@@ -66,6 +73,12 @@ export default function XmlFormatterPage() {
     };
 
     useEffect(() => { if (input) run(mode, input); }, [mode]);
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setInput(s.input);
+        setMode(s.mode);
+        run(s.mode, s.input);
+    });
 
     return (
         <ToolPageLayout
@@ -96,6 +109,11 @@ export default function XmlFormatterPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner
+                accepts={["xml", "text"]}
+                onAccept={(p) => { setInput(p.data); run(mode, p.data); }}
+            />
+
             <Space style={{ marginBottom: 16 }} wrap>
                 <Segmented<Mode>
                     options={["Prettify", "Minify", "Validate"]}
@@ -107,6 +125,8 @@ export default function XmlFormatterPage() {
                 {validState?.valid === false && <Tag icon={<CloseCircleOutlined />} color="error">Invalid XML</Tag>}
                 <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output || input)}>Copy</Button>
                 <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setValidState(null); }}>Clear</Button>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, mode })} size="middle" />
+                <SendToButton data={output || input} kind="xml" sourceToolId="xml-formatter" size="middle" />
             </Space>
 
             <div className="tool-split-pane" style={{ gap: 16 }}>

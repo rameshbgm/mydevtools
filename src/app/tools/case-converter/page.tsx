@@ -5,6 +5,10 @@ import { Button, Card, Space, Typography, Row, Col, Input, Select, App } from "a
 import { FontSizeOutlined, CopyOutlined, SwapOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { TextArea } = Input;
 const { Text, Title } = Typography;
@@ -76,6 +80,9 @@ function processMultiLine(text: string, targetCase: CaseType): string {
         .join("\n");
 }
 
+interface ShareState { input: string; targetCase: CaseType; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "case-converter", version: 1 };
+
 export default function CaseConverterPage() {
     const { message } = App.useApp();
     const [input, setInput] = useState("hello_world_example");
@@ -87,6 +94,11 @@ export default function CaseConverterPage() {
     }));
 
     const mainOutput = processMultiLine(input, targetCase);
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setInput(s.input);
+        setTargetCase(s.targetCase);
+    });
 
     return (
         <ToolPageLayout
@@ -117,6 +129,13 @@ export default function CaseConverterPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner accepts={["text"]} onAccept={(p) => setInput(p.data)} />
+
+            <Space style={{ marginBottom: 16 }} wrap>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, targetCase })} size="middle" />
+                <SendToButton data={mainOutput} kind="text" sourceToolId="case-converter" size="middle" />
+            </Space>
+
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card title="Input">
@@ -199,7 +218,7 @@ export default function CaseConverterPage() {
                                             {c.result}
                                         </Text>
                                     </div>
-                                    <Button
+                                    <Button aria-label="Copy"
                                         size="small"
                                         type="text"
                                         icon={<CopyOutlined />}

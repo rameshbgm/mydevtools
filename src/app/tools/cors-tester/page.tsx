@@ -224,7 +224,7 @@ export default function CorsTesterPage() {
                             }>
                                 <Alert
                                     type={result.ok ? "success" : "warning"}
-                                    message={result.explanation}
+                                    title={result.explanation}
                                     showIcon
                                 />
                                 {result.networkError && (

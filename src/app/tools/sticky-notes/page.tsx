@@ -369,7 +369,7 @@ export default function StickyNotesPage() {
 
                                         {isEditing && (
                                             <Tooltip title="Done editing">
-                                                <Button
+                                                <Button aria-label="Confirm"
                                                     type="text"
                                                     size="small"
                                                     icon={<CheckOutlined />}
@@ -388,7 +388,7 @@ export default function StickyNotesPage() {
                                             onPopupClick={e => e.stopPropagation()}
                                         >
                                             <Tooltip title="Delete">
-                                                <Button
+                                                <Button aria-label="Delete"
                                                     type="text"
                                                     size="small"
                                                     danger

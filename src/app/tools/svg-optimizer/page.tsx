@@ -4,75 +4,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Card, Typography, Input, Row, Col, Switch, Slider, Space, Tag, App } from "antd";
 import { ScissorOutlined, CopyOutlined, DownloadOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { optimizeSvg, DEFAULT_OPTS, type OptimizeOptions } from "./optimize";
 import { copyToClipboard } from "@/lib/clipboard";
+import { downloadText } from "@/lib/download";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
-
-interface OptimizeOptions {
-    stripComments: boolean;
-    stripXmlDeclaration: boolean;
-    stripEditorMetadata: boolean; // sodipodi:*, inkscape:*, sketch:*
-    stripEmptyAttrs: boolean;
-    collapseWhitespace: boolean;
-    roundNumbers: boolean;
-    decimalPlaces: number;
-}
-
-const DEFAULT_OPTS: OptimizeOptions = {
-    stripComments: true,
-    stripXmlDeclaration: true,
-    stripEditorMetadata: true,
-    stripEmptyAttrs: true,
-    collapseWhitespace: true,
-    roundNumbers: true,
-    decimalPlaces: 3,
-};
-
-const EDITOR_PREFIXES = ["sodipodi", "inkscape", "sketch", "figma", "krita", "graffle", "adobe"];
-
-function optimizeSvg(input: string, opts: OptimizeOptions): string {
-    let out = input;
-
-    if (opts.stripXmlDeclaration) {
-        out = out.replace(/<\?xml[\s\S]*?\?>/g, "");
-        out = out.replace(/<!DOCTYPE[\s\S]*?>/g, "");
-    }
-    if (opts.stripComments) {
-        out = out.replace(/<!--[\s\S]*?-->/g, "");
-    }
-    if (opts.stripEditorMetadata) {
-        EDITOR_PREFIXES.forEach((p) => {
-            // strip xmlns:editor declarations
-            out = out.replace(new RegExp(`\\s+xmlns:${p}="[^"]*"`, "g"), "");
-            // strip attributes like sodipodi:foo="…"
-            out = out.replace(new RegExp(`\\s+${p}:[\\w-]+="[^"]*"`, "g"), "");
-            // strip elements like <sodipodi:namedview …/> or <inkscape:something>…</inkscape:something>
-            out = out.replace(new RegExp(`<${p}:[\\w-]+(?:\\s[^>]*)?\\/>`, "g"), "");
-            out = out.replace(new RegExp(`<${p}:[\\w-]+[\\s\\S]*?</${p}:[\\w-]+>`, "g"), "");
-        });
-        // <metadata>…</metadata> blocks are almost always editor cruft
-        out = out.replace(/<metadata[\s\S]*?<\/metadata>/g, "");
-    }
-    if (opts.stripEmptyAttrs) {
-        out = out.replace(/\s+[\w-]+=""/g, "");
-    }
-    if (opts.roundNumbers) {
-        const factor = Math.pow(10, opts.decimalPlaces);
-        out = out.replace(/-?\d+\.\d+/g, (m) => {
-            const n = parseFloat(m);
-            return String(Math.round(n * factor) / factor);
-        });
-    }
-    if (opts.collapseWhitespace) {
-        out = out.replace(/>\s+</g, "><");
-        out = out.replace(/\s{2,}/g, " ");
-        out = out.replace(/\s+\/>/g, "/>");
-        out = out.replace(/\s+>/g, ">");
-    }
-
-    return out.trim();
-}
 
 function formatBytes(n: number) {
     if (n < 1024) return `${n} B`;
@@ -122,15 +59,7 @@ export default function SvgOptimizerPage() {
         message.success("Optimised SVG copied");
     };
 
-    const downloadOutput = () => {
-        const blob = new Blob([output], { type: "image/svg+xml" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "optimized.svg";
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    const downloadOutput = () => downloadText(output, "optimized.svg", "image/svg+xml");
 
     return (
         <ToolPageLayout

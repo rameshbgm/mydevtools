@@ -46,8 +46,14 @@ useEffect(() => { setMounted(true); }, []);
 {mounted && <Select ... />}
 ```
 
-## Tool counts (v1.3)
+## Tool counts (v1.4, branch `v1.4`)
 
-**90 tools across 14 categories.** Fun & Games: 7 (coin-toss, dice-roll, timer, stopwatch, spin-wheel, magic-8ball, typing-test). Artificial Intelligence: 2 (mcp-inspector, a2a-inspector). Text & Utilities: 11 (includes sticky-notes, rich-text-editor).
+**113 tools across 15 categories.** Generators: 10 — includes credit-card-generator, whose brand table and Luhn helpers live in shared `src/lib/credit-card.ts` (imported by credit-card-validator too, so don't reintroduce a local copy). Fun & Games: 7 (coin-toss, dice-roll, timer, stopwatch, spin-wheel, magic-8ball, typing-test). Artificial Intelligence: 6 — mcp-inspector, a2a-inspector, plus follow-up additions token-counter, jsonl-validator, agent-manifest-generator, and rag-search (rebuilt with real embeddings via `@huggingface/transformers`, not the earlier keyword-matching demo). Reference: 6, including model-pricing-reference. Text & Utilities: 12 (includes sticky-notes, rich-text-editor). Image & Media: added in v1.4 (image-compressor, svg-optimizer, favicon-generator, color-palette-extractor, exif-viewer).
 
-When adding a tool: extend **`tools-registry.ts`** → **`tool-url-table.ts`** → **`seo-content.ts`** → create **`src/app/tools/[id]/page.tsx`** + **`layout.tsx`**.
+`APP_VERSION` in `src/lib/release-notes.ts` is `"1.4"`. The former separate v1.5 changelog entry (pipelines, shareable URLs, PWA, extension, AI category) was **merged into the single v1.4 entry** — there is no v1.5 release. Everything on this branch ships as v1.4.
+
+When adding a tool: extend **`tools-registry.ts`** → **`tool-url-table.ts`** → **`seo-content.ts`** → create **`src/app/tools/[id]/page.tsx`** + **`layout.tsx`**. **`scripts/check-parity.js`** runs on `prebuild` and fails the build if any of these four fall out of sync, or if a tool page advertises itself in `BRIDGE_TARGETS` without actually reading the bridge.
+
+## AI tools — key-free by design
+
+Every tool in the **Artificial Intelligence** category must work with **no API key, no signup, no server round-trip, and no persisted state** — this is a deliberate product constraint, not an oversight. A BYOK prompt playground was evaluated and rejected for exactly this reason (a key in `localStorage`, or transiting the server via `/api/proxy-stream`, both violate it). If a future AI tool idea needs a key, it likely belongs to a different part of the product, not this category.

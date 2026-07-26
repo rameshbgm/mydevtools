@@ -42,6 +42,7 @@ import {
 import type { DataNode } from "antd/es/tree";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import { copyToClipboard as sharedCopy } from "@/lib/clipboard";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -542,10 +543,7 @@ export default function WsdlParserPage() {
         return generateSampleRequest(selectedOperation, parsedWsdl.messages, parsedWsdl.targetNamespace);
     }, [selectedOperation, parsedWsdl]);
 
-    const copyToClipboard = (text: string, label: string) => {
-        navigator.clipboard.writeText(text);
-        message.success(`${label} copied!`);
-    };
+    const copyToClipboard = (text: string, label: string) => sharedCopy(text, `${label} copied!`);
 
     return (
         <ToolPageLayout
@@ -650,7 +648,7 @@ export default function WsdlParserPage() {
                                                     onChange={(e) => updateHeader(i, "value", e.target.value)}
                                                     style={{ width: 200 }}
                                                 />
-                                                <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => removeHeader(i)} />
+                                                <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => removeHeader(i)} />
                                             </Space>
                                         ))}
                                         <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addHeader} block>
@@ -730,7 +728,7 @@ export default function WsdlParserPage() {
                                         size="small"
                                         style={{ marginBottom: 10 }}
                                         title={<Text style={{ fontSize: 12 }}><ImportOutlined style={{ marginRight: 6, color: "#722ed1" }} />{entry.label}</Text>}
-                                        extra={<Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={() => removeXsdEntry(entry.id)} />}
+                                        extra={<Button aria-label="Delete" size="small" danger type="text" icon={<DeleteOutlined />} onClick={() => removeXsdEntry(entry.id)} />}
                                     >
                                         <TextArea
                                             value={entry.content}
@@ -751,7 +749,7 @@ export default function WsdlParserPage() {
                     {error && (
                         <Alert
                             type="error"
-                            message="Parse Error"
+                            title="Parse Error"
                             description={error}
                             showIcon
                             style={{ marginBottom: 16 }}

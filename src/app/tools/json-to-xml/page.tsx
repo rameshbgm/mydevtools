@@ -1,10 +1,15 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, Alert, Switch, Select } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, Alert, Switch, Select } from "antd";
 import { SwapOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import { copyToClipboard } from "@/lib/clipboard";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { Text } = Typography;
 
@@ -121,6 +126,9 @@ function jsonToXml(jsonString: string, options: ConversionOptions): string {
     return xml;
 }
 
+interface ShareState { input: string; attributePrefix: string; textKey: string; declaration: boolean; indent: number; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "json-to-xml", version: 1 };
+
 export default function JsonToXmlPage() {
     const [input, setInput] = useState(SAMPLE_JSON);
     const [attributePrefix, setAttributePrefix] = useState("@");
@@ -141,10 +149,15 @@ export default function JsonToXmlPage() {
         }
     }, [input, attributePrefix, textKey, declaration, indent]);
 
-    const copyOutput = () => {
-        navigator.clipboard.writeText(output);
-        message.success("XML copied!");
-    };
+    const copyOutput = () => copyToClipboard(output, "XML copied!");
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setInput(s.input);
+        setAttributePrefix(s.attributePrefix);
+        setTextKey(s.textKey);
+        setDeclaration(s.declaration);
+        setIndent(s.indent);
+    });
 
     return (
         <ToolPageLayout
@@ -175,6 +188,13 @@ export default function JsonToXmlPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner accepts={["json"]} onAccept={(p) => setInput(p.data)} />
+
+            <Space style={{ marginBottom: 16 }} wrap>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, attributePrefix, textKey, declaration, indent })} size="middle" />
+                <SendToButton data={output} kind="xml" sourceToolId="json-to-xml" size="middle" />
+            </Space>
+
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card
@@ -206,7 +226,7 @@ export default function JsonToXmlPage() {
                         }
                     >
                         {error ? (
-                            <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />
+                            <Alert type="error" title={error} showIcon style={{ marginBottom: 16 }} />
                         ) : null}
                         <CodeEditor
                             value={output}

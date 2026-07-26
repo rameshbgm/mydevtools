@@ -38,6 +38,7 @@ import {
     Html5Outlined,
     CompressOutlined,
     QrcodeOutlined,
+    DollarOutlined,
     CheckCircleOutlined,
     CreditCardOutlined,
     NodeIndexOutlined,
@@ -165,7 +166,7 @@ export const CATEGORY_DESCRIPTIONS: Record<ToolCategory, string> = {
     Generators: "Create UUIDs, passwords, code stubs, QR codes, and more",
     "Text & Utilities": "Text manipulation, time, color, number bases, and productivity",
     "Fun & Games": "Coin toss, dice rolls, timers, and other playful utilities",
-    "Artificial Intelligence": "AI-powered protocol inspectors: MCP and Agent-to-Agent",
+    "Artificial Intelligence": "Protocol inspectors, token/dataset tooling, and semantic search — all local, no API key required",
     Reference: "Lookup guides for HTTP codes, MIME types, ports, and RFCs",
 };
 
@@ -236,6 +237,15 @@ export const toolsRegistry: ToolDefinition[] = [
         category: "Formatters",
         tags: ["yaml", "format", "prettify", "validate", "config"],
         color: "#cb171e",
+    },
+    {
+        id: "mermaid-formatter",
+        name: "Mermaid Formatter",
+        description: "Format, validate and beautify Mermaid diagrams and flowcharts",
+        icon: FileMarkdownOutlined,
+        category: "Formatters",
+        tags: ["mermaid", "format", "diagram", "flowchart", "validate", "graph", "chart"],
+        color: "#667eea",
     },
 
     // ===== Validators =====
@@ -715,6 +725,15 @@ export const toolsRegistry: ToolDefinition[] = [
         color: "#52c41a",
     },
     {
+        id: "credit-card-generator",
+        name: "Credit Card Generator",
+        description: "Generate Luhn-valid test card numbers for every major brand with CVV and expiry",
+        icon: CreditCardOutlined,
+        category: "Generators",
+        tags: ["credit", "card", "generate", "test", "luhn", "cvv", "payment"],
+        color: "#0891b2",
+    },
+    {
         id: "lorem-ipsum",
         name: "Lorem Ipsum Generator",
         description: "Generate placeholder text in paragraphs, sentences, or words",
@@ -796,6 +815,15 @@ export const toolsRegistry: ToolDefinition[] = [
         category: "Text & Utilities",
         tags: ["markdown", "preview", "md"],
         color: "#1677ff",
+    },
+    {
+        id: "mermaid-viewer",
+        name: "Mermaid Viewer",
+        description: "Render and preview Mermaid diagrams with live editing, theme support, and SVG export",
+        icon: EyeOutlined,
+        category: "Text & Utilities",
+        tags: ["mermaid", "diagram", "flowchart", "preview", "render", "svg", "chart"],
+        color: "#667eea",
     },
     {
         id: "case-converter",
@@ -898,6 +926,42 @@ export const toolsRegistry: ToolDefinition[] = [
         tags: ["a2a", "agent", "protocol", "jsonrpc", "ai", "multi-agent", "chat", "inspect"],
         color: "#0891b2",
     },
+    {
+        id: "token-counter",
+        name: "LLM Token Counter",
+        description: "Count tokens and estimate context-window usage across GPT, Claude, and open models",
+        icon: NumberOutlined,
+        category: "Artificial Intelligence",
+        tags: ["tokens", "llm", "gpt", "claude", "context window", "tokenizer", "ai", "cost", "budget"],
+        color: "#13c2c2",
+    },
+    {
+        id: "jsonl-validator",
+        name: "Fine-Tuning Dataset Validator",
+        description: "Validate JSONL fine-tuning datasets against OpenAI or Anthropic message schemas — entirely in your browser",
+        icon: FileProtectOutlined,
+        category: "Artificial Intelligence",
+        tags: ["jsonl", "fine-tuning", "dataset", "openai", "anthropic", "validator", "ai", "training data"],
+        color: "#722ed1",
+    },
+    {
+        id: "agent-manifest-generator",
+        name: "Agent Card / MCP Manifest Generator",
+        description: "Build a valid A2A agent-card.json or MCP server config, then send it straight to the A2A or MCP inspector to test",
+        icon: RobotOutlined,
+        category: "Artificial Intelligence",
+        tags: ["a2a", "agent card", "mcp", "manifest", "generator", "ai", "agent", "config"],
+        color: "#0891b2",
+    },
+    {
+        id: "rag-search",
+        name: "Semantic Search Playground",
+        description: "Real embedding-based search over your own text, computed entirely in your browser — no server, no API key",
+        icon: DatabaseOutlined,
+        category: "Artificial Intelligence",
+        tags: ["semantic search", "embeddings", "rag", "vector search", "ai", "webgpu", "similarity"],
+        color: "#9254de",
+    },
 
     // ===== Reference =====
     {
@@ -926,6 +990,15 @@ export const toolsRegistry: ToolDefinition[] = [
         category: "Reference",
         tags: ["port", "network", "tcp", "udp", "protocol", "service", "reference"],
         color: "#13c2c2",
+    },
+    {
+        id: "model-pricing-reference",
+        name: "Model & Pricing Comparison",
+        description: "Compare context windows, output limits and per-token pricing across major LLM providers",
+        icon: DollarOutlined,
+        category: "Reference",
+        tags: ["llm", "pricing", "model", "ai", "cost", "comparison", "context window", "tokens", "reference"],
+        color: "#fa8c16",
     },
     {
         id: "ip-ranges-reference",

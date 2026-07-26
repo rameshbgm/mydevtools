@@ -4,8 +4,13 @@ import React, { useState } from "react";
 import { Button, Card, Space, Select, Switch, App, Typography, Input } from "antd";
 import { CopyOutlined, ClearOutlined, DownloadOutlined, FileExcelOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
+import { downloadText } from "@/lib/download";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { Text } = Typography;
 
@@ -48,6 +53,9 @@ function escapeCsvCell(value: unknown, delimiter: string): string {
     return str;
 }
 
+interface ShareState { input: string; delimiter: string; includeHeader: boolean; flattenNested: boolean; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "json-to-csv", version: 1 };
+
 export default function JsonToCsvPage() {
     const { message } = App.useApp();
     const [input, setInput] = useState(SAMPLE);
@@ -89,16 +97,16 @@ export default function JsonToCsvPage() {
 
     const handleDownload = () => {
         if (!output) return;
-        const blob = new Blob([output], { type: "text/csv;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "data.csv";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        downloadText(output, "data.csv", "text/csv;charset=utf-8");
     };
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setInput(s.input);
+        setDelimiter(s.delimiter);
+        setIncludeHeader(s.includeHeader);
+        setFlattenNested(s.flattenNested);
+        convert(s.input);
+    });
 
     return (
         <ToolPageLayout
@@ -129,6 +137,8 @@ export default function JsonToCsvPage() {
                 ],
             }}
         >
+            <ToolBridgeBanner accepts={["json", "text"]} onAccept={(p) => { setInput(p.data); convert(p.data); }} />
+
             <Space style={{ marginBottom: 16 }} wrap>
                 <span>
                     <Text type="secondary" style={{ marginRight: 8 }}>Delimiter:</Text>
@@ -150,6 +160,8 @@ export default function JsonToCsvPage() {
                 <Button icon={<CopyOutlined />} disabled={!output} onClick={() => copyToClipboard(output)}>Copy</Button>
                 <Button icon={<DownloadOutlined />} disabled={!output} onClick={handleDownload}>Download</Button>
                 <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); }}>Clear</Button>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, delimiter, includeHeader, flattenNested })} size="middle" />
+                <SendToButton data={output} kind="csv" sourceToolId="json-to-csv" size="middle" />
             </Space>
 
             <div className="tool-split-pane" style={{ gap: 16 }}>

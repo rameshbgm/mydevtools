@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Card, Space, InputNumber, Typography, List } from "antd";
+import { Button, Card, Space, InputNumber, Typography } from "antd";
+import SimpleList from "@/components/SimpleList";
 import { KeyOutlined, CopyOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
 import { v4 as uuidv4 } from "uuid";
@@ -54,16 +55,11 @@ export default function UuidGeneratorPage() {
             </Space>
 
             <Card size="small">
-                <List
+                <SimpleList
                     dataSource={uuids}
-                    renderItem={(uuid, i) => (
-                        <List.Item
-                            extra={
-                                <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(uuid)} />
-                            }
-                        >
-                            <Text code style={{ fontSize: 14 }}>{uuid}</Text>
-                        </List.Item>
+                    renderItem={(uuid) => <Text code style={{ fontSize: 14 }}>{uuid}</Text>}
+                    renderExtra={(uuid) => (
+                        <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(uuid)} />
                     )}
                 />
             </Card>

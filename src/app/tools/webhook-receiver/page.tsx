@@ -62,33 +62,47 @@ export default function WebhookReceiverPage() {
         ? `${window.location.origin}/api/webhook/${sessionId}`
         : "";
 
-    const pollOnce = useCallback(async () => {
-        if (!sessionRef.current) return;
+    // Returns false when the request failed, so the loop can back off instead
+    // of spinning. The signal aborts the in-flight long-poll on unmount.
+    const pollOnce = useCallback(async (signal: AbortSignal): Promise<boolean> => {
+        if (!sessionRef.current) return false;
         try {
-            const res = await fetch(`/api/webhook/${sessionRef.current}/events?since=${lastIdRef.current}&wait=20000`);
-            if (!res.ok) return;
+            const res = await fetch(
+                `/api/webhook/${sessionRef.current}/events?since=${lastIdRef.current}&wait=20000`,
+                { signal },
+            );
+            if (!res.ok) return false;
             const data = (await res.json()) as { requests: CapturedRequest[] };
             if (data.requests.length) {
                 setRequests((prev) => [...data.requests.reverse(), ...prev]);
                 lastIdRef.current = Math.max(lastIdRef.current, ...data.requests.map((r) => r.id));
             }
+            return true;
         } catch {
-            // network blip; the next tick retries
+            // network blip or abort; the caller decides whether to retry
+            return false;
         }
     }, []);
 
     useEffect(() => {
         if (!mounted || !polling || !sessionId) return;
         let active = true;
+        const controller = new AbortController();
         sessionRef.current = sessionId;
         const loop = async () => {
-            while (active && polling) {
-                await pollOnce();
+            while (active) {
+                const ok = await pollOnce(controller.signal);
                 if (!active) return;
+                // Without this, a server that fails fast turns the long-poll
+                // into a tight request loop.
+                if (!ok) await new Promise((r) => setTimeout(r, 2000));
             }
         };
         loop();
-        return () => { active = false; };
+        return () => {
+            active = false;
+            controller.abort();
+        };
     }, [mounted, polling, sessionId, pollOnce]);
 
     const newSession = () => {

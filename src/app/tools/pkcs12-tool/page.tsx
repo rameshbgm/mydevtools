@@ -15,9 +15,9 @@ import {
     readPkcs12,
     createPkcs12,
     formatDN,
-    downloadBytes,
     type Pkcs12Bundle,
 } from "@/lib/cert-utils";
+import { downloadBytes, downloadText } from "@/lib/download";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -121,7 +121,7 @@ function ReadPkcs12() {
                 <Button type="primary" icon={<LockOutlined />} onClick={handleRead} loading={loading} disabled={!bytes}>
                     Unlock & Inspect
                 </Button>
-                {error && <Alert type="error" message={error} showIcon />}
+                {error && <Alert type="error" title={error} showIcon />}
                 {bundle && <Pkcs12Result bundle={bundle} />}
             </Space>
         </Card>
@@ -136,7 +136,7 @@ function Pkcs12Result({ bundle }: { bundle: Pkcs12Bundle }) {
         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <Alert
                 type="success"
-                message={
+                title={
                     <Space wrap>
                         {bundle.certificate ? <Tag icon={<SafetyCertificateOutlined />} color="success">Cert: {bundle.certificate.subject.CN ?? "?"}</Tag> : null}
                         {bundle.privateKeyPem && <Tag icon={<KeyOutlined />} color="processing">Private key</Tag>}
@@ -158,7 +158,7 @@ function Pkcs12Result({ bundle }: { bundle: Pkcs12Bundle }) {
                         </Descriptions.Item>
                     </Descriptions>
                     <div style={{ marginTop: 12 }}>
-                        <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadBytes(new TextEncoder().encode(bundle.certificate!.pem), `${bundle.certificate!.subject.CN ?? "cert"}.pem`, "application/x-pem-file")}>
+                        <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadText(bundle.certificate!.pem, `${bundle.certificate!.subject.CN ?? "cert"}.pem`, "application/x-pem-file")}>
                             Download cert PEM
                         </Button>
                     </div>
@@ -169,7 +169,7 @@ function Pkcs12Result({ bundle }: { bundle: Pkcs12Bundle }) {
                     <TextArea rows={6} value={bundle.privateKeyPem} readOnly style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }} />
                     <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
                         <Button size="small" onClick={() => copy(bundle.privateKeyPem!, "Private key copied")}>Copy</Button>
-                        <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadBytes(new TextEncoder().encode(bundle.privateKeyPem!), "private.key", "application/x-pem-file")}>Download .key</Button>
+                        <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadText(bundle.privateKeyPem!, "private.key", "application/x-pem-file")}>Download .key</Button>
                     </div>
                 </Card>
             )}

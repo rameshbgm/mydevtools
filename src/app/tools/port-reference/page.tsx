@@ -324,7 +324,7 @@ export default function PortReferencePage() {
                                 ) : portLookup ? (
                                     <Alert
                                         type="info"
-                                        message={`Port ${portLookup} is not in our database`}
+                                        title={`Port ${portLookup} is not in our database`}
                                         description="This might be an ephemeral port (49152-65535), a custom application port, or an unregistered port."
                                     />
                                 ) : null}

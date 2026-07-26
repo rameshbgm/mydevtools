@@ -5,6 +5,7 @@ import { Card, Input, Button, Space, App, Alert, Tabs, Typography, Tag, Upload }
 import { DatabaseOutlined, UploadOutlined, CopyOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
+import { downloadBytes } from "@/lib/download";
 import forge from "node-forge";
 
 const { TextArea } = Input;
@@ -41,7 +42,7 @@ export default function JksToolPage() {
             <Alert
                 type="info"
                 showIcon
-                message="JKS parsing requires Java"
+                title="JKS parsing requires Java"
                 description={
                     <span>
                         JKS is a proprietary Java format that cannot be safely parsed in a browser. This tool helps you{" "}
@@ -94,15 +95,7 @@ function ConvertTab() {
             });
             const der = forge.asn1.toDer(p12Asn1).getBytes();
             const bytes = new Uint8Array(forge.util.binary.raw.decode(der));
-            const blob = new Blob([new Uint8Array(bytes)], { type: "application/x-pkcs12" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${alias}.p12`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            downloadBytes(bytes, `${alias}.p12`, "application/x-pkcs12");
             message.success("Downloaded .p12 — now run the keytool command below");
         } catch (e) {
             message.error(e instanceof Error ? e.message : "Failed to build keystore");

@@ -6,89 +6,12 @@ import { SwapOutlined, CopyOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
 import YAML from "yaml";
+import { parseToml, serializeToml, type TomlValue } from "./toml";
 
 const { Text } = Typography;
 const { TextArea } = Input;
 
 type Fmt = "toml" | "json" | "yaml";
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Minimal TOML parser / serializer.
-// Supports: key=value, [section], [nested.section], strings (basic + literal),
-// numbers, booleans, dates (as strings), inline arrays of scalars.
-// Not supported: inline tables, arrays of tables ([[a.b]]), multi-line strings.
-// Adequate for most config-conversion scenarios; fall back to JSON for edge cases.
-// ──────────────────────────────────────────────────────────────────────────────
-
-type TomlValue = string | number | boolean | TomlValue[] | { [k: string]: TomlValue };
-
-function parseToml(src: string): TomlValue {
-    const root: Record<string, TomlValue> = {};
-    let cur: Record<string, TomlValue> = root;
-    src.split("\n").forEach((rawLine) => {
-        const line = rawLine.replace(/#.*$/, "").trim();
-        if (!line) return;
-        const section = line.match(/^\[([^\]]+)\]$/);
-        if (section) {
-            const path = section[1].split(".").map((p) => p.trim());
-            cur = root;
-            for (const part of path) {
-                const next = (cur[part] as Record<string, TomlValue>) || {};
-                cur[part] = next;
-                cur = next;
-            }
-            return;
-        }
-        const kv = line.match(/^([A-Za-z0-9_.-]+)\s*=\s*(.+)$/);
-        if (!kv) return;
-        cur[kv[1]] = parseTomlValue(kv[2]);
-    });
-    return root;
-}
-
-function parseTomlValue(s: string): TomlValue {
-    s = s.trim();
-    if (s.startsWith('"') && s.endsWith('"')) return s.slice(1, -1).replace(/\\"/g, '"').replace(/\\n/g, "\n").replace(/\\\\/g, "\\");
-    if (s.startsWith("'") && s.endsWith("'")) return s.slice(1, -1);
-    if (s === "true") return true;
-    if (s === "false") return false;
-    if (/^-?\d+$/.test(s)) return parseInt(s, 10);
-    if (/^-?\d+\.\d+(e-?\d+)?$/i.test(s)) return parseFloat(s);
-    if (s.startsWith("[") && s.endsWith("]")) {
-        const inner = s.slice(1, -1).trim();
-        if (!inner) return [];
-        // simple comma split (won't handle nested arrays/inline tables — OK for most configs)
-        return inner.split(",").map((p) => parseTomlValue(p.trim()));
-    }
-    return s; // fallback: bare string
-}
-
-function serializeToml(obj: TomlValue, prefix = ""): string {
-    if (typeof obj !== "object" || obj === null || Array.isArray(obj)) {
-        throw new Error("TOML root must be an object");
-    }
-    const out: string[] = [];
-    // emit scalars first
-    const entries = Object.entries(obj);
-    const scalars = entries.filter(([, v]) => typeof v !== "object" || Array.isArray(v));
-    const tables = entries.filter(([, v]) => typeof v === "object" && !Array.isArray(v));
-    if (prefix && (scalars.length || tables.length)) out.push(`[${prefix}]`);
-    for (const [k, v] of scalars) out.push(`${k} = ${formatTomlValue(v)}`);
-    for (const [k, v] of tables) {
-        const newPrefix = prefix ? `${prefix}.${k}` : k;
-        const sub = serializeToml(v as TomlValue, newPrefix);
-        if (sub) out.push("", sub);
-    }
-    return out.join("\n").trim();
-}
-
-function formatTomlValue(v: unknown): string {
-    if (typeof v === "string") return `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
-    if (typeof v === "number" || typeof v === "boolean") return String(v);
-    if (Array.isArray(v)) return `[${v.map(formatTomlValue).join(", ")}]`;
-    if (v === null) return '""';
-    return JSON.stringify(v);
-}
 
 function convert(src: string, from: Fmt, to: Fmt): string {
     if (!src.trim()) return "";
@@ -160,7 +83,8 @@ export default function TomlConverterPage() {
                     "Use the swap button to invert the conversion",
                 ],
                 tips: [
-                    "TOML support here covers the common subset: sections, dotted keys, scalars, arrays of scalars. Inline tables and arrays-of-tables are not supported — convert via JSON if you hit one.",
+                    "TOML support covers sections, dotted keys, scalars, arrays (including nested), inline tables ({ x = 1 }) and arrays of tables ([[server]]). Multi-line strings (\"\"\"...\"\"\") are the main gap — convert via JSON if you hit one.",
+                    "A `#` inside a quoted string is kept, not treated as a comment — so `color = \"#ff0000\"` and URLs with fragments round-trip correctly.",
                     "YAML output uses block style for readability; pass it through `yq` if you need flow style.",
                     "Round-trip JSON ↔ YAML is always lossless; TOML may lose comments.",
                 ],

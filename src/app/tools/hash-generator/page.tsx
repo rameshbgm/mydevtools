@@ -116,7 +116,7 @@ export default function HashGeneratorPage() {
                 <div className="tool-split-pane" style={{ gap: 12 }}>
                     {Object.entries(hashes).map(([algo, hash]) => (
                         <Card key={algo} size="small" title={algo} extra={
-                            <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(hash, `${algo} copied!`)} />
+                            <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(hash, `${algo} copied!`)} />
                         }>
                             <Text code copyable style={{ fontSize: 12, wordBreak: "break-all" }}>{hash}</Text>
                         </Card>

@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, Alert, Select, Segmented } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, Alert, Select, Segmented } from "antd";
 import { CodeOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -119,10 +120,7 @@ export default function StringEscapePage() {
         return mode === "escape" ? escapeString(input, escapeType) : unescapeString(input, escapeType);
     }, [input, escapeType, mode]);
 
-    const copyOutput = () => {
-        navigator.clipboard.writeText(output);
-        message.success("Copied!");
-    };
+    const copyOutput = () => copyToClipboard(output);
 
     const swapContent = () => {
         setInput(output);

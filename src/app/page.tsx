@@ -380,7 +380,7 @@ interface ToolCardProps {
 function ToolCard({ tool, onClick }: Readonly<ToolCardProps>) {
     const isAlpha = ALPHA_CATEGORIES.includes(tool.category);
     return (
-        <motion.div variants={item} whileTap={{ scale: 0.98 }}>
+        <motion.div variants={item} whileTap={{ scale: 0.98 }} style={{ height: "100%" }}>
             <Card
                 className="wb-cat-tool-card"
                 onClick={onClick}
@@ -432,7 +432,7 @@ function ToolCard({ tool, onClick }: Readonly<ToolCardProps>) {
                 </Title>
                 <Text className="wb-cat-tool-desc">{tool.description}</Text>
 
-                <div style={{ marginTop: 14, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <div style={{ marginTop: "auto", paddingTop: 14, display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {tool.tags.slice(0, 3).map((tag) => (
                         <Tag key={tag} className="wb-cat-tag">
                             {tag}

@@ -40,6 +40,7 @@ import {
     EditOutlined,
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { downloadText } from "@/lib/download";
 
 const { Text } = Typography;
 
@@ -231,16 +232,7 @@ export default function RichTextEditorPage() {
             type === "html"
                 ? `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${activeDoc.title}</title></head><body>${activeDoc.content}</body></html>`
                 : activeDoc.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-        const blob = new Blob([content], { type: type === "html" ? "text/html" : "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = Object.assign(document.createElement("a"), {
-            href: url,
-            download: `${activeDoc.title}.${type === "html" ? "html" : "txt"}`,
-        });
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        downloadText(content, `${activeDoc.title}.${type === "html" ? "html" : "txt"}`, type === "html" ? "text/html" : "text/plain");
     };
 
     const exportMenu: MenuProps = {
@@ -500,7 +492,7 @@ export default function RichTextEditorPage() {
                     <VDivider />
 
                     <Tooltip title="Insert Link">
-                        <Button
+                        <Button aria-label="Link"
                             size="small"
                             type="text"
                             icon={<LinkOutlined />}

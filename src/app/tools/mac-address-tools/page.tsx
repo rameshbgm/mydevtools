@@ -17,7 +17,6 @@ import {
     Table,
     Select,
 } from "antd";
-import { messageService as message } from "@/lib/messageService";
 import {
     WifiOutlined,
     CopyOutlined,
@@ -29,6 +28,8 @@ import {
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
+import { downloadText } from "@/lib/download";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text } = Typography;
 
@@ -838,10 +839,7 @@ export default function MACAddressToolsPage() {
             .slice(0, 50);
     }, [vendorSearch]);
 
-    const handleCopy = (text: string, label: string) => {
-        navigator.clipboard.writeText(text);
-        message.success(`${label} copied!`);
-    };
+    const handleCopy = (text: string, label: string) => copyToClipboard(text, `${label} copied!`);
 
     const handleGenerate = useCallback(() => {
         const macs: string[] = [];
@@ -855,20 +853,9 @@ export default function MACAddressToolsPage() {
         setGeneratedMACs(macs);
     }, [generateCount, generatePrefix, generateUnicast, generateUniversal]);
 
-    const handleCopyAll = () => {
-        navigator.clipboard.writeText(generatedMACs.join("\n"));
-        message.success("All MAC addresses copied!");
-    };
+    const handleCopyAll = () => copyToClipboard(generatedMACs.join("\n"), "All MAC addresses copied!");
 
-    const handleDownload = () => {
-        const blob = new Blob([generatedMACs.join("\n")], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "mac-addresses.txt";
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    const handleDownload = () => downloadText(generatedMACs.join("\n"), "mac-addresses.txt");
 
     const getStatusColor = () => {
         if (!inputMAC) return undefined;
@@ -1018,7 +1005,7 @@ export default function MACAddressToolsPage() {
                                                                 <Text type="secondary" style={{ textTransform: "capitalize" }}>{format}:</Text>
                                                                 <Space>
                                                                     <Text code>{value}</Text>
-                                                                    <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(value, format)} />
+                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(value, format)} />
                                                                 </Space>
                                                             </div>
                                                         ))}
@@ -1026,14 +1013,14 @@ export default function MACAddressToolsPage() {
                                                             <Text type="secondary">EUI-64:</Text>
                                                             <Space>
                                                                 <Text code style={{ fontSize: 11 }}>{macInfo.eui64}</Text>
-                                                                <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(macInfo.eui64, "EUI-64")} />
+                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(macInfo.eui64, "EUI-64")} />
                                                             </Space>
                                                         </div>
                                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
                                                             <Text type="secondary">Binary:</Text>
                                                             <Space>
                                                                 <Text code style={{ fontSize: 9, wordBreak: "break-all" }}>{macInfo.binaryFormat}</Text>
-                                                                <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(macInfo.binaryFormat, "Binary")} />
+                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(macInfo.binaryFormat, "Binary")} />
                                                             </Space>
                                                         </div>
                                                     </Space>
@@ -1046,7 +1033,7 @@ export default function MACAddressToolsPage() {
                                         <Alert
                                             style={{ marginTop: 16 }}
                                             type="error"
-                                            message="Invalid MAC Address"
+                                            title="Invalid MAC Address"
                                             description="Enter a valid 48-bit MAC address (6 bytes). Supported formats: 00:1C:B3:00:00:01, 00-1C-B3-00-00-01, 001C.B300.0001, 001CB3000001"
                                             showIcon
                                         />
@@ -1154,7 +1141,7 @@ export default function MACAddressToolsPage() {
                                                                     <Button size="small" type="link" onClick={() => setInputMAC(mac)}>
                                                                         Analyze
                                                                     </Button>
-                                                                    <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(mac, "MAC")} />
+                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(mac, "MAC")} />
                                                                 </Space>
                                                             </div>
                                                         ))}
@@ -1194,7 +1181,7 @@ export default function MACAddressToolsPage() {
                                         <Alert
                                             style={{ marginTop: 16 }}
                                             type="info"
-                                            message="Tip"
+                                            title="Tip"
                                             description="Use 'Local' scope for VMs and containers to avoid conflicts with real hardware addresses."
                                             showIcon
                                         />
@@ -1237,7 +1224,7 @@ export default function MACAddressToolsPage() {
                                             {vendorSearch && filteredVendors.length === 0 && (
                                                 <Alert
                                                     type="info"
-                                                    message="No Results"
+                                                    title="No Results"
                                                     description="No vendors found matching your search. Try a different OUI prefix or vendor name."
                                                     showIcon
                                                 />
@@ -1246,7 +1233,7 @@ export default function MACAddressToolsPage() {
                                             {!vendorSearch && (
                                                 <Alert
                                                     type="info"
-                                                    message="Vendor Database"
+                                                    title="Vendor Database"
                                                     description={`This database contains ${Object.keys(VENDOR_DATABASE).length}+ OUI prefixes from major manufacturers including Apple, Samsung, Intel, Cisco, HP, VMware, and many more.`}
                                                     showIcon
                                                 />

@@ -4,6 +4,11 @@ import React, { useState, useMemo } from "react";
 import { Card, Input, Typography, Row, Col, Select, Button, Space, message, Segmented, Divider, Alert } from "antd";
 import { SafetyOutlined, CopyOutlined, SwapOutlined, LockOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { copyToClipboard } from "@/lib/clipboard";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -49,6 +54,9 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
     return btoa(binary);
 }
 
+interface ShareState { inputText: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "hmac-generator", version: 1 };
+
 export default function HmacGeneratorPage() {
     const [inputText, setInputText] = useState("Hello, World!");
     const [secretKey, setSecretKey] = useState("my-secret-key");
@@ -79,10 +87,7 @@ export default function HmacGeneratorPage() {
     };
 
     const copyResult = () => {
-        if (hmacResult) {
-            navigator.clipboard.writeText(hmacResult);
-            message.success("HMAC copied to clipboard!");
-        }
+        if (hmacResult) copyToClipboard(hmacResult, "HMAC copied to clipboard!");
     };
 
     const generateRandomKey = () => {
@@ -91,6 +96,8 @@ export default function HmacGeneratorPage() {
         const key = arrayBufferToBase64(array.buffer);
         setSecretKey(key);
     };
+
+    useShareableState(SHARE_SCHEMA, (s) => { setInputText(s.inputText); });
 
     const algorithmInfo = ALGORITHMS.find((a) => a.value === algorithm);
 
@@ -124,6 +131,8 @@ export default function HmacGeneratorPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner accepts={["text"]} onAccept={(p) => setInputText(p.data)} />
+
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card title="Input">
@@ -176,16 +185,20 @@ export default function HmacGeneratorPage() {
                             </div>
                         </Space>
 
-                        <Button
-                            type="primary"
-                            size="large"
-                            icon={<SafetyOutlined />}
-                            onClick={generateHash}
-                            loading={loading}
-                            style={{ background: "#f5222d", borderColor: "#f5222d" }}
-                        >
-                            Generate HMAC
-                        </Button>
+                        <Space wrap>
+                            <Button
+                                type="primary"
+                                size="large"
+                                icon={<SafetyOutlined />}
+                                onClick={generateHash}
+                                loading={loading}
+                                style={{ background: "#f5222d", borderColor: "#f5222d" }}
+                            >
+                                Generate HMAC
+                            </Button>
+                            <ShareButton schema={SHARE_SCHEMA} getState={() => ({ inputText })} sensitiveFieldHint="The secret key is never included in share links — only the message text." size="middle" />
+                            <SendToButton data={inputText} kind="text" sourceToolId="hmac-generator" size="middle" />
+                        </Space>
                     </Card>
 
                     <Card

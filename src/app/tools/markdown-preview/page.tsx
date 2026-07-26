@@ -5,8 +5,13 @@ import dynamic from "next/dynamic";
 import { Card, Button, Tooltip, Space, Spin } from "antd";
 import { FileMarkdownOutlined, CopyOutlined, DownloadOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
+import { downloadText } from "@/lib/download";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 // Lazy load ReactMarkdown
 const ReactMarkdown = dynamic(() => import("react-markdown"), {
@@ -47,18 +52,15 @@ console.log(greeting);
 - [ ] Add more tools
 `;
 
+interface ShareState { markdown: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "markdown-preview", version: 1 };
+
 export default function MarkdownPreviewPage() {
     const [markdown, setMarkdown] = useState(SAMPLE);
 
-    const handleDownload = () => {
-        const blob = new Blob([markdown], { type: "text/markdown" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "document.md";
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    const handleDownload = () => downloadText(markdown, "document.md", "text/markdown");
+
+    useShareableState(SHARE_SCHEMA, (s) => { setMarkdown(s.markdown); });
 
     return (
         <ToolPageLayout
@@ -89,6 +91,8 @@ export default function MarkdownPreviewPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner accepts={["text"]} onAccept={(p) => setMarkdown(p.data)} />
+
             <Space style={{ marginBottom: 12 }} wrap>
                 <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(markdown, "Markdown copied!")}>
                     Copy Markdown
@@ -96,6 +100,8 @@ export default function MarkdownPreviewPage() {
                 <Button icon={<DownloadOutlined />} onClick={handleDownload}>
                     Download .md
                 </Button>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ markdown })} size="middle" />
+                <SendToButton data={markdown} kind="text" sourceToolId="markdown-preview" size="middle" />
             </Space>
             <div className="tool-split-pane" style={{ gap: 16 }}>
                 <Card size="small" title="Markdown" styles={{ body: { padding: 0 } }}>

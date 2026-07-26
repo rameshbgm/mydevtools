@@ -1,106 +1,13 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, Alert, Tag, InputNumber, Select, Table, Segmented } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, Alert, Tag, InputNumber, Select, Table, Segmented } from "antd";
 import { CreditCardOutlined, CopyOutlined, CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { copyToClipboard } from "@/lib/clipboard";
+import { CARD_TYPES, luhnCheck, detectCardType, generateCardNumber, formatCardNumber } from "@/lib/credit-card";
 
 const { Text, Paragraph } = Typography;
-
-interface CardType {
-    name: string;
-    prefixes: number[];
-    lengths: number[];
-    color: string;
-}
-
-const CARD_TYPES: CardType[] = [
-    { name: "Visa", prefixes: [4], lengths: [13, 16, 19], color: "#1a1f71" },
-    { name: "Mastercard", prefixes: [51, 52, 53, 54, 55, 2221, 2720], lengths: [16], color: "#eb001b" },
-    { name: "American Express", prefixes: [34, 37], lengths: [15], color: "#006fcf" },
-    { name: "Discover", prefixes: [6011, 644, 645, 646, 647, 648, 649, 65], lengths: [16, 19], color: "#ff6000" },
-    { name: "JCB", prefixes: [3528, 3589], lengths: [16, 19], color: "#0b4ea2" },
-    { name: "Diners Club", prefixes: [300, 301, 302, 303, 304, 305, 36, 38], lengths: [14, 16, 19], color: "#004c97" },
-    { name: "Maestro", prefixes: [5018, 5020, 5038, 5893, 6304, 6759, 6761, 6762, 6763], lengths: [12, 13, 14, 15, 16, 17, 18, 19], color: "#cc0000" },
-];
-
-function luhnCheck(cardNumber: string): boolean {
-    const digits = cardNumber.replace(/\D/g, "");
-    if (!digits) return false;
-
-    let sum = 0;
-    let isEven = false;
-
-    for (let i = digits.length - 1; i >= 0; i--) {
-        let digit = parseInt(digits[i], 10);
-
-        if (isEven) {
-            digit *= 2;
-            if (digit > 9) digit -= 9;
-        }
-
-        sum += digit;
-        isEven = !isEven;
-    }
-
-    return sum % 10 === 0;
-}
-
-function detectCardType(cardNumber: string): CardType | null {
-    const digits = cardNumber.replace(/\D/g, "");
-
-    for (const cardType of CARD_TYPES) {
-        for (const prefix of cardType.prefixes) {
-            if (digits.startsWith(prefix.toString())) {
-                return cardType;
-            }
-        }
-    }
-
-    return null;
-}
-
-function generateCardNumber(cardType: CardType): string {
-    const prefix = cardType.prefixes[Math.floor(Math.random() * cardType.prefixes.length)];
-    const length = cardType.lengths[Math.floor(Math.random() * cardType.lengths.length)];
-
-    let number = prefix.toString();
-
-    // Generate random digits (leaving last digit for checksum)
-    while (number.length < length - 1) {
-        number += Math.floor(Math.random() * 10);
-    }
-
-    // Calculate Luhn checksum digit
-    let sum = 0;
-    let isEven = true;
-
-    for (let i = number.length - 1; i >= 0; i--) {
-        let digit = parseInt(number[i], 10);
-
-        if (isEven) {
-            digit *= 2;
-            if (digit > 9) digit -= 9;
-        }
-
-        sum += digit;
-        isEven = !isEven;
-    }
-
-    const checkDigit = (10 - (sum % 10)) % 10;
-    return number + checkDigit;
-}
-
-function formatCardNumber(number: string): string {
-    const digits = number.replace(/\D/g, "");
-    const groups = [];
-
-    for (let i = 0; i < digits.length; i += 4) {
-        groups.push(digits.slice(i, i + 4));
-    }
-
-    return groups.join(" ");
-}
 
 export default function CreditCardValidatorPage() {
     const [cardNumber, setCardNumber] = useState("");
@@ -123,7 +30,7 @@ export default function CreditCardValidatorPage() {
             isValidLength,
             cardType,
             digits,
-            formatted: formatCardNumber(digits),
+            formatted: formatCardNumber(digits, cardType?.name),
         };
     }, [cardNumber]);
 
@@ -138,10 +45,7 @@ export default function CreditCardValidatorPage() {
         setGeneratedCards(cards);
     };
 
-    const copyCards = () => {
-        navigator.clipboard.writeText(generatedCards.join("\n"));
-        message.success("Card numbers copied!");
-    };
+    const copyCards = () => copyToClipboard(generatedCards.join("\n"), "Card numbers copied!");
 
     return (
         <ToolPageLayout
@@ -206,7 +110,7 @@ export default function CreditCardValidatorPage() {
                                             type={validation.isValid ? "success" : "error"}
                                             showIcon
                                             icon={validation.isValid ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-                                            message={validation.isValid ? "Valid Card Number" : "Invalid Card Number"}
+                                            title={validation.isValid ? "Valid Card Number" : "Invalid Card Number"}
                                             description={
                                                 <Space orientation="vertical">
                                                     <Text>Formatted: <Text code>{validation.formatted}</Text></Text>
@@ -313,15 +217,12 @@ export default function CreditCardValidatorPage() {
                                                     }}
                                                 >
                                                     <Text code style={{ fontFamily: "monospace", letterSpacing: 1 }}>
-                                                        {formatCardNumber(card)}
+                                                        {formatCardNumber(card, generateType)}
                                                     </Text>
-                                                    <Button
+                                                    <Button aria-label="Copy"
                                                         size="small"
                                                         icon={<CopyOutlined />}
-                                                        onClick={() => {
-                                                            navigator.clipboard.writeText(card);
-                                                            message.success("Copied!");
-                                                        }}
+                                                        onClick={() => copyToClipboard(card)}
                                                     />
                                                 </div>
                                             ))}
@@ -335,7 +236,7 @@ export default function CreditCardValidatorPage() {
                             <Alert
                                 type="warning"
                                 showIcon
-                                message="Test Cards Only"
+                                title="Test Cards Only"
                                 description="These are randomly generated numbers that pass Luhn validation. They are NOT real credit cards and cannot be used for actual transactions. Use only for testing purposes."
                                 style={{ marginBottom: 16 }}
                             />

@@ -719,6 +719,18 @@
   font-size: 13px !important;
   line-height: 1.52 !important;
   display: block !important;
+  /* ponytail: cap at ~4 lines (13px * 1.52 * 4) and scroll the overflow,
+     so every card in a row is the same height without truncating text. */
+  max-height: calc(13px * 1.52 * 4);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* Stretch the card body so the tag row can pin to the bottom. */
+.wb-cat-tool-card.ant-card > .ant-card-body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .wb-cat-tag.ant-tag {

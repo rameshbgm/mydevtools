@@ -1,15 +1,21 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { Card, Typography, Input, Row, Col, Space, Tag, Radio, App, Tooltip } from "antd";
-import { CompressOutlined, CopyOutlined } from "@ant-design/icons";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Card, Typography, Input, Row, Col, Space, Tag, Radio, Segmented, App, Tooltip } from "antd";
+import { CompressOutlined, CopyOutlined, SwapOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
+import { encodeToon, decodeToon } from "@/lib/toon";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
-type InputFmt = "json" | "xml";
+type StructFmt = "json" | "xml";
+type Direction = "encode" | "decode";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // XML → JS object (uses the browser's DOMParser)
@@ -56,164 +62,45 @@ function elementToValue(el: Element): unknown {
     return result;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// TOON encoder
-//
-// TOON (Token-Oriented Object Notation) is a compact data format that drops
-// JSON's structural tokens (quotes, braces, brackets, commas) wherever they
-// can be inferred from layout. Key features used here:
-//
-//   key: value             — scalar
-//   key:                   — nested object (children indented 2 sp)
-//   key[N]:                — list of N items, each on a `- ` line
-//   key[N]{f1,f2,f3}:      — tabular: N rows of CSV-like records
-// ──────────────────────────────────────────────────────────────────────────────
-
-const INDENT = "  ";
-
-function encodeToon(value: unknown): string {
-    if (value === null || value === undefined) return "null";
-    if (typeof value !== "object") return formatScalar(value);
-    const lines: string[] = [];
-    if (Array.isArray(value)) {
-        encodeArrayInline("data", value, lines, 0);
-    } else {
-        encodeObject(value as Record<string, unknown>, lines, 0);
+// JS object → XML, the inverse of xmlToObject's mapping above.
+function objectToXml(obj: unknown, rootTag = "root"): string {
+    function valueToXml(tag: string, val: unknown): string {
+        if (val === null || val === undefined) return `<${tag}/>`;
+        if (typeof val !== "object") return `<${tag}>${escapeXml(String(val))}</${tag}>`;
+        if (Array.isArray(val)) return val.map((v) => valueToXml(tag, v)).join("");
+        const entries = Object.entries(val as Record<string, unknown>);
+        const attrs = entries.filter(([k]) => k.startsWith("@"));
+        const children = entries.filter(([k]) => !k.startsWith("@") && k !== "#text");
+        const text = (val as Record<string, unknown>)["#text"];
+        const attrStr = attrs.map(([k, v]) => ` ${k.slice(1)}="${escapeXml(String(v))}"`).join("");
+        const childStr = children.map(([k, v]) => valueToXml(k, v)).join("");
+        const textStr = typeof text === "string" ? escapeXml(text) : "";
+        if (!childStr && !textStr) return `<${tag}${attrStr}/>`;
+        return `<${tag}${attrStr}>${childStr}${textStr}</${tag}>`;
     }
-    return lines.join("\n");
+    if (typeof obj === "object" && obj !== null && !Array.isArray(obj)) {
+        const entries = Object.entries(obj as Record<string, unknown>);
+        if (entries.length === 1) return valueToXml(entries[0][0], entries[0][1]);
+    }
+    return valueToXml(rootTag, obj);
 }
 
-function encodeObject(obj: Record<string, unknown>, out: string[], depth: number) {
-    const pad = INDENT.repeat(depth);
-    for (const [rawKey, val] of Object.entries(obj)) {
-        const key = formatKey(rawKey);
-        if (Array.isArray(val)) {
-            encodeArrayInline(key, val, out, depth);
-        } else if (typeof val === "object" && val !== null) {
-            const keys = Object.keys(val);
-            if (keys.length === 0) {
-                out.push(`${pad}${key}: {}`);
-            } else {
-                out.push(`${pad}${key}:`);
-                encodeObject(val as Record<string, unknown>, out, depth + 1);
-            }
-        } else {
-            out.push(`${pad}${key}: ${formatScalar(val)}`);
+function escapeXml(s: string): string {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function convert(src: string, direction: Direction, from: StructFmt, to: StructFmt): { output: string; error: string | null } {
+    if (!src.trim()) return { output: "", error: null };
+    try {
+        if (direction === "encode") {
+            const data = from === "json" ? JSON.parse(src) : xmlToObject(src);
+            return { output: encodeToon(data), error: null };
         }
+        const data = decodeToon(src);
+        return { output: to === "xml" ? objectToXml(data) : JSON.stringify(data, null, 2), error: null };
+    } catch (err) {
+        return { output: "", error: err instanceof Error ? err.message : String(err) };
     }
-}
-
-function encodeArrayInline(key: string, arr: unknown[], out: string[], depth: number) {
-    const pad = INDENT.repeat(depth);
-    if (arr.length === 0) {
-        out.push(`${pad}${key}[0]:`);
-        return;
-    }
-    // tabular form: array of objects with same scalar fields → key[N]{f1,f2}:
-    const table = detectUniformTable(arr);
-    if (table) {
-        out.push(`${pad}${key}[${arr.length}]{${table.fields.join(",")}}:`);
-        const rowPad = INDENT.repeat(depth + 1);
-        for (const row of arr) {
-            const r = row as Record<string, unknown>;
-            out.push(`${rowPad}${table.fields.map((f) => formatCell(r[f])).join(",")}`);
-        }
-        return;
-    }
-    out.push(`${pad}${key}[${arr.length}]:`);
-    for (const item of arr) {
-        encodeListItem(item, out, depth + 1);
-    }
-}
-
-function encodeListItem(value: unknown, out: string[], depth: number) {
-    const pad = INDENT.repeat(depth);
-    if (value === null || value === undefined) { out.push(`${pad}- null`); return; }
-    if (typeof value !== "object") { out.push(`${pad}- ${formatScalar(value)}`); return; }
-    if (Array.isArray(value)) {
-        out.push(`${pad}-`);
-        // emit each nested item one deeper, also using `- ` prefix
-        for (const item of value) encodeListItem(item, out, depth + 1);
-        return;
-    }
-    const entries = Object.entries(value);
-    if (entries.length === 0) { out.push(`${pad}- {}`); return; }
-    out.push(`${pad}-`);
-    encodeObject(value as Record<string, unknown>, out, depth + 1);
-}
-
-function detectUniformTable(arr: unknown[]): { fields: string[] } | null {
-    if (arr.length === 0) return null;
-    const first = arr[0];
-    if (typeof first !== "object" || first === null || Array.isArray(first)) return null;
-    const fields = Object.keys(first);
-    if (fields.length === 0) return null;
-    for (const item of arr) {
-        if (typeof item !== "object" || item === null || Array.isArray(item)) return null;
-        const keys = Object.keys(item);
-        if (keys.length !== fields.length) return null;
-        for (let i = 0; i < fields.length; i++) {
-            if (keys[i] !== fields[i]) return null;
-            const v = (item as Record<string, unknown>)[fields[i]];
-            if (v !== null && typeof v === "object") return null; // table cells must be scalar
-        }
-    }
-    return { fields };
-}
-
-function formatScalar(v: unknown): string {
-    if (v === null) return "null";
-    if (typeof v === "boolean") return v ? "true" : "false";
-    if (typeof v === "number") return Number.isFinite(v) ? String(v) : JSON.stringify(String(v));
-    if (typeof v === "string") return formatString(v);
-    return JSON.stringify(v);
-}
-
-// A string can be written bare in TOON when it's free of structural characters,
-// doesn't visually collide with reserved literals (true/false/null/numbers),
-// and has no leading/trailing whitespace.
-function formatString(s: string): string {
-    if (s === "") return '""';
-    if (/^\s|\s$/.test(s)) return JSON.stringify(s);
-    if (/[\n\r\t]/.test(s)) return JSON.stringify(s);
-    if (/[:,\[\]{}#"]/.test(s)) return JSON.stringify(s);
-    if (s === "true" || s === "false" || s === "null") return JSON.stringify(s);
-    if (/^-?\d+(\.\d+)?(e-?\d+)?$/i.test(s)) return JSON.stringify(s);
-    return s;
-}
-
-// In a tabular row the separator is `,` and newlines break the row, so the
-// quoting rules are stricter than for a regular scalar.
-function formatCell(v: unknown): string {
-    if (v === null || v === undefined) return "";
-    if (typeof v === "boolean") return v ? "true" : "false";
-    if (typeof v === "number") return Number.isFinite(v) ? String(v) : JSON.stringify(String(v));
-    const s = String(v);
-    if (s === "") return '""';
-    if (/[,"\n\r]/.test(s)) return JSON.stringify(s);
-    return s;
-}
-
-function formatKey(k: string): string {
-    if (k === "") return '""';
-    if (/^[A-Za-z_@#][A-Za-z0-9_\-.@#]*$/.test(k)) return k;
-    return JSON.stringify(k);
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Top-level conversion
-// ──────────────────────────────────────────────────────────────────────────────
-
-function convert(src: string, from: InputFmt): { toon: string; intermediate: unknown } {
-    if (!src.trim()) return { toon: "", intermediate: null };
-    let data: unknown;
-    if (from === "json") {
-        try { data = JSON.parse(src); }
-        catch (err) { throw new Error(`JSON parse error: ${err instanceof Error ? err.message : String(err)}`); }
-    } else {
-        data = xmlToObject(src);
-    }
-    return { toon: encodeToon(data), intermediate: data };
 }
 
 const SAMPLE_JSON = `{
@@ -242,23 +129,67 @@ const SAMPLE_XML = `<library>
   </books>
 </library>`;
 
+const SAMPLE_TOON = `title: mydevtools
+version: 1.4
+active: true
+users[3]{id,name,role}:
+  1,Ada Lovelace,admin
+  2,Alan Turing,user
+  3,Grace Hopper,user
+tags[3]:
+  - primary
+  - release
+  - stable`;
+
+interface ShareState { direction: Direction; structFmt: StructFmt; input: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "toon-converter", version: 1 };
+
 export default function ToonConverterPage() {
     const { message } = App.useApp();
-    const [from, setFrom] = useState<InputFmt>("json");
+    const [direction, setDirection] = useState<Direction>("encode");
+    const [structFmt, setStructFmt] = useState<StructFmt>("json");
     const [input, setInput] = useState(SAMPLE_JSON);
+    const [tokenCounts, setTokenCounts] = useState<{ in: number; out: number } | null>(null);
+    const countTokensRef = useRef<((t: string) => number) | null>(null);
 
-    const { output, error } = useMemo(() => {
-        try { return { output: convert(input, from).toon, error: null }; }
-        catch (err) { return { output: "", error: err instanceof Error ? err.message : String(err) }; }
-    }, [input, from]);
+    const from = direction === "encode" ? structFmt : ("toon" as const);
+    const to = direction === "encode" ? ("toon" as const) : structFmt;
 
-    const switchFrom = (next: InputFmt) => {
-        // If the user is on the sample for the old format, swap in the new sample.
-        if (next !== from) {
-            if (from === "json" && input === SAMPLE_JSON) setInput(SAMPLE_XML);
-            else if (from === "xml" && input === SAMPLE_XML) setInput(SAMPLE_JSON);
+    const { output, error } = useMemo(
+        () => convert(input, direction, structFmt, structFmt),
+        [input, direction, structFmt]
+    );
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            if (!countTokensRef.current) {
+                const { countTokens } = await import("gpt-tokenizer");
+                countTokensRef.current = countTokens;
+            }
+            if (cancelled) return;
+            const fn = countTokensRef.current;
+            setTokenCounts({ in: fn(input), out: fn(output) });
+        })();
+        return () => { cancelled = true; };
+    }, [input, output]);
+
+    const switchDirection = (next: Direction) => {
+        if (next === direction) return;
+        // Swap in the matching sample so the user isn't left staring at
+        // JSON in a "decode from TOON" pane or vice versa.
+        if (next === "decode" && direction === "encode") setInput(SAMPLE_TOON);
+        else if (next === "encode" && direction === "decode") setInput(structFmt === "json" ? SAMPLE_JSON : SAMPLE_XML);
+        setDirection(next);
+    };
+
+    const switchStructFmt = (next: StructFmt) => {
+        if (next === structFmt) return;
+        if (direction === "encode") {
+            if (structFmt === "json" && input === SAMPLE_JSON) setInput(SAMPLE_XML);
+            else if (structFmt === "xml" && input === SAMPLE_XML) setInput(SAMPLE_JSON);
         }
-        setFrom(next);
+        setStructFmt(next);
     };
 
     const inChars = input.length;
@@ -266,52 +197,77 @@ export default function ToonConverterPage() {
     const charsSaved = Math.max(0, inChars - outChars);
     const savingsPct = inChars > 0 ? (charsSaved / inChars) * 100 : 0;
 
-    // Rough token estimate (LLM context): ~4 characters per token for English-like text.
-    // Not exact, but a useful order-of-magnitude indicator for prompt budgeting.
-    const tokensInApprox = Math.ceil(inChars / 4);
-    const tokensOutApprox = Math.ceil(outChars / 4);
-    const tokensSaved = Math.max(0, tokensInApprox - tokensOutApprox);
+    const tokensIn = tokenCounts?.in ?? 0;
+    const tokensOut = tokenCounts?.out ?? 0;
+    const tokensSaved = Math.max(0, tokensIn - tokensOut);
+    const tokensSavedPct = tokensIn > 0 ? (tokensSaved / tokensIn) * 100 : 0;
 
     const copyOutput = async () => {
         await copyToClipboard(output);
-        message.success("TOON copied");
+        message.success("Copied");
     };
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setDirection(s.direction);
+        setStructFmt(s.structFmt);
+        setInput(s.input);
+    });
+
+    const emitKind = direction === "encode" ? "text" : structFmt;
 
     return (
         <ToolPageLayout
             title="TOON Converter"
-            description="Convert JSON or XML to TOON (Token-Oriented Object Notation) — compact, LLM-friendly, with live character savings"
+            description="Convert JSON or XML to TOON (Token-Oriented Object Notation) and back — compact, LLM-friendly, with real token savings"
             icon={<CompressOutlined style={{ fontSize: 24, color: "#7c3aed" }} />}
             color="#7c3aed"
             learnMore={{
-                whatIs: "TOON (Token-Oriented Object Notation) is a compact text format for structured data. It uses indentation instead of braces, declares array shapes upfront (e.g. users[2]{id,name}:), and drops quotes on strings that don't need them. The result reads like YAML but parses more strictly, and uses noticeably fewer characters than equivalent JSON.",
-                whyUse: "Large language models price requests by tokens; configuration files and structured fixtures are often the largest single contribution to prompt size. Converting JSON or XML payloads to TOON typically cuts 30–50% of characters for tabular data and 10–25% for nested objects — directly reducing token spend.",
+                whatIs: "TOON (Token-Oriented Object Notation) is a compact text format for structured data. It uses indentation instead of braces, declares array shapes upfront (e.g. users[2]{id,name}:), and drops quotes on strings that don't need them. The result reads like YAML but parses more strictly, and uses noticeably fewer tokens than equivalent JSON.",
+                whyUse: "Large language models price requests by tokens, not characters; configuration files and structured fixtures are often the largest single contribution to prompt size. Converting JSON or XML payloads to TOON typically cuts real token counts noticeably for tabular data, and this tool measures the actual token difference rather than approximating from character count.",
                 howToUse: [
-                    "Pick the input format (JSON or XML)",
-                    "Paste your document on the left",
-                    "Compact TOON appears on the right; copy when satisfied",
-                    "The 'Characters saved' badge shows the size delta",
+                    "Choose a direction: encode (JSON/XML → TOON) or decode (TOON → JSON/XML)",
+                    "Pick the structured format on the other side of the conversion",
+                    "Paste your document; the converted output appears on the right",
+                    "The token badges show the real difference, measured with the same tokenizer OpenAI uses server-side",
                 ],
                 tips: [
                     "Tabular data (arrays of objects with the same scalar fields) compress the most — TOON emits a header row plus CSV-like rows instead of repeating keys.",
                     "Strings that look like numbers, booleans, null, or contain structural characters are auto-quoted to preserve type information on parse.",
                     "XML attributes are mapped to keys prefixed with @ to preserve them through the conversion.",
+                    "Decoding is strict about indentation — TOON emitted by this tool round-trips exactly, but hand-edited TOON with inconsistent indentation may not parse as expected.",
                 ],
                 useCases: [
                     "Reducing token spend on LLM prompts that embed structured data",
+                    "Converting a model's TOON output back to JSON for your application code",
                     "Embedding fixtures in markdown documentation without huge JSON blocks",
                     "Producing readable diffs of large configs",
-                    "Converting API responses for compact logging",
                 ],
             }}
         >
+            <ToolBridgeBanner
+                accepts={["json", "xml", "text"]}
+                onAccept={(p) => {
+                    if (p.kind === "xml") { setDirection("encode"); setStructFmt("xml"); }
+                    else if (p.kind === "json") { setDirection("encode"); setStructFmt("json"); }
+                    setInput(p.data);
+                }}
+            />
+
             <Card>
                 <Space wrap size="middle" style={{ width: "100%", justifyContent: "space-between" }}>
                     <Space wrap>
-                        <Text type="secondary">From:</Text>
+                        <Segmented
+                            value={direction}
+                            onChange={(v) => switchDirection(v as Direction)}
+                            options={[
+                                { value: "encode", label: `${structFmt.toUpperCase()} → TOON` },
+                                { value: "decode", label: `TOON → ${structFmt.toUpperCase()}` },
+                            ]}
+                        />
+                        <Text type="secondary">Format:</Text>
                         <Radio.Group
-                            value={from}
-                            onChange={(e) => switchFrom(e.target.value)}
+                            value={structFmt}
+                            onChange={(e) => switchStructFmt(e.target.value)}
                             options={[
                                 { value: "json", label: "JSON" },
                                 { value: "xml", label: "XML" },
@@ -319,24 +275,21 @@ export default function ToonConverterPage() {
                             optionType="button"
                             buttonStyle="solid"
                         />
-                        <Text type="secondary">→ TOON</Text>
                     </Space>
                     <Space wrap>
-                        <Tooltip title="Input characters">
-                            <Tag>in: {inChars.toLocaleString()} chars</Tag>
+                        <Tooltip title="Real token counts, measured with gpt-tokenizer (o200k_base — same tokenizer OpenAI uses for GPT-4o/5.x)">
+                            <Tag>in: {tokensIn.toLocaleString()} tok</Tag>
                         </Tooltip>
-                        <Tooltip title="Output characters">
-                            <Tag color="purple">out: {outChars.toLocaleString()} chars</Tag>
+                        <Tooltip title="Output tokens">
+                            <Tag color="purple">out: {tokensOut.toLocaleString()} tok</Tag>
                         </Tooltip>
-                        <Tooltip title="Bytes saved between input and output">
-                            <Tag color={charsSaved > 0 ? "green" : "default"}>
-                                saved: {charsSaved.toLocaleString()} ({savingsPct.toFixed(1)}%)
+                        <Tooltip title="Token difference between input and output">
+                            <Tag color={tokensSaved > 0 ? "green" : "default"}>
+                                {tokensSaved > 0 ? "saved" : "delta"}: {tokensSaved.toLocaleString()} ({tokensSavedPct.toFixed(1)}%)
                             </Tag>
                         </Tooltip>
-                        <Tooltip title="Approximate tokens (≈ 4 chars/token). Useful for LLM budgeting, not exact.">
-                            <Tag color={tokensSaved > 0 ? "geekblue" : "default"}>
-                                ≈ {tokensSaved} tokens saved
-                            </Tag>
+                        <Tooltip title="Character counts, for reference">
+                            <Tag color="default">chars: {inChars.toLocaleString()} → {outChars.toLocaleString()} ({savingsPct.toFixed(0)}%)</Tag>
                         </Tooltip>
                     </Space>
                 </Space>
@@ -356,8 +309,17 @@ export default function ToonConverterPage() {
                 <Col xs={24} md={12}>
                     <Card
                         size="small"
-                        title={<Space><Text strong>Output</Text><Tag color="purple">TOON</Tag></Space>}
-                        extra={!error && output && <a onClick={copyOutput}><CopyOutlined /> Copy</a>}
+                        title={<Space><Text strong>Output</Text><Tag color="purple">{to.toUpperCase()}</Tag></Space>}
+                        extra={
+                            <Space>
+                                {!error && output && <a onClick={copyOutput}><CopyOutlined /> Copy</a>}
+                                <SwapOutlined
+                                    onClick={() => { if (!error && output) { setInput(output); switchDirection(direction === "encode" ? "decode" : "encode"); } }}
+                                    style={{ cursor: !error && output ? "pointer" : "not-allowed", opacity: !error && output ? 1 : 0.4 }}
+                                    title="Send output back as input, flipping direction"
+                                />
+                            </Space>
+                        }
                     >
                         {error ? (
                             <Text type="danger" style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12, whiteSpace: "pre-wrap" }}>
@@ -374,6 +336,11 @@ export default function ToonConverterPage() {
                     </Card>
                 </Col>
             </Row>
+
+            <Space style={{ marginTop: 16 }}>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ direction, structFmt, input })} size="middle" />
+                <SendToButton data={output} kind={emitKind} sourceToolId="toon-converter" size="middle" />
+            </Space>
 
             <Card size="small" style={{ marginTop: 16 }} title="How TOON compresses">
                 <Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 8 }}>

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Button, Card, Space, Typography, Row, Col, Input, List, Tag, App, Alert } from "antd";
+import { Button, Card, Space, Typography, Row, Col, Input, Tag, App, Alert } from "antd";
+import SimpleList from "@/components/SimpleList";
 import { ClockCircleOutlined, CopyOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
 import ToolPageLayout from "@/components/ToolPageLayout";
@@ -347,11 +348,11 @@ export default function CronParserPage() {
                     {/* Next Runs */}
                     {nextRuns.length > 0 && (
                         <Card title="Next Scheduled Runs" style={{ marginTop: 16 }}>
-                            <List
+                            <SimpleList
                                 size="small"
                                 dataSource={nextRuns}
                                 renderItem={(date, index) => (
-                                    <List.Item>
+                                    <Space>
                                         <Tag color="green">{index + 1}</Tag>
                                         <Text style={{ fontFamily: "var(--font-geist-mono)" }}>
                                             {date.toLocaleString("en-US", {
@@ -363,7 +364,7 @@ export default function CronParserPage() {
                                                 minute: "2-digit",
                                             })}
                                         </Text>
-                                    </List.Item>
+                                    </Space>
                                 )}
                             />
                         </Card>

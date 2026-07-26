@@ -1,10 +1,15 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, Alert, Switch, Select, Segmented } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, Alert, Switch, Select, Segmented } from "antd";
 import { FileExcelOutlined, CopyOutlined, ClearOutlined, SwapOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import { copyToClipboard } from "@/lib/clipboard";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { Text } = Typography;
 
@@ -99,6 +104,17 @@ function escapeXml(str: string): string {
         .replace(/"/g, "&quot;");
 }
 
+interface ShareState {
+    input: string;
+    outputFormat: "json" | "xml";
+    hasHeader: boolean;
+    delimiter: string;
+    arrayFormat: boolean;
+    rootElement: string;
+    rowElement: string;
+}
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "csv-to-json", version: 1 };
+
 export default function CsvConverterPage() {
     const [input, setInput] = useState(SAMPLE_CSV);
     const [outputFormat, setOutputFormat] = useState<"json" | "xml">("json");
@@ -107,6 +123,16 @@ export default function CsvConverterPage() {
     const [arrayFormat, setArrayFormat] = useState(false);
     const [rootElement, setRootElement] = useState("data");
     const [rowElement, setRowElement] = useState("row");
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setInput(s.input);
+        setOutputFormat(s.outputFormat);
+        setHasHeader(s.hasHeader);
+        setDelimiter(s.delimiter);
+        setArrayFormat(s.arrayFormat);
+        setRootElement(s.rootElement);
+        setRowElement(s.rowElement);
+    });
 
     const { output, conversionError } = useMemo(() => {
         if (!input.trim()) return { output: "", conversionError: null as string | null };
@@ -127,10 +153,7 @@ export default function CsvConverterPage() {
         }
     }, [input, outputFormat, hasHeader, delimiter, arrayFormat, rootElement, rowElement]);
 
-    const copyOutput = () => {
-        navigator.clipboard.writeText(output);
-        message.success(`${outputFormat.toUpperCase()} copied!`);
-    };
+    const copyOutput = () => copyToClipboard(output, `${outputFormat.toUpperCase()} copied!`);
 
     return (
         <ToolPageLayout
@@ -161,6 +184,13 @@ export default function CsvConverterPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner accepts={["csv", "text"]} onAccept={(p) => setInput(p.data)} />
+
+            <Space style={{ marginBottom: 16 }} wrap>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, outputFormat, hasHeader, delimiter, arrayFormat, rootElement, rowElement })} size="middle" />
+                <SendToButton data={output} kind={outputFormat} sourceToolId="csv-to-json" size="middle" />
+            </Space>
+
             <Row gutter={[24, 24]}>
                 <Col xs={24}>
                     <Segmented
@@ -205,7 +235,7 @@ export default function CsvConverterPage() {
                         }
                     >
                         {conversionError ? (
-                            <Alert type="error" message={conversionError} showIcon style={{ marginBottom: 16 }} />
+                            <Alert type="error" title={conversionError} showIcon style={{ marginBottom: 16 }} />
                         ) : null}
                         <CodeEditor
                             value={output}

@@ -518,6 +518,17 @@ const RFC_STANDARDS: RFCStandard[] = [
         keywords: ["problem details", "error", "api", "json", "http", "rest"],
     },
     {
+        rfc: "RFC 4918",
+        title: "HTTP Extensions for Web Distributed Authoring and Versioning (WebDAV)",
+        category: "HTTP",
+        description: "Defines the WebDAV extensions to HTTP for collaborative authoring, including status codes 102, 207, 422, 423, 424, and 507 used across the HTTP status code registry.",
+        status: "Standard",
+        year: 2007,
+        url: "https://datatracker.ietf.org/doc/html/rfc4918",
+        relatedRFCs: ["RFC 9110", "RFC 5842"],
+        keywords: ["webdav", "http", "status codes", "authoring", "collaborative", "422", "423", "424", "507"],
+    },
+    {
         rfc: "RFC 5789",
         title: "PATCH Method for HTTP",
         category: "HTTP",

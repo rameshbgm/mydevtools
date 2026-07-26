@@ -37,14 +37,31 @@ const GPS_TAGS: Record<number, string> = {
 interface IfdEntry { tag: number; value: unknown; }
 
 function readExif(buf: ArrayBuffer): Record<string, unknown> | { error: string } {
+    if (buf.byteLength < 8) return { error: "File is too small to contain image metadata" };
     const view = new DataView(buf);
-    if (view.getUint16(0) !== 0xFFD8) return { error: "Not a JPEG file (no SOI marker)" };
+
+    // A bare TIFF has no JPEG wrapper — its TIFF header sits at byte 0, so parse
+    // it directly instead of hunting for an APP1 segment that will never exist.
+    const bom = view.getUint16(0);
+    if (bom === 0x4949 || bom === 0x4D4D) {
+        const little = bom === 0x4949;
+        if (view.getUint16(2, little) !== 42) return { error: "Not a valid TIFF file (bad magic number)" };
+        return parseTiff(view, 0, buf);
+    }
+
+    if (view.getUint16(0) !== 0xFFD8) {
+        return { error: "Unsupported file — expected a JPEG (FFD8) or TIFF (II/MM) header" };
+    }
     let offset = 2;
-    while (offset < view.byteLength) {
+    // Every read below is bounds-checked: a truncated or corrupt JPEG must
+    // report "no EXIF" rather than throw a RangeError out of the DataView.
+    while (offset + 4 <= view.byteLength) {
         if (view.getUint8(offset) !== 0xFF) return { error: "Malformed JPEG segments" };
         const marker = view.getUint16(offset);
         const len = view.getUint16(offset + 2);
+        if (len < 2) return { error: "Malformed JPEG segment length" };
         if (marker === 0xFFE1) {
+            if (offset + 10 > view.byteLength) break;
             // APP1 — check for "Exif\0\0"
             const sig = String.fromCharCode(...new Uint8Array(buf, offset + 4, 4));
             if (sig !== "Exif") { offset += 2 + len; continue; }
@@ -58,6 +75,7 @@ function readExif(buf: ArrayBuffer): Record<string, unknown> | { error: string }
 }
 
 function parseTiff(view: DataView, start: number, buf: ArrayBuffer): Record<string, unknown> {
+    if (start + 8 > view.byteLength) return {};
     const byteOrder = view.getUint16(start);
     const little = byteOrder === 0x4949;
     const ifd0Offset = view.getUint32(start + 4, little);

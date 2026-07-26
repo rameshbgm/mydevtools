@@ -256,7 +256,7 @@ export default function SpinWheelPage() {
                                     maxLength={30}
                                     disabled={items.length >= 12}
                                 />
-                                <Button icon={<PlusOutlined />} onClick={addItem} disabled={!newItem.trim() || items.length >= 12} />
+                                <Button aria-label="Add" icon={<PlusOutlined />} onClick={addItem} disabled={!newItem.trim() || items.length >= 12} />
                             </Space.Compact>
 
                             <div style={{ maxHeight: 280, overflowY: "auto" }}>
@@ -271,7 +271,7 @@ export default function SpinWheelPage() {
                                             background: SEGMENT_COLORS[i % SEGMENT_COLORS.length],
                                         }} />
                                         <Text style={{ flex: 1, fontSize: 13 }}>{item}</Text>
-                                        <Button
+                                        <Button aria-label="Delete"
                                             type="text" danger size="small"
                                             icon={<DeleteOutlined />}
                                             onClick={() => removeItem(i)}

@@ -5,6 +5,11 @@ import { Card, Input, Typography, Row, Col, Button, Space, message, Segmented, I
 import { Html5Outlined, CopyOutlined, FormatPainterOutlined, CompressOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import { copyToClipboard } from "@/lib/clipboard";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 import beautify from "js-beautify";
 
 const beautifyHtml = (beautify as unknown as { html: (input: string, opts?: Record<string, unknown>) => string }).html;
@@ -12,6 +17,9 @@ const beautifyHtml = (beautify as unknown as { html: (input: string, opts?: Reco
 const { Text } = Typography;
 
 const SAMPLE_HTML = `<!DOCTYPE html><html><head><title>Sample</title><style>body{margin:0;padding:20px;}</style></head><body><div class="container"><h1>Hello World</h1><p>This is a <strong>sample</strong> HTML document.</p><ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul></div><script>console.log("Hello");</script></body></html>`;
+
+interface ShareState { input: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "html-formatter", version: 1 };
 
 export default function HtmlFormatterPage() {
     const [input, setInput] = useState(SAMPLE_HTML);
@@ -47,15 +55,9 @@ export default function HtmlFormatterPage() {
             .trim();
     }, [input]);
 
-    const copyFormatted = () => {
-        navigator.clipboard.writeText(formatted);
-        message.success("Formatted HTML copied!");
-    };
+    const copyFormatted = () => copyToClipboard(formatted, "Formatted HTML copied!");
 
-    const copyMinified = () => {
-        navigator.clipboard.writeText(minified);
-        message.success("Minified HTML copied!");
-    };
+    const copyMinified = () => copyToClipboard(minified, "Minified HTML copied!");
 
     const applyFormatted = () => {
         setInput(formatted);
@@ -69,6 +71,8 @@ export default function HtmlFormatterPage() {
         const formattedSize = new Blob([formatted]).size;
         return { tags, originalSize, minSize, formattedSize };
     }, [input, minified, formatted]);
+
+    useShareableState(SHARE_SCHEMA, (s) => setInput(s.input));
 
     return (
         <ToolPageLayout
@@ -99,6 +103,8 @@ export default function HtmlFormatterPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner accepts={["html", "text"]} onAccept={(p) => setInput(p.data)} />
+
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card
@@ -108,6 +114,8 @@ export default function HtmlFormatterPage() {
                                 <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
                                     Clear
                                 </Button>
+                                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input })} size="small" />
+                                <SendToButton data={input} kind="html" sourceToolId="html-formatter" size="small" />
                             </Space>
                         }
                     >

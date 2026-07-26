@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Button, Card, Space, Slider, Switch, InputNumber, Typography, Row, Col, List, App } from "antd";
+import { Button, Card, Space, Slider, Switch, InputNumber, Typography, Row, Col, App } from "antd";
+import SimpleList from "@/components/SimpleList";
 import { LockOutlined, CopyOutlined, ReloadOutlined, DeleteOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
 import ToolPageLayout from "@/components/ToolPageLayout";
@@ -210,28 +211,25 @@ export default function PasswordGeneratorPage() {
                         {history.length === 0 ? (
                             <Text type="secondary">Generated passwords will appear here</Text>
                         ) : (
-                            <List
+                            <SimpleList
                                 size="small"
                                 dataSource={history}
                                 renderItem={(item, index) => (
-                                    <List.Item
-                                        actions={[
-                                            <Button
-                                                key="copy"
-                                                size="small"
-                                                type="text"
-                                                icon={<CopyOutlined />}
-                                                onClick={() => copyToClipboard(item)}
-                                            />,
-                                        ]}
+                                    <Text
+                                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
+                                        ellipsis={{ tooltip: item }}
                                     >
-                                        <Text
-                                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
-                                            ellipsis={{ tooltip: item }}
-                                        >
-                                            {index + 1}. {item}
-                                        </Text>
-                                    </List.Item>
+                                        {index + 1}. {item}
+                                    </Text>
+                                )}
+                                renderExtra={(item) => (
+                                    <Button
+                                        aria-label="Copy"
+                                        size="small"
+                                        type="text"
+                                        icon={<CopyOutlined />}
+                                        onClick={() => copyToClipboard(item)}
+                                    />
                                 )}
                             />
                         )}

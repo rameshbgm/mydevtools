@@ -36,10 +36,22 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
 // not perceptually-accurate, but cheap and stable for ≤16 swatches.
 function kmeans(pixels: number[][], k: number, iters = 8): Swatch[] {
     if (pixels.length === 0) return [];
+    // Never ask for more clusters than there are distinct colours: a solid-colour
+    // image would otherwise return k copies of the same swatch, and seeding would
+    // index past the end of the array.
+    const distinct = new Map<string, number[]>();
+    for (const p of pixels) {
+        const key = `${p[0]},${p[1]},${p[2]}`;
+        if (!distinct.has(key)) distinct.set(key, p);
+        if (distinct.size > k) break;
+    }
+    const effectiveK = Math.max(1, Math.min(k, distinct.size));
+
     // seed by sampling evenly through the pixel array
-    const centroids: number[][] = Array.from({ length: k }, (_, i) =>
-        [...pixels[Math.floor((i + 0.5) * pixels.length / k)]]);
+    const centroids: number[][] = Array.from({ length: effectiveK }, (_, i) =>
+        [...pixels[Math.min(pixels.length - 1, Math.floor(((i + 0.5) * pixels.length) / effectiveK))]]);
     const assignments = new Int32Array(pixels.length);
+    k = effectiveK;
 
     for (let iter = 0; iter < iters; iter++) {
         // assign
@@ -74,6 +86,9 @@ function kmeans(pixels: number[][], k: number, iters = 8): Swatch[] {
             const r = Math.round(c[0]), g = Math.round(c[1]), b = Math.round(c[2]);
             return { hex: rgbToHex(r, g, b), rgb: [r, g, b] as [number, number, number], hsl: rgbToHsl(r, g, b), count: counts[i] };
         })
+        // A cluster that won no pixels is a seeding artefact, not a colour in
+        // the image — emitting it would show a duplicate swatch with count 0.
+        .filter((s) => s.count > 0)
         .sort((a, b) => b.count - a.count);
 }
 
@@ -198,7 +213,7 @@ export default function ColorPaletteExtractorPage() {
                                                     <div>hsl({s.hsl[0]}, {s.hsl[1]}%, {s.hsl[2]}%)</div>
                                                 </div>
                                                 <Tag>{pct.toFixed(1)}%</Tag>
-                                                <Button size="small" icon={<CopyOutlined />} onClick={async () => { await copyToClipboard(s.hex); message.success(`${s.hex} copied`); }} />
+                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={async () => { await copyToClipboard(s.hex); message.success(`${s.hex} copied`); }} />
                                             </div>
                                         );
                                     })}

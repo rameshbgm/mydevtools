@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, InputNumber, Switch, Select } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, InputNumber, Switch, Select } from "antd";
 import { FormatPainterOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import { copyToClipboard } from "@/lib/clipboard";
 import beautify from "js-beautify";
 
 const beautifyCss = (beautify as unknown as { css: (input: string, opts?: Record<string, unknown>) => string }).css;
@@ -46,15 +47,9 @@ export default function CssFormatterPage() {
             .trim();
     }, [input]);
 
-    const copyFormatted = () => {
-        navigator.clipboard.writeText(formatted);
-        message.success("Formatted CSS copied!");
-    };
+    const copyFormatted = () => copyToClipboard(formatted, "Formatted CSS copied!");
 
-    const copyMinified = () => {
-        navigator.clipboard.writeText(minified);
-        message.success("Minified CSS copied!");
-    };
+    const copyMinified = () => copyToClipboard(minified, "Minified CSS copied!");
 
     const stats = useMemo(() => {
         const selectors = (input.match(/[^{}]+(?=\{)/g) || []).length;

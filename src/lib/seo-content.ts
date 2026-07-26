@@ -16,9 +16,9 @@ export interface ToolSeoContent {
 
 export const SITE_NAME = "mydevtools";
 export const SITE_URL = "https://mydevtools.com";
-export const SITE_TAGLINE = "Free Online Developer Tools: 100% Client-Side";
+export const SITE_TAGLINE = "Free Online Developer Tools — Client-Side by Default";
 export const SITE_DESCRIPTION =
-    "Free, fast, privacy-first developer tools that run entirely in your browser. Format, validate, convert, encode, decode, generate and inspect: no signup, no upload, no tracking.";
+    "Free, fast, privacy-first developer tools that run entirely in your browser. Format, validate, convert, encode, decode, generate and inspect: no signup, no tracking — your data stays in your browser unless a tool explicitly says otherwise.";
 
 export const SEO_CONTENT: Record<string, ToolSeoContent> = {
     // ===== Formatters =====
@@ -891,6 +891,21 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "online password generator",
         ],
     },
+    "credit-card-generator": {
+        title: "Credit Card Generator — Luhn-Valid Test Card Numbers, Free",
+        description:
+            "Generate valid test credit card numbers for Visa, Mastercard, Amex, Discover, JCB, UnionPay, RuPay and more — with CVV, expiry and card-style preview. Runs fully in your browser.",
+        keywords: [
+            "credit card generator",
+            "test credit card numbers",
+            "fake credit card generator",
+            "luhn valid card generator",
+            "visa test card number",
+            "mastercard test card number",
+            "amex test card number",
+            "dummy credit card generator",
+        ],
+    },
     "lorem-ipsum": {
         title: "Lorem Ipsum Generator — Placeholder Text in Words, Sentences",
         description:
@@ -1099,47 +1114,24 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
         ],
     },
 
-    // ===== Retired AI tools (pages kept for SEO, not in registry) =====
     "rag-search": {
-        title: "RAG Document Q&A — Ask Questions on Your Docs (AI Alpha)",
+        title: "Semantic Search Playground — Real Embedding Search in Your Browser",
         description:
-            "Upload documents and ask natural-language questions powered by Retrieval Augmented Generation. AI-driven document search and Q&A. Alpha.",
+            "Search your own text by meaning, not keywords, using real sentence embeddings (all-MiniLM-L6-v2) computed entirely in your browser via WebGPU/WASM. No server, no API key.",
         keywords: [
-            "rag document qa",
-            "ai document search",
-            "retrieval augmented generation",
-            "ask questions on documents",
-            "ai document qa tool",
-            "llm document search",
-            "rag online tool",
+            "semantic search",
+            "embedding search online",
+            "vector search browser",
+            "all-minilm embeddings",
+            "rag playground",
+            "cosine similarity search",
+            "webgpu embeddings",
+            "local semantic search",
         ],
-    },
-    "text-summarizer": {
-        title: "AI Text Summarizer — Summarize Long Text into Key Points",
-        description:
-            "Summarize long articles, papers and notes into concise key points using AI. TL;DR generator with adjustable length. Alpha — may change without notice.",
-        keywords: [
-            "ai text summarizer",
-            "tldr generator",
-            "summarize text online",
-            "ai article summarizer",
-            "long text summarizer",
-            "automatic summarizer",
-            "ai summary tool",
-        ],
-    },
-    "code-explainer": {
-        title: "AI Code Explainer — Explain Code Snippets in Any Language",
-        description:
-            "Paste code in any language and get plain-English explanations powered by AI. Understand legacy code, learn new languages, debug faster. Alpha.",
-        keywords: [
-            "ai code explainer",
-            "code explanation tool",
-            "explain code online",
-            "ai code understanding",
-            "code to english",
-            "legacy code explainer",
-            "ai programming helper",
+        faq: [
+            { q: "Does this send my documents to a server?", a: "No. The only network request this tool makes is a one-time download of the embedding model's weights (~25 MB) from the Hugging Face CDN, cached by your browser afterward. Your documents and queries are embedded locally and never leave your browser." },
+            { q: "How is this different from keyword search?", a: "Keyword search only matches literal word overlap. This tool converts text into numeric embeddings that capture meaning, so a query like \"car\" can match a chunk that only says \"automobile\" — something substring matching can't do." },
+            { q: "Why does the model take a moment to load?", a: "The first time you click \"Load model\", ~25 MB of ONNX model weights download from the Hugging Face CDN. Subsequent visits reuse the browser's cache, so loading is much faster after the first use." },
         ],
     },
 
@@ -1189,6 +1181,36 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "iana port numbers",
         ],
     },
+    "model-pricing-reference": {
+        title: "LLM Model & Pricing Comparison — Claude, GPT, Gemini, Llama, Mistral",
+        description:
+            "Compare context windows, max output tokens, and per-million-token pricing across Anthropic, OpenAI, Google, Meta, and Mistral models. Free, no signup.",
+        keywords: [
+            "llm pricing comparison",
+            "ai model pricing",
+            "claude pricing",
+            "gpt pricing",
+            "gemini pricing",
+            "llm cost calculator",
+            "context window comparison",
+            "ai api pricing",
+            "llm token pricing",
+        ],
+        faq: [
+            {
+                q: "How often is this pricing updated?",
+                a: "Prices are checked periodically and the table shows a \"last verified\" date. LLM pricing changes frequently — click a model name to open the provider's own pricing page and confirm the current rate before budgeting.",
+            },
+            {
+                q: "What does \"cached input\" pricing mean?",
+                a: "Several providers offer a discounted rate for input tokens that match a recently-sent prompt prefix (prompt caching). It can cut input costs by up to 90% for workloads that repeat the same system prompt or context across requests.",
+            },
+            {
+                q: "Why do some models show a higher price above a certain context length?",
+                a: "Some providers (e.g. Google's Gemini Pro tier) charge a higher per-token rate once a request exceeds a threshold like 200K tokens. This table shows the standard, lower tier — check the provider's page for the long-context rate.",
+            },
+        ],
+    },
     "ip-ranges-reference": {
         title: "IP Ranges Reference — Private, Reserved & Special-Use IPs",
         description:
@@ -1235,6 +1257,40 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "online yaml editor",
             "kubernetes yaml formatter",
             "docker compose yaml",
+        ],
+    },
+    "mermaid-formatter": {
+        title: "Mermaid Diagram Formatter & Viewer — Format and Preview Diagrams Online",
+        description:
+            "Format, validate and beautify Mermaid diagrams online. Custom indentation, syntax highlighting, and live preview. Free diagram formatter with real-time rendering.",
+        keywords: [
+            "mermaid formatter",
+            "mermaid diagram editor",
+            "mermaid preview",
+            "mermaid diagram formater online",
+            "mermaid linter",
+            "flowchart formatter",
+            "sequence diagram",
+            "online mermaid editor",
+            "mermaid validator",
+            "mermaid graph builder",
+        ],
+    },
+    "mermaid-viewer": {
+        title: "Mermaid Diagram Viewer — Render Mermaid Diagrams Online",
+        description:
+            "Render and preview Mermaid diagrams online with live editing, theme switching, and SVG export. Free Mermaid viewer for flowcharts, sequence diagrams, and more.",
+        keywords: [
+            "mermaid viewer",
+            "mermaid renderer",
+            "mermaid diagram preview",
+            "mermaid to svg",
+            "online mermaid viewer",
+            "flowchart viewer",
+            "sequence diagram viewer",
+            "mermaid svg export",
+            "mermaid theme",
+            "mermaid live preview",
         ],
     },
     "email-validator": {
@@ -1412,6 +1468,66 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
         faq: [
             { q: "What is the A2A (Agent-to-Agent) protocol?", a: "A2A is an open protocol for AI agents to communicate with each other. Agents expose an agent-card.json describing their capabilities and skills, then accept JSON-RPC 2.0 messages via message/send and message/stream endpoints." },
             { q: "What does the compliance checker verify?", a: "The compliance checker validates that the agent card contains all required fields (name, description, version, capabilities) and checks that skills have proper ids and descriptions per the A2A spec." },
+        ],
+    },
+    "token-counter": {
+        title: "LLM Token Counter — Count Tokens & Estimate Context Window Usage",
+        description:
+            "Count tokens for GPT, Claude, and open models. Exact BPE counts for OpenAI models, labeled estimates for Claude/Llama. Free, runs entirely in your browser.",
+        keywords: [
+            "llm token counter",
+            "gpt token counter",
+            "claude token counter",
+            "tokenizer online",
+            "context window calculator",
+            "token estimator",
+            "bpe tokenizer",
+            "ai prompt token count",
+        ],
+        faq: [
+            { q: "Is the token count exact or an estimate?", a: "For GPT models it's exact — this tool uses gpt-tokenizer, which implements the same byte-pair-encoding algorithm OpenAI uses server-side. For Claude and open models (Llama, Mistral) it's a labeled estimate, since those tokenizers aren't publicly available." },
+            { q: "Does my text get sent anywhere?", a: "No. Tokenization runs entirely in your browser using a local BPE table. Nothing you type is transmitted to any server." },
+            { q: "Why does the same text have a different token count for different models?", a: "Each model family uses its own vocabulary and merge rules. GPT-4o's o200k_base encoding, GPT-4's cl100k_base, and Claude's tokenizer all split text into different token boundaries, so the same sentence can cost a different number of tokens depending on the model." },
+        ],
+    },
+    "jsonl-validator": {
+        title: "Fine-Tuning Dataset Validator — Check JSONL Files for OpenAI & Anthropic",
+        description:
+            "Validate JSONL fine-tuning datasets against OpenAI or Anthropic message schemas, with per-line token counts. Runs entirely in your browser — no upload.",
+        keywords: [
+            "jsonl validator",
+            "fine-tuning dataset validator",
+            "openai fine-tuning format",
+            "anthropic fine-tuning format",
+            "jsonl schema check",
+            "training data validator",
+            "chat fine-tuning jsonl",
+            "llm dataset checker",
+        ],
+        faq: [
+            { q: "Does this tool upload my dataset anywhere?", a: "No. The file is read and validated entirely in your browser using the File API. Nothing is sent to a server — this is deliberate, since fine-tuning datasets often contain sensitive or proprietary examples." },
+            { q: "What's the difference between the OpenAI and Anthropic schemas?", a: "OpenAI expects a top-level \"messages\" array where an optional system message comes first and the last message must have role \"assistant\". Anthropic nests messages under a \"messages\" array with an optional separate \"system\" field, and requires the array to start with \"user\" and strictly alternate user/assistant." },
+            { q: "Why does a line fail even though the JSON is valid?", a: "This tool checks two things: that each line parses as JSON, and that the parsed object matches the target provider's chat schema (required fields, role ordering, alternation). A line can be valid JSON but still violate the schema — e.g. ending on a user message instead of assistant." },
+        ],
+    },
+    "agent-manifest-generator": {
+        title: "Agent Card & MCP Manifest Generator — A2A and MCP Config Builder",
+        description:
+            "Build a valid A2A agent-card.json or MCP server config with live validation, then test it directly in the A2A or MCP Inspector. Free, no signup.",
+        keywords: [
+            "a2a agent card generator",
+            "agent card json",
+            "mcp server config",
+            "mcpservers json",
+            "a2a manifest builder",
+            "mcp json generator",
+            "ai agent config",
+            "model context protocol config",
+        ],
+        faq: [
+            { q: "What is an A2A agent card?", a: "An agent-card.json is a JSON document an A2A (Agent-to-Agent) server publishes, typically at /.well-known/agent-card.json, describing its name, endpoint URL, capabilities, and the skills it supports. Other agents fetch it to learn how to talk to your agent." },
+            { q: "What is the MCP server config used for?", a: "MCP (Model Context Protocol) clients like Claude Desktop and Claude Code read a JSON config with an mcpServers object to know which MCP servers to launch (stdio, via command + args) or connect to (HTTP/SSE, via URL), plus any environment variables the server needs." },
+            { q: "Can I test the generated manifest immediately?", a: "Yes — use the Send To button on the preview to forward the generated JSON straight into this site's A2A Inspector or MCP Inspector tool." },
         ],
     },
 

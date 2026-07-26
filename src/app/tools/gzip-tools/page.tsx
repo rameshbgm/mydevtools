@@ -5,6 +5,7 @@ import { Card, Input, Typography, Row, Col, Button, Space, Segmented, Statistic,
 import { messageService as message } from "@/lib/messageService";
 import { CompressOutlined, CopyOutlined, SwapOutlined, ExpandAltOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -117,10 +118,7 @@ export default function GzipToolsPage() {
         }
     };
 
-    const copyOutput = () => {
-        navigator.clipboard.writeText(output);
-        message.success("Copied to clipboard!");
-    };
+    const copyOutput = () => copyToClipboard(output, "Copied to clipboard!");
 
     const swapContent = () => {
         setInput(output);

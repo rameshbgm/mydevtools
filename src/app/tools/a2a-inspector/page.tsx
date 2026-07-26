@@ -19,6 +19,8 @@ import { useAppStore } from "@/lib/store";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SslConfigSection, { DEFAULT_SSL_CONFIG, buildSslProxyFields, type SslConfig } from "@/components/SslConfigSection";
+import { copyToClipboard } from "@/lib/clipboard";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -1135,6 +1137,24 @@ export default function A2aInspectorPage() {
                 ],
             }}
         >
+            <ToolBridgeBanner
+                accepts={["json"]}
+                onAccept={(p) => {
+                    try {
+                        const parsed = JSON.parse(p.data);
+                        if (!parsed || typeof parsed !== "object" || typeof parsed.name !== "string" || typeof parsed.url !== "string") {
+                            message.error("Payload doesn't look like an agent card (missing name/url)");
+                            return;
+                        }
+                        setAgentCard(parsed);
+                        if (typeof parsed.url === "string") setAgentUrl(parsed.url.replace(/\/$/, "").replace(/\/(a2a)?$/, "") || parsed.url);
+                        message.success("Agent card loaded — skills and capabilities are populated below without fetching");
+                    } catch {
+                        message.error("Payload isn't valid JSON");
+                    }
+                }}
+            />
+
             {/* URL bar + protocol */}
             <Card size="small" style={{ marginBottom: 12 }}>
                 <Row gutter={[8, 8]} align="middle">
@@ -1220,7 +1240,7 @@ export default function A2aInspectorPage() {
                 {cardError && (
                     <Alert
                         type="error"
-                        message={cardError}
+                        title={cardError}
                         showIcon
                         closable
                         onClose={() => setCardError("")}
@@ -1234,7 +1254,7 @@ export default function A2aInspectorPage() {
                         closable
                         onClose={() => setDiagnosticResult(null)}
                         style={{ marginTop: 8 }}
-                        message={
+                        title={
                             <Space>
                                 <Text strong>Connection Diagnostic</Text>
                                 {diagnosticResult.crossOrigin
@@ -1327,7 +1347,7 @@ export default function A2aInspectorPage() {
                                                 <Alert
                                                     type="info"
                                                     showIcon
-                                                    message="SSL options auto-route through /api/proxy"
+                                                    title="SSL options auto-route through /api/proxy"
                                                     description="When any SSL option is set, requests are sent server-side regardless of Connection Type. Streaming is still supported (chunks are piped back via /api/proxy-stream) with your SSL/TLS configuration applied server-side."
                                                     style={{ fontSize: 12 }}
                                                 />
@@ -1516,10 +1536,10 @@ export default function A2aInspectorPage() {
                                         size="small"
                                         title="Raw card JSON"
                                         extra={
-                                            <Button
+                                            <Button aria-label="Copy"
                                                 size="small"
                                                 icon={<CopyOutlined />}
-                                                onClick={() => { navigator.clipboard.writeText(cardJson); message.success("Copied!"); }}
+                                                onClick={() => copyToClipboard(cardJson)}
                                             />
                                         }
                                     >
@@ -1720,7 +1740,7 @@ export default function A2aInspectorPage() {
                                     <Alert
                                         type="info"
                                         showIcon
-                                        message="Task IDs are returned by message/send (current spec) or from the chat tab's response"
+                                        title="Task IDs are returned by message/send (current spec) or from the chat tab's response"
                                         style={{ fontSize: 12 }}
                                     />
                                     <Space.Compact style={{ width: "100%" }}>
@@ -1812,10 +1832,10 @@ export default function A2aInspectorPage() {
                                                             {new Date(entry.ts).toLocaleTimeString()}
                                                         </Text>
                                                         <Tooltip title="Copy">
-                                                            <Button
+                                                            <Button aria-label="Copy"
                                                                 size="small" type="text" icon={<CopyOutlined />}
                                                                 style={{ padding: "0 4px" }}
-                                                                onClick={() => { navigator.clipboard.writeText(payloadStr); message.success("Copied!"); }}
+                                                                onClick={() => copyToClipboard(payloadStr)}
                                                             />
                                                         </Tooltip>
                                                     </div>
@@ -1865,7 +1885,7 @@ function AuthPanel({ value, onChange, card }: AuthPanelProps) {
                     type="info"
                     showIcon
                     icon={<LockOutlined />}
-                    message="Agent declares the following security schemes"
+                    title="Agent declares the following security schemes"
                     description={securityHints.join(" · ")}
                     style={{ fontSize: 12 }}
                 />
@@ -1944,7 +1964,7 @@ function AuthPanel({ value, onChange, card }: AuthPanelProps) {
                     <Alert
                         type="warning"
                         showIcon
-                        message="Browser-side OAuth 2.0 flows require server support."
+                        title="Browser-side OAuth 2.0 flows require server support."
                         description="Paste a pre-obtained access token below — it will be sent as 'Authorization: <tokenType> <accessToken>'."
                         style={{ marginBottom: 12, fontSize: 12 }}
                     />
@@ -2011,7 +2031,7 @@ function HeadersPanel({ headers, mode, json, onModeChange, onAdd, onUpdate, onRe
                                 onChange={e => onUpdate(h.id, { value: e.target.value })}
                                 style={{ flex: 1 }}
                             />
-                            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => onRemove(h.id)} />
+                            <Button aria-label="Delete" type="text" danger icon={<DeleteOutlined />} onClick={() => onRemove(h.id)} />
                         </Space>
                     ))}
                     <Button type="dashed" icon={<PlusOutlined />} onClick={onAdd} block>
@@ -2077,7 +2097,7 @@ function ChatPanel({
             }
         >
             {streamingNotice && (
-                <Alert type="warning" showIcon message={streamingNotice} style={{ marginBottom: 8, fontSize: 12 }} />
+                <Alert type="warning" showIcon title={streamingNotice} style={{ marginBottom: 8, fontSize: 12 }} />
             )}
             <div style={{ height: 420, overflowY: "auto", padding: "8px 0", marginBottom: 12 }}>
                 {messages.length === 0 && (

@@ -464,7 +464,7 @@ export default function XsdValidatorPage() {
                         {xsdParseError && (
                             <Alert
                                 type="error"
-                                message="XSD Parse Error"
+                                title="XSD Parse Error"
                                 description={xsdParseError}
                                 showIcon
                                 style={{ marginTop: 12 }}
@@ -605,7 +605,7 @@ export default function XsdValidatorPage() {
                                 {validationErrors.length === 0 ? (
                                     <Alert
                                         type="success"
-                                        message="Validation Successful"
+                                        title="Validation Successful"
                                         description="The XML document is valid according to the XSD schema."
                                         showIcon
                                     />
@@ -644,7 +644,7 @@ export default function XsdValidatorPage() {
                         {!parsedXsd && !validated && (
                             <Alert
                                 type="info"
-                                message="Parse XSD First"
+                                title="Parse XSD First"
                                 description="Please parse the XSD schema before validating XML documents."
                                 showIcon
                                 style={{ marginTop: 16 }}

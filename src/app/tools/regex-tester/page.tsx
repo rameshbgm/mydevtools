@@ -5,14 +5,27 @@ import { Card, Input, Tag, Typography, Space, Alert, Button, Tooltip } from "ant
 import { SearchOutlined, CopyOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import SendToButton from "@/components/SendToButton";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { TextArea } = Input;
 const { Text } = Typography;
+
+interface ShareState { pattern: string; flags: string; testStr: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "regex-tester", version: 1 };
 
 export default function RegexTesterPage() {
     const [pattern, setPattern] = useState("(\\w+)@(\\w+\\.\\w+)");
     const [flags, setFlags] = useState("gi");
     const [testStr, setTestStr] = useState("Contact us at hello@example.com or support@devtools.io for help.");
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setPattern(s.pattern);
+        setFlags(s.flags);
+        setTestStr(s.testStr);
+    });
 
     const { matches, error } = useMemo(() => {
         try {
@@ -59,6 +72,13 @@ export default function RegexTesterPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner accepts={["text"]} onAccept={(p) => setTestStr(p.data)} />
+
+            <Space style={{ marginBottom: 16 }} wrap>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ pattern, flags, testStr })} size="middle" />
+                <SendToButton data={testStr} kind="text" sourceToolId="regex-tester" size="middle" />
+            </Space>
+
             <div className="tool-split-pane" style={{ gap: 16 }}>
                 <div>
                     <Card
@@ -67,7 +87,7 @@ export default function RegexTesterPage() {
                         style={{ marginBottom: 12 }}
                         extra={
                             <Tooltip title="Copy pattern">
-                                <Button size="small" icon={<CopyOutlined />} onClick={copyPattern} />
+                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={copyPattern} />
                             </Tooltip>
                         }
                     >
@@ -92,7 +112,7 @@ export default function RegexTesterPage() {
                         title="Test String"
                         extra={
                             <Tooltip title="Copy test string">
-                                <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(testStr, "Test string copied!")} />
+                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(testStr, "Test string copied!")} />
                             </Tooltip>
                         }
                     >
@@ -130,7 +150,7 @@ export default function RegexTesterPage() {
                                         <Text type="secondary" style={{ marginLeft: 8 }}>index: {m.index}</Text>
                                     </div>
                                     <Tooltip title="Copy match">
-                                        <Button size="small" type="text" icon={<CopyOutlined />} onClick={() => copyToClipboard(m[0])} />
+                                        <Button aria-label="Copy" size="small" type="text" icon={<CopyOutlined />} onClick={() => copyToClipboard(m[0])} />
                                     </Tooltip>
                                 </div>
                                 {m.length > 1 && (

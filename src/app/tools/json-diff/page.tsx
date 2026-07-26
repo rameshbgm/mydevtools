@@ -5,11 +5,22 @@ import { Button, Space, message, Card } from "antd";
 import { DiffOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor, CodeDiff } from "@/components/CodeEditor";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
+
+interface ShareState { left: string; right: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "json-diff", version: 1 };
 
 export default function JsonDiffPage() {
     const [left, setLeft] = useState(`{\n  "name": "John",\n  "age": 30,\n  "city": "New York"\n}`);
     const [right, setRight] = useState(`{\n  "name": "Jane",\n  "age": 25,\n  "city": "New York",\n  "country": "US"\n}`);
     const [showDiff, setShowDiff] = useState(false);
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setLeft(s.left);
+        setRight(s.right);
+    });
 
     return (
         <ToolPageLayout
@@ -40,6 +51,8 @@ export default function JsonDiffPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner accepts={["json", "text"]} onAccept={(p) => setLeft(p.data)} />
+
             <Space style={{ marginBottom: 16 }}>
                 <Button type="primary" icon={<DiffOutlined />} onClick={() => setShowDiff(true)}>
                     Compare
@@ -47,6 +60,7 @@ export default function JsonDiffPage() {
                 <Button icon={<ClearOutlined />} onClick={() => { setLeft(""); setRight(""); setShowDiff(false); }}>
                     Clear
                 </Button>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ left, right })} size="middle" />
             </Space>
 
             {!showDiff ? (

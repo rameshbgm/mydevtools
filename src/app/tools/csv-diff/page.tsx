@@ -5,6 +5,9 @@ import { Card, Typography, Input, Row, Col, Select, Tag, Empty, Space, App } fro
 import { FileExcelOutlined, CopyOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -103,11 +106,20 @@ const SAMPLE_RIGHT = `id,name,email,role
 2,Bob,bob.new@example.com,user
 4,Dan,dan@example.com,user`;
 
+interface ShareState { leftText: string; rightText: string; keyCol: number; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "csv-diff", version: 1 };
+
 export default function CsvDiffPage() {
     const { message } = App.useApp();
     const [leftText, setLeftText] = useState(SAMPLE_LEFT);
     const [rightText, setRightText] = useState(SAMPLE_RIGHT);
     const [keyCol, setKeyCol] = useState(0);
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setLeftText(s.leftText);
+        setRightText(s.rightText);
+        setKeyCol(s.keyCol);
+    });
 
     const parsedLeft = useMemo(() => parseCsv(leftText), [leftText]);
     const parsedRight = useMemo(() => parseCsv(rightText), [rightText]);
@@ -167,6 +179,8 @@ export default function CsvDiffPage() {
                 ],
             }}
         >
+            <ToolBridgeBanner accepts={["csv", "text"]} onAccept={(p) => setLeftText(p.data)} />
+
             <Row gutter={[16, 16]}>
                 <Col xs={24} md={12}>
                     <Card size="small" title={<><Text strong>Left</Text> <Tag style={{ marginLeft: 8 }}>{parsedLeft.rows.length} rows</Tag></>}>
@@ -209,6 +223,7 @@ export default function CsvDiffPage() {
                             <Tag key={s} color={STATUS_COLOR[s]}>{s}: {counts[s]}</Tag>
                         ))}
                         <a onClick={copyReport}><CopyOutlined /> Copy report</a>
+                        <ShareButton schema={SHARE_SCHEMA} getState={() => ({ leftText, rightText, keyCol })} size="middle" />
                     </Space>
                 </Space>
             </Card>

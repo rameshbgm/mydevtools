@@ -39,9 +39,9 @@ import {
     listPemBlocks,
     formatDN,
     parseCSR,
-    downloadBytes,
     type ParsedCertificate,
 } from "@/lib/cert-utils";
+import { downloadBytes, downloadText } from "@/lib/download";
 import forge from "node-forge";
 
 const { TextArea } = Input;
@@ -142,7 +142,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
         <div>
             {info.isExpired && (
                 <Alert
-                    message="This certificate is EXPIRED"
+                    title="This certificate is EXPIRED"
                     type="error"
                     icon={<CloseCircleOutlined />}
                     showIcon
@@ -151,7 +151,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
             )}
             {!info.isExpired && info.daysUntilExpiry < 30 && (
                 <Alert
-                    message={`Expires in ${info.daysUntilExpiry} days`}
+                    title={`Expires in ${info.daysUntilExpiry} days`}
                     type="warning"
                     icon={<WarningOutlined />}
                     showIcon
@@ -160,7 +160,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
             )}
             {!info.isExpired && info.daysUntilExpiry >= 30 && (
                 <Alert
-                    message={`Valid (${info.daysUntilExpiry} days remaining)`}
+                    title={`Valid (${info.daysUntilExpiry} days remaining)`}
                     type="success"
                     icon={<CheckCircleOutlined />}
                     showIcon
@@ -509,7 +509,7 @@ function FingerprintTab({ input }: { input: string }) {
                                 <Text code style={{ fontSize: 11, wordBreak: "break-all", flex: 1 }}>
                                     {fps.sha256}
                                 </Text>
-                                <Button
+                                <Button aria-label="Copy"
                                     size="small"
                                     icon={<CopyOutlined />}
                                     onClick={() => copy(fps.sha256, "SHA-256 copied")}
@@ -529,7 +529,7 @@ function FingerprintTab({ input }: { input: string }) {
                                 <Text code style={{ fontSize: 11, wordBreak: "break-all", flex: 1 }}>
                                     {fps.sha1}
                                 </Text>
-                                <Button
+                                <Button aria-label="Copy"
                                     size="small"
                                     icon={<CopyOutlined />}
                                     onClick={() => copy(fps.sha1, "SHA-1 copied")}
@@ -555,7 +555,7 @@ function FingerprintTab({ input }: { input: string }) {
                                 <Text code style={{ fontSize: 11, wordBreak: "break-all", flex: 1 }}>
                                     {fps.md5}
                                 </Text>
-                                <Button
+                                <Button aria-label="Copy"
                                     size="small"
                                     icon={<CopyOutlined />}
                                     onClick={() => copy(fps.md5, "MD5 copied")}
@@ -623,7 +623,7 @@ function ConvertTab({ input }: { input: string }) {
             downloadBytes(downloadBytesOut, `${name}.der`, "application/x-x509-ca-cert");
         } else if (output) {
             const ext = target === "pem" ? "pem" : "txt";
-            downloadBytes(new TextEncoder().encode(output), `${name}.${ext}`, "application/x-pem-file");
+            downloadText(output, `${name}.${ext}`, "application/x-pem-file");
         }
     };
 
@@ -648,7 +648,7 @@ function ConvertTab({ input }: { input: string }) {
             {info && (
                 <Alert
                     type={info.isExpired ? "warning" : "info"}
-                    message={
+                    title={
                         <Space wrap>
                             <Tag color="success">{info.subject.CN ?? "?"}</Tag>
                             <Tag>

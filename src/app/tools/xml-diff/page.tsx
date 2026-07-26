@@ -5,11 +5,22 @@ import { Button, Space, Card } from "antd";
 import { DiffOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor, CodeDiff } from "@/components/CodeEditor";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
+
+interface ShareState { left: string; right: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "xml-diff", version: 1 };
 
 export default function XmlDiffPage() {
     const [left, setLeft] = useState(`<?xml version="1.0"?>\n<catalog>\n  <book id="1">\n    <title>Old Title</title>\n    <price>10.00</price>\n  </book>\n</catalog>`);
     const [right, setRight] = useState(`<?xml version="1.0"?>\n<catalog>\n  <book id="1">\n    <title>New Title</title>\n    <price>12.50</price>\n  </book>\n  <book id="2">\n    <title>Extra Book</title>\n  </book>\n</catalog>`);
     const [showDiff, setShowDiff] = useState(false);
+
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setLeft(s.left);
+        setRight(s.right);
+    });
 
     return (
         <ToolPageLayout
@@ -40,9 +51,12 @@ export default function XmlDiffPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner accepts={["xml", "text"]} onAccept={(p) => setLeft(p.data)} />
+
             <Space style={{ marginBottom: 16 }}>
                 <Button type="primary" icon={<DiffOutlined />} onClick={() => setShowDiff(true)}>Compare</Button>
                 <Button icon={<ClearOutlined />} onClick={() => { setLeft(""); setRight(""); setShowDiff(false); }}>Clear</Button>
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ left, right })} size="middle" />
             </Space>
 
             {!showDiff ? (

@@ -858,17 +858,3 @@ export function createPkcs12(opts: {
     const p12Der = forge.asn1.toDer(p12Asn1).getBytes();
     return new Uint8Array(forge.util.binary.raw.decode(p12Der));
 }
-
-// ─── Download helper ──────────────────────────────────────────────────────────
-
-export function downloadBytes(bytes: Uint8Array, filename: string, mime = "application/octet-stream") {
-    const blob = new Blob([new Uint8Array(bytes)], { type: mime });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}

@@ -25,6 +25,7 @@ import {
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import { copyToClipboard } from "@/lib/clipboard";
+import { downloadText } from "@/lib/download";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -707,13 +708,8 @@ export default function JavaPojoGeneratorPage() {
         const content = options.outputMode === "multiple-files" && outputFiles.size > 1
             ? [...outputFiles.entries()].map(([n, c]) => `// ═══ ${n}.java ═══\n\n${c}`).join("\n\n")
             : output;
-        const blob = new Blob([content], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = outputFiles.size === 1 ? `${[...outputFiles.keys()][0]}.java` : "generated.java";
-        a.click();
-        URL.revokeObjectURL(url);
+        const filename = outputFiles.size === 1 ? `${[...outputFiles.keys()][0]}.java` : "generated.java";
+        downloadText(content, filename, "text/plain");
     }, [output, outputFiles, options.outputMode]);
 
     const toJavaOpts = useMemo(() => (

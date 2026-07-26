@@ -11,6 +11,8 @@ import {
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
 import { showErrorModal } from "@/lib/errorModal";
+import { downloadText } from "@/lib/download";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { TextArea } = Input;
 const { Text, Title } = Typography;
@@ -172,20 +174,7 @@ export default function JWKGeneratorPage() {
         }
     }, [keyType, keyUse, rsaKeySize, ecCurve, symmetricKeySize, keyId]);
 
-    const copyToClipboard = (text: string, label: string) => {
-        navigator.clipboard.writeText(text);
-        message.success(`${label} copied to clipboard!`);
-    };
-
-    const downloadJwk = (content: string, filename: string) => {
-        const blob = new Blob([content], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    const downloadJwk = (content: string, filename: string) => downloadText(content, filename, "application/json");
 
     const collapseItems = [
         ...(publicJwk ? [{
@@ -199,7 +188,7 @@ export default function JWKGeneratorPage() {
             children: (
                 <div>
                     <div style={{ marginBottom: 8, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                        <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(publicJwk, "Public JWK")}>
+                        <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(publicJwk, "Public JWK copied!")}>
                             Copy
                         </Button>
                         <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadJwk(publicJwk, "public-key.jwk")}>
@@ -226,7 +215,7 @@ export default function JWKGeneratorPage() {
             children: (
                 <div>
                     <div style={{ marginBottom: 8, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                        <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(privateJwk, "Private JWK")}>
+                        <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(privateJwk, "Private JWK copied!")}>
                             Copy
                         </Button>
                         <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadJwk(privateJwk, "private-key.jwk")}>
@@ -253,7 +242,7 @@ export default function JWKGeneratorPage() {
             children: (
                 <div>
                     <div style={{ marginBottom: 8, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                        <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(jwkSet, "JWK Set")}>
+                        <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(jwkSet, "JWK Set copied!")}>
                             Copy
                         </Button>
                         <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadJwk(jwkSet, "jwks.json")}>

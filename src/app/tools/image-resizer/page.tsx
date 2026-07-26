@@ -347,7 +347,7 @@ export default function ImageResizerPage() {
                                                     style={{ width: "100%" }}
                                                 />
                                             </div>
-                                            <Button
+                                            <Button aria-label="Swap"
                                                 icon={<SwapOutlined />}
                                                 onClick={swapDimensions}
                                                 title="Swap width and height"

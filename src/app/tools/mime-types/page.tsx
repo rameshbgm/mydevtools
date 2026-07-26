@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Table, Tag, Space, Button, message } from "antd";
+import { Card, Input, Typography, Row, Col, Table, Tag, Space, Button } from "antd";
 import { OrderedListOutlined, SearchOutlined, CopyOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text } = Typography;
 
@@ -136,10 +137,7 @@ export default function MimeTypesPage() {
         return Array.from(cats);
     }, []);
 
-    const copyType = (type: string) => {
-        navigator.clipboard.writeText(type);
-        message.success("MIME type copied!");
-    };
+    const copyType = (type: string) => copyToClipboard(type, "MIME type copied!");
 
     return (
         <ToolPageLayout
@@ -219,7 +217,7 @@ export default function MimeTypesPage() {
                                     render: (type) => (
                                         <Space>
                                             <Text code style={{ fontSize: 12 }}>{type}</Text>
-                                            <Button
+                                            <Button aria-label="Copy"
                                                 size="small"
                                                 type="text"
                                                 icon={<CopyOutlined />}

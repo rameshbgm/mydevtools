@@ -20,6 +20,8 @@ import SslConfigSection, { DEFAULT_SSL_CONFIG, buildSslProxyFields, type SslConf
 import { substitute, buildVariableMap, type Environment } from "@/lib/api-builder/variables";
 import { parseCurl } from "@/lib/api-builder/curl-import";
 import { parsePostmanCollection, exportPostmanCollection } from "@/lib/api-builder/postman-collection";
+import { downloadText, downloadBytes } from "@/lib/download";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -825,13 +827,7 @@ export default function ApiRequestBuilderPage() {
                 bodyType: r.bodyType,
             })),
         });
-        const blob = new Blob([json], { type: "application/json" });
-        const u = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = u;
-        a.download = "mydevtools-collection.json";
-        a.click();
-        URL.revokeObjectURL(u);
+        downloadText(json, "mydevtools-collection.json", "application/json");
         message.success("Collection downloaded");
     };
 
@@ -839,28 +835,21 @@ export default function ApiRequestBuilderPage() {
     const downloadResponse = () => {
         if (response === null) return;
         const contentType = responseHeaders["content-type"] ?? "application/octet-stream";
-        let blob: Blob;
+        const ext = contentType.includes("json") ? "json" : contentType.includes("xml") ? "xml" : contentType.includes("html") ? "html" : "bin";
+        const filename = `response-${Date.now()}.${ext}`;
         if (responseIsBase64) {
             const bin = atob(response);
             const arr = new Uint8Array(bin.length);
             for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-            blob = new Blob([arr], { type: contentType });
+            downloadBytes(arr, filename, contentType);
         } else {
-            blob = new Blob([response], { type: contentType });
+            downloadText(response, filename, contentType);
         }
-        const u = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = u;
-        const ext = contentType.includes("json") ? "json" : contentType.includes("xml") ? "xml" : contentType.includes("html") ? "html" : "bin";
-        a.download = `response-${Date.now()}.${ext}`;
-        a.click();
-        URL.revokeObjectURL(u);
     };
 
     const copyResponse = () => {
         if (response === null) return;
-        navigator.clipboard.writeText(response);
-        message.success("Response copied");
+        copyToClipboard(response, "Response copied");
     };
 
     // ── cURL + code snippets ──────────────────────────────────────────
@@ -1050,7 +1039,7 @@ System.out.println(response.body());`;
                                     ]}
                                 />
                                 <Tooltip title="Manage environments">
-                                    <Button size="small" icon={<SettingOutlined />} onClick={openNewEnv} />
+                                    <Button aria-label="Settings" size="small" icon={<SettingOutlined />} onClick={openNewEnv} />
                                 </Tooltip>
                                 {activeEnv && (
                                     <Tag color="blue">{activeEnv.variables.filter((v) => v.enabled).length} vars</Tag>
@@ -1118,7 +1107,7 @@ System.out.println(response.body());`;
                             size="small"
                             tabBarExtraContent={
                                 <Tooltip title="Save Request">
-                                    <Button size="small" icon={<SaveOutlined />} onClick={() => setSaveModalOpen(true)} />
+                                    <Button aria-label="Save" size="small" icon={<SaveOutlined />} onClick={() => setSaveModalOpen(true)} />
                                 </Tooltip>
                             }
                             items={[
@@ -1185,7 +1174,7 @@ System.out.println(response.body());`;
                                                             <Switch checked={f.enabled} onChange={(v) => updateItem(setFormData, f.id, "enabled", v)} size="small" />
                                                             <Input value={f.key} onChange={(e) => updateItem(setFormData, f.id, "key", e.target.value)} placeholder="Key" style={{ width: 150 }} />
                                                             <Input value={f.value} onChange={(e) => updateItem(setFormData, f.id, "value", e.target.value)} placeholder="Value" style={{ flex: 1 }} />
-                                                            <Button icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setFormData, f.id)} />
+                                                            <Button aria-label="Delete" icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setFormData, f.id)} />
                                                         </Space>
                                                     ))}
                                                     <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setFormData)}>Add Field</Button>
@@ -1226,7 +1215,7 @@ System.out.println(response.body());`;
                                                                 ))}
                                                             </Select>
                                                             <Input value={h.value} onChange={(e) => updateItem(setHeaders, h.id, "value", e.target.value)} placeholder="Value" style={{ flex: 1, minWidth: 180 }} />
-                                                            <Button icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setHeaders, h.id)} />
+                                                            <Button aria-label="Delete" icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setHeaders, h.id)} />
                                                         </Space>
                                                     ))}
                                                     <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setHeaders)}>Add Header</Button>
@@ -1262,7 +1251,7 @@ System.out.println(response.body());`;
                                                     <Switch checked={p.enabled} onChange={(v) => updateItem(setQueryParams, p.id, "enabled", v)} size="small" />
                                                     <Input value={p.key} onChange={(e) => updateItem(setQueryParams, p.id, "key", e.target.value)} placeholder="Key" style={{ width: 150 }} />
                                                     <Input value={p.value} onChange={(e) => updateItem(setQueryParams, p.id, "value", e.target.value)} placeholder="Value" style={{ flex: 1 }} />
-                                                    <Button icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setQueryParams, p.id)} />
+                                                    <Button aria-label="Delete" icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setQueryParams, p.id)} />
                                                 </Space>
                                             ))}
                                             <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setQueryParams)}>Add Param</Button>
@@ -1328,7 +1317,7 @@ System.out.println(response.body());`;
                                                     <Switch checked={c.enabled} onChange={(v) => updateItem(setCookies, c.id, "enabled", v)} size="small" />
                                                     <Input value={c.key} onChange={(e) => updateItem(setCookies, c.id, "key", e.target.value)} placeholder="Name" style={{ width: 150 }} />
                                                     <Input value={c.value} onChange={(e) => updateItem(setCookies, c.id, "value", e.target.value)} placeholder="Value" style={{ flex: 1 }} />
-                                                    <Button icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setCookies, c.id)} />
+                                                    <Button aria-label="Delete" icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setCookies, c.id)} />
                                                 </Space>
                                             ))}
                                             <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setCookies)}>Add Cookie</Button>
@@ -1452,10 +1441,10 @@ System.out.println(response.body());`;
                             response && !responseError && (
                                 <Space>
                                     <Tooltip title="Copy">
-                                        <Button size="small" icon={<CopyOutlined />} onClick={copyResponse} />
+                                        <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={copyResponse} />
                                     </Tooltip>
                                     <Tooltip title="Download">
-                                        <Button size="small" icon={<DownloadOutlined />} onClick={downloadResponse} />
+                                        <Button aria-label="Download" size="small" icon={<DownloadOutlined />} onClick={downloadResponse} />
                                     </Tooltip>
                                 </Space>
                             )
@@ -1626,7 +1615,7 @@ System.out.println(response.body());`;
                                                 <Tag color={HTTP_METHODS.find((m) => m.value === req.method)?.color}>{req.method}</Tag>
                                                 <Text style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{req.name}</Text>
                                                 <Button size="small" type="text" onClick={() => loadRequest(req)}>Load</Button>
-                                                <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => deleteRequest(req.id)} />
+                                                <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => deleteRequest(req.id)} />
                                             </div>
                                         ))}
                                     </div>
@@ -1672,7 +1661,7 @@ System.out.println(response.body());`;
                                                 {env.id !== activeEnvId && (
                                                     <Button size="small" type="text" onClick={() => selectEnv(env.id)}>Use</Button>
                                                 )}
-                                                <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => deleteEnv(env.id)} />
+                                                <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => deleteEnv(env.id)} />
                                             </div>
                                         ))}
                                     </div>
@@ -1785,7 +1774,7 @@ System.out.println(response.body());`;
                                                 variables: editingEnv.variables.map((x, i) => i === idx ? { ...x, value: e.target.value } : x),
                                             })}
                                         />
-                                        <Button
+                                        <Button aria-label="Delete"
                                             icon={<DeleteOutlined />} danger size="small"
                                             onClick={() => setEditingEnv({
                                                 ...editingEnv,

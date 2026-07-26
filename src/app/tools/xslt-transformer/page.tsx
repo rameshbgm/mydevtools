@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, Alert } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, Alert } from "antd";
 import { SettingOutlined, CopyOutlined, ClearOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text, Paragraph } = Typography;
 
@@ -118,10 +119,7 @@ export default function XsltTransformerPage() {
         }
     };
 
-    const copyOutput = () => {
-        navigator.clipboard.writeText(output);
-        message.success("Output copied!");
-    };
+    const copyOutput = () => copyToClipboard(output, "Output copied!");
 
     return (
         <ToolPageLayout
@@ -213,7 +211,7 @@ export default function XsltTransformerPage() {
                         }
                     >
                         {error ? (
-                            <Alert type="error" message={error} showIcon />
+                            <Alert type="error" title={error} showIcon />
                         ) : output ? (
                             <CodeEditor
                                 value={output}

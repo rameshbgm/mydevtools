@@ -161,19 +161,19 @@ export default function MarkdownTablePage() {
                                         {table.alignments.map((align, i) => (
                                             <th key={`align-${i}`} style={{ padding: "8px 4px", borderBottom: "1px solid #eee" }}>
                                                 <Space size={4}>
-                                                    <Button
+                                                    <Button aria-label="Align left"
                                                         size="small"
                                                         type={align === "left" ? "primary" : "text"}
                                                         icon={<AlignLeftOutlined />}
                                                         onClick={() => updateAlignment(i, "left")}
                                                     />
-                                                    <Button
+                                                    <Button aria-label="Align center"
                                                         size="small"
                                                         type={align === "center" ? "primary" : "text"}
                                                         icon={<AlignCenterOutlined />}
                                                         onClick={() => updateAlignment(i, "center")}
                                                     />
-                                                    <Button
+                                                    <Button aria-label="Align right"
                                                         size="small"
                                                         type={align === "right" ? "primary" : "text"}
                                                         icon={<AlignRightOutlined />}

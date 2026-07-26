@@ -5,6 +5,9 @@ import { Card, Input, Typography, Row, Col, Button, Space, Alert, Tag, Collapse 
 import { CheckCircleOutlined, CloseCircleOutlined, ClearOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
+import ShareButton from "@/components/ShareButton";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { Text, Paragraph } = Typography;
 
@@ -75,11 +78,16 @@ function getJSONStats(parsed: unknown): { type: string; keys?: number; length?: 
     return { type: typeof parsed, depth: 0 };
 }
 
+interface ShareState { input: string; }
+const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "json-validator", version: 1 };
+
 export default function JsonValidatorPage() {
     const [input, setInput] = useState(SAMPLE_JSON);
 
     const result = useMemo(() => validateJSON(input), [input]);
     const stats = useMemo(() => (result.valid && result.parsed ? getJSONStats(result.parsed) : null), [result]);
+
+    useShareableState(SHARE_SCHEMA, (s) => setInput(s.input));
 
     return (
         <ToolPageLayout
@@ -110,14 +118,19 @@ export default function JsonValidatorPage() {
                 ]
             }}
         >
+            <ToolBridgeBanner accepts={["json", "text"]} onAccept={(p) => setInput(p.data)} />
+
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card
                         title="JSON Input"
                         extra={
-                            <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
-                                Clear
-                            </Button>
+                            <Space>
+                                <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
+                                    Clear
+                                </Button>
+                                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input })} size="small" />
+                            </Space>
                         }
                     >
                         <CodeEditor
@@ -134,7 +147,7 @@ export default function JsonValidatorPage() {
                                 type="success"
                                 showIcon
                                 icon={<CheckCircleOutlined />}
-                                message="Valid JSON"
+                                title="Valid JSON"
                                 description={
                                     <Space orientation="vertical">
                                         <Text>The JSON is well-formed and valid.</Text>
@@ -154,7 +167,7 @@ export default function JsonValidatorPage() {
                                 type="error"
                                 showIcon
                                 icon={<CloseCircleOutlined />}
-                                message="Invalid JSON"
+                                title="Invalid JSON"
                                 description={
                                     <Space orientation="vertical">
                                         <Text>{result.error}</Text>
