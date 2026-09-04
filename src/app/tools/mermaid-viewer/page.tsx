@@ -37,7 +37,6 @@ export default function MermaidViewerPage() {
     const [previewSvg, setPreviewSvg] = useState<string>("");
     const [error, setError] = useState<string>("");
     const [theme, setTheme] = useState<Theme>("default");
-    const containerRef = useRef<HTMLDivElement>(null);
     const mermaidRef = useRef<Mermaid | null>(null);
     const initedThemeRef = useRef<Theme | null>(null);
 
@@ -53,7 +52,7 @@ export default function MermaidViewerPage() {
             }
             const mermaid = mermaidRef.current;
             if (initedThemeRef.current !== t) {
-                mermaid.initialize({ theme: t, securityLevel: "loose", fontFamily: "monospace", startOnLoad: false });
+                mermaid.initialize({ theme: t, securityLevel: "strict", fontFamily: "monospace", startOnLoad: false });
                 initedThemeRef.current = t;
             }
             await mermaid.parse(src);
@@ -170,14 +169,20 @@ export default function MermaidViewerPage() {
                     styles={{ body: { padding: 32, textAlign: "center", minHeight: 500 } }}
                 >
                     {previewSvg ? (
-                        <div ref={containerRef} style={{
+                        <div style={{
                             background: theme === "dark" ? "#1e1e1e" : "#ffffff",
                             borderRadius: 8,
                             padding: 24,
                             overflow: "auto",
                             maxHeight: 600,
                         }}>
-                            <div dangerouslySetInnerHTML={{ __html: previewSvg }} />
+                            <iframe
+                                title="Mermaid diagram preview"
+                                sandbox=""
+                                referrerPolicy="no-referrer"
+                                srcDoc={previewSvg}
+                                style={{ width: "100%", minHeight: 500, border: 0, background: theme === "dark" ? "#1e1e1e" : "#ffffff" }}
+                            />
                         </div>
                     ) : error ? (
                         <div style={{ paddingTop: 80 }}>

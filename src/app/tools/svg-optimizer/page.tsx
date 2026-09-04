@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Card, Typography, Input, Row, Col, Switch, Slider, Space, Tag, App } from "antd";
+import { Button, Card, Typography, Input, Row, Col, Switch, Slider, Space, Tag, App } from "antd";
 import { ScissorOutlined, CopyOutlined, DownloadOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { optimizeSvg, DEFAULT_OPTS, type OptimizeOptions } from "./optimize";
@@ -105,8 +105,8 @@ export default function SvgOptimizerPage() {
                             <Text strong>Output</Text>
                             <Tag color="green">{formatBytes(outSize)}</Tag>
                             <Tag color="blue">−{savings.toFixed(1)}%</Tag>
-                            <a onClick={copyOutput}><CopyOutlined /> Copy</a>
-                            <a onClick={downloadOutput}><DownloadOutlined /> Download</a>
+                            <Button type="text" size="small" icon={<CopyOutlined />} onClick={copyOutput}>Copy</Button>
+                            <Button type="text" size="small" icon={<DownloadOutlined />} onClick={downloadOutput}>Download</Button>
                         </Space>
                     }>
                         <TextArea
@@ -156,16 +156,18 @@ export default function SvgOptimizerPage() {
                         <Paragraph type="secondary" style={{ fontSize: 12 }}>
                             Rendered from the optimised output. Both panels should look identical.
                         </Paragraph>
-                        <div
+                        <iframe
+                            title="Optimized SVG preview"
+                            sandbox=""
+                            referrerPolicy="no-referrer"
+                            srcDoc={output}
                             style={{
                                 background: "repeating-conic-gradient(rgba(0,0,0,0.04) 0% 25%, transparent 0% 50%) 50% / 16px 16px",
-                                padding: 16,
-                                borderRadius: 8,
-                                display: "grid",
-                                placeItems: "center",
+                                width: "100%",
                                 minHeight: 160,
+                                border: 0,
+                                borderRadius: 8,
                             }}
-                            dangerouslySetInnerHTML={{ __html: output }}
                         />
                     </Card>
                 </Col>

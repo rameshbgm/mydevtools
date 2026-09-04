@@ -1,6 +1,6 @@
 # mydevtools
 
-A private, offline-first developer tools portal — **112 utilities** across **15 categories**, all in one place. Built with Next.js 16, React 19, Ant Design 6, Monaco Editor, and Framer Motion.
+A privacy-first developer tools portal — **121 utilities** across **15 categories**, all in one place. Built with Next.js 16, React 19, Ant Design 6, Monaco Editor, and Framer Motion.
 
 > Stop context-switching between dozens of single-purpose websites. Format, diff, decode, generate, validate, parse, calculate — all from one workspace, in your browser.
 
@@ -11,7 +11,7 @@ A private, offline-first developer tools portal — **112 utilities** across **1
 
 ## Highlights
 
-- **112 tools** organised into 15 logical categories
+- **121 tools** organised into 15 logical categories
 - **Editorial landing page (rebrand 2026)** — tool-themed SVG hero (JSON tree + SHA-256 bars + regex bracket), 3-pillar value section, category grid, spotlight cards and animated marquee. Self-contained `lv-*` styles in `LandingMarketing.tsx` with `lv-light` / `lv-dark` modifier classes.
 - **Canonical URLs** — each tool opens at **`/<category-slug>/<tool-id>`** (e.g. `/formatters/json-formatter`). Legacy **`/tools/...`** hit a **308** redirect to that path; **`src/proxy.ts`** (Next.js 16 proxy, formerly middleware) rewrites the pretty URL to the existing **`/tools/*`** file routes.
 - **Workshop chrome (rebrand 2026)** — post‑landing catalogue + **`AppShell`** + tool shells use **`src/app/workspace.css`** with **`--wb-*`** tokens and **`wb-*`** classes (slate-cool neutrals + **cyan / indigo** accents matching the landing palette), plus **`wb-tool-route`** from **`tools/layout.tsx`**.
@@ -21,9 +21,9 @@ A private, offline-first developer tools portal — **112 utilities** across **1
 - **Accordion sidebar** that auto-expands the active tool's category
 - **Dark / Light themes** with persistent preference
 - **Navigation loader** with friendly messages and 60-second safety timeout
-- **Privacy-first**: 100% client-side, no analytics, no telemetry, zero third-party runtime requests
-- **Static export** — every page is pre-rendered to HTML; deploy to any static host
-- **Production build:** 125 static routes pre-rendered (112 tools + alias stubs + dashboard + release-notes + 404 + sitemap + robots)
+- **Privacy-first**: local tools run in-browser with no analytics or telemetry; managed network tools disclose their data boundary before use
+- **Managed network tools** — proxy, certificate inspection, and webhook capture are disabled in production unless `MYDEVTOOLS_ENABLE_MANAGED_ROUTES=true`
+- **Production build:** Next.js server deployment for canonical routing and optional managed tools
 - **MIT licensed** — fork it, modify it, ship it
 
 ---
@@ -33,22 +33,22 @@ A private, offline-first developer tools portal — **112 utilities** across **1
 | # | Category | Count | Examples |
 |---|----------|------:|----------|
 | 1 | Formatters | 8 | JSON, XML, SQL, HTML, JS, CSS, YAML, Mermaid |
-| 2 | Validators | 8 | JSON, XML, HTML, XSD, XPath, Regex, Credit Card, Email |
-| 3 | Diff & Compare | 5 | JSON Diff, XML Diff, Text Diff, Image Diff, CSV Diff |
+| 2 | Validators | 9 | JSON, XML, HTML, XSD, XPath, Regex, Credit Card, Email, JSON Schema |
+| 3 | Diff & Compare | 6 | JSON Diff, XML Diff, Text Diff, Image Diff, CSV Diff, OpenAPI Contract Diff |
 | 4 | Data Converters | 10 | XML↔JSON, CSV→JSON, CSV→XML, YAML↔JSON, XSLT, JSON→CSV, Mock Data, TOML, TOON |
 | 5 | Encoding & Decoding | 7 | Base64, URL, HTML Entities, Unicode, Gzip, String Escape, Hex |
 | 6 | Cryptography | 8 | Hash, HMAC, JWT, JWS, JWE, JWK, BCrypt, AES |
-| 7 | Certificates & Keys | 7 | X.509 inspector/decoder, SSL checker, CSR, PEM parser, PKCS#12, JKS, SSH keys |
-| 8 | API & Web Services | 6 | Swagger/OpenAPI viewer, REST request builder, JSONPath, URL parser, WSDL, SOAP client |
+| 7 | Certificates & Keys | 8 | X.509 inspector/decoder, SSL checker, CSR, PEM parser, PKCS#12, JKS, SSH keys, WebAuthn |
+| 8 | API & Web Services | 9 | Swagger/OpenAPI, REST, GraphQL, AsyncAPI, OAuth/OIDC, JSONPath, URL, WSDL, SOAP |
 | 9 | Artificial Intelligence | 6 | MCP Inspector, A2A Inspector, LLM Token Counter, Fine-Tuning Dataset Validator, Agent Card / MCP Manifest Generator, Semantic Search Playground |
-| 10 | Network | 7 | IP tools, Subnet calculator, MAC address tools, Webhook Receiver, WebSocket Tester, CORS Tester, DNS Lookup |
-| 11 | Generators | 9 | UUID, Password, Lorem Ipsum, QR code, Markdown table, Java POJO, JSON→TypeScript, Slug, Color Contrast Checker |
+| 10 | Network | 9 | IP, Subnet, MAC, Webhook, WebSocket, CORS, DNS, Security Headers, Docker Compose |
+| 11 | Generators | 10 | UUID, Password, Credit Card, Lorem Ipsum, QR code, Markdown table, Java POJO, JSON→TypeScript, Slug, Color Contrast |
 | 12 | Image & Media | 6 | Image Compressor, Image Resizer, SVG Optimizer, Favicon Generator, Color Palette Extractor, EXIF Viewer |
 | 13 | Fun & Games | 7 | Timer, Stopwatch, Coin Toss, Dice Roll, Spin the Wheel, Magic 8-Ball, Typing Speed Test |
 | 14 | Text & Utilities | 12 | Case converter, Markdown, Mermaid Viewer, Timestamp, Color picker, Cron parser, Todo list, Sticky Notes, Rich Text Editor |
 | 15 | Reference | 6 | HTTP status codes, MIME types, Port numbers, Model & Pricing comparison, IP ranges, RFC standards |
 
-**New in v1.4:** Networking & Web (Webhook Receiver, WebSocket Tester, CORS Tester, DNS Lookup) · Diff additions (Image Diff, CSV Diff) · new Image & Media category · Data Conversion additions (Mock Data Generator, TOML, TOON) · AI category grown to 6 key-free tools · cross-tool pipelines · shareable URL fragments · PWA install button · Manifest V3 browser extension
+**New in v1.5:** OpenAPI contract diff · JSON Schema, AsyncAPI and GraphQL contract workbenches · Security Headers/CSP analysis · OAuth/OIDC PKCE and WebAuthn credential inspection · Docker Compose analysis · managed-route hardening and safer untrusted-content previews
 
 ---
 
@@ -61,7 +61,7 @@ npm install
 # dev (http://localhost:3000)
 npm run dev
 
-# production build → out/ directory
+# production build
 npm run build
 
 # lint
@@ -76,26 +76,26 @@ Requires **Node.js ≥ 20**.
 
 | Layer | Choice | Why |
 |------|--------|-----|
-| Framework | **Next.js 16** (App Router, Turbopack) | Latest static-export friendly framework |
+| Framework | **Next.js 16** (App Router, Turbopack) | App Router with canonical routing and optional managed Route Handlers |
 | UI | **React 19.2** + **Ant Design 6** | Stable component library with deep token theming |
 | State | **Zustand** with `persist` | Lightweight client state, IndexedDB / localStorage persistence |
 | Editor | **Monaco** (self-hosted) | Same engine as VS Code — copied locally to avoid CDN |
 | Animation | **Framer Motion** | Smooth page and card transitions |
 | Styling | **Tailwind v4** + CSS variables | Theme-aware tokens (`--primary-rgb`, etc.) |
 | Crypto | **Web Crypto API** + `crypto-js` + `bcryptjs` | Hashing, AES, JWT/JWS/JWE, key gen, BCrypt |
-| Parsing | `fast-xml-parser`, `yaml`, `jsonpath-plus`, `diff` | Pure-JS, no native deps |
+| Parsing | `fast-xml-parser`, `yaml`, `graphql`, `jsonpath-plus`, `diff` | Pure-JS, no native deps |
 | PWA | Native Web Manifest + custom service worker | Installable, offline-capable |
 
 ---
 
 ## Privacy & Data Handling
 
-This app is built around the principle that **your data should never leave your browser**.
+This app is built around the principle that **local work stays in your browser by default**. A small set of explicitly labelled network tools uses managed server routes because browsers cannot perform those operations directly.
 
 | Concern | Status | Detail |
 |---|---|---|
-| Server-side runtime | ❌ None | `output: "export"` — all 87 tools pre-rendered to static HTML |
-| API routes | ❌ None | `src/app/api/` is empty |
+| Server-side runtime | ✅ Optional managed mode | Required for canonical routing and managed proxy, certificate, and webhook tools |
+| API routes | ✅ Present | Disabled in production by default; enable with `MYDEVTOOLS_ENABLE_MANAGED_ROUTES=true` only behind appropriate gateway controls |
 | Analytics packages | ❌ None | No GA, Plausible, Sentry, Hotjar, Mixpanel, Segment, etc. |
 | Auto-fetch on mount | ❌ None | No tool calls anything when you open it |
 | Third-party CDNs at runtime | ❌ None | Monaco self-hosted; Swagger UI bundled via `swagger-ui-react` |
@@ -216,28 +216,9 @@ To tweak **landing**, use **`globals.css`** (`landing-*`). To tweak workspace ch
 
 ## Deployment
 
-This app builds to a fully static `out/` directory. Deploy anywhere that serves files.
+The full product runs as a Next.js Node deployment. This is required for canonical route rewrites and the optional managed network tools. Production deployments leave managed routes disabled unless `MYDEVTOOLS_ENABLE_MANAGED_ROUTES=true` is explicitly set.
 
-### Hostinger (Apache shared hosting)
-
-`public/.htaccess` is configured for clean URLs, gzip, long-term caching of hashed assets, and basic security headers.
-
-```bash
-npm run build              # produces out/
-# Upload contents of out/ (including .htaccess) to Hostinger public_html/
-```
-
-In your FTP client, **enable "show hidden files"** so `.htaccess` is uploaded.
-
-### Vercel / Netlify / Cloudflare Pages
-
-Build command: `npm run build` · Publish directory: `out`
-
-### GitHub Pages / S3 / any static host
-
-Run `npm run build` and upload `out/`. The site is fully self-contained.
-
-### Docker (Node runtime — not required, but supported)
+### Docker (Node runtime)
 
 ```dockerfile
 FROM node:20-alpine AS build
@@ -247,9 +228,14 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM nginx:alpine AS runner
-COPY --from=build /app/out /usr/share/nginx/html
-EXPOSE 80
+FROM node:20-alpine AS runner
+WORKDIR /app
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
+COPY --from=build /app/package*.json ./
+RUN npm ci --omit=dev
+EXPOSE 3000
+CMD ["npm", "run", "start"]
 ```
 
 ---

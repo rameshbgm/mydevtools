@@ -61,7 +61,11 @@ function uid() {
 function loadDocs(): RichDoc[] {
     if (typeof window === "undefined") return [];
     try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]") as unknown;
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+            .filter((doc): doc is RichDoc => Boolean(doc && typeof doc === "object" && typeof (doc as RichDoc).id === "string" && typeof (doc as RichDoc).title === "string" && typeof (doc as RichDoc).content === "string"))
+            .map((doc) => ({ ...doc, content: sanitizeRichTextHtml(doc.content) }));
     } catch {
         return [];
     }
@@ -100,6 +104,53 @@ const FONT_SIZES = [
     { value: "6", label: "24 pt" },
     { value: "7", label: "36 pt" },
 ];
+
+function sanitizeRichTextHtml(html: string): string {
+    if (typeof DOMParser === "undefined") return html;
+    const documentFragment = new DOMParser().parseFromString(html, "text/html");
+    documentFragment.querySelectorAll("script, style, iframe, object, embed, svg, math, link, base, meta, form, input, button, textarea, select").forEach((node) => node.remove());
+    documentFragment.body.querySelectorAll("*").forEach((element) => {
+        for (const attribute of [...element.attributes]) {
+            const name = attribute.name.toLowerCase();
+            const value = attribute.value.trim().toLowerCase();
+            if (name.startsWith("on") || name === "srcdoc") {
+                element.removeAttribute(attribute.name);
+                continue;
+            }
+            if ((name === "href" || name === "src" || name === "xlink:href") && /^(javascript:|data:text\/html)/.test(value)) {
+                element.removeAttribute(attribute.name);
+                continue;
+            }
+            if (name === "style" && /(expression\s*\(|@import|-moz-binding|behavior\s*:|url\s*\()/i.test(value)) {
+                element.removeAttribute(attribute.name);
+            }
+        }
+    });
+    return documentFragment.body.innerHTML;
+}
+
+function ToolbarButton({ tip, cmd, val, children, disabled, onExecute }: Readonly<{
+    tip: string; cmd: string; val?: string; children: React.ReactNode; disabled: boolean; onExecute: (cmd: string, val?: string) => void;
+}>) {
+    return (
+        <Tooltip title={tip}>
+            <Button
+                aria-label={tip}
+                size="small"
+                type="text"
+                disabled={disabled}
+                icon={children}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onExecute(cmd, val)}
+                style={{ width: 32, height: 32, borderRadius: 6 }}
+            />
+        </Tooltip>
+    );
+}
+
+function VerticalDivider() {
+    return <span aria-hidden style={{ display: "inline-block", width: 1, height: 22, background: "var(--wb-card-border)", margin: "0 6px", alignSelf: "center", flexShrink: 0 }} />;
+}
 
 export default function RichTextEditorPage() {
     const [docs, setDocs] = useState<RichDoc[]>([]);
@@ -143,8 +194,9 @@ export default function RichTextEditorPage() {
 
     const updateDoc = useCallback((id: string, patch: Partial<RichDoc>) => {
         setDocs(prev => {
+            const safePatch = typeof patch.content === "string" ? { ...patch, content: sanitizeRichTextHtml(patch.content) } : patch;
             const updated = prev.map(d =>
-                d.id === id ? { ...d, ...patch, updatedAt: Date.now() } : d
+                d.id === id ? { ...d, ...safePatch, updatedAt: Date.now() } : d
             );
             saveDocs(updated);
             return updated;
@@ -153,13 +205,14 @@ export default function RichTextEditorPage() {
 
     const flush = useCallback(() => {
         if (!editorRef.current || !activeId || sourceView) return;
-        updateDoc(activeId, { content: editorRef.current.innerHTML });
+        updateDoc(activeId, { content: sanitizeRichTextHtml(editorRef.current.innerHTML) });
     }, [activeId, sourceView, updateDoc]);
 
     useEffect(() => {
         if (sourceView || !editorRef.current || !activeDoc) return;
-        if (editorRef.current.innerHTML !== activeDoc.content) {
-            editorRef.current.innerHTML = activeDoc.content;
+        const safeContent = sanitizeRichTextHtml(activeDoc.content);
+        if (editorRef.current.innerHTML !== safeContent) {
+            editorRef.current.innerHTML = safeContent;
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeId, sourceView]);
@@ -230,7 +283,7 @@ export default function RichTextEditorPage() {
         if (!activeDoc) return;
         const content =
             type === "html"
-                ? `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${activeDoc.title}</title></head><body>${activeDoc.content}</body></html>`
+                ? `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${activeDoc.title}</title></head><body>${sanitizeRichTextHtml(activeDoc.content)}</body></html>`
                 : activeDoc.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
         downloadText(content, `${activeDoc.title}.${type === "html" ? "html" : "txt"}`, type === "html" ? "text/html" : "text/plain");
     };
@@ -298,38 +351,6 @@ export default function RichTextEditorPage() {
             ),
         };
     });
-
-    // Toolbar button helper
-    const TB = ({ tip, cmd, val, children }: {
-        tip: string; cmd: string; val?: string; children: React.ReactNode;
-    }) => (
-        <Tooltip title={tip}>
-            <Button
-                size="small"
-                type="text"
-                disabled={sourceView}
-                icon={children}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => exec(cmd, val)}
-                style={{ width: 32, height: 32, borderRadius: 6 }}
-            />
-        </Tooltip>
-    );
-
-    const VDivider = () => (
-        <span
-            aria-hidden
-            style={{
-                display: "inline-block",
-                width: 1,
-                height: 22,
-                background: "var(--wb-card-border)",
-                margin: "0 6px",
-                alignSelf: "center",
-                flexShrink: 0,
-            }}
-        />
-    );
 
     return (
         <ToolPageLayout
@@ -414,12 +435,12 @@ export default function RichTextEditorPage() {
                         popupMatchSelectWidth={false}
                     />
 
-                    <VDivider />
+                    <VerticalDivider />
 
-                    <TB tip="Bold (Ctrl+B)" cmd="bold"><BoldOutlined /></TB>
-                    <TB tip="Italic (Ctrl+I)" cmd="italic"><ItalicOutlined /></TB>
-                    <TB tip="Underline (Ctrl+U)" cmd="underline"><UnderlineOutlined /></TB>
-                    <TB tip="Strikethrough" cmd="strikeThrough"><StrikethroughOutlined /></TB>
+                    <ToolbarButton tip="Bold (Ctrl+B)" cmd="bold" disabled={sourceView} onExecute={exec}><BoldOutlined /></ToolbarButton>
+                    <ToolbarButton tip="Italic (Ctrl+I)" cmd="italic" disabled={sourceView} onExecute={exec}><ItalicOutlined /></ToolbarButton>
+                    <ToolbarButton tip="Underline (Ctrl+U)" cmd="underline" disabled={sourceView} onExecute={exec}><UnderlineOutlined /></ToolbarButton>
+                    <ToolbarButton tip="Strikethrough" cmd="strikeThrough" disabled={sourceView} onExecute={exec}><StrikethroughOutlined /></ToolbarButton>
 
                     <Tooltip title="Text Color">
                         <Button
@@ -475,21 +496,21 @@ export default function RichTextEditorPage() {
                         </Button>
                     </Tooltip>
 
-                    <VDivider />
+                    <VerticalDivider />
 
-                    <TB tip="Align Left" cmd="justifyLeft"><AlignLeftOutlined /></TB>
-                    <TB tip="Align Center" cmd="justifyCenter"><AlignCenterOutlined /></TB>
-                    <TB tip="Align Right" cmd="justifyRight"><AlignRightOutlined /></TB>
-                    <TB tip="Justify" cmd="justifyFull"><MenuOutlined /></TB>
+                    <ToolbarButton tip="Align Left" cmd="justifyLeft" disabled={sourceView} onExecute={exec}><AlignLeftOutlined /></ToolbarButton>
+                    <ToolbarButton tip="Align Center" cmd="justifyCenter" disabled={sourceView} onExecute={exec}><AlignCenterOutlined /></ToolbarButton>
+                    <ToolbarButton tip="Align Right" cmd="justifyRight" disabled={sourceView} onExecute={exec}><AlignRightOutlined /></ToolbarButton>
+                    <ToolbarButton tip="Justify" cmd="justifyFull" disabled={sourceView} onExecute={exec}><MenuOutlined /></ToolbarButton>
 
-                    <VDivider />
+                    <VerticalDivider />
 
-                    <TB tip="Ordered List" cmd="insertOrderedList"><OrderedListOutlined /></TB>
-                    <TB tip="Unordered List" cmd="insertUnorderedList"><UnorderedListOutlined /></TB>
-                    <TB tip="Indent" cmd="indent"><MenuFoldOutlined /></TB>
-                    <TB tip="Outdent" cmd="outdent"><MenuUnfoldOutlined /></TB>
+                    <ToolbarButton tip="Ordered List" cmd="insertOrderedList" disabled={sourceView} onExecute={exec}><OrderedListOutlined /></ToolbarButton>
+                    <ToolbarButton tip="Unordered List" cmd="insertUnorderedList" disabled={sourceView} onExecute={exec}><UnorderedListOutlined /></ToolbarButton>
+                    <ToolbarButton tip="Indent" cmd="indent" disabled={sourceView} onExecute={exec}><MenuFoldOutlined /></ToolbarButton>
+                    <ToolbarButton tip="Outdent" cmd="outdent" disabled={sourceView} onExecute={exec}><MenuUnfoldOutlined /></ToolbarButton>
 
-                    <VDivider />
+                    <VerticalDivider />
 
                     <Tooltip title="Insert Link">
                         <Button aria-label="Link"
@@ -502,14 +523,14 @@ export default function RichTextEditorPage() {
                             style={{ width: 32, height: 32, borderRadius: 6 }}
                         />
                     </Tooltip>
-                    <TB tip="Remove Link" cmd="unlink"><DisconnectOutlined /></TB>
-                    <TB tip="Horizontal Rule" cmd="insertHorizontalRule"><MinusOutlined /></TB>
+                    <ToolbarButton tip="Remove Link" cmd="unlink" disabled={sourceView} onExecute={exec}><DisconnectOutlined /></ToolbarButton>
+                    <ToolbarButton tip="Horizontal Rule" cmd="insertHorizontalRule" disabled={sourceView} onExecute={exec}><MinusOutlined /></ToolbarButton>
 
-                    <VDivider />
+                    <VerticalDivider />
 
-                    <TB tip="Undo (Ctrl+Z)" cmd="undo"><UndoOutlined /></TB>
-                    <TB tip="Redo (Ctrl+Y)" cmd="redo"><RedoOutlined /></TB>
-                    <TB tip="Clear Formatting" cmd="removeFormat"><ClearOutlined /></TB>
+                    <ToolbarButton tip="Undo (Ctrl+Z)" cmd="undo" disabled={sourceView} onExecute={exec}><UndoOutlined /></ToolbarButton>
+                    <ToolbarButton tip="Redo (Ctrl+Y)" cmd="redo" disabled={sourceView} onExecute={exec}><RedoOutlined /></ToolbarButton>
+                    <ToolbarButton tip="Clear Formatting" cmd="removeFormat" disabled={sourceView} onExecute={exec}><ClearOutlined /></ToolbarButton>
 
                     <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
                         <Tooltip title={sourceView ? "Back to WYSIWYG" : "View / edit raw HTML"}>
@@ -563,6 +584,9 @@ export default function RichTextEditorPage() {
                         <div
                             ref={editorRef}
                             contentEditable
+                            role="textbox"
+                            aria-label="Rich text editor"
+                            aria-multiline="true"
                             suppressContentEditableWarning
                             spellCheck
                             onInput={flush}
@@ -642,7 +666,7 @@ export default function RichTextEditorPage() {
                 .rte-canvas p { margin: 0 0 0.8em; }
                 .rte-canvas blockquote {
                     margin: 1em 0; padding: 0.5em 1em;
-                    border-left: 3px solid var(--wb-accent);
+                    border-inline-start: 1px solid var(--wb-accent);
                     color: var(--wb-text-muted); font-style: italic;
                     background: var(--wb-accent-soft); border-radius: 4px;
                 }

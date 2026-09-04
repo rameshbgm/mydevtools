@@ -73,5 +73,6 @@ check(
     '<svg><path d="M0 0"/><path d="M1 1"/></svg>',
 );
 check("empty attributes are stripped", '<svg id=""><path d="M0 0"/></svg>', '<svg><path d="M0 0"/></svg>');
+check("scripts and event handlers are stripped", '<svg><script>alert(1)</script><path onclick="alert(1)" d="M0 0"/></svg>', '<svg><path d="M0 0"/></svg>');
 
 console.log(`✓ ${passed}/${passed} SVG optimizer assertions passed`);

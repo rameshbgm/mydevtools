@@ -156,7 +156,7 @@ export default function UrlParserPage() {
                                         <Descriptions.Item
                                             key={item.label}
                                             label={item.label}
-                                            labelStyle={{ width: 100 }}
+                                            styles={{ label: { width: 100 } }}
                                         >
                                             <Space>
                                                 <Text code style={{ fontSize: 12, wordBreak: "break-all" }}>

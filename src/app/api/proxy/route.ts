@@ -20,12 +20,24 @@
 import http from "http";
 import https from "https";
 import { NextResponse } from "next/server";
+import {
+    consumeManagedRouteQuota,
+    createPinnedLookup,
+    managedRoutesEnabled,
+    resolvePublicHost,
+    type ResolvedAddress,
+} from "@/lib/server-network-policy";
 
 export const runtime = "nodejs";
 
 // Hard cap on the response body we'll buffer. Anything larger is truncated
 // with a synthetic header so the UI can warn the user.
 const MAX_RESPONSE_BYTES = 25 * 1024 * 1024; // 25 MB
+const MAX_REQUEST_BYTES = 5 * 1024 * 1024; // 5 MB
+const MAX_TIMEOUT_MS = 30_000;
+const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
+const HOP_BY_HOP_HEADERS = new Set(["connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailer", "transfer-encoding", "upgrade", "host"]);
+const CROSS_ORIGIN_SENSITIVE_HEADERS = new Set(["authorization", "cookie", "proxy-authorization"]);
 
 interface ProxyRequest {
     url: string;
@@ -53,6 +65,13 @@ interface ProxyResponse {
 }
 
 export async function POST(request: Request) {
+    if (!managedRoutesEnabled()) {
+        return NextResponse.json({ error: "Managed network tools are disabled for this deployment" }, { status: 503 });
+    }
+    if (!consumeManagedRouteQuota(request, "proxy")) {
+        return NextResponse.json({ error: "Too many managed requests. Try again in a minute." }, { status: 429 });
+    }
+
     let req: ProxyRequest;
     try {
         req = await request.json();
@@ -63,6 +82,13 @@ export async function POST(request: Request) {
     if (!req.url) {
         return NextResponse.json({ error: "Missing required field: url" }, { status: 400 });
     }
+
+    const method = (req.method || "GET").toUpperCase();
+    if (!ALLOWED_METHODS.has(method)) {
+        return NextResponse.json({ error: "Unsupported HTTP method" }, { status: 400 });
+    }
+    req.method = method;
+    if (!req.headers || typeof req.headers !== "object" || Array.isArray(req.headers)) req.headers = {};
 
     let parsed: URL;
     try {
@@ -76,22 +102,37 @@ export async function POST(request: Request) {
     }
 
     try {
-        const result = await proxyRequest(req, parsed, 0);
+        const addresses = await resolvePublicHost(parsed.hostname);
+        const result = await proxyRequest(req, parsed, addresses, 0);
         return NextResponse.json(result);
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        return NextResponse.json({ error: msg }, { status: 502 });
+        const status = /blocked|public internet|Unsupported|too large/i.test(msg) ? 400 : 502;
+        return NextResponse.json({ error: msg }, { status });
     }
 }
 
-async function proxyRequest(req: ProxyRequest, parsed: URL, redirectCount: number): Promise<ProxyResponse> {
+function prepareHeaders(headers: Record<string, string>, crossOrigin = false): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(headers)) {
+        const normalised = key.toLowerCase();
+        if (HOP_BY_HOP_HEADERS.has(normalised)) continue;
+        if (crossOrigin && CROSS_ORIGIN_SENSITIVE_HEADERS.has(normalised)) continue;
+        out[key] = value;
+    }
+    delete out["content-length"];
+    delete out["Content-Length"];
+    return out;
+}
+
+async function proxyRequest(req: ProxyRequest, parsed: URL, addresses: ResolvedAddress[], redirectCount: number): Promise<ProxyResponse> {
     const startTime = Date.now();
 
     return new Promise<ProxyResponse>((resolve, reject) => {
         const isHttps = parsed.protocol === "https:";
         const lib = isHttps ? https : http;
 
-        const outHeaders: Record<string, string> = { ...req.headers };
+        const outHeaders = prepareHeaders(req.headers);
 
         // Decode body
         let bodyBuffer: Buffer | null = null;
@@ -99,6 +140,10 @@ async function proxyRequest(req: ProxyRequest, parsed: URL, redirectCount: numbe
             bodyBuffer = req.bodyIsBase64
                 ? Buffer.from(req.body, "base64")
                 : Buffer.from(req.body, "utf-8");
+            if (bodyBuffer.byteLength > MAX_REQUEST_BYTES) {
+                reject(new Error(`Request body exceeds the ${MAX_REQUEST_BYTES / 1024 / 1024} MB limit`));
+                return;
+            }
             // Set Content-Length so the server knows the body size
             if (!outHeaders["content-length"] && !outHeaders["Content-Length"]) {
                 outHeaders["content-length"] = String(bodyBuffer.byteLength);
@@ -113,9 +158,11 @@ async function proxyRequest(req: ProxyRequest, parsed: URL, redirectCount: numbe
             path: parsed.pathname + parsed.search,
             method: (req.method || "GET").toUpperCase(),
             headers: outHeaders,
-            // Default to lenient (false) for backward compatibility with existing tools.
-            // A request can opt into strict cert validation by sending sslVerify: true.
-            rejectUnauthorized: req.sslVerify === true,
+            lookup: createPinnedLookup(addresses),
+            agent: false,
+            // TLS validation is safe by default. A custom CA extends trust rather
+            // than disabling verification, which keeps mTLS deployments working.
+            rejectUnauthorized: req.sslVerify !== false,
         };
         if (isHttps) {
             if (req.sslCaCert) options.ca = req.sslCaCert;
@@ -145,11 +192,25 @@ async function proxyRequest(req: ProxyRequest, parsed: URL, redirectCount: numbe
                 // For 303, switch to GET and drop the body
                 const redirectMethod = res.statusCode === 303 ? "GET" : req.method;
                 const redirectBody   = res.statusCode === 303 ? null : req.body;
-                proxyRequest(
-                    { ...req, method: redirectMethod, body: redirectBody },
-                    redirectUrl,
-                    redirectCount + 1
-                ).then(resolve).catch(reject);
+                void (async () => {
+                    try {
+                        const redirectAddresses = await resolvePublicHost(redirectUrl.hostname);
+                        const crossOrigin = redirectUrl.origin !== parsed.origin;
+                        resolve(await proxyRequest(
+                            {
+                                ...req,
+                                method: redirectMethod,
+                                body: redirectBody,
+                                headers: prepareHeaders(req.headers, crossOrigin),
+                            },
+                            redirectUrl,
+                            redirectAddresses,
+                            redirectCount + 1,
+                        ));
+                    } catch (error) {
+                        reject(error);
+                    }
+                })();
                 return;
             }
 
@@ -211,8 +272,9 @@ async function proxyRequest(req: ProxyRequest, parsed: URL, redirectCount: numbe
         });
 
         clientReq.on("error", reject);
-        clientReq.setTimeout(req.timeout || 30000, () => {
-            clientReq.destroy(new Error(`Request timed out after ${req.timeout || 30000}ms`));
+        const timeoutMs = Math.min(Math.max(Number(req.timeout) || MAX_TIMEOUT_MS, 1_000), MAX_TIMEOUT_MS);
+        clientReq.setTimeout(timeoutMs, () => {
+            clientReq.destroy(new Error(`Request timed out after ${timeoutMs}ms`));
         });
 
         if (bodyBuffer) clientReq.write(bodyBuffer);

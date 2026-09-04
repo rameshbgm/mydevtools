@@ -8,6 +8,12 @@ import http from "http";
 import https from "https";
 import { NextResponse } from "next/server";
 import type { IncomingMessage } from "http";
+import {
+    consumeManagedRouteQuota,
+    createPinnedLookup,
+    managedRoutesEnabled,
+    resolvePublicHost,
+} from "@/lib/server-network-policy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,9 +44,21 @@ const HOP_BY_HOP = new Set([
     "upgrade",
     "content-encoding",
     "content-length",
+    "set-cookie",
 ]);
+const MAX_REQUEST_BYTES = 5 * 1024 * 1024;
+const MAX_STREAM_BYTES = 25 * 1024 * 1024;
+const MAX_TIMEOUT_MS = 120_000;
+const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
 
 export async function POST(request: Request) {
+    if (!managedRoutesEnabled()) {
+        return NextResponse.json({ error: "Managed network tools are disabled for this deployment" }, { status: 503 });
+    }
+    if (!consumeManagedRouteQuota(request, "proxy-stream", 20)) {
+        return NextResponse.json({ error: "Too many managed stream requests. Try again in a minute." }, { status: 429 });
+    }
+
     let req: ProxyStreamRequest;
     try {
         req = await request.json();
@@ -50,6 +68,12 @@ export async function POST(request: Request) {
     if (!req.url) {
         return NextResponse.json({ error: "Missing required field: url" }, { status: 400 });
     }
+    const method = (req.method || "POST").toUpperCase();
+    if (!ALLOWED_METHODS.has(method)) {
+        return NextResponse.json({ error: "Unsupported HTTP method" }, { status: 400 });
+    }
+    req.method = method;
+    if (!req.headers || typeof req.headers !== "object" || Array.isArray(req.headers)) req.headers = {};
 
     let parsed: URL;
     try {
@@ -61,16 +85,30 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Only http and https URLs are supported" }, { status: 400 });
     }
 
+    let addresses;
+    try {
+        addresses = await resolvePublicHost(parsed.hostname);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Target is not permitted";
+        return NextResponse.json({ error: message }, { status: 400 });
+    }
+
     const isHttps = parsed.protocol === "https:";
     const lib = isHttps ? https : http;
 
-    const outHeaders: Record<string, string> = { ...(req.headers || {}) };
+    const outHeaders: Record<string, string> = {};
+    for (const [key, value] of Object.entries(req.headers || {})) {
+        if (!HOP_BY_HOP.has(key.toLowerCase()) && key.toLowerCase() !== "host") outHeaders[key] = value;
+    }
 
     let bodyBuffer: Buffer | null = null;
     if (req.body) {
         bodyBuffer = req.bodyIsBase64
             ? Buffer.from(req.body, "base64")
             : Buffer.from(req.body, "utf-8");
+        if (bodyBuffer.byteLength > MAX_REQUEST_BYTES) {
+            return NextResponse.json({ error: `Request body exceeds the ${MAX_REQUEST_BYTES / 1024 / 1024} MB limit` }, { status: 413 });
+        }
         if (!outHeaders["content-length"] && !outHeaders["Content-Length"]) {
             outHeaders["content-length"] = String(bodyBuffer.byteLength);
         }
@@ -82,7 +120,9 @@ export async function POST(request: Request) {
         path: parsed.pathname + parsed.search,
         method: (req.method || "POST").toUpperCase(),
         headers: outHeaders,
-        rejectUnauthorized: req.sslVerify === true,
+        lookup: createPinnedLookup(addresses),
+        agent: false,
+        rejectUnauthorized: req.sslVerify !== false,
     };
     if (isHttps) {
         if (req.sslCaCert) options.ca = req.sslCaCert;
@@ -90,7 +130,7 @@ export async function POST(request: Request) {
         if (req.sslClientKey) options.key = req.sslClientKey;
     }
 
-    const timeoutMs = req.timeout || 600000; // 10 min default — streams are long-lived
+    const timeoutMs = Math.min(Math.max(Number(req.timeout) || MAX_TIMEOUT_MS, 1_000), MAX_TIMEOUT_MS);
 
     // Capture client-abort signal before any await, so we can tear down upstream
     // if the browser closes the connection.
@@ -127,7 +167,14 @@ export async function POST(request: Request) {
 
     const stream = new ReadableStream<Uint8Array>({
         start(controller) {
+            let bytesForwarded = 0;
             const onData = (chunk: Buffer) => {
+                bytesForwarded += chunk.byteLength;
+                if (bytesForwarded > MAX_STREAM_BYTES) {
+                    upstream.destroy(new Error(`Stream exceeded the ${MAX_STREAM_BYTES / 1024 / 1024} MB limit`));
+                    try { controller.error(new Error("Stream response exceeded the safety limit")); } catch { /* closed */ }
+                    return;
+                }
                 try {
                     controller.enqueue(new Uint8Array(chunk));
                 } catch {

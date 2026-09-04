@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Input, Typography, Card, Button, Space, message, Select, Divider, Collapse, Tag, Alert } from "antd";
+import { App, Input, Typography, Card, Button, Space, Select, Divider, Collapse, Tag, Alert } from "antd";
 import {
     DesktopOutlined,
     CopyOutlined,
@@ -32,6 +32,7 @@ interface SSHKeyPair {
 
 export default function SSHKeyGeneratorPage() {
     const { darkMode } = useAppStore();
+    const { message } = App.useApp();
     const [keyType, setKeyType] = useState<KeyType>("RSA");
     const [rsaKeySize, setRsaKeySize] = useState<RSAKeySize>(4096);
     const [ecCurve, setEcCurve] = useState<ECCurve>("P-256");
@@ -175,7 +176,7 @@ export default function SSHKeyGeneratorPage() {
         } finally {
             setIsGenerating(false);
         }
-    }, [keyType, rsaKeySize, ecCurve, comment, passphrase]);
+    }, [keyType, rsaKeySize, ecCurve, comment, passphrase, message]);
 
     const copyToClipboard = (text: string, label: string) => sharedCopy(text, `${label} copied to clipboard!`);
 

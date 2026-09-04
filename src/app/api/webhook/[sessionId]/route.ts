@@ -3,20 +3,36 @@
 // receipt so curl/Postman/upstream test harnesses see success.
 
 import { NextRequest, NextResponse } from "next/server";
-import { recordRequest } from "@/lib/webhook-store";
+import { isValidWebhookSessionId, recordRequest } from "@/lib/webhook-store";
+import { consumeManagedRouteQuota, managedRoutesEnabled } from "@/lib/server-network-policy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function handle(req: NextRequest, ctx: { params: Promise<{ sessionId: string }> }) {
+    if (!managedRoutesEnabled()) {
+        return NextResponse.json({ error: "Managed network tools are disabled for this deployment" }, { status: 503 });
+    }
+    if (!consumeManagedRouteQuota(req, "webhook-ingest", 120)) {
+        return NextResponse.json({ error: "Too many webhook requests. Try again in a minute." }, { status: 429 });
+    }
     const { sessionId } = await ctx.params;
-    if (!/^[A-Za-z0-9_-]{6,64}$/.test(sessionId)) {
+    if (!isValidWebhookSessionId(sessionId)) {
         return NextResponse.json({ error: "invalid session id" }, { status: 400 });
     }
 
     const url = new URL(req.url);
     const headers: Record<string, string> = {};
-    req.headers.forEach((v, k) => { headers[k] = v; });
+    let capturedHeaderBytes = 0;
+    const MAX_CAPTURED_HEADER_BYTES = 16 * 1024;
+    req.headers.forEach((v, k) => {
+        const size = new TextEncoder().encode(k).byteLength + new TextEncoder().encode(v).byteLength;
+        if (capturedHeaderBytes + size <= MAX_CAPTURED_HEADER_BYTES) {
+            headers[k] = v;
+            capturedHeaderBytes += size;
+        }
+    });
+    if (capturedHeaderBytes >= MAX_CAPTURED_HEADER_BYTES) headers["x-mydevtools-headers-truncated"] = "true";
 
     const query: Record<string, string> = {};
     url.searchParams.forEach((v, k) => { query[k] = v; });

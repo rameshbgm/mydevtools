@@ -210,7 +210,7 @@ function LiveCheckTab() {
                             children: p ? (
                                 <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                     {/* ── Summary ── */}
-                                    <Descriptions bordered size="small" column={{ xs: 1, md: 2 }} labelStyle={{ width: 160 }}>
+                                    <Descriptions bordered size="small" column={{ xs: 1, md: 2 }} styles={{ label: { width: 160 } }}>
                                         <Descriptions.Item label="Common Name" span={2}>{p.subject.CN ?? "—"}</Descriptions.Item>
                                         <Descriptions.Item label="Issuer">{formatDN(p.issuer)}</Descriptions.Item>
                                         <Descriptions.Item label="Serial">
@@ -272,7 +272,7 @@ function LiveCheckTab() {
                                     {/* ── Fingerprints ── */}
                                     {cert.fps && (
                                         <Card size="small" title="Fingerprints">
-                                            <Descriptions bordered size="small" column={1} labelStyle={{ width: 90 }}>
+                                            <Descriptions bordered size="small" column={1} styles={{ label: { width: 90 } }}>
                                                 <Descriptions.Item label={<Space>SHA-256 <Tag color="success" style={{ fontSize: 10 }}>recommended</Tag></Space>}>
                                                     <Space>
                                                         <Text code style={{ fontSize: 11, wordBreak: "break-all" }}>{cert.fps.sha256}</Text>

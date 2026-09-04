@@ -1,6 +1,6 @@
 {
   "name": "mytoosl",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,8 +10,10 @@
     "prebuild": "node scripts/check-parity.js",
     "test:toon": "tsx scripts/toon-roundtrip.test.ts",
     "test:toml": "tsx scripts/toml-parser.test.ts",
-    "test": "npm run test:toon && npm run test:toml && npm run test:svg && npm run test:card",
+    "test": "npm run test:toon && npm run test:toml && npm run test:svg && npm run test:card && npm run test:network-policy && npm run test:contract-tools",
     "test:card": "tsx scripts/credit-card.test.ts",
+    "test:network-policy": "tsx scripts/server-network-policy.test.ts",
+    "test:contract-tools": "tsx scripts/contract-tools.test.ts",
     "copy-monaco": "rm -rf public/monaco && mkdir -p public/monaco && cp -R node_modules/monaco-editor/min/vs public/monaco/vs",
     "postinstall": "npm run copy-monaco",
     "test:svg": "tsx scripts/svg-optimizer.test.ts"
@@ -39,6 +41,7 @@
     "fast-xml-parser": "^5.7.2",
     "framer-motion": "^12.38.0",
     "gpt-tokenizer": "^3.4.0",
+    "graphql": "^17.0.2",
     "js-base64": "^3.7.8",
     "js-beautify": "^1.15.4",
     "jsonpath-plus": "^10.4.0",

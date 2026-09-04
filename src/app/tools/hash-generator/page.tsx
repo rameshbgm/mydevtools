@@ -55,7 +55,14 @@ export default function HashGeneratorPage() {
 
     useEffect(() => { generate(); }, []);
 
-    useShareableState(SHARE_SCHEMA, (s) => { setInput(s.input); });
+    useShareableState(SHARE_SCHEMA, (s) => {
+        setInput(s.input);
+        setLoading(true);
+        void computeHashes(s.input)
+            .then(setHashes)
+            .catch(() => message.error("Error generating hashes"))
+            .finally(() => setLoading(false));
+    });
 
     const copyAll = () => {
         const text = Object.entries(hashes).map(([k, v]) => `${k}: ${v}`).join("\n");

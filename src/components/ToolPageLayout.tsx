@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useId, useMemo, useState } from "react";
+import React, { useId, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { Typography, Breadcrumb, Collapse, Card, Tag } from "antd";
 import {
@@ -108,15 +108,6 @@ export default function ToolPageLayout({
 
     const faq = toolId ? SEO_CONTENT[toolId]?.faq : undefined;
 
-    // Universal SSR-hydration guard for every tool's interactive body.
-    // antd Input/Select/Segmented internals get mutated by browser extensions
-    // (Shark injects `data-sharkid`), which trips React's hydration check
-    // because the server didn't emit that attribute. Rendering `children`
-    // client-only fixes it for all 104 tools at once. The SEO content
-    // (breadcrumb, title, learnMore) above still SSRs normally.
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => { setMounted(true); }, []);
-
     const breadcrumbItems = useMemo(() => {
         const items: {
             title: React.ReactNode;
@@ -193,7 +184,7 @@ export default function ToolPageLayout({
                     <div className="wb-tool-hero-titles">
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <Title
-                                level={2}
+                                level={1}
                                 style={{
                                     margin: 0,
                                     fontWeight: 800,
@@ -229,6 +220,15 @@ export default function ToolPageLayout({
                     </div>
                 </div>
             </motion.div>
+
+            {learnMore?.serverNotice && (
+                <ServerProxyNotice
+                    route={learnMore.serverNotice.route}
+                    purpose={learnMore.serverNotice.purpose}
+                    sentFields={learnMore.serverNotice.sentFields}
+                    extra={learnMore.serverNotice.extra}
+                />
+            )}
 
             {learnMore && (
                 <motion.div
@@ -345,14 +345,6 @@ export default function ToolPageLayout({
                                                     </ul>
                                                 </div>
                                             )}
-                                            {learnMore.serverNotice && (
-                                                <ServerProxyNotice
-                                                    route={learnMore.serverNotice.route}
-                                                    purpose={learnMore.serverNotice.purpose}
-                                                    sentFields={learnMore.serverNotice.sentFields}
-                                                    extra={learnMore.serverNotice.extra}
-                                                />
-                                            )}
                                         </div>
                                     </Card>
                                 ),
@@ -367,9 +359,7 @@ export default function ToolPageLayout({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.3 }}
             >
-                {mounted ? children : (
-                    <div style={{ minHeight: 320 }} aria-hidden />
-                )}
+                {children}
             </motion.div>
 
             {faq && faq.length > 0 && (

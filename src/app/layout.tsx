@@ -179,7 +179,7 @@ const PLATFORM_STRUCTURED_DATA = {
     "@type": "SoftwareApplication",
     name: SITE_NAME,
     url: SITE_URL,
-    description: "112 free developer tools in one place — format, validate, convert, encode, decode, generate, inspect and test: all client-side, no signup, no tracking.",
+    description: "121 free developer tools in one place — format, validate, convert, encode, decode, generate, inspect and test. Most tools run locally; selected network tools use clearly disclosed managed routes.",
     applicationCategory: "DeveloperApplication",
     applicationSubCategory: "Developer Productivity",
     operatingSystem: "Any (Web Browser)",
@@ -221,7 +221,7 @@ const SITE_FAQ_STRUCTURED_DATA = {
             name: "Is mydevtools really free?",
             acceptedAnswer: {
                 "@type": "Answer",
-                text: "Yes, 100% free. No signup, no credit card, no premium tier. All 112 tools are permanently free.",
+                text: "Yes, 100% free. No signup, no credit card, no premium tier. All 121 tools are permanently free.",
             },
         },
         {
@@ -229,7 +229,7 @@ const SITE_FAQ_STRUCTURED_DATA = {
             name: "Does my data leave my browser?",
             acceptedAnswer: {
                 "@type": "Answer",
-                text: "No. Every tool runs entirely in your browser using client-side JavaScript. No data is sent to any server. The app is statically exported and requires no server-side runtime.",
+                text: "Most tools run entirely in your browser. Network features such as server proxying, certificate fetching, and webhook capture clearly disclose when data is sent to a managed server route.",
             },
         },
         {
@@ -245,7 +245,7 @@ const SITE_FAQ_STRUCTURED_DATA = {
             name: "How many tools does mydevtools have?",
             acceptedAnswer: {
                 "@type": "Answer",
-                text: "mydevtools has 112 tools across 15 categories: Formatters, Validators, Diff & Compare, Data Converters, Encoding & Decoding, Cryptography, Certificates & Keys, API & Web Services, Artificial Intelligence, Network, Generators, Image & Media, Fun & Games, Text & Utilities, and Reference.",
+                text: "mydevtools has 121 tools across 15 categories: Formatters, Validators, Diff & Compare, Data Converters, Encoding & Decoding, Cryptography, Certificates & Keys, API & Web Services, Artificial Intelligence, Network, Generators, Image & Media, Fun & Games, Text & Utilities, and Reference.",
             },
         },
         {

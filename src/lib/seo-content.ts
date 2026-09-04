@@ -1952,6 +1952,46 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             { q: "Is TOON lossless from JSON?", a: "Yes for typical JSON: objects, arrays, strings, numbers, booleans, and null all round-trip. Keys are preserved exactly. Strings that look like numbers or booleans are quoted to avoid ambiguity." },
         ],
     },
+    "openapi-contract-diff": {
+        title: "OpenAPI Contract Diff — Find Breaking API Changes Online",
+        description: "Compare two OpenAPI or Swagger contracts and identify breaking endpoint, parameter, response and schema changes locally in your browser.",
+        keywords: ["openapi diff", "swagger diff", "api breaking change checker", "openapi contract testing", "api compatibility"],
+    },
+    "security-headers-analyzer": {
+        title: "Security Headers & CSP Analyzer — Audit HTTP Headers Online",
+        description: "Paste HTTP response headers to analyze CSP, HSTS, nosniff, Referrer-Policy and Permissions-Policy gaps. Private local browser analysis.",
+        keywords: ["security headers checker", "csp analyzer", "content security policy checker", "hsts checker", "http headers security"],
+    },
+    "json-schema-workbench": {
+        title: "JSON Schema Workbench — Validate JSON Against Schema Online",
+        description: "Validate JSON or YAML data against a JSON Schema in your browser. Inspect required fields, types, enums and local references privately.",
+        keywords: ["json schema validator", "json schema workbench", "draft 2020-12 validator", "validate json schema", "yaml schema validator"],
+    },
+    "asyncapi-explorer": {
+        title: "AsyncAPI Explorer — Inspect Event API Contracts Online",
+        description: "Inspect AsyncAPI JSON and YAML documents locally. Review channels, operations, servers and messages for Kafka, MQTT and WebSocket APIs.",
+        keywords: ["asyncapi viewer", "asyncapi validator", "event driven api", "kafka api documentation", "mqtt api contract"],
+    },
+    "oauth-oidc-playground": {
+        title: "OAuth OIDC & PKCE Playground — Test Discovery Metadata",
+        description: "Inspect pasted OIDC discovery metadata and generate PKCE S256 verifier and challenge values locally. No client secrets or network calls.",
+        keywords: ["oauth pkce generator", "oidc discovery validator", "openid connect playground", "pkce s256", "oauth authorization url"],
+    },
+    "graphql-explorer": {
+        title: "GraphQL Schema Explorer — Validate Queries Against SDL Online",
+        description: "Validate GraphQL queries, mutations and subscriptions against an SDL schema locally in your browser. No endpoint connection required.",
+        keywords: ["graphql validator", "graphql schema explorer", "graphql query validator", "graphql sdl", "graphql operation checker"],
+    },
+    "docker-compose-analyzer": {
+        title: "Docker Compose Analyzer — Review compose.yaml Online",
+        description: "Analyze Docker Compose YAML locally for services, ports, volumes, networking, health checks and common deployment hygiene gaps.",
+        keywords: ["docker compose analyzer", "compose yaml validator", "docker compose security", "compose file checker", "container config review"],
+    },
+    "webauthn-passkey-playground": {
+        title: "WebAuthn Passkey Playground — Inspect Credential JSON Online",
+        description: "Decode WebAuthn credential response metadata and clientDataJSON locally. Inspect passkey fixtures without transmitting browser credential data.",
+        keywords: ["webauthn decoder", "passkey playground", "webauthn credential inspector", "fido credential json", "clientdatajson decoder"],
+    },
 };
 
 export function getSeoContent(toolId: string): ToolSeoContent | undefined {
