@@ -90,7 +90,7 @@ const ENTRIES: ReleaseNote[] = [
                     "Parse server responses by content type across network-capable tools so non-JSON failures surface as actionable HTTP errors rather than `Unexpected token '<'` messages.",
                     "Validate proxy and streaming-proxy request objects before processing them, including omitted bodies and malformed method, header, and timeout fields.",
                     "Apply the managed-route disable gate and quota to webhook history deletion as well as ingestion and polling.",
-                    "Keep managed network routes disabled by default in production while retaining public-target validation, destination blocking, bounded requests, and the existing development opt-in boundary.",
+                    "Enable managed network routes by default so production API and certificate tools work after deployment, while retaining public-target validation, destination blocking, bounded requests, and an explicit `MYDEVTOOLS_DISABLE_MANAGED_ROUTES=true` opt-out.",
                     "Load deployment configuration from plain `next.config.js`, include the matching `@next/swc-wasm-nodejs 16.3.4` fallback, and use the Webpack production build on Linux hosts where old glibc leaves only WASM SWC available because Turbopack requires native bindings.",
                 ],
             },
