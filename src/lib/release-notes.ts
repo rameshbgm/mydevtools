@@ -88,6 +88,8 @@ const ENTRIES: ReleaseNote[] = [
                     "Preserve canonical **`/[categorySlug]/[toolId]`** URLs and redirect legacy **`/tools/[toolId]`** requests without breaking tool metadata or sitemap coverage.",
                     "Exclude reserved **`/api/*`** paths from the category/tool rewrite so certificate, proxy, webhook, and other server endpoints return JSON instead of an HTML page.",
                     "Parse server responses by content type across network-capable tools so non-JSON failures surface as actionable HTTP errors rather than `Unexpected token '<'` messages.",
+                    "Validate proxy and streaming-proxy request objects before processing them, including omitted bodies and malformed method, header, and timeout fields.",
+                    "Apply the managed-route disable gate and quota to webhook history deletion as well as ingestion and polling.",
                     "Keep managed network routes disabled by default in production while retaining public-target validation, destination blocking, bounded requests, and the existing development opt-in boundary.",
                     "Load deployment configuration from plain `next.config.js`, include the matching `@next/swc-wasm-nodejs 16.3.4` fallback, and use the Webpack production build on Linux hosts where old glibc leaves only WASM SWC available because Turbopack requires native bindings.",
                 ],
