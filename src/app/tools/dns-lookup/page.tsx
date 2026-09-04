@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Card, Typography, Input, Button, Row, Col, Space, Tag, Select, App, Spin, Empty } from "antd";
 import { GlobalOutlined, SearchOutlined, CopyOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { parseJsonResponse } from "@/lib/certificate-fetch-response";
 import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text, Paragraph } = Typography;
@@ -50,7 +51,7 @@ export default function DnsLookupPage() {
                     out[t] = { error: `HTTP ${res.status}` };
                     return;
                 }
-                out[t] = await res.json();
+                out[t] = await parseJsonResponse<DohResponse>(res, "DNS resolver");
             } catch (err) {
                 out[t] = { error: err instanceof Error ? err.message : String(err) };
             }

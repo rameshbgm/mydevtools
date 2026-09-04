@@ -22,6 +22,7 @@ import { parseCurl } from "@/lib/api-builder/curl-import";
 import { parsePostmanCollection, exportPostmanCollection } from "@/lib/api-builder/postman-collection";
 import { downloadText, downloadBytes } from "@/lib/download";
 import { copyToClipboard } from "@/lib/clipboard";
+import { parseJsonResponse, type ProxyResponsePayload } from "@/lib/certificate-fetch-response";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -609,8 +610,7 @@ export default function ApiRequestBuilderPage() {
                 signal: controller.signal,
             });
 
-            const data = await proxyRes.json();
-            if (!proxyRes.ok && data.error) throw new Error(data.error);
+            const data = await parseJsonResponse<ProxyResponsePayload>(proxyRes, "Proxy service");
 
             setResponseTime(data.timing ?? 0);
             setStatus(data.status ?? 0);

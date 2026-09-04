@@ -41,6 +41,7 @@ import {
     type ChainValidationResult,
     type ParsedCertificate,
 } from "@/lib/cert-utils";
+import { parseCertificateFetchResponse } from "@/lib/certificate-fetch-response";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -86,8 +87,7 @@ function LiveCheckTab() {
         setChainResult(null);
         try {
             const res = await fetch(`/api/fetch-cert?host=${encodeURIComponent(host)}&port=${resolvedPort}`);
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+            const data = await parseCertificateFetchResponse(res);
 
             const pems: string[] = data.pems ?? [];
             if (pems.length === 0) throw new Error("No certificates returned from server");
@@ -367,8 +367,7 @@ function ChainValidatorTab() {
         setFetchLoading(true);
         try {
             const res = await fetch(`/api/fetch-cert?host=${encodeURIComponent(host)}&port=${resolvedPort}`);
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+            const data = await parseCertificateFetchResponse(res);
             const pems: string[] = data.pems ?? [];
             if (pems.length === 0) throw new Error("No certificates returned");
             setInput(pems.join("\n\n"));

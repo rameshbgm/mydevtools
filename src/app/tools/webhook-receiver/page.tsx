@@ -8,6 +8,7 @@ import {
     InboxOutlined, CopyOutlined, DeleteOutlined, ReloadOutlined, LinkOutlined,
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { parseJsonResponse } from "@/lib/certificate-fetch-response";
 import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text, Paragraph } = Typography;
@@ -72,7 +73,7 @@ export default function WebhookReceiverPage() {
                 { signal },
             );
             if (!res.ok) return false;
-            const data = (await res.json()) as { requests: CapturedRequest[] };
+            const data = await parseJsonResponse<{ requests: CapturedRequest[] }>(res, "Webhook service");
             if (data.requests.length) {
                 setRequests((prev) => [...data.requests.reverse(), ...prev]);
                 lastIdRef.current = Math.max(lastIdRef.current, ...data.requests.map((r) => r.id));

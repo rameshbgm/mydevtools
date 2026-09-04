@@ -20,6 +20,7 @@ import { CodeEditor } from "@/components/CodeEditor";
 import SslConfigSection, { type SslConfig } from "@/components/SslConfigSection";
 import { copyToClipboard } from "@/lib/clipboard";
 import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { parseJsonResponse, type ProxyResponsePayload } from "@/lib/certificate-fetch-response";
 import type { ColumnsType } from "antd/es/table/interface";
 
 const { Text, Paragraph } = Typography;
@@ -285,7 +286,7 @@ async function mcpFetchViaProxy(
             ...sslFields,
         }),
     });
-    const proxy = await res.json();
+    const proxy = await parseJsonResponse<ProxyResponsePayload>(res, "Proxy service");
     if (proxy.error) throw new Error(proxy.error);
 
     const respHeaders = (proxy.headers ?? {}) as Record<string, string>;
@@ -677,7 +678,7 @@ export default function McpInspectorPage() {
                         ...sslFields(config),
                     }),
                 });
-                const data = await proxyRes.json();
+                const data = await parseJsonResponse<ProxyResponsePayload>(proxyRes, "Proxy service");
                 steps.push({
                     name: "Via Server Proxy",
                     ok: !data.error && data.status >= 200 && data.status < 500,

@@ -41,6 +41,7 @@ import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SslConfigSection, { DEFAULT_SSL_CONFIG, buildSslProxyFields, type SslConfig } from "@/components/SslConfigSection";
 import { copyToClipboard as sharedCopy } from "@/lib/clipboard";
+import { parseJsonResponse, type ProxyResponsePayload } from "@/lib/certificate-fetch-response";
 
 const { Text, Paragraph, Title } = Typography;
 const { TextArea } = Input;
@@ -272,8 +273,7 @@ export default function SoapClientPage() {
                     }),
                     signal: controller.signal,
                 });
-                const data = await proxyRes.json();
-                if (data.error) throw new Error(data.error);
+                const data = await parseJsonResponse<ProxyResponsePayload>(proxyRes, "Proxy service");
                 respStatus = data.status ?? 0;
                 respText = data.bodyIsBase64
                     ? atob(data.body)
@@ -308,8 +308,7 @@ export default function SoapClientPage() {
                         }),
                         signal: controller.signal,
                     });
-                    const data = await proxyRes.json();
-                    if (data.error) throw new Error(data.error);
+                    const data = await parseJsonResponse<ProxyResponsePayload>(proxyRes, "Proxy service");
                     respStatus = data.status ?? 0;
                     respText = data.bodyIsBase64 ? atob(data.body) : (data.body ?? "");
                     Object.assign(respHeaders, data.headers ?? {});
