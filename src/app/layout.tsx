@@ -5,8 +5,8 @@ import "./workspace.css";
 import AppShell from "@/components/AppShell";
 import PwaRegister from "@/components/PwaRegister";
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/seo-content";
-import { toolsRegistry } from "@/lib/tools-registry";
-import { toolPath } from "@/lib/category-routes";
+import { SEO_CONTENT } from "@/lib/seo-content";
+import { toolPathFromId } from "@/lib/category-routes";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -277,13 +277,16 @@ const COLLECTION_STRUCTURED_DATA = {
     name: `${SITE_NAME}: All Developer Tools`,
     url: SITE_URL,
     description: SITE_DESCRIPTION,
-    hasPart: toolsRegistry.map((t) => ({
-        "@type": "SoftwareApplication",
-        name: t.name,
-        url: `${SITE_URL}${toolPath(t)}`,
-        applicationCategory: "DeveloperApplication",
-        applicationSubCategory: t.category,
-    })),
+    hasPart: Object.entries(SEO_CONTENT).flatMap(([toolId, seo]) => {
+        const path = toolPathFromId(toolId);
+        if (!path) return [];
+        return [{
+            "@type": "SoftwareApplication",
+            name: seo.h1 ?? seo.title.split(" — ")[0],
+            url: `${SITE_URL}${path}`,
+            applicationCategory: "DeveloperApplication",
+        }];
+    }),
 };
 
 export default function RootLayout({
