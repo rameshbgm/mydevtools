@@ -14,22 +14,10 @@ import {
     managedRoutesEnabled,
     resolvePublicHost,
 } from "@/lib/server-network-policy";
+import { parseManagedProxyRequest, type ManagedProxyRequest } from "@/lib/proxy-request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-interface ProxyStreamRequest {
-    url: string;
-    method?: string;
-    headers?: Record<string, string>;
-    body?: string | null;
-    bodyIsBase64?: boolean;
-    timeout?: number;
-    sslVerify?: boolean;
-    sslCaCert?: string;
-    sslClientCert?: string;
-    sslClientKey?: string;
-}
 
 // Headers we must not forward back to the browser — they refer to the
 // upstream hop and break the response when copied verbatim.
@@ -49,8 +37,6 @@ const HOP_BY_HOP = new Set([
 const MAX_REQUEST_BYTES = 5 * 1024 * 1024;
 const MAX_STREAM_BYTES = 25 * 1024 * 1024;
 const MAX_TIMEOUT_MS = 120_000;
-const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
-
 export async function POST(request: Request) {
     if (!managedRoutesEnabled()) {
         return NextResponse.json({ error: "Managed network tools are disabled for this deployment" }, { status: 503 });
@@ -59,21 +45,17 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Too many managed stream requests. Try again in a minute." }, { status: 429 });
     }
 
-    let req: ProxyStreamRequest;
+    let input: unknown;
     try {
-        req = await request.json();
+        input = await request.json();
     } catch {
         return NextResponse.json({ error: "Invalid JSON request body" }, { status: 400 });
     }
-    if (!req.url) {
-        return NextResponse.json({ error: "Missing required field: url" }, { status: 400 });
+    const parsedRequest = parseManagedProxyRequest(input, "POST");
+    if (typeof parsedRequest === "string") {
+        return NextResponse.json({ error: parsedRequest }, { status: 400 });
     }
-    const method = (req.method || "POST").toUpperCase();
-    if (!ALLOWED_METHODS.has(method)) {
-        return NextResponse.json({ error: "Unsupported HTTP method" }, { status: 400 });
-    }
-    req.method = method;
-    if (!req.headers || typeof req.headers !== "object" || Array.isArray(req.headers)) req.headers = {};
+    const req: ManagedProxyRequest = parsedRequest;
 
     let parsed: URL;
     try {
