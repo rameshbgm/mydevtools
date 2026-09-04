@@ -1,21 +1,7 @@
-import type { NextConfig } from "next";
-import { TOOL_ID_TO_CATEGORY } from "./src/lib/tool-url-table";
+// @ts-check
 
-function categoryToSlug(category: string): string {
-  return category
-    .toLowerCase()
-    .trim()
-    .replace(/\s*&\s*/g, "-and-")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-const canonicalToolRewrites = Object.entries(TOOL_ID_TO_CATEGORY).map(([toolId, category]) => ({
-  source: `/${categoryToSlug(category)}/${toolId}`,
-  destination: `/tools/${toolId}`,
-}));
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   experimental: {
     useTypeScriptCli: true,
   },
@@ -24,7 +10,15 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return {
-      beforeFiles: canonicalToolRewrites,
+      // The proxy validates known tool paths and handles legacy redirects;
+      // this rewrite serves the validated canonical path without re-entering
+      // the proxy and creating a redirect loop.
+      beforeFiles: [
+        {
+          source: "/:categorySlug/:toolId",
+          destination: "/tools/:toolId",
+        },
+      ],
     };
   },
   async headers() {
@@ -43,4 +37,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
