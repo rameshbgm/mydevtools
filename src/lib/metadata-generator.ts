@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { getSeoContent, SITE_NAME, SITE_URL, SITE_DESCRIPTION } from "./seo-content";
-import { getToolById } from "./tools-registry";
 import { toolPathFromId } from "./category-routes";
+import { TOOL_ID_TO_CATEGORY } from "./tool-url-table";
 
 interface ToolMetadataParams {
     toolId: string;
@@ -10,11 +10,11 @@ interface ToolMetadataParams {
 export function generateToolMetadata(params: ToolMetadataParams): Metadata {
     const { toolId } = params;
     const seo = getSeoContent(toolId);
-    const tool = getToolById(toolId);
+    const category = TOOL_ID_TO_CATEGORY[toolId as keyof typeof TOOL_ID_TO_CATEGORY];
 
-    const fallbackTitle = tool ? `${tool.name} — ${SITE_NAME}` : SITE_NAME;
-    const fallbackDescription = tool ? tool.description : SITE_DESCRIPTION;
-    const fallbackKeywords = tool ? tool.tags : [];
+    const fallbackTitle = toolId ? `${toolId} — ${SITE_NAME}` : SITE_NAME;
+    const fallbackDescription = SITE_DESCRIPTION;
+    const fallbackKeywords: string[] = [];
 
     const title = seo?.title ?? fallbackTitle;
     const description = seo?.description ?? fallbackDescription;
@@ -32,7 +32,7 @@ export function generateToolMetadata(params: ToolMetadataParams): Metadata {
         creator: SITE_NAME,
         publisher: SITE_NAME,
         applicationName: SITE_NAME,
-        category: tool?.category ?? "Developer Tools",
+        category: category ?? "Developer Tools",
         alternates: {
             canonical: pageUrl,
         },
@@ -48,7 +48,7 @@ export function generateToolMetadata(params: ToolMetadataParams): Metadata {
                     url: ogImage,
                     width: 1200,
                     height: 630,
-                    alt: tool?.name ?? title,
+                    alt: title,
                 },
             ],
         },
@@ -75,24 +75,24 @@ export function generateToolMetadata(params: ToolMetadataParams): Metadata {
 
 export function generateToolStructuredData(toolId: string) {
     const seo = getSeoContent(toolId);
-    const tool = getToolById(toolId);
-    if (!tool) return null;
+    const category = TOOL_ID_TO_CATEGORY[toolId as keyof typeof TOOL_ID_TO_CATEGORY];
+    if (!category) return null;
 
     const canon = toolPathFromId(toolId);
     const pageUrl = `${SITE_URL}${canon ?? `/tools/${toolId}`}`;
-    const description = seo?.description ?? tool.description;
-    const name = seo?.title?.split(" — ")[0]?.split(" | ")[0] ?? tool.name;
+    const description = seo?.description ?? SITE_DESCRIPTION;
+    const name = seo?.title?.split(" — ")[0]?.split(" | ")[0] ?? toolId;
 
     const data: Record<string, unknown> = {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         name,
-        alternateName: tool.name,
+        alternateName: toolId,
         description,
         url: pageUrl,
         applicationCategory: "DeveloperApplication",
-        applicationSubCategory: tool.category,
-        keywords: (seo?.keywords ?? tool.tags).join(", "),
+        applicationSubCategory: category,
+        keywords: (seo?.keywords ?? []).join(", "),
         operatingSystem: "Any (Web Browser)",
         browserRequirements: "Requires JavaScript. Requires a modern browser.",
         offers: {

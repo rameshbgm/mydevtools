@@ -16,7 +16,7 @@
  * Public-facing version number shown in the topbar. Bump on a meaningful
  * shipping milestone — does NOT need to match individual entries below.
  */
-export const APP_VERSION = "1.5";
+export const APP_VERSION = "1.5.1";
 
 export type ReleaseKind = "feature" | "fix" | "security" | "ui" | "perf";
 
@@ -43,6 +43,9 @@ export interface ReleaseNote {
  * Release notes — newest entry FIRST. The exported array is sorted on
  * load so out-of-order appends still render correctly.
  *
+ * V1.5.1 — dependency refresh, Next.js 16.3 / TypeScript 7 compatibility,
+ *        server metadata boundary hardening, and live route verification.
+ *
  * V1.5 — 8 contract, security, identity and platform tools, plus managed
  *        route hardening, safer previews, accessibility fixes and a catalog
  *        accuracy pass (121 tools total).
@@ -62,6 +65,46 @@ export interface ReleaseNote {
  * V1.0 — initial public release of the toolkit (80+ tools).
  */
 const ENTRIES: ReleaseNote[] = [
+    {
+        date: "2026-09-05",
+        version: "1.5.1",
+        kind: "fix",
+        title: "V1.5.1 — dependency refresh, server reliability, and route verification",
+        summary:
+            "Refreshes the application toolchain to current registry package versions, keeps Next.js 16.3.4 and TypeScript 7 compiling cleanly, and verifies the homepage, canonical tool routes, sitemap, certificate lookup, and managed proxy behavior end to end.",
+        sections: [
+            {
+                label: "Current package baseline",
+                bullets: [
+                    "Update Ant Design to **`6.6.2`** with **`@ant-design/icons 6.3.4`**, keeping the icon peer requirement aligned with Ant Design v6.",
+                    "Update Next.js to **`16.3.4`**, React / React DOM to **`19.2.8`**, and TypeScript to **`7.0.2`**; opt into the documented TypeScript CLI path required by this Next.js toolchain.",
+                    "Refresh Tailwind CSS / PostCSS, ESLint, Framer Motion, Mermaid, Swagger UI, XML parsing, tokenisation, formatting, UUID, YAML, Zustand, type packages, and security overrides; regenerate the lockfile for reproducible installs.",
+                ],
+            },
+            {
+                label: "Server rendering and route reliability",
+                bullets: [
+                    "Keep metadata, structured data, and sitemap generation on React-free server-safe tables so Ant Design client context is never evaluated while Next.js collects page data.",
+                    "Preserve canonical **`/[categorySlug]/[toolId]`** URLs and redirect legacy **`/tools/[toolId]`** requests without breaking tool metadata or sitemap coverage.",
+                    "Keep managed network routes disabled by default in production while retaining public-target validation, destination blocking, bounded requests, and the existing development opt-in boundary.",
+                ],
+            },
+            {
+                label: "Verification completed",
+                bullets: [
+                    "Pass **`npx tsc --noEmit`** with no TypeScript errors.",
+                    "Pass **`npm run build`** on the default Next.js Turbopack path, including registry parity (**121 registered tools / 127 tool directories / 6 allowlisted stubs**) and generation of **138 / 138** static pages.",
+                    "Verify the homepage and canonical certificate-inspector page (**HTTP 200**), the legacy `/tools/certificate-inspector` redirect (**HTTP 308**), sitemap entries, public certificate lookup (**5 PEM certificates from `example.com`**), loopback-target blocking (**HTTP 400**), malformed proxy-body validation (**HTTP 400**), and public HTTPS proxying (**HTTP 200** with a 559-byte response).",
+                ],
+            },
+            {
+                label: "Known toolchain caveat",
+                bullets: [
+                    "Keep the latest TypeScript 7 baseline documented: `npm run lint` is currently blocked before source analysis because the latest `typescript-eslint 8.69.0` bundled by `eslint-config-next 16.3.4` supports TypeScript versions below 6.1, while `npx tsc --noEmit` and the production build pass cleanly.",
+                ],
+            },
+        ],
+    },
     {
         date: "2026-09-05",
         version: "1.5",

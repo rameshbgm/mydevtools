@@ -38,7 +38,10 @@ export function proxy(request: NextRequest) {
                 const url = new URL(`/${categoryToSlug(expectedCat)}/${toolId}`, request.url);
                 return NextResponse.redirect(url, 308);
             }
-            return NextResponse.rewrite(new URL(`/tools/${toolId}`, request.url));
+            // Canonical rewrites are declared in next.config.ts. Keeping this
+            // branch as `next()` avoids re-running the proxy against the
+            // internal `/tools/...` destination and creating a redirect loop.
+            return NextResponse.next();
         }
     }
 
