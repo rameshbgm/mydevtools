@@ -36,6 +36,39 @@ function normaliseIp(address: string): string {
     return address.replace(/^\[|\]$/g, "").toLowerCase();
 }
 
+function parseIpv6Words(address: string): number[] | null {
+    let value = address.toLowerCase();
+
+    // Expand an embedded IPv4 suffix into the final two IPv6 words first.
+    if (value.includes(".")) {
+        const separator = value.lastIndexOf(":");
+        if (separator < 0) return null;
+        const octets = value.slice(separator + 1).split(".");
+        if (octets.length !== 4 || octets.some((octet) => !/^\d+$/.test(octet) || Number(octet) > 255)) return null;
+        const high = (Number(octets[0]) << 8) | Number(octets[1]);
+        const low = (Number(octets[2]) << 8) | Number(octets[3]);
+        value = `${value.slice(0, separator)}:${high.toString(16)}:${low.toString(16)}`;
+    }
+
+    const halves = value.split("::");
+    if (halves.length > 2) return null;
+    const parseHalf = (half: string): number[] | null => {
+        if (!half) return [];
+        const parts = half.split(":");
+        if (parts.some((part) => !/^[0-9a-f]{1,4}$/.test(part))) return null;
+        return parts.map((part) => parseInt(part, 16));
+    };
+
+    const left = parseHalf(halves[0]);
+    const right = parseHalf(halves[1] ?? "");
+    if (!left || !right) return null;
+    if (halves.length === 1) return left.length === 8 ? left : null;
+
+    const omitted = 8 - left.length - right.length;
+    if (omitted < 1) return null;
+    return [...left, ...Array.from({ length: omitted }, () => 0), ...right];
+}
+
 /** True only for addresses that are safe to reach from a public service. */
 export function isPublicIp(address: string): boolean {
     const ip = normaliseIp(address);
@@ -45,19 +78,33 @@ export function isPublicIp(address: string): boolean {
     }
     if (family !== 6) return false;
 
-    // IPv4-mapped IPv6 addresses need the same policy as their IPv4 form.
-    const mapped = ip.match(/^(?:0*:)*ffff:(\d+\.\d+\.\d+\.\d+)$/i);
-    if (mapped) return isPublicIp(mapped[1]);
+    const words = parseIpv6Words(ip);
+    if (!words) return false;
 
-    // Unspecified/loopback, unique-local, link-local, documentation and multicast.
-    if (ip === "::" || ip === "::1" || ip === "0:0:0:0:0:0:0:1") return false;
-    return !(
-        ip.startsWith("fc") ||
-        ip.startsWith("fd") ||
-        /^fe[89ab]/.test(ip) ||
-        ip.startsWith("ff") ||
-        ip.startsWith("2001:db8")
-    );
+    // Unspecified and loopback.
+    if (words.every((word) => word === 0)) return false;
+    if (words.slice(0, 7).every((word) => word === 0) && words[7] === 1) return false;
+
+    // IPv4-mapped IPv6 addresses need the same policy as their IPv4 form,
+    // including hexadecimal forms such as ::ffff:7f00:1.
+    const mapped = words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff;
+    if (mapped) {
+        const ipv4 = [words[6] >> 8, words[6] & 0xff, words[7] >> 8, words[7] & 0xff].join(".");
+        return isPublicIp(ipv4);
+    }
+
+    // IPv4-compatible IPv6 addresses are deprecated and can encode private
+    // destinations without the mapped marker; reject the entire ::/96 range.
+    if (words.slice(0, 6).every((word) => word === 0)) return false;
+
+    const first = words[0];
+    // Unique-local, link-local, multicast, and documentation ranges.
+    if ((first & 0xfe00) === 0xfc00) return false;
+    if ((first & 0xffc0) === 0xfe80) return false;
+    if ((first & 0xff00) === 0xff00) return false;
+    if (words[0] === 0x2001 && words[1] === 0x0db8) return false;
+
+    return true;
 }
 
 /**

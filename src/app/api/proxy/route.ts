@@ -27,6 +27,7 @@ import {
     resolvePublicHost,
     type ResolvedAddress,
 } from "@/lib/server-network-policy";
+import { parseManagedProxyRequest, type ManagedProxyRequest } from "@/lib/proxy-request";
 
 export const runtime = "nodejs";
 
@@ -35,24 +36,8 @@ export const runtime = "nodejs";
 const MAX_RESPONSE_BYTES = 25 * 1024 * 1024; // 25 MB
 const MAX_REQUEST_BYTES = 5 * 1024 * 1024; // 5 MB
 const MAX_TIMEOUT_MS = 30_000;
-const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
 const HOP_BY_HOP_HEADERS = new Set(["connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailer", "transfer-encoding", "upgrade", "host"]);
 const CROSS_ORIGIN_SENSITIVE_HEADERS = new Set(["authorization", "cookie", "proxy-authorization"]);
-
-interface ProxyRequest {
-    url: string;
-    method: string;
-    headers: Record<string, string>;
-    body: string | null;    // base64 when bodyIsBase64=true, otherwise UTF-8 text
-    bodyIsBase64: boolean;
-    timeout: number;
-    followRedirects: boolean;
-    // SSL / TLS configuration (all optional, all only apply to https URLs)
-    sslVerify?: boolean;      // strict cert validation; default false (current behavior — accept self-signed)
-    sslCaCert?: string;       // PEM-encoded CA bundle to trust
-    sslClientCert?: string;   // PEM-encoded client cert (mTLS)
-    sslClientKey?: string;    // PEM-encoded private key (mTLS)
-}
 
 interface ProxyResponse {
     status: number;
@@ -72,23 +57,18 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Too many managed requests. Try again in a minute." }, { status: 429 });
     }
 
-    let req: ProxyRequest;
+    let input: unknown;
     try {
-        req = await request.json();
+        input = await request.json();
     } catch {
         return NextResponse.json({ error: "Invalid JSON request body" }, { status: 400 });
     }
 
-    if (!req.url) {
-        return NextResponse.json({ error: "Missing required field: url" }, { status: 400 });
+    const parsedRequest = parseManagedProxyRequest(input, "GET");
+    if (typeof parsedRequest === "string") {
+        return NextResponse.json({ error: parsedRequest }, { status: 400 });
     }
-
-    const method = (req.method || "GET").toUpperCase();
-    if (!ALLOWED_METHODS.has(method)) {
-        return NextResponse.json({ error: "Unsupported HTTP method" }, { status: 400 });
-    }
-    req.method = method;
-    if (!req.headers || typeof req.headers !== "object" || Array.isArray(req.headers)) req.headers = {};
+    const req: ManagedProxyRequest = parsedRequest;
 
     let parsed: URL;
     try {
@@ -125,7 +105,7 @@ function prepareHeaders(headers: Record<string, string>, crossOrigin = false): R
     return out;
 }
 
-async function proxyRequest(req: ProxyRequest, parsed: URL, addresses: ResolvedAddress[], redirectCount: number): Promise<ProxyResponse> {
+async function proxyRequest(req: ManagedProxyRequest, parsed: URL, addresses: ResolvedAddress[], redirectCount: number): Promise<ProxyResponse> {
     const startTime = Date.now();
 
     return new Promise<ProxyResponse>((resolve, reject) => {
