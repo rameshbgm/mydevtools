@@ -43,6 +43,7 @@ import type { DataNode } from "antd/es/tree";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import { copyToClipboard as sharedCopy } from "@/lib/clipboard";
+import { parseJsonResponse, type ProxyResponsePayload } from "@/lib/certificate-fetch-response";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -427,8 +428,7 @@ export default function WsdlParserPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ url, method: "GET", headers: requestHeaders }),
         });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
+        const data = await parseJsonResponse<ProxyResponsePayload>(res, "Proxy service");
         return data.bodyIsBase64 ? atob(data.body) : (data.body ?? "");
     };
 
