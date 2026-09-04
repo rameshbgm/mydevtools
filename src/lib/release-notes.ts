@@ -87,6 +87,7 @@ const ENTRIES: ReleaseNote[] = [
                     "Keep metadata, structured data, and sitemap generation on React-free server-safe tables so Ant Design client context is never evaluated while Next.js collects page data.",
                     "Preserve canonical **`/[categorySlug]/[toolId]`** URLs and redirect legacy **`/tools/[toolId]`** requests without breaking tool metadata or sitemap coverage.",
                     "Keep managed network routes disabled by default in production while retaining public-target validation, destination blocking, bounded requests, and the existing development opt-in boundary.",
+                    "Load deployment configuration from plain `next.config.js` and include the matching `@next/swc-wasm-nodejs 16.3.4` fallback for Linux hosts whose glibc cannot load the native SWC binary.",
                 ],
             },
             {

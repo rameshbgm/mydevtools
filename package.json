@@ -61,6 +61,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@next/swc-wasm-nodejs": "^16.3.4",
     "eslint": "^10.10.0",
     "eslint-config-next": "16.3.4",
     "tsx": "^4.23.13"
