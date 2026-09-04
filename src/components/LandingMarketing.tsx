@@ -7,6 +7,7 @@ import {
     CATEGORY_ORDER,
     type ToolCategory,
 } from "@/lib/tools-registry";
+import { dashboardCategoryHashId } from "@/lib/category-routes";
 import { APP_VERSION } from "@/lib/release-notes";
 import { triggerPwaInstallPrompt } from "@/lib/pwa-install-prompt";
 import { messageService } from "@/lib/messageService";
@@ -21,10 +22,6 @@ interface LandingMarketingProps {
 /* ────────────────────────────────────────────────────────────────
    Helpers
    ──────────────────────────────────────────────────────────────── */
-
-function categoryAnchorId(category: ToolCategory) {
-    return `category-${category.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9-]/g, "")}`;
-}
 
 function scrollToCatalog() {
     document
@@ -731,7 +728,7 @@ export default function LandingMarketing({
                                     className="lv-cat-tile"
                                     style={{ color }}
                                     onClick={() => {
-                                        const id = categoryAnchorId(category);
+                                        const id = dashboardCategoryHashId(category);
                                         document
                                             .getElementById(id)
                                             ?.scrollIntoView({ behavior: "smooth", block: "start" });

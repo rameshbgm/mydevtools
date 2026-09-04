@@ -4,8 +4,24 @@
 
 import tls from "tls";
 import { NextResponse } from "next/server";
+import {
+    consumeManagedRouteQuota,
+    createPinnedLookup,
+    managedRoutesEnabled,
+    resolvePublicHost,
+    type ResolvedAddress,
+} from "@/lib/server-network-policy";
+
+export const runtime = "nodejs";
 
 export async function GET(request: Request) {
+    if (!managedRoutesEnabled()) {
+        return NextResponse.json({ error: "Managed network tools are disabled for this deployment" }, { status: 503 });
+    }
+    if (!consumeManagedRouteQuota(request, "fetch-cert", 20)) {
+        return NextResponse.json({ error: "Too many certificate lookups. Try again in a minute." }, { status: 429 });
+    }
+
     const { searchParams } = new URL(request.url);
     const host = searchParams.get("host")?.trim();
     const portParam = searchParams.get("port");
@@ -20,11 +36,13 @@ export async function GET(request: Request) {
     }
 
     try {
-        const pems = await fetchCertChain(host, port);
+        const addresses = await resolvePublicHost(host);
+        const pems = await fetchCertChain(host, port, addresses);
         return NextResponse.json({ pems });
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return NextResponse.json({ error: `Failed to fetch certificate from ${host}:${port} — ${message}` }, { status: 500 });
+        const status = /blocked|public internet/i.test(message) ? 400 : 502;
+        return NextResponse.json({ error: `Certificate lookup failed — ${message}` }, { status });
     }
 }
 
@@ -35,7 +53,7 @@ function derBufferToPem(raw: Buffer): string {
     return `-----BEGIN CERTIFICATE-----\n${lines.join("\n")}\n-----END CERTIFICATE-----`;
 }
 
-function fetchCertChain(host: string, port: number): Promise<string[]> {
+function fetchCertChain(host: string, port: number, addresses: ResolvedAddress[]): Promise<string[]> {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
             socket.destroy();
@@ -46,6 +64,7 @@ function fetchCertChain(host: string, port: number): Promise<string[]> {
             {
                 host,
                 port,
+                lookup: createPinnedLookup(addresses),
                 rejectUnauthorized: false,
                 servername: host,
             },

@@ -172,6 +172,7 @@ export default function Dashboard() {
                                 </span>
                                 <input
                                     type="text"
+                                    aria-label="Search tools"
                                     className="landing-catalog-search-input wb-cat-search-input"
                                     placeholder={`Search ${stats.total} tools…`}
                                     value={search}
@@ -185,6 +186,7 @@ export default function Dashboard() {
                         {search && (
                             <button
                                 type="button"
+                                aria-label="Clear tool search"
                                 onClick={() => setSearch("")}
                                 style={{
                                     position: "absolute",

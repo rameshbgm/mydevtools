@@ -14,7 +14,15 @@ const { TextArea } = Input;
 const { Text } = Typography;
 
 interface ShareState { pattern: string; flags: string; testStr: string; }
-const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "regex-tester", version: 1 };
+const SHARE_SCHEMA: ShareSchema<ShareState> = {
+    toolId: "regex-tester",
+    version: 1,
+    validate: (state: unknown): state is ShareState => {
+        if (!state || typeof state !== "object") return false;
+        const candidate = state as Record<string, unknown>;
+        return typeof candidate.pattern === "string" && typeof candidate.flags === "string" && typeof candidate.testStr === "string";
+    },
+};
 
 export default function RegexTesterPage() {
     const [pattern, setPattern] = useState("(\\w+)@(\\w+\\.\\w+)");

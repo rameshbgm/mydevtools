@@ -175,7 +175,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
                         key: "summary",
                         label: "Summary",
                         children: (
-                            <Descriptions bordered size="small" column={1} labelStyle={{ width: 180 }}>
+                            <Descriptions bordered size="small" column={1} styles={{ label: { width: 180 } }}>
                                 <Descriptions.Item label="Common Name">{info.subject.CN ?? "—"}</Descriptions.Item>
                                 <Descriptions.Item label="Issuer">{formatDN(info.issuer)}</Descriptions.Item>
                                 <Descriptions.Item label="Serial Number">
@@ -297,7 +297,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
                         key: "fingerprints",
                         label: "Fingerprints",
                         children: (
-                            <Descriptions bordered size="small" column={1} labelStyle={{ width: 100 }}>
+                            <Descriptions bordered size="small" column={1} styles={{ label: { width: 100 } }}>
                                 <Descriptions.Item label="SHA-256">
                                     <Text
                                         code
@@ -497,7 +497,7 @@ function FingerprintTab({ input }: { input: string }) {
                             </Tag>
                         </div>
                     )}
-                    <Descriptions bordered size="small" column={1} labelStyle={{ width: 120, fontWeight: 600 }}>
+                    <Descriptions bordered size="small" column={1} styles={{ label: { width: 120, fontWeight: 600 } }}>
                         <Descriptions.Item
                             label={
                                 <Space>

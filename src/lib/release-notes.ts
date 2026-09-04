@@ -16,7 +16,7 @@
  * Public-facing version number shown in the topbar. Bump on a meaningful
  * shipping milestone — does NOT need to match individual entries below.
  */
-export const APP_VERSION = "1.4";
+export const APP_VERSION = "1.5";
 
 export type ReleaseKind = "feature" | "fix" | "security" | "ui" | "perf";
 
@@ -43,6 +43,10 @@ export interface ReleaseNote {
  * Release notes — newest entry FIRST. The exported array is sorted on
  * load so out-of-order appends still render correctly.
  *
+ * V1.5 — 8 contract, security, identity and platform tools, plus managed
+ *        route hardening, safer previews, accessibility fixes and a catalog
+ *        accuracy pass (121 tools total).
+ *
  * V1.4 — 14 new tools across Networking, Diff, Image & Media and Data
  *        Conversion, plus cross-tool pipelines, shareable URLs, PWA
  *        install, the browser extension, and the key-free AI category.
@@ -58,6 +62,57 @@ export interface ReleaseNote {
  * V1.0 — initial public release of the toolkit (80+ tools).
  */
 const ENTRIES: ReleaseNote[] = [
+    {
+        date: "2026-09-05",
+        version: "1.5",
+        kind: "feature",
+        title: "V1.5 — API contracts, security analysis, identity tooling, and platform hardening",
+        summary:
+            "Eight local-first developer tools join the catalog, while managed network routes, untrusted previews, certificate inspection, extension handoffs, release metadata, and Ant Design v6 usage receive a focused reliability and security pass. The catalog now contains 121 tools across 15 categories.",
+        sections: [
+            {
+                label: "New API, contract & platform tools (8)",
+                bullets: [
+                    "**OpenAPI Contract Diff** — compares two OpenAPI or Swagger documents and reports conservative breaking changes across operations, required parameters, responses, and schema requirements.",
+                    "**JSON Schema Workbench** — validates JSON or YAML instances against common Draft 2020-12 schema rules, including local references, types, required properties, enums, strings, arrays, and additional-property checks.",
+                    "**AsyncAPI Explorer** — summarizes AsyncAPI 2.x/3.x channels, operations, servers, messages, and core required fields without contacting a broker.",
+                    "**GraphQL Schema & Operation Explorer** — validates queries, mutations, and subscriptions against pasted SDL with the official GraphQL parser; it never connects to an endpoint.",
+                    "**Security Headers & CSP Analyzer** — evaluates pasted response headers for CSP, HSTS, nosniff, Referrer-Policy, and Permissions-Policy gaps locally.",
+                    "**OAuth / OIDC & PKCE Playground** — reviews pasted discovery metadata, generates local PKCE S256 verifier/challenge pairs, and previews an authorization request without fetching a provider or accepting secrets.",
+                    "**Docker Compose Analyzer** — inspects compose.yaml services, ports, volumes, networks, privileged containers, host networking, and healthcheck coverage; it never contacts Docker.",
+                    "**WebAuthn / Passkey Playground** — decodes serialised credential metadata and clientDataJSON locally. Full registration and assertion ceremonies remain application-specific and require server-side challenge validation.",
+                ],
+            },
+            {
+                label: "Managed network route hardening",
+                bullets: [
+                    "Managed proxy, streaming proxy, certificate fetch, and webhook capture routes are disabled by default in production and require `MYDEVTOOLS_ENABLE_MANAGED_ROUTES=true` behind appropriate gateway controls.",
+                    "Public-address validation and DNS pinning block loopback, private, link-local, multicast, documentation, and mixed public/private destinations before outbound connections are made.",
+                    "Proxy routes now clamp request/response sizes and timeouts, use strict TLS by default, protect redirects, and remove credentials on cross-origin redirects.",
+                    "Webhook capture now uses stronger session identifiers plus bounded per-session/global retention. It remains temporary in-memory development/debugging storage, not durable delivery infrastructure.",
+                    "Fixed certificate inspection for hosts whose TLS client requests Node DNS lookup results in `all` mode, including `mportal.passportindia.gov.in`.",
+                ],
+            },
+            {
+                label: "Safer content handling & clearer trust boundaries",
+                bullets: [
+                    "Mermaid and SVG previews now render in sandboxed iframes; SVG optimisation strips active-content sinks before rendering or download.",
+                    "Rich Text Editor input, stored documents, previews, and exports now pass through a local allowlist sanitizer.",
+                    "Network-capable tool notices now state exactly what a route does and whether webhook data is temporary, instead of using a generic privacy claim.",
+                    "Certificate verification defaults to enabled; certificate fetching intentionally allows invalid chains only so they can be inspected, while destination protections remain enforced.",
+                ],
+            },
+            {
+                label: "Quality, accessibility & catalog accuracy",
+                bullets: [
+                    "Replaced deprecated Ant Design `Descriptions.labelStyle`, static message usage, `List`, and `Input.addonBefore` patterns in the updated tools with context-aware v6 APIs.",
+                    "Tool pages use one H1, visible trust notices before managed actions, labelled controls, and responsive layouts; catalog links and structured data now match the registered count.",
+                    "Extension handoff state now matches each target schema, custom origins are validated, and stale manifest icon/permission references were removed.",
+                    "Added network-policy and contract-tool regression tests. Production build, type checks, route/catalog parity, and focused browser checks passed; lint completed with no errors (existing repository warnings remain tracked separately).",
+                ],
+            },
+        ],
+    },
     {
         date: "2026-05-27",
         version: "1.4",

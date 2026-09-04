@@ -13,15 +13,15 @@
 const DEFAULT_SITE = "https://mydevtools.com";
 
 const TARGETS = [
-    // { id: "<tool-id>", title: "<menu label>", path: "<canonical path>", kind: "<input field key>" }
-    { id: "json-formatter",   title: "Format JSON",                path: "/formatters/json-formatter",            field: "input", extra: { mode: "Prettify" } },
-    { id: "jwt-decoder",      title: "Decode JWT",                 path: "/cryptography/jwt-decoder",             field: "token" },
-    { id: "base64",           title: "Base64 encode",              path: "/encoding-and-decoding/base64",         field: "input", extra: { mode: "Encode" } },
-    { id: "base64-decode",    title: "Base64 decode",              path: "/encoding-and-decoding/base64",         field: "input", extra: { mode: "Decode" }, toolId: "base64" },
-    { id: "url-encoder",      title: "URL encode",                 path: "/encoding-and-decoding/url-encoder",    field: "input", extra: { mode: "Encode" } },
-    { id: "url-decoder",      title: "URL decode",                 path: "/encoding-and-decoding/url-encoder",    field: "input", extra: { mode: "Decode" }, toolId: "url-encoder" },
-    { id: "hash-generator",   title: "Generate hashes",            path: "/cryptography/hash-generator",          field: "input" },
-    { id: "regex-tester",     title: "Test with regex",            path: "/validators/regex-tester",              field: "input" },
+    // `state(text)` must match the target's share schema exactly.
+    { id: "json-formatter",   title: "Format JSON",                path: "/formatters/json-formatter",            state: (text) => ({ input: text, mode: "Prettify" }) },
+    { id: "jwt-decoder",      title: "Decode JWT",                 path: "/cryptography/jwt-decoder",             state: (text) => ({ token: text }) },
+    { id: "base64",           title: "Base64 encode",              path: "/encoding-and-decoding/base64",         state: (text) => ({ input: text, mode: "Encode" }) },
+    { id: "base64-decode",    title: "Base64 decode",              path: "/encoding-and-decoding/base64",         toolId: "base64", state: (text) => ({ input: text, mode: "Decode" }) },
+    { id: "url-encoder",      title: "URL encode",                 path: "/encoding-and-decoding/url-encoder",    state: (text) => ({ input: text, mode: "Encode" }) },
+    { id: "url-decoder",      title: "URL decode",                 path: "/encoding-and-decoding/url-encoder",    toolId: "url-encoder", state: (text) => ({ input: text, mode: "Decode" }) },
+    { id: "hash-generator",   title: "Generate hashes",            path: "/cryptography/hash-generator",          state: (text) => ({ input: text }) },
+    { id: "regex-tester",     title: "Test with regex",            path: "/validators/regex-tester",              state: (text) => ({ pattern: "", flags: "g", testStr: text }) },
 ];
 
 // ── share-URL builder (matches src/lib/shareable-state.ts) ────────────
@@ -47,7 +47,7 @@ function bytesToBase64Url(b) {
 
 async function buildShareUrl(siteOrigin, target, text) {
     const toolId = target.toolId || target.id;
-    const state = { [target.field]: text, ...(target.extra || {}) };
+    const state = target.state(text);
     const payload = JSON.stringify({ t: toolId, v: 1, s: state });
     const bytes = await deflate(payload);
     const b64 = bytesToBase64Url(bytes);
@@ -58,7 +58,13 @@ async function buildShareUrl(siteOrigin, target, text) {
 
 async function getSiteOrigin() {
     const stored = await chrome.storage.sync.get("siteOrigin");
-    return stored.siteOrigin || DEFAULT_SITE;
+    const raw = stored.siteOrigin || DEFAULT_SITE;
+    const parsed = new URL(raw);
+    const isLocal = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "[::1]";
+    if (!["https:", "http:"].includes(parsed.protocol) || (parsed.protocol !== "https:" && !isLocal)) {
+        throw new Error("Use an HTTPS origin (HTTP is allowed only for localhost)");
+    }
+    return parsed.origin;
 }
 
 // ── menus ─────────────────────────────────────────────────────────────

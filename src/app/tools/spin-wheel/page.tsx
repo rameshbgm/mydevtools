@@ -54,8 +54,11 @@ export default function SpinWheelPage() {
     const [winner, setWinner] = useState<string | null>(null);
     const [history, setHistory] = useState<string[]>([]);
     const [winnerIdx, setWinnerIdx] = useState<number | null>(null);
-    const spinRef = useRef(rotation);
-    spinRef.current = rotation;
+    const spinRef = useRef(0);
+
+    useEffect(() => {
+        spinRef.current = rotation;
+    }, [rotation]);
 
     useEffect(() => {
         try {

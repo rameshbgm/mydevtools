@@ -65,6 +65,8 @@ export interface ShareSchema<T> {
     version: number;
     /** Drop nothing — just a hook to remove huge / sensitive fields before serialising. */
     sanitize?: (state: T) => Partial<T>;
+    /** Reject malformed or stale state before a tool applies it. */
+    validate?: (state: unknown) => state is T;
 }
 
 /** Encode + write to `location.hash`. Returns the share URL or `null` on overflow. */
@@ -89,10 +91,11 @@ export async function readShareState<T>(schema: ShareSchema<T>): Promise<T | nul
     try {
         const bytes = base64UrlToBytes(b64);
         const text = await inflate(bytes);
-        const parsed = JSON.parse(text) as { t: string; v: number; s: T };
+        const parsed = JSON.parse(text) as { t: string; v: number; s: unknown };
         if (parsed.t !== schema.toolId) return null;
         if (parsed.v !== schema.version) return null;
-        return parsed.s;
+        if (schema.validate && !schema.validate(parsed.s)) return null;
+        return parsed.s as T;
     } catch {
         return null;
     }

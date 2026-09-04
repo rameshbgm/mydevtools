@@ -17,7 +17,7 @@ interface Props {
     purpose: string;
     /** Bullet list of the exact data fields that leave the browser. */
     sentFields: string[];
-    /** Optional override; defaults to the standard "no logs" line. */
+    /** Optional disclosure for route-specific retention or operational limits. */
     extra?: React.ReactNode;
 }
 
@@ -30,10 +30,8 @@ const ROUTE_FILE: Record<ServerRouteId, string> = {
 
 /**
  * Trust notice for tools whose features require a server-side route
- * (CORS bypass, raw TLS sockets) that cannot run in a browser.
- *
- * Renders a single warning Alert that explains: what is sent, why it is sent,
- * that nothing is logged, and links to the route source on GitHub for audit.
+ * (CORS bypass, raw TLS sockets) that cannot run in a browser. This is shown
+ * before the interactive tool so the data boundary is visible before sending.
  */
 export default function ServerProxyNotice({ route, purpose, sentFields, extra }: Props) {
     const filePath = ROUTE_FILE[route];
@@ -66,8 +64,12 @@ export default function ServerProxyNotice({ route, purpose, sentFields, extra }:
                     </div>
 
                     <Paragraph style={{ fontSize: 12, marginBottom: 0 }}>
-                        <Text strong>Privacy:</Text> the server does not log, store, or forward any of this
-                        data. The route forwards your request, returns the response, and discards everything.
+                        <Text strong>Data handling:</Text>{" "}
+                        {route === "webhook"
+                            ? "captured requests are stored in temporary process memory so this page can display them."
+                            : route === "fetch-cert"
+                                ? "the server opens a TLS connection to the hostname and returns the certificate chain."
+                                : "the server relays this request to your target and returns its response; the target receives the fields above."}
                     </Paragraph>
 
                     {extra}

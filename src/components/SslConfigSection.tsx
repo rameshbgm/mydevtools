@@ -15,7 +15,7 @@ export interface SslConfig {
 }
 
 export const DEFAULT_SSL_CONFIG: SslConfig = {
-    sslVerify: false,
+    sslVerify: true,
     sslCaCert: "",
     sslClientCert: "",
     sslClientKey: "",
@@ -65,7 +65,7 @@ export default function SslConfigSection({ value, onChange, compact }: Props) {
                     <Text strong style={{ fontSize: 13 }}>Verify SSL certificate</Text>
                     <div>
                         <Text type="secondary" style={{ fontSize: 11 }}>
-                            When off (default), self-signed and expired certs are accepted via the proxy.
+                            On by default. Turn it off only for a deliberately trusted development endpoint with a self-signed or expired certificate.
                         </Text>
                     </div>
                 </div>

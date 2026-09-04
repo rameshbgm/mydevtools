@@ -25,9 +25,9 @@ interface CapturedRequest {
 }
 
 function randomSessionId(): string {
-    const bytes = new Uint8Array(9);
+    const bytes = new Uint8Array(18);
     crypto.getRandomValues(bytes);
-    return Array.from(bytes, (b) => b.toString(36).padStart(2, "0")).join("").slice(0, 12);
+    return Array.from(bytes, (b) => b.toString(36).padStart(2, "0")).join("").slice(0, 24);
 }
 
 const METHOD_COLOR: Record<string, string> = {
@@ -47,7 +47,7 @@ export default function WebhookReceiverPage() {
     useEffect(() => {
         setMounted(true);
         const stored = typeof window !== "undefined" ? localStorage.getItem("webhook-session-id") : null;
-        if (stored && /^[A-Za-z0-9_-]{6,64}$/.test(stored)) {
+        if (stored && /^[A-Za-z0-9_-]{16,64}$/.test(stored)) {
             setSessionId(stored);
             sessionRef.current = stored;
         } else {
@@ -155,7 +155,7 @@ export default function WebhookReceiverPage() {
                 ],
                 tips: [
                     "Session URL is stored in localStorage so refreshes keep your history",
-                    "Server holds the last 200 requests per session and auto-expires after 1 hour idle",
+                    "Server holds up to 50 requests or 5 MB per session, auto-expires after 1 hour idle, and may not survive a deployment restart",
                     "All methods are accepted (GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD)",
                     "Binary bodies are surfaced as base64 inside the captured request",
                 ],
@@ -166,7 +166,7 @@ export default function WebhookReceiverPage() {
                 ],
                 serverNotice: {
                     route: "webhook",
-                    purpose: "Webhook Receiver runs an in-memory server-side store keyed by your session id. Captured requests stay on the mydevtools server only for the session lifetime (1 hour idle, max 200 requests).",
+                    purpose: "Webhook Receiver keeps captured requests in process memory for the session lifetime (1 hour idle, up to 50 requests or 5 MB). It is not durable across deployment restarts or shared across server instances.",
                     sentFields: ["session id", "captured request headers", "captured request body"],
                 },
             }}
