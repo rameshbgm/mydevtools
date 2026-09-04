@@ -42,6 +42,7 @@ import {
     type ParsedCertificate,
 } from "@/lib/cert-utils";
 import { downloadBytes, downloadText } from "@/lib/download";
+import { parseCertificateFetchResponse } from "@/lib/certificate-fetch-response";
 import forge from "node-forge";
 
 const { TextArea } = Input;
@@ -944,10 +945,7 @@ function CertificateInspectorPageContent() {
         setFetchLoading(true);
         try {
             const res = await fetch(`/api/fetch-cert?host=${encodeURIComponent(host)}&port=${port}`);
-            const data = await res.json() as { pems?: string[]; error?: string };
-            if (!res.ok || data.error) {
-                throw new Error(data.error ?? "Fetch failed");
-            }
+            const data = await parseCertificateFetchResponse(res);
             if (!data.pems || data.pems.length === 0) {
                 throw new Error("No certificates returned");
             }

@@ -15,7 +15,7 @@ const nextConfig = {
       // the proxy and creating a redirect loop.
       beforeFiles: [
         {
-          source: "/:categorySlug/:toolId",
+          source: "/:categorySlug((?!api(?:/|$)|tools(?:/|$)|_next(?:/|$)|memory(?:/|$)|release-notes(?:/|$))[^/]+)/:toolId",
           destination: "/tools/:toolId",
         },
       ],

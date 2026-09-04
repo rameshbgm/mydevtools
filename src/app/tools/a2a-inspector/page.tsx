@@ -21,6 +21,7 @@ import { CodeEditor } from "@/components/CodeEditor";
 import SslConfigSection, { DEFAULT_SSL_CONFIG, buildSslProxyFields, type SslConfig } from "@/components/SslConfigSection";
 import { copyToClipboard } from "@/lib/clipboard";
 import ToolBridgeBanner from "@/components/ToolBridgeBanner";
+import { parseJsonResponse, type ProxyResponsePayload } from "@/lib/certificate-fetch-response";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -448,7 +449,7 @@ export default function A2aInspectorPage() {
         try {
             const res = await fetch(finalUrl, { headers });
             if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-            return { data: await res.json(), usedProxy: false, status: res.status };
+            return { data: await parseJsonResponse<AgentCard>(res, "Agent endpoint"), usedProxy: false, status: res.status };
         } catch (err) {
             if (looksLikeNetworkError(err)) {
                 if (corsFallbackAllowed()) {
@@ -472,7 +473,7 @@ export default function A2aInspectorPage() {
                 ...buildSslProxyFields(sslConfig),
             }),
         });
-        const proxy = await res.json();
+        const proxy = await parseJsonResponse<ProxyResponsePayload>(res, "Proxy service");
         if (proxy.error) throw new Error(proxy.error);
         if (proxy.status < 200 || proxy.status >= 300) {
             throw new Error(`HTTP ${proxy.status}: ${proxy.statusText || (proxy.body as string)?.slice?.(0, 120)}`);
@@ -504,7 +505,7 @@ export default function A2aInspectorPage() {
                         ...buildSslProxyFields(sslConfig),
                     }),
                 });
-                const proxy = await proxyRes.json();
+                const proxy = await parseJsonResponse<ProxyResponsePayload>(proxyRes, "Proxy service");
                 if (proxy.error) throw new Error(proxy.error);
                 if (proxy.status < 200 || proxy.status >= 300) {
                     throw new Error(`HTTP ${proxy.status}: ${proxy.statusText || (proxy.body as string)?.slice?.(0, 120)}`);
@@ -515,7 +516,7 @@ export default function A2aInspectorPage() {
                 try {
                     const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
                     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-                    resJson = await res.json();
+                    resJson = await parseJsonResponse<typeof resJson>(res, "Agent endpoint");
                 } catch (err) {
                     if (!looksLikeNetworkError(err)) throw err;
                     // CORS/cert fallback — only when the user has chosen "direct" auto mode.
@@ -532,7 +533,7 @@ export default function A2aInspectorPage() {
                             ...buildSslProxyFields(sslConfig),
                         }),
                     });
-                    const proxy = await proxyRes.json();
+                    const proxy = await parseJsonResponse<ProxyResponsePayload>(proxyRes, "Proxy service");
                     if (proxy.error) throw new Error(proxy.error);
                     if (proxy.status < 200 || proxy.status >= 300) {
                         throw new Error(`HTTP ${proxy.status}: ${proxy.statusText || (proxy.body as string)?.slice?.(0, 120)}`);
@@ -708,7 +709,7 @@ export default function A2aInspectorPage() {
                         ...buildSslProxyFields(sslConfig),
                     }),
                 });
-                const data = await proxyRes.json();
+                const data = await parseJsonResponse<ProxyResponsePayload>(proxyRes, "Proxy service");
                 steps.push({
                     name: "Via Server Proxy",
                     ok: !data.error && data.status >= 200 && data.status < 500,
