@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { createPinnedLookup, isPublicIp } from "../src/lib/server-network-policy";
+import { createPinnedLookup, isPublicIp, managedRoutesEnabled } from "../src/lib/server-network-policy";
 
 const blocked = [
     "127.0.0.1", "10.0.0.1", "100.64.0.1", "169.254.169.254", "172.16.0.1",
@@ -11,6 +11,23 @@ for (const address of ["1.1.1.1", "8.8.8.8", "2606:4700:4700::1111"]) {
     assert.equal(isPublicIp(address), true, `${address} must be allowed`);
 }
 assert.equal(isPublicIp("::ffff:808:808"), true, "public IPv4-mapped IPv6 must be allowed");
+
+const previousDisable = process.env.MYDEVTOOLS_DISABLE_MANAGED_ROUTES;
+const previousEnable = process.env.MYDEVTOOLS_ENABLE_MANAGED_ROUTES;
+delete process.env.MYDEVTOOLS_DISABLE_MANAGED_ROUTES;
+delete process.env.MYDEVTOOLS_ENABLE_MANAGED_ROUTES;
+assert.equal(managedRoutesEnabled(), true, "managed routes must be enabled by default");
+process.env.MYDEVTOOLS_DISABLE_MANAGED_ROUTES = "true";
+assert.equal(managedRoutesEnabled(), false, "explicit disable flag must disable managed routes");
+delete process.env.MYDEVTOOLS_DISABLE_MANAGED_ROUTES;
+process.env.MYDEVTOOLS_ENABLE_MANAGED_ROUTES = "false";
+assert.equal(managedRoutesEnabled(), false, "legacy enable flag set to false must disable managed routes");
+process.env.MYDEVTOOLS_ENABLE_MANAGED_ROUTES = "true";
+assert.equal(managedRoutesEnabled(), true, "explicit enable flag must enable managed routes");
+if (previousDisable === undefined) delete process.env.MYDEVTOOLS_DISABLE_MANAGED_ROUTES;
+else process.env.MYDEVTOOLS_DISABLE_MANAGED_ROUTES = previousDisable;
+if (previousEnable === undefined) delete process.env.MYDEVTOOLS_ENABLE_MANAGED_ROUTES;
+else process.env.MYDEVTOOLS_ENABLE_MANAGED_ROUTES = previousEnable;
 
 const lookup = createPinnedLookup([{ address: "1.1.1.1", family: 4 }]);
 (async () => {
@@ -25,7 +42,7 @@ const lookup = createPinnedLookup([{ address: "1.1.1.1", family: 4 }]);
             }
         });
     });
-    console.log(`✓ ${blocked.length + 4}/${blocked.length + 4} network policy assertions passed`);
+    console.log(`✓ ${blocked.length + 8}/${blocked.length + 8} network policy assertions passed`);
 })().catch((error) => {
     console.error(error);
     process.exitCode = 1;

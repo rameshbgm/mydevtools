@@ -147,9 +147,10 @@ export function createPinnedLookup(addresses: ResolvedAddress[]): LookupFunction
     };
 }
 
-/** Managed server routes are available in development and opt-in in production. */
+/** Managed routes are enabled by default; deployments can explicitly disable them. */
 export function managedRoutesEnabled(): boolean {
-    return process.env.NODE_ENV !== "production" || process.env.MYDEVTOOLS_ENABLE_MANAGED_ROUTES === "true";
+    return process.env.MYDEVTOOLS_DISABLE_MANAGED_ROUTES !== "true"
+        && process.env.MYDEVTOOLS_ENABLE_MANAGED_ROUTES !== "false";
 }
 
 type RateWindow = { count: number; resetAt: number };

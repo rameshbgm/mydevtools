@@ -22,8 +22,8 @@ A privacy-first developer tools portal — **121 utilities** across **15 categor
 - **Dark / Light themes** with persistent preference
 - **Navigation loader** with friendly messages and 60-second safety timeout
 - **Privacy-first**: local tools run in-browser with no analytics or telemetry; managed network tools disclose their data boundary before use
-- **Managed network tools** — proxy, certificate inspection, and webhook capture are disabled in production unless `MYDEVTOOLS_ENABLE_MANAGED_ROUTES=true`
-- **Production build:** Next.js server deployment for canonical routing and optional managed tools
+- **Managed network tools** — proxy, certificate inspection, and webhook capture are enabled by default with SSRF controls and quotas; set `MYDEVTOOLS_DISABLE_MANAGED_ROUTES=true` to disable them
+- **Production build:** Next.js Node deployment for canonical routing and managed tools
 - **MIT licensed** — fork it, modify it, ship it
 
 ---
@@ -37,7 +37,7 @@ Version 1.5 adds eight local-first tools and strengthens the small set of server
 | API contracts | OpenAPI Contract Diff, JSON Schema Workbench, AsyncAPI Explorer, GraphQL Schema & Operation Explorer | Pasted documents are parsed locally. GraphQL validates against the pasted SDL; it does not call an endpoint. |
 | Web & identity security | Security Headers & CSP Analyzer, OAuth/OIDC & PKCE Playground, WebAuthn / Passkey Playground | Headers, discovery metadata, and credential fixtures stay in the browser. PKCE values are generated locally. Never paste client secrets or private keys. |
 | Platform workflows | Docker Compose Analyzer | Compose YAML is inspected locally; the tool never contacts a Docker daemon. |
-| Managed network routes | Proxy, stream proxy, certificate inspection, webhook receiver | Disabled in production by default. They enforce public-address policy checks, DNS pinning, bounded input/output, timeouts, and route-specific disclosure. |
+| Managed network routes | Proxy, stream proxy, certificate inspection, webhook receiver | Enabled by default with public-address policy checks, DNS pinning, bounded input/output, timeouts, and route-specific disclosure. Set `MYDEVTOOLS_DISABLE_MANAGED_ROUTES=true` to disable them. |
 
 The release also sandboxed Mermaid/SVG previews, sanitizes Rich Text Editor content, improved certificate inspection reliability, corrected cross-tool extension payloads, and added regression coverage for network policy and contract tooling.
 
@@ -118,8 +118,8 @@ This app is built around the principle that **local work stays in your browser b
 
 | Concern | Status | Detail |
 |---|---|---|
-| Server-side runtime | ✅ Optional managed mode | Required for canonical routing and managed proxy, certificate, and webhook tools |
-| API routes | ✅ Present | Disabled in production by default; enable with `MYDEVTOOLS_ENABLE_MANAGED_ROUTES=true` only behind appropriate gateway controls |
+| Server-side runtime | ✅ Node runtime | Required for canonical routing and managed proxy, certificate, and webhook tools |
+| API routes | ✅ Present | Enabled by default with SSRF and quota controls; set `MYDEVTOOLS_DISABLE_MANAGED_ROUTES=true` to disable them explicitly |
 | Analytics packages | ❌ None | No GA, Plausible, Sentry, Hotjar, Mixpanel, Segment, etc. |
 | Auto-fetch on mount | ❌ None | No tool calls anything when you open it |
 | Third-party CDNs at runtime | ❌ None | Monaco self-hosted; Swagger UI bundled via `swagger-ui-react` |
@@ -242,7 +242,7 @@ To tweak **landing**, use **`globals.css`** (`landing-*`). To tweak workspace ch
 
 ## Deployment
 
-The full product runs as a Next.js Node deployment. This is required for canonical route rewrites and the optional managed network tools. Production deployments leave managed routes disabled unless `MYDEVTOOLS_ENABLE_MANAGED_ROUTES=true` is explicitly set.
+The full product runs as a Next.js Node deployment. This is required for canonical route rewrites and the managed network tools. Production deployments enable managed routes by default; set `MYDEVTOOLS_DISABLE_MANAGED_ROUTES=true` to disable them explicitly. `MYDEVTOOLS_ENABLE_MANAGED_ROUTES=true` remains accepted for compatibility.
 
 ### Docker (Node runtime)
 
