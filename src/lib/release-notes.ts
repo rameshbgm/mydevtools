@@ -87,14 +87,14 @@ const ENTRIES: ReleaseNote[] = [
                     "Keep metadata, structured data, and sitemap generation on React-free server-safe tables so Ant Design client context is never evaluated while Next.js collects page data.",
                     "Preserve canonical **`/[categorySlug]/[toolId]`** URLs and redirect legacy **`/tools/[toolId]`** requests without breaking tool metadata or sitemap coverage.",
                     "Keep managed network routes disabled by default in production while retaining public-target validation, destination blocking, bounded requests, and the existing development opt-in boundary.",
-                    "Load deployment configuration from plain `next.config.js` and include the matching `@next/swc-wasm-nodejs 16.3.4` fallback for Linux hosts whose glibc cannot load the native SWC binary.",
+                    "Load deployment configuration from plain `next.config.js`, include the matching `@next/swc-wasm-nodejs 16.3.4` fallback, and use the Webpack production build on Linux hosts where old glibc leaves only WASM SWC available because Turbopack requires native bindings.",
                 ],
             },
             {
                 label: "Verification completed",
                 bullets: [
                     "Pass **`npx tsc --noEmit`** with no TypeScript errors.",
-                    "Pass **`npm run build`** on the default Next.js Turbopack path, including registry parity (**121 registered tools / 127 tool directories / 6 allowlisted stubs**) and generation of **138 / 138** static pages.",
+                    "Pass **`npm run build`** through Next.js Webpack, including registry parity (**121 registered tools / 127 tool directories / 6 allowlisted stubs**) and generation of **138 / 138** static pages.",
                     "Verify the homepage and canonical certificate-inspector page (**HTTP 200**), the legacy `/tools/certificate-inspector` redirect (**HTTP 308**), sitemap entries, public certificate lookup (**5 PEM certificates from `example.com`**), loopback-target blocking (**HTTP 400**), malformed proxy-body validation (**HTTP 400**), and public HTTPS proxying (**HTTP 200** with a 559-byte response).",
                 ],
             },
