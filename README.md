@@ -28,6 +28,30 @@ A privacy-first developer tools portal — **121 utilities** across **15 categor
 
 ---
 
+## v1.5 release
+
+Version 1.5 adds eight local-first tools and strengthens the small set of server-assisted workflows. The catalog now contains 121 tools across 15 categories.
+
+| Area | What’s included | Data boundary |
+|---|---|---|
+| API contracts | OpenAPI Contract Diff, JSON Schema Workbench, AsyncAPI Explorer, GraphQL Schema & Operation Explorer | Pasted documents are parsed locally. GraphQL validates against the pasted SDL; it does not call an endpoint. |
+| Web & identity security | Security Headers & CSP Analyzer, OAuth/OIDC & PKCE Playground, WebAuthn / Passkey Playground | Headers, discovery metadata, and credential fixtures stay in the browser. PKCE values are generated locally. Never paste client secrets or private keys. |
+| Platform workflows | Docker Compose Analyzer | Compose YAML is inspected locally; the tool never contacts a Docker daemon. |
+| Managed network routes | Proxy, stream proxy, certificate inspection, webhook receiver | Disabled in production by default. They enforce public-address policy checks, DNS pinning, bounded input/output, timeouts, and route-specific disclosure. |
+
+The release also sandboxed Mermaid/SVG previews, sanitizes Rich Text Editor content, improved certificate inspection reliability, corrected cross-tool extension payloads, and added regression coverage for network policy and contract tooling.
+
+### Verify locally
+
+```bash
+npm test
+npm run build
+```
+
+`npm run build` runs the catalog parity check first. It verifies every registered tool has its route and SEO entry.
+
+---
+
 ## Categories at a Glance
 
 | # | Category | Count | Examples |
@@ -140,7 +164,7 @@ src/
 │   ├── globals.css           # Theme variables + landing (`landing-*`) + global overrides
 │   ├── workspace.css         # Workspace/catalog/tool-shell tokens & components (below marketing)
 │   └── tools/[id]/
-│       ├── page.tsx          # Tool implementation (87 of them)
+│       ├── page.tsx          # Tool implementation (121 registered tools)
 │       └── layout.tsx        # Per-tool SEO metadata + JSON-LD schema
 ├── components/
 │   ├── AppShell.tsx          # Layout: sidebar (accordion), header (search + theme)
@@ -151,8 +175,10 @@ src/
 │   └── PwaRegister.tsx       # Service-worker registration (production only)
 ├── lib/
 │   ├── tools-registry.ts     # Single source of truth: tools, categories, colors, icons
+│   ├── tool-url-table.ts     # Edge-safe tool-to-category map for canonical routes
 │   ├── seo-content.ts        # Hand-crafted SEO metadata (title/desc/keywords) per tool
 │   ├── metadata-generator.ts # Builds Next.js Metadata + JSON-LD from registry+seo
+│   ├── server-network-policy.ts # Public destination policy and pinned DNS lookup for managed routes
 │   ├── store.ts              # Zustand: darkMode, sidebar, recentTools, isNavigating
 │   ├── messageService.ts     # Theme-aware antd message bridge
 │   ├── todo-db.ts            # IndexedDB helpers for the Todo List tool
