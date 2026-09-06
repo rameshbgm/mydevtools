@@ -79,6 +79,7 @@ const ENTRIES: ReleaseNote[] = [
                     "Update Ant Design to **`6.6.2`** with **`@ant-design/icons 6.3.4`**, keeping the icon peer requirement aligned with Ant Design v6.",
                     "Update Next.js to **`16.3.4`**, React / React DOM to **`19.2.8`**, and TypeScript to **`7.0.2`**; opt into the documented TypeScript CLI path required by this Next.js toolchain.",
                     "Refresh Tailwind CSS / PostCSS, ESLint, Framer Motion, Mermaid, Swagger UI, XML parsing, tokenisation, formatting, UUID, YAML, Zustand, type packages, and security overrides; regenerate the lockfile for reproducible installs.",
+                    "Patch the nested Babel, Browserslist, and brace-expansion dependency paths, and update the Hugging Face runtime path to **`sharp 0.35.4`**, **`onnxruntime-node 1.29.0`**, and **`adm-zip 0.6.0`**; `npm audit` now reports zero known vulnerabilities.",
                 ],
             },
             {
