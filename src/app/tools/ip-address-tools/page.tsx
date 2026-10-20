@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
+import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import {
     Card,
     Input,
@@ -31,7 +32,6 @@ import {
     SearchOutlined,
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
-import { useAppStore } from "@/lib/store";
 import { copyToClipboard } from "@/lib/clipboard";
 
 const { Text } = Typography;
@@ -176,48 +176,25 @@ function isReservedIPv4(octets: number[]): boolean {
 // ─── IPv6 Utils ───────────────────────────────────────────────────────
 
 function parseIPv6(ip: string): number[] | null {
-    const zoneIndex = ip.indexOf("%");
-    let cleanIP = zoneIndex !== -1 ? ip.substring(0, zoneIndex) : ip;
-
+    const zoneParts = ip.split("%");
+    if (zoneParts.length > 2 || (zoneParts.length === 2 && !/^[A-Za-z0-9_.~-]+$/.test(zoneParts[1]))) return null;
+    let cleanIP = zoneParts[0];
     if (cleanIP.includes(".")) {
         const lastColon = cleanIP.lastIndexOf(":");
-        if (lastColon === -1) return null;
-        const ipv6Part = cleanIP.substring(0, lastColon);
-        const ipv4Part = cleanIP.substring(lastColon + 1);
-        const ipv4Octets = parseIPv4(ipv4Part);
-        if (!ipv4Octets) return null;
-
-        const hex1 = ((ipv4Octets[0] << 8) + ipv4Octets[1]).toString(16);
-        const hex2 = ((ipv4Octets[2] << 8) + ipv4Octets[3]).toString(16);
-        cleanIP = ipv6Part + ":" + hex1 + ":" + hex2;
+        if (lastColon < 0) return null;
+        const octets = parseIPv4(cleanIP.slice(lastColon + 1));
+        if (!octets) return null;
+        cleanIP = cleanIP.slice(0, lastColon + 1) + ((octets[0] << 8) | octets[1]).toString(16) + ":" + ((octets[2] << 8) | octets[3]).toString(16);
     }
-
-    let expanded = cleanIP;
-    if (cleanIP.includes("::")) {
-        const parts = cleanIP.split("::");
-        if (parts.length > 2) return null;
-
-        const left = parts[0] ? parts[0].split(":").filter(p => p !== "") : [];
-        const right = parts[1] ? parts[1].split(":").filter(p => p !== "") : [];
-        const missingGroups = 8 - left.length - right.length;
-
-        if (missingGroups < 0) return null;
-
-        const middle = Array(missingGroups).fill("0");
-        expanded = [...left, ...middle, ...right].join(":");
-    }
-
-    const groups = expanded.split(":");
-    if (groups.length !== 8) return null;
-
-    const result: number[] = [];
-    for (const group of groups) {
-        if (group.length > 4) return null;
-        const num = parseInt(group || "0", 16);
-        if (isNaN(num) || num < 0 || num > 0xFFFF) return null;
-        result.push(num);
-    }
-    return result;
+    const halves = cleanIP.split("::");
+    if (halves.length > 2) return null;
+    const left = halves[0] ? halves[0].split(":") : [];
+    const right = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+    if (![...left, ...right].every(group => /^[0-9a-fA-F]{1,4}$/.test(group))) return null;
+    if (halves.length === 1) return left.length === 8 ? left.map(group => parseInt(group, 16)) : null;
+    const missing = 8 - left.length - right.length;
+    if (missing < 1) return null;
+    return [...left.map(group => parseInt(group, 16)), ...Array(missing).fill(0), ...right.map(group => parseInt(group, 16))];
 }
 
 function compressIPv6(groups: number[]): string {
@@ -261,11 +238,12 @@ function expandIPv6(groups: number[]): string {
 function getIPv6Scope(groups: number[]): string {
     const first = groups[0];
 
+    if (groups.every(g => g === 0)) return "Unspecified";
     if (groups.every((g, i) => i === 7 ? g === 1 : g === 0)) return "Loopback";
-    if (first === 0xfe80) return "Link-Local";
-    if (first === 0xfec0) return "Site-Local (Deprecated)";
+    if ((first & 0xffc0) === 0xfe80) return "Link-Local";
+    if ((first & 0xffc0) === 0xfec0) return "Site-Local (Deprecated)";
     if ((first >> 8) === 0xff) {
-        const scope = (first >> 4) & 0xf;
+        const scope = first & 0xf;
         const scopes: Record<number, string> = {
             0x1: "Interface-Local",
             0x2: "Link-Local",
@@ -356,11 +334,11 @@ function analyzeIP(input: string): IPInfo {
         const compressed = compressIPv6(ipv6Groups);
 
         const isLoopback = ipv6Groups.every((g, i) => i === 7 ? g === 1 : g === 0);
-        const isLinkLocal = ipv6Groups[0] === 0xfe80;
+        const isLinkLocal = (ipv6Groups[0] & 0xffc0) === 0xfe80;
         const isMulticast = (ipv6Groups[0] >> 8) === 0xff;
         const isPrivate = (ipv6Groups[0] & 0xfe00) === 0xfc00;
         const isDocumentation = ipv6Groups[0] === 0x2001 && ipv6Groups[1] === 0x0db8;
-        const isAnycast = ipv6Groups[0] === 0x2001 && ipv6Groups[1] === 0;
+        const isAnycast = false; // Assignment to multiple interfaces cannot be inferred from syntax.
 
         const scope = getIPv6Scope(ipv6Groups);
         let networkType = scope;
@@ -374,7 +352,7 @@ function analyzeIP(input: string): IPInfo {
             isPrivate,
             isLoopback,
             isMulticast,
-            isReserved: false,
+            isReserved: ipv6Groups.every(g => g === 0) || (ipv6Groups[0] & 0xffc0) === 0xfec0,
             isLinkLocal,
             isDocumentation,
             isBroadcast: false,
@@ -412,7 +390,7 @@ function analyzeIP(input: string): IPInfo {
 
 function calculateIPv4Subnet(ip: string, cidr: number): SubnetInfo | null {
     const octets = parseIPv4(ip);
-    if (!octets || cidr < 0 || cidr > 32) return null;
+    if (!octets || !Number.isInteger(cidr) || cidr < 0 || cidr > 32) return null;
 
     const ipNum = octets.reduce((acc, o, i) => acc + (o << (24 - i * 8)), 0) >>> 0;
     const mask = cidr === 0 ? 0 : (~0 << (32 - cidr)) >>> 0;
@@ -443,7 +421,7 @@ function calculateIPv4Subnet(ip: string, cidr: number): SubnetInfo | null {
 
 function calculateIPv6Subnet(ip: string, prefix: number): { network: string; range: string } | null {
     const groups = parseIPv6(ip);
-    if (!groups || prefix < 0 || prefix > 128) return null;
+    if (!groups || !Number.isInteger(prefix) || prefix < 0 || prefix > 128) return null;
 
     const networkGroups = [...groups];
     const fullGroups = Math.floor(prefix / 16);
@@ -491,8 +469,9 @@ function binaryToIPv4(binary: string): string {
 }
 
 function decimalToIPv4(decimal: string): string {
-    const num = parseInt(decimal, 10);
-    if (isNaN(num) || num < 0 || num > 4294967295) return "";
+    if (!/^\d+$/.test(decimal.trim())) return "";
+    const num = Number(decimal.trim());
+    if (!Number.isSafeInteger(num) || num < 0 || num > 4294967295) return "";
 
     return [
         (num >>> 24) & 255,
@@ -531,7 +510,7 @@ function generateRandomIPv4(type: "public" | "private" | "any"): string {
             ip[0] === 127 ||
             (ip[0] === 172 && ip[1] >= 16 && ip[1] <= 31) ||
             (ip[0] === 192 && ip[1] === 168) ||
-            ip[0] >= 224
+            ip[0] >= 224 || isReservedIPv4(ip) || isDocumentationIPv4(ip) || isLinkLocalIPv4(ip)
         );
         return ip.join(".");
     }
@@ -557,13 +536,17 @@ function generateRandomIPv6(type: "global" | "linklocal" | "unique"): string {
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function IPAddressToolsPage() {
-    const { darkMode } = useAppStore();
+    const { t } = useLanguage();
+    const tCurrent = useRef(t);
+    useEffect(() => { tCurrent.current = t; }, [t]);
     const [inputIP, setInputIP] = useState("");
     const [cidr, setCidr] = useState(24);
     const [ipv6Prefix, setIpv6Prefix] = useState(64);
     const [conversionInput, setConversionInput] = useState("");
     const [conversionType, setConversionType] = useState<"binary" | "decimal" | "hex">("binary");
 
+    const localizeType = (value: string) => value.startsWith("Multicast (")
+        ? t("Multicast ({scope})", { scope: t(value.slice(11, -1)) }) : t(value);
     const ipInfo = useMemo(() => analyzeIP(inputIP), [inputIP]);
 
     const subnetInfo = useMemo(() => {
@@ -576,7 +559,7 @@ export default function IPAddressToolsPage() {
         return null;
     }, [inputIP, ipv6Prefix, ipInfo.version]);
 
-    const handleCopy = (text: string, label: string) => copyToClipboard(text, `${label} copied!`);
+    const handleCopy = (text: string) => copyToClipboard(text);
 
     const handleConvert = useCallback(() => {
         let result = "";
@@ -590,9 +573,9 @@ export default function IPAddressToolsPage() {
 
         if (result) {
             setInputIP(result);
-            message.success("Converted successfully!");
+            message.success(tCurrent.current("Converted successfully!"));
         } else {
-            message.error("Invalid input format");
+            message.error(tCurrent.current("Invalid input format"));
         }
     }, [conversionInput, conversionType]);
 
@@ -610,57 +593,35 @@ export default function IPAddressToolsPage() {
     };
 
     const sampleColumns = [
-        { title: "IP Address", dataIndex: "ip", key: "ip", render: (ip: string) => <Text code style={{ fontSize: 11 }}>{ip}</Text> },
-        { title: "Type", dataIndex: "desc", key: "desc", render: (desc: string) => <Text style={{ fontSize: 11 }}>{desc}</Text> },
+        { title: t("IP Address"), dataIndex: "ip", key: "ip", render: (ip: string) => <Text code style={{ fontSize: 11 }}>{ip}</Text> },
+        { title: t("Type"), dataIndex: "desc", key: "desc", render: (desc: string) => <Text style={{ fontSize: 11 }}>{t(desc)}</Text> },
         {
             title: "",
             key: "action",
             width: 50,
             render: (_: unknown, record: { ip: string }) => (
-                <Button size="small" type="link" onClick={() => setInputIP(record.ip)}>Use</Button>
+                <Button size="small" type="link" onClick={() => setInputIP(record.ip)}>{t("Use")}</Button>
             )
         },
     ];
 
     const subnetColumns = [
-        { title: "CIDR", dataIndex: "cidr", key: "cidr" },
-        { title: "Subnet Mask", dataIndex: "mask", key: "mask" },
-        { title: "Hosts", dataIndex: "hosts", key: "hosts" },
+        { title: t("CIDR"), dataIndex: "cidr", key: "cidr" },
+        { title: t("Subnet Mask"), dataIndex: "mask", key: "mask" },
+        { title: t("Hosts"), dataIndex: "hosts", key: "hosts" },
     ];
 
     return (
         <ToolPageLayout
-            title="IP Address Tools"
-            description="Comprehensive IPv4/IPv6 analyzer, converter, and subnet calculator"
+            title={t("IP Address Tools")}
+            description={t("Comprehensive IPv4/IPv6 analyzer, converter, and subnet calculator")}
             icon={<GlobalOutlined style={{ fontSize: 24, color: "#1890ff" }} />}
             color="#1890ff"
             learnMore={{
-                whatIs: "A complete utility for inspecting both IPv4 (32-bit, dotted-decimal) and IPv6 (128-bit, colon-hex) addresses. It validates the address, classifies it (private, loopback, link-local, multicast, reserved, documentation, ULA), shows the binary, decimal, and hex forms, computes the in-addr.arpa / ip6.arpa reverse-DNS pointer, and runs subnet math without sending the address anywhere.",
-                whyUse: "Network engineers waste minutes per IP toggling between calculators, RFC tables, and online lookups. This tool collapses that into a single view — useful when triaging firewall hits, planning a VPC, decoding access logs, or answering 'is 100.64.0.5 public?' (it's not — that's CGNAT space, RFC 6598).",
-                howToUse: [
-                    "Enter any IPv4 or IPv6 address — validation runs as you type",
-                    "Read the classification, scope, and which RFC defines the range",
-                    "Switch to the subnet tab to compute network/broadcast/usable hosts for a CIDR",
-                    "Toggle representations: binary, decimal, hex, expanded vs compressed IPv6",
-                    "Generate a random address inside a chosen prefix for synthetic test data",
-                ],
-                tips: [
-                    "IPv4 private space: 10.0.0.0/8 (RFC 1918), 172.16.0.0/12, 192.168.0.0/16",
-                    "100.64.0.0/10 (RFC 6598) is shared CGNAT space — neither truly public nor private",
-                    "169.254.0.0/16 (RFC 3927) is link-local — auto-assigned when DHCP fails",
-                    "IPv6 fc00::/7 is the Unique Local Address space — the IPv6 equivalent of RFC 1918",
-                    "IPv6 :: compresses one run of consecutive zero groups — only one :: per address",
-                    "/64 is the standard IPv6 subnet size; smaller subnets break SLAAC",
-                    "224.0.0.0/4 (IPv4) and ff00::/8 (IPv6) are multicast — used for mDNS, OSPF, IGMP",
-                ],
-                useCases: [
-                    "Confirming whether a logged IP is internal, external, or shared CGNAT",
-                    "Planning VPC, VNet, and on-prem subnet allocations without overlap",
-                    "Decoding firewall and SIEM events that log IPs in unfamiliar formats",
-                    "Converting IPv4 to IPv4-mapped IPv6 (::ffff:1.2.3.4) for dual-stack systems",
-                    "Building reverse-DNS PTR records during DNS configuration",
-                    "Studying for CCNA, CompTIA Network+, AWS Networking certifications",
-                ],
+                whatIs: t("Inspect IPv4 and IPv6 addresses, representations and subnet ranges locally."),
+                whyUse: t("Use the analyzer, subnet calculator or conversion tab; choose a sample to begin."),
+                howToUse: [t("Enter an address, select an integer prefix length, then inspect or copy the result.")],
+                tips: [t("Classification lists selected special-use ranges; it does not prove routability or whether an address is assigned."), t("Anycast cannot be identified from an address alone.")],
             }}
         >
             <Tabs
@@ -668,7 +629,7 @@ export default function IPAddressToolsPage() {
                 items={[
                     {
                         key: "analyze",
-                        label: <span><SearchOutlined /> Analyze</span>,
+                        label: <span><SearchOutlined /> {t("Analyze")}</span>,
                         children: (
                             <Row gutter={[16, 16]}>
                                 <Col xs={24} lg={16}>
@@ -676,7 +637,7 @@ export default function IPAddressToolsPage() {
                                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                             <Input
                                                 size="large"
-                                                placeholder="Enter IPv4 (e.g., 192.168.1.1) or IPv6 (e.g., 2001:db8::1)"
+                                                placeholder={t("Enter IPv4 (e.g., 192.168.1.1) or IPv6 (e.g., 2001:db8::1)")}
                                                 value={inputIP}
                                                 onChange={(e) => setInputIP(e.target.value)}
                                                 prefix={<WifiOutlined />}
@@ -690,22 +651,22 @@ export default function IPAddressToolsPage() {
                                                             <CloseCircleOutlined style={{ color: "#ff4d4f" }} />
                                                         )
                                                     )
-                                                }
+                                                } dir="ltr" aria-label={t("IP address")}
                                             />
 
                                             <Space wrap>
-                                                <Text type="secondary">Generate:</Text>
+                                                <Text type="secondary">{t("Generate:")}</Text>
                                                 <Button size="small" onClick={() => handleGenerateRandom("ipv4", "public")}>
-                                                    Public IPv4
+                                                    {t("Public IPv4")}
                                                 </Button>
                                                 <Button size="small" onClick={() => handleGenerateRandom("ipv4", "private")}>
-                                                    Private IPv4
+                                                    {t("Private IPv4")}
                                                 </Button>
                                                 <Button size="small" onClick={() => handleGenerateRandom("ipv6", "global")}>
-                                                    Global IPv6
+                                                    {t("Global IPv6")}
                                                 </Button>
                                                 <Button size="small" onClick={() => handleGenerateRandom("ipv6", "linklocal")}>
-                                                    Link-Local IPv6
+                                                    {t("Link-Local IPv6")}
                                                 </Button>
                                             </Space>
                                         </Space>
@@ -714,40 +675,40 @@ export default function IPAddressToolsPage() {
                                     {ipInfo.isValid && (
                                         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
                                             <Col xs={24} md={12}>
-                                                <Card title="Address Information" size="small">
+                                                <Card title={t("Address Information")} size="small">
                                                     <Descriptions column={1} size="small">
-                                                        <Descriptions.Item label="Version">
+                                                        <Descriptions.Item label={t("Version")}>
                                                             <Tag color="blue">{ipInfo.version}</Tag>
                                                         </Descriptions.Item>
-                                                        <Descriptions.Item label="Network Type">
+                                                        <Descriptions.Item label={t("Network Type")}>
                                                             <Tag color={ipInfo.isPrivate || ipInfo.isLoopback ? "orange" : "cyan"}>
-                                                                {ipInfo.networkType}
+                                                                {localizeType(ipInfo.networkType)}
                                                             </Tag>
                                                         </Descriptions.Item>
                                                         {ipInfo.ipClass && (
-                                                            <Descriptions.Item label="IP Class">
-                                                                <Tag color="purple">Class {ipInfo.ipClass}</Tag>
+                                                            <Descriptions.Item label={t("IP Class")}>
+                                                                <Tag color="purple">{t("Class")} {localizeType(ipInfo.ipClass)}</Tag>
                                                             </Descriptions.Item>
                                                         )}
                                                         {ipInfo.scope && (
-                                                            <Descriptions.Item label="Scope">
-                                                                <Tag color="geekblue">{ipInfo.scope}</Tag>
+                                                            <Descriptions.Item label={t("Scope")}>
+                                                                <Tag color="geekblue">{localizeType(ipInfo.scope)}</Tag>
                                                             </Descriptions.Item>
                                                         )}
-                                                        <Descriptions.Item label="Properties">
+                                                        <Descriptions.Item label={t("Properties")}>
                                                             <Space wrap size={[4, 4]}>
-                                                                {ipInfo.isPrivate && <Tag color="orange">Private</Tag>}
-                                                                {ipInfo.isLoopback && <Tag color="cyan">Loopback</Tag>}
-                                                                {ipInfo.isMulticast && <Tag color="magenta">Multicast</Tag>}
-                                                                {ipInfo.isLinkLocal && <Tag color="gold">Link-Local</Tag>}
-                                                                {ipInfo.isBroadcast && <Tag color="red">Broadcast</Tag>}
-                                                                {ipInfo.isDocumentation && <Tag color="purple">Documentation</Tag>}
-                                                                {ipInfo.isAnycast && <Tag color="volcano">Anycast</Tag>}
-                                                                {ipInfo.isReserved && <Tag color="red">Reserved</Tag>}
+                                                                {ipInfo.isPrivate && <Tag color="orange">{t("Private")}</Tag>}
+                                                                {ipInfo.isLoopback && <Tag color="cyan">{t("Loopback")}</Tag>}
+                                                                {ipInfo.isMulticast && <Tag color="magenta">{t("Multicast")}</Tag>}
+                                                                {ipInfo.isLinkLocal && <Tag color="gold">{t("Link-Local")}</Tag>}
+                                                                {ipInfo.isBroadcast && <Tag color="red">{t("Broadcast")}</Tag>}
+                                                                {ipInfo.isDocumentation && <Tag color="purple">{t("Documentation")}</Tag>}
+                                                                {ipInfo.isAnycast && <Tag color="volcano">{t("Anycast")}</Tag>}
+                                                                {ipInfo.isReserved && <Tag color="red">{t("Reserved")}</Tag>}
                                                                 {!ipInfo.isPrivate && !ipInfo.isLoopback && !ipInfo.isMulticast &&
                                                                     !ipInfo.isLinkLocal && !ipInfo.isReserved && !ipInfo.isBroadcast &&
                                                                     !ipInfo.isDocumentation && (
-                                                                        <Tag color="green">Globally Routable</Tag>
+                                                                        <Tag color="green">{t("No listed special-use flag")}</Tag>
                                                                     )}
                                                             </Space>
                                                         </Descriptions.Item>
@@ -756,64 +717,64 @@ export default function IPAddressToolsPage() {
                                             </Col>
 
                                             <Col xs={24} md={12}>
-                                                <Card title="Representations" size="small">
+                                                <Card title={t("Representations")} size="small">
                                                     <Space orientation="vertical" style={{ width: "100%" }} size="small">
                                                         {ipInfo.version === "IPv6" && ipInfo.compressed && (
                                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                                <Text type="secondary">Compressed:</Text>
+                                                                <Text type="secondary">{t("Compressed:")}</Text>
                                                                 <Space>
                                                                     <Text code>{ipInfo.compressed}</Text>
-                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.compressed!, "Compressed")} />
+                                                                    <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.compressed!)} />
                                                                 </Space>
                                                             </div>
                                                         )}
                                                         {ipInfo.version === "IPv6" && ipInfo.expanded && (
                                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                                <Text type="secondary">Expanded:</Text>
+                                                                <Text type="secondary">{t("Expanded:")}</Text>
                                                                 <Space>
                                                                     <Text code style={{ fontSize: 11 }}>{ipInfo.expanded}</Text>
-                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.expanded!, "Expanded")} />
+                                                                    <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.expanded!)} />
                                                                 </Space>
                                                             </div>
                                                         )}
                                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                            <Text type="secondary">Hexadecimal:</Text>
+                                                            <Text type="secondary">{t("Hexadecimal:")}</Text>
                                                             <Space>
                                                                 <Text code style={{ fontSize: 11 }}>{ipInfo.hexadecimal}</Text>
-                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.hexadecimal, "Hex")} />
+                                                                <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.hexadecimal)} />
                                                             </Space>
                                                         </div>
                                                         {ipInfo.version === "IPv4" && (
                                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                                <Text type="secondary">Decimal:</Text>
+                                                                <Text type="secondary">{t("Decimal:")}</Text>
                                                                 <Space>
                                                                     <Text code>{ipInfo.decimal}</Text>
-                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.decimal, "Decimal")} />
+                                                                    <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.decimal)} />
                                                                 </Space>
                                                             </div>
                                                         )}
                                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-                                                            <Text type="secondary">Binary:</Text>
+                                                            <Text type="secondary">{t("Binary:")}</Text>
                                                             <Space>
                                                                 <Text code style={{ fontSize: 10, wordBreak: "break-all" }}>{ipInfo.binary}</Text>
-                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.binary, "Binary")} />
+                                                                <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.binary)} />
                                                             </Space>
                                                         </div>
                                                         {ipInfo.reversePtr && (
                                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-                                                                <Text type="secondary">Reverse PTR:</Text>
+                                                                <Text type="secondary">{t("Reverse PTR:")}</Text>
                                                                 <Space>
                                                                     <Text code style={{ fontSize: 10, wordBreak: "break-all" }}>{ipInfo.reversePtr}</Text>
-                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.reversePtr!, "PTR")} />
+                                                                    <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipInfo.reversePtr!)} />
                                                                 </Space>
                                                             </div>
                                                         )}
                                                         {ipInfo.version === "IPv4" && (
                                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                                <Text type="secondary">IPv6 Mapped:</Text>
+                                                                <Text type="secondary">{t("IPv6 Mapped:")}</Text>
                                                                 <Space>
                                                                     <Text code>{ipv4ToIPv6(inputIP)}</Text>
-                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipv4ToIPv6(inputIP)!, "IPv6 Mapped")} />
+                                                                    <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipv4ToIPv6(inputIP)!)} />
                                                                 </Space>
                                                             </div>
                                                         )}
@@ -827,15 +788,15 @@ export default function IPAddressToolsPage() {
                                         <Alert
                                             style={{ marginTop: 16 }}
                                             type="error"
-                                            title="Invalid IP Address"
-                                            description="Enter a valid IPv4 (e.g., 192.168.1.1) or IPv6 (e.g., 2001:db8::1) address"
+                                            title={t("Invalid IP Address")}
+                                            description={t("Enter a valid IPv4 (e.g., 192.168.1.1) or IPv6 (e.g., 2001:db8::1) address")}
                                             showIcon
                                         />
                                     )}
                                 </Col>
 
                                 <Col xs={24} lg={8}>
-                                    <Card title="Example IP Addresses" size="small">
+                                    <Card title={t("Example IP Addresses")} size="small">
                                         <Table
                                             dataSource={SAMPLE_IPS}
                                             columns={sampleColumns}
@@ -850,7 +811,7 @@ export default function IPAddressToolsPage() {
                     },
                     {
                         key: "subnet",
-                        label: <span><CalculatorOutlined /> Subnet Calculator</span>,
+                        label: <span><CalculatorOutlined /> {t("Subnet Calculator")}</span>,
                         children: (
                             <Row gutter={[16, 16]}>
                                 <Col xs={24} lg={16}>
@@ -860,10 +821,10 @@ export default function IPAddressToolsPage() {
                                                 <Col flex="auto">
                                                     <Input
                                                         size="large"
-                                                        placeholder="Enter IP address"
+                                                        placeholder={t("Enter IP address")}
                                                         value={inputIP}
                                                         onChange={(e) => setInputIP(e.target.value)}
-                                                        prefix={<WifiOutlined />}
+                                                        prefix={<WifiOutlined />} dir="ltr" aria-label={t("Subnet address")}
                                                     />
                                                 </Col>
                                                 <Col>
@@ -872,19 +833,19 @@ export default function IPAddressToolsPage() {
                                                 <Col>
                                                     {ipInfo.version === "IPv6" ? (
                                                         <InputNumber
-                                                            min={1}
+                                                            min={0}
                                                             max={128}
                                                             value={ipv6Prefix}
-                                                            onChange={(v) => setIpv6Prefix(v || 64)}
-                                                            style={{ width: 80 }}
+                                                            onChange={(v) => setIpv6Prefix(v ?? 64)}
+                                                            style={{ width: 80 }} dir="ltr" aria-label={t("IPv6 prefix length")}
                                                         />
                                                     ) : (
                                                         <InputNumber
                                                             min={0}
                                                             max={32}
                                                             value={cidr}
-                                                            onChange={(v) => setCidr(v || 24)}
-                                                            style={{ width: 80 }}
+                                                            onChange={(v) => setCidr(v ?? 24)}
+                                                            style={{ width: 80 }} dir="ltr" aria-label={t("IPv4 prefix length")}
                                                         />
                                                     )}
                                                 </Col>
@@ -892,7 +853,7 @@ export default function IPAddressToolsPage() {
 
                                             {ipInfo.version === "IPv4" && (
                                                 <Space wrap>
-                                                    <Text type="secondary">Quick select:</Text>
+                                                    <Text type="secondary">{t("Quick select:")}</Text>
                                                     {[8, 16, 24, 25, 26, 27, 28, 29, 30, 32].map(c => (
                                                         <Button
                                                             key={c}
@@ -908,7 +869,7 @@ export default function IPAddressToolsPage() {
 
                                             {ipInfo.version === "IPv6" && (
                                                 <Space wrap>
-                                                    <Text type="secondary">Quick select:</Text>
+                                                    <Text type="secondary">{t("Quick select:")}</Text>
                                                     {[48, 56, 64, 112, 128].map(p => (
                                                         <Button
                                                             key={p}
@@ -927,30 +888,30 @@ export default function IPAddressToolsPage() {
                                     {subnetInfo && ipInfo.version === "IPv4" && (
                                         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
                                             <Col xs={24} md={12}>
-                                                <Card title="Subnet Details" size="small">
+                                                <Card title={t("Subnet Details")} size="small">
                                                     <Descriptions column={1} size="small">
-                                                        <Descriptions.Item label="Network Address">
+                                                        <Descriptions.Item label={t("Network Address")}>
                                                             <Space>
                                                                 <Text code>{subnetInfo.networkAddress}</Text>
-                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.networkAddress, "Network")} />
+                                                                <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.networkAddress)} />
                                                             </Space>
                                                         </Descriptions.Item>
-                                                        <Descriptions.Item label="Broadcast Address">
+                                                        <Descriptions.Item label={t("Broadcast Address")}>
                                                             <Space>
                                                                 <Text code>{subnetInfo.broadcastAddress}</Text>
-                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.broadcastAddress, "Broadcast")} />
+                                                                <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.broadcastAddress)} />
                                                             </Space>
                                                         </Descriptions.Item>
-                                                        <Descriptions.Item label="Subnet Mask">
+                                                        <Descriptions.Item label={t("Subnet Mask")}>
                                                             <Space>
                                                                 <Text code>{subnetInfo.subnetMask}</Text>
-                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.subnetMask, "Subnet Mask")} />
+                                                                <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.subnetMask)} />
                                                             </Space>
                                                         </Descriptions.Item>
-                                                        <Descriptions.Item label="Wildcard Mask">
+                                                        <Descriptions.Item label={t("Wildcard Mask")}>
                                                             <Space>
                                                                 <Text code>{subnetInfo.wildcardMask}</Text>
-                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.wildcardMask, "Wildcard")} />
+                                                                <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(subnetInfo.wildcardMask)} />
                                                             </Space>
                                                         </Descriptions.Item>
                                                     </Descriptions>
@@ -958,12 +919,12 @@ export default function IPAddressToolsPage() {
                                             </Col>
 
                                             <Col xs={24} md={12}>
-                                                <Card title="Host Range" size="small">
+                                                <Card title={t("Host Range")} size="small">
                                                     <Descriptions column={1} size="small">
-                                                        <Descriptions.Item label="First Usable Host">
+                                                        <Descriptions.Item label={t("First Usable Host")}>
                                                             <Text code>{subnetInfo.firstHost}</Text>
                                                         </Descriptions.Item>
-                                                        <Descriptions.Item label="Last Usable Host">
+                                                        <Descriptions.Item label={t("Last Usable Host")}>
                                                             <Text code>{subnetInfo.lastHost}</Text>
                                                         </Descriptions.Item>
                                                     </Descriptions>
@@ -971,14 +932,14 @@ export default function IPAddressToolsPage() {
                                                     <Row gutter={16}>
                                                         <Col span={12}>
                                                             <Statistic
-                                                                title="Total Addresses"
+                                                                title={t("Total Addresses")}
                                                                 value={subnetInfo.totalHosts.toLocaleString()}
                                                                 styles={{ content: { fontSize: 18 } }}
                                                             />
                                                         </Col>
                                                         <Col span={12}>
                                                             <Statistic
-                                                                title="Usable Hosts"
+                                                                title={t("Usable Hosts")}
                                                                 value={subnetInfo.usableHosts.toLocaleString()}
                                                                 styles={{ content: { fontSize: 18, color: "#52c41a" } }}
                                                             />
@@ -990,16 +951,16 @@ export default function IPAddressToolsPage() {
                                     )}
 
                                     {ipv6SubnetInfo && ipInfo.version === "IPv6" && (
-                                        <Card title="IPv6 Subnet Details" size="small" style={{ marginTop: 16 }}>
+                                        <Card title={t("IPv6 Subnet Details")} size="small" style={{ marginTop: 16 }}>
                                             <Descriptions column={{ xs: 1, md: 2 }} size="small">
-                                                <Descriptions.Item label="Network">
+                                                <Descriptions.Item label={t("Network")}>
                                                     <Space>
                                                         <Text code>{ipv6SubnetInfo.network}</Text>
-                                                        <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipv6SubnetInfo.network, "Network")} />
+                                                        <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(ipv6SubnetInfo.network)} />
                                                     </Space>
                                                 </Descriptions.Item>
-                                                <Descriptions.Item label="Address Space">
-                                                    <Text>{ipv6SubnetInfo.range}</Text>
+                                                <Descriptions.Item label={t("Address Space")}>
+                                                    <Text>{t("{count} addresses", { count: ipv6SubnetInfo.range.split(" ")[0] })}</Text>
                                                 </Descriptions.Item>
                                             </Descriptions>
                                         </Card>
@@ -1007,7 +968,7 @@ export default function IPAddressToolsPage() {
                                 </Col>
 
                                 <Col xs={24} lg={8}>
-                                    <Card title="Common Subnet Sizes" size="small">
+                                    <Card title={t("Common Subnet Sizes")} size="small">
                                         <Table
                                             dataSource={COMMON_SUBNETS}
                                             columns={subnetColumns}
@@ -1022,11 +983,11 @@ export default function IPAddressToolsPage() {
                     },
                     {
                         key: "convert",
-                        label: <span><SwapOutlined /> Convert</span>,
+                        label: <span><SwapOutlined /> {t("Convert")}</span>,
                         children: (
                             <Row gutter={[16, 16]}>
                                 <Col xs={24}>
-                                    <Card title="Convert to IPv4" size="small">
+                                    <Card title={t("Convert to IPv4")} size="small">
                                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                             <Row gutter={16}>
                                                 <Col xs={24} md={6}>
@@ -1035,9 +996,9 @@ export default function IPAddressToolsPage() {
                                                         onChange={setConversionType}
                                                         style={{ width: "100%" }}
                                                         options={[
-                                                            { value: "binary", label: "Binary" },
-                                                            { value: "decimal", label: "Decimal" },
-                                                            { value: "hex", label: "Hexadecimal" },
+                                                            { value: "binary", label: t("Binary") },
+                                                            { value: "decimal", label: t("Decimal") },
+                                                            { value: "hex", label: t("Hexadecimal") },
                                                         ]}
                                                     />
                                                 </Col>
@@ -1047,28 +1008,28 @@ export default function IPAddressToolsPage() {
                                                         onChange={(e) => setConversionInput(e.target.value)}
                                                         placeholder={
                                                             conversionType === "binary"
-                                                                ? "11000000.10101000.00000001.00000001 or 11000000101010000000000100000001"
+                                                                ? t("{first} or {second}", { first: "11000000.10101000.00000001.00000001", second: "11000000101010000000000100000001" })
                                                                 : conversionType === "decimal"
                                                                     ? "3232235777"
-                                                                    : "c0:a8:01:01 or c0a80101"
-                                                        }
+                                                                    : t("{first} or {second}", { first: "c0:a8:01:01", second: "c0a80101" })
+                                                        } dir="ltr" aria-label={t("Conversion input")}
                                                     />
                                                 </Col>
                                                 <Col xs={24} md={4}>
                                                     <Button type="primary" icon={<SwapOutlined />} onClick={handleConvert} block>
-                                                        Convert
+                                                        {t("Convert")}
                                                     </Button>
                                                 </Col>
                                             </Row>
 
                                             <Alert
                                                 type="info"
-                                                title="Conversion Formats"
+                                                title={t("Conversion Formats")}
                                                 description={
                                                     <ul style={{ margin: 0, paddingLeft: 20 }}>
-                                                        <li><strong>Binary:</strong> 32 bits, optionally separated by dots</li>
-                                                        <li><strong>Decimal:</strong> Single number 0-4294967295</li>
-                                                        <li><strong>Hexadecimal:</strong> 8 hex digits, optionally with colons</li>
+                                                        <li><strong>{t("Binary:")}</strong> {t("32 bits, optionally separated by dots")}</li>
+                                                        <li><strong>{t("Decimal:")}</strong> {t("Single number 0-4294967295")}</li>
+                                                        <li><strong>{t("Hexadecimal:")}</strong> {t("8 hex digits, optionally with colons")}</li>
                                                     </ul>
                                                 }
                                             />

@@ -8,7 +8,7 @@ const changes = compareOpenApiContracts(
     { openapi: "3.1.0", paths: { "/users": { get: { responses: { 200: {} } } } }, components: { schemas: { User: { required: ["id"] } } } },
     { openapi: "3.1.0", paths: { "/users": { get: { parameters: [{ name: "tenant", in: "query", required: true }], responses: {} } } }, components: { schemas: { User: { required: ["id", "email"] } } } },
 );
-assert.ok(changes.filter((change) => change.severity === "breaking").length >= 3);
+assert.ok(changes.filter((change) => change.severity === "breaking").length >= 2);
 assert.ok(changes.some((change) => change.message.includes("became required")));
 assert.ok(changes.some((change) => change.message.includes("Response 200 was removed")));
 

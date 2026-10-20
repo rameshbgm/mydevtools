@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, message, Segmented, InputNumber, Switch, Alert } from "antd";
 import { Html5Outlined, CopyOutlined, FormatPainterOutlined, CompressOutlined, ClearOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -22,6 +23,7 @@ interface ShareState { input: string; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "html-formatter", version: 1 };
 
 export default function HtmlFormatterPage() {
+    const { t } = useLanguage();
     const [input, setInput] = useState(SAMPLE_HTML);
     const [indentSize, setIndentSize] = useState(2);
     const [useTabs, setUseTabs] = useState(false);
@@ -55,13 +57,13 @@ export default function HtmlFormatterPage() {
             .trim();
     }, [input]);
 
-    const copyFormatted = () => copyToClipboard(formatted, "Formatted HTML copied!");
+    const copyFormatted = () => copyToClipboard(formatted, t("Formatted HTML copied!"));
 
-    const copyMinified = () => copyToClipboard(minified, "Minified HTML copied!");
+    const copyMinified = () => copyToClipboard(minified, t("Minified HTML copied!"));
 
     const applyFormatted = () => {
         setInput(formatted);
-        message.success("Applied formatted HTML to input");
+        message.success(t("Applied formatted HTML to input"));
     };
 
     const stats = useMemo(() => {
@@ -76,8 +78,8 @@ export default function HtmlFormatterPage() {
 
     return (
         <ToolPageLayout
-            title="HTML Formatter"
-            description="Format, prettify and beautify HTML documents"
+            title={t("HTML Formatter")}
+            description={t("Format, prettify and beautify HTML documents")}
             icon={<Html5Outlined style={{ fontSize: 24, color: "#fa541c" }} />}
             color="#fa541c"
             learnMore={{
@@ -108,11 +110,11 @@ export default function HtmlFormatterPage() {
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card
-                        title="Input HTML"
+                        title={t("Input HTML")}
                         extra={
                             <Space>
                                 <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
-                                    Clear
+                                    {t("Clear")}
                                 </Button>
                                 <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input })} size="small" />
                                 <SendToButton data={input} kind="html" sourceToolId="html-formatter" size="small" />
@@ -122,12 +124,13 @@ export default function HtmlFormatterPage() {
                         <CodeEditor
                             value={input}
                             onChange={(val) => setInput(val || "")}
+                            ariaLabel={t("Input HTML")}
                             language="html"
                             height={400}
                         />
                         <div style={{ marginTop: 8 }}>
                             <Text type="secondary">
-                                {stats.tags} tags • {stats.originalSize} bytes
+                                {t("{count} tags", { count: stats.tags })} · {t("{count} bytes", { count: stats.originalSize })}
                             </Text>
                         </div>
                     </Card>
@@ -135,36 +138,39 @@ export default function HtmlFormatterPage() {
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title="Formatted HTML"
+                        title={t("Formatted HTML")}
                         extra={
                             <Space>
                                 <Button size="small" icon={<CopyOutlined />} onClick={copyFormatted}>
-                                    Copy
+                                    {t("Copy")}
                                 </Button>
                                 <Button size="small" onClick={applyFormatted}>
-                                    Apply
+                                    {t("Apply")}
                                 </Button>
                             </Space>
                         }
                     >
                         <CodeEditor
                             value={formatted}
+                            ariaLabel={t("Formatted HTML")}
                             language="html"
                             height={400}
                             readOnly
                         />
                         <div style={{ marginTop: 8 }}>
-                            <Text type="secondary">{stats.formattedSize} bytes</Text>
+                            <Text type="secondary">{t("{count} bytes", { count: stats.formattedSize })}</Text>
                         </div>
+                        <Text type="secondary" style={{ display: "block", marginTop: 8 }}>{t("If formatting fails, check the source syntax and options. Parser details are shown unchanged.")}</Text>
                     </Card>
                 </Col>
 
                 <Col xs={24} lg={12}>
-                    <Card title="Options">
+                    <Card title={t("Options")}>
                         <Row gutter={[16, 16]}>
                             <Col span={12}>
-                                <Text style={{ display: "block", marginBottom: 4 }}>Indent Size</Text>
+                                <Text style={{ display: "block", marginBottom: 4 }}>{t("Indent Size")}</Text>
                                 <InputNumber
+                                    aria-label={t("Indent Size")}
                                     value={indentSize}
                                     onChange={(v) => setIndentSize(v || 2)}
                                     min={1}
@@ -173,8 +179,9 @@ export default function HtmlFormatterPage() {
                                 />
                             </Col>
                             <Col span={12}>
-                                <Text style={{ display: "block", marginBottom: 4 }}>Wrap Line Length</Text>
+                                <Text style={{ display: "block", marginBottom: 4 }}>{t("Wrap Line Length")}</Text>
                                 <InputNumber
+                                    aria-label={t("Wrap Line Length")}
                                     value={wrapLineLength}
                                     onChange={(v) => setWrapLineLength(v || 120)}
                                     min={0}
@@ -184,14 +191,14 @@ export default function HtmlFormatterPage() {
                             </Col>
                             <Col span={12}>
                                 <Space>
-                                    <Switch checked={useTabs} onChange={setUseTabs} />
-                                    <Text>Use Tabs</Text>
+                                    <Switch aria-label={t("Use Tabs")} checked={useTabs} onChange={setUseTabs} />
+                                    <Text>{t("Use Tabs")}</Text>
                                 </Space>
                             </Col>
                             <Col span={12}>
                                 <Space>
-                                    <Switch checked={preserveNewlines} onChange={setPreserveNewlines} />
-                                    <Text>Preserve Newlines</Text>
+                                    <Switch aria-label={t("Preserve Newlines")} checked={preserveNewlines} onChange={setPreserveNewlines} />
+                                    <Text>{t("Preserve Newlines")}</Text>
                                 </Space>
                             </Col>
                         </Row>
@@ -200,14 +207,16 @@ export default function HtmlFormatterPage() {
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title="Minified HTML"
+                        title={t("Minified HTML")}
                         extra={
                             <Button size="small" icon={<CopyOutlined />} onClick={copyMinified}>
-                                Copy
+                                {t("Copy")}
                             </Button>
                         }
                     >
                         <Input.TextArea
+                            dir="ltr"
+                            aria-label={t("Minified HTML")}
                             value={minified}
                             readOnly
                             rows={4}
@@ -215,7 +224,7 @@ export default function HtmlFormatterPage() {
                         />
                         <div style={{ marginTop: 8 }}>
                             <Text type="secondary">
-                                {stats.minSize} bytes ({Math.round((1 - stats.minSize / stats.originalSize) * 100)}% smaller)
+                                {t("{count} bytes ({percent}% smaller)", { count: stats.minSize, percent: stats.originalSize ? Math.round((1 - stats.minSize / stats.originalSize) * 100) : 0 })}
                             </Text>
                         </div>
                     </Card>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Button, Space, Card, App, Typography, Select, Segmented } from "antd";
+import { Button, Space, Card, App, Typography, Select } from "antd";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
     CopyOutlined,
@@ -9,6 +9,7 @@ import {
     EyeOutlined,
     DownloadOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SendToButton from "@/components/SendToButton";
@@ -32,6 +33,9 @@ interface ShareState { input: string; theme: Theme; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "mermaid-viewer", version: 1 };
 
 export default function MermaidViewerPage() {
+    const { t } = useLanguage();
+    const translationRef = React.useRef(t);
+    useEffect(() => { translationRef.current = t; }, [t]);
     const { message } = App.useApp();
     const [input, setInput] = useState(SAMPLE);
     const [previewSvg, setPreviewSvg] = useState<string>("");
@@ -59,7 +63,7 @@ export default function MermaidViewerPage() {
             const { svg } = await mermaid.render("mermaid-viewer-diagram", src);
             setPreviewSvg(svg);
         } catch (e) {
-            setError(e instanceof Error ? e.message : "Rendering error");
+            setError(e instanceof Error ? e.message : translationRef.current("Rendering error"));
         }
     }, []);
 
@@ -86,33 +90,19 @@ export default function MermaidViewerPage() {
 
     return (
         <ToolPageLayout
-            title="Mermaid Viewer"
-            description="Render and preview Mermaid diagrams with live editing, theme support, and SVG export"
+            title={t("Mermaid Viewer")}
+            description={t("Render and preview Mermaid diagrams with live editing, theme support, and SVG export")}
             icon={<EyeOutlined style={{ fontSize: 24, color: "#667eea" }} />}
             color="#667eea"
             learnMore={{
-                whatIs: "A Mermaid Viewer is a dedicated tool for rendering Mermaid diagram code as visual SVG graphics. It provides live preview, multiple theme options, and the ability to export diagrams as SVG files.",
-                whyUse: "Mermaid lets you create diagrams and flowcharts from plain text. This viewer focuses purely on rendering, giving you a clean side-by-side editing experience with real-time updates and theme switching.",
+                whatIs: "Render Mermaid text diagrams with live preview and SVG export.",
+                whyUse: "Create flowcharts, sequence diagrams and documentation graphics.",
                 howToUse: [
-                    "Paste your Mermaid diagram code into the input editor",
-                    "See the rendered diagram update live in the preview panel",
-                    "Switch themes (default, dark, forest, neutral, base) to match your style",
-                    "Download the diagram as SVG for use in documentation",
-                    "Share the diagram state via URL with the share button"
+                    "Enter Mermaid code, choose a theme and download the SVG.",
                 ],
                 tips: [
-                    "The preview updates in real-time as you type",
-                    "Try different themes to find the best look for your diagram",
-                    "Export as SVG for high-quality vector graphics",
-                    "Use the share button to create a link with your current diagram and theme"
+                    "A shared link contains the diagram code and theme.",
                 ],
-                useCases: [
-                    "Creating flowcharts and process diagrams",
-                    "Building sequence diagrams for documentation",
-                    "Designing entity-relationship diagrams",
-                    "Rendering Gantt charts for project planning",
-                    "Exporting diagrams for presentations and reports"
-                ]
             }}
         >
             <ToolBridgeBanner
@@ -121,43 +111,39 @@ export default function MermaidViewerPage() {
             />
 
             <Space style={{ marginBottom: 16 }} wrap>
-                <Select
+                <Select aria-label={t("Diagram theme")}
                     value={theme}
                     onChange={(v) => setTheme(v)}
                     options={[
-                        { value: "default", label: "Default" },
-                        { value: "dark", label: "Dark" },
-                        { value: "forest", label: "Forest" },
-                        { value: "neutral", label: "Neutral" },
-                        { value: "base", label: "Base" },
+                        { value: "default", label: t("Default") },
+                        { value: "dark", label: t("Dark") },
+                        { value: "forest", label: t("Forest") },
+                        { value: "neutral", label: t("Neutral") },
+                        { value: "base", label: t("Base") },
                     ]}
-                    style={{ width: 140 }}
+                    style={{ minWidth: 140, maxWidth: "100%" }}
                     size="large"
                 />
                 <Button icon={<DownloadOutlined />} disabled={!previewSvg} onClick={handleDownload}>
-                    Download SVG
-                </Button>
+                    {t("Download SVG")}</Button>
                 <Button icon={<CopyOutlined />} onClick={() => {
                     if (previewSvg) {
                         copyToClipboard(previewSvg);
-                        message.success("SVG copied to clipboard");
+                        message.success(t("SVG copied to clipboard"));
                     } else {
                         copyToClipboard(input);
                     }
                 }}>
-                    Copy
-                </Button>
+                    {t("Copy")}</Button>
                 <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setPreviewSvg(""); setError(""); }}>
-                    Clear
-                </Button>
+                    {t("Clear")}</Button>
                 <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, theme })} size="middle" />
                 <SendToButton data={input} kind="mermaid" sourceToolId="mermaid-viewer" size="middle" />
             </Space>
 
             <div className="tool-split-pane" style={{ gap: 16 }}>
-                <Card size="small" title="Input" styles={{ body: { padding: 0 } }}>
-                    <CodeEditor
-                        value={input}
+                <Card size="small" title={t("Input")} styles={{ body: { padding: 0 } }}>
+                    <CodeEditor ariaLabel={t("Diagram code editor")} value={input}
                         onChange={(v) => setInput(v)}
                         language="text"
                         height="500px"
@@ -165,7 +151,7 @@ export default function MermaidViewerPage() {
                 </Card>
                 <Card
                     size="small"
-                    title="Preview"
+                    title={t("Preview")}
                     styles={{ body: { padding: 32, textAlign: "center", minHeight: 500 } }}
                 >
                     {previewSvg ? (
@@ -177,7 +163,7 @@ export default function MermaidViewerPage() {
                             maxHeight: 600,
                         }}>
                             <iframe
-                                title="Mermaid diagram preview"
+                                title={t("Mermaid diagram preview")}
                                 sandbox=""
                                 referrerPolicy="no-referrer"
                                 srcDoc={previewSvg}
@@ -190,8 +176,7 @@ export default function MermaidViewerPage() {
                         </div>
                     ) : (
                         <Text type="secondary" style={{ display: "block", padding: "80px 0", textAlign: "center" }}>
-                            Paste Mermaid diagram code and it will be rendered here
-                        </Text>
+                            {t("Paste Mermaid diagram code and it will be rendered here")}</Text>
                     )}
                 </Card>
             </div>

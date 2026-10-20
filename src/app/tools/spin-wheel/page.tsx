@@ -1,15 +1,17 @@
 "use client";
+import { projectStorage } from "@/lib/project-storage";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Button, Card, Input, Typography, Space, Tag, Tooltip, Row, Col } from "antd";
+import { Button, Card, Input, Typography, Space, Tag, Row, Col } from "antd";
 import {
     SyncOutlined, DeleteOutlined, PlusOutlined, TrophyOutlined, ReloadOutlined,
 } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 const SEGMENT_COLORS = [
     "#f97316", "#8b5cf6", "#06b6d4", "#ec4899", "#22c55e",
@@ -42,11 +44,13 @@ function labelPos(cx: number, cy: number, r: number, startDeg: number, endDeg: n
 }
 
 function truncate(s: string, max: number) {
-    return s.length > max ? s.slice(0, max - 1) + "…" : s;
+    const chars = Array.from(s);
+    return chars.length > max ? chars.slice(0, max - 1).join("") + "…" : s;
 }
 
 export default function SpinWheelPage() {
     const { darkMode } = useAppStore();
+    const { t } = useLanguage();
     const [items, setItems] = useState<string[]>(DEFAULT_ITEMS);
     const [newItem, setNewItem] = useState("");
     const [spinning, setSpinning] = useState(false);
@@ -55,6 +59,8 @@ export default function SpinWheelPage() {
     const [history, setHistory] = useState<string[]>([]);
     const [winnerIdx, setWinnerIdx] = useState<number | null>(null);
     const spinRef = useRef(0);
+    const resultRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => { if (resultRef.current) clearTimeout(resultRef.current); }, []);
 
     useEffect(() => {
         spinRef.current = rotation;
@@ -62,26 +68,30 @@ export default function SpinWheelPage() {
 
     useEffect(() => {
         try {
-            const saved = localStorage.getItem(LS_KEY);
-            if (saved) setItems(JSON.parse(saved));
+            const saved = projectStorage.getItem(LS_KEY);
+            if (saved) {
+                const parsed: unknown = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length >= 2 && parsed.length <= 12 && parsed.every(item => typeof item === "string" && item.trim() && item.length <= 30)) setItems(parsed);
+            }
         } catch {}
     }, []);
 
     const saveItems = (next: string[]) => {
         setItems(next);
-        try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch {}
+        try { projectStorage.setItem(LS_KEY, JSON.stringify(next)); } catch {}
     };
 
     const addItem = () => {
         const t = newItem.trim();
-        if (!t || items.length >= 12) return;
+        if (spinning || !t || items.length >= 12) return;
         saveItems([...items, t]);
         setNewItem("");
     };
 
     const removeItem = (i: number) => {
+        if (spinning || items.length <= 2) return;
         const next = items.filter((_, idx) => idx !== i);
-        saveItems(next.length >= 2 ? next : next);
+        saveItems(next);
         setWinner(null);
         setWinnerIdx(null);
     };
@@ -105,7 +115,7 @@ export default function SpinWheelPage() {
 
         setRotation(newRotation);
 
-        setTimeout(() => {
+        resultRef.current = setTimeout(() => {
             setWinner(items[targetIdx]);
             setWinnerIdx(targetIdx);
             setHistory(prev => [items[targetIdx], ...prev].slice(0, 10));
@@ -113,35 +123,22 @@ export default function SpinWheelPage() {
         }, 4200);
     }, [spinning, items]);
 
-    const bg = darkMode ? "#141414" : "#f8fafc";
     const cardBg = darkMode ? "#1d1d1d" : "#ffffff";
     const border = darkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
-    const muted = darkMode ? "#6b7280" : "#9ca3af";
     const n = items.length;
     const segDeg = n > 0 ? 360 / n : 360;
     const cx = 160; const cy = 160; const r = 148;
 
     return (
         <ToolPageLayout
-            title="Spin the Wheel"
-            description="Randomly select from custom options with an animated spinning wheel"
+            title={t("Spin the Wheel")}
+            description={t("Randomly select from custom options with an animated spinning wheel")}
             icon={<SyncOutlined style={{ fontSize: 24, color: "#f97316" }} />}
             color="#f97316"
             learnMore={{
-                whatIs: "An animated prize wheel that randomly picks one of your custom options. Add up to 12 items, spin, and get a fair random result with satisfying visual momentum.",
-                whyUse: "Great for picking dinner spots, assigning tasks, selecting random team members, or any decision you want to delegate to chance.",
-                howToUse: [
-                    "Add or remove options in the list (2–12 items)",
-                    "Click Spin to start the wheel",
-                    "The winner is highlighted and added to history",
-                    "Items persist across page reloads",
-                ],
-                tips: [
-                    "Each segment has equal probability",
-                    "Spin history tracks the last 10 results",
-                    "Use short labels for the best display",
-                ],
-                useCases: ["Team standups", "Game nights", "Random task assignment", "Decision making"],
+                whatIs: t("An animated wheel chooses equally among 2–12 custom options using Math.random. It is intended for casual choices."),
+                howToUse: [t("Add or remove options before spinning. The selected option is highlighted and added to the last 10 results.")],
+                tips: [t("Options are saved in the current workspace. Sample labels and your own labels keep their original text when you change language.")],
             }}
         >
             <Row gutter={[20, 20]}>
@@ -215,7 +212,7 @@ export default function SpinWheelPage() {
                                 disabled={spinning || items.length < 2}
                                 style={{ background: "#f97316", borderColor: "#f97316", minWidth: 140, fontSize: 16, height: 48 }}
                             >
-                                {spinning ? "Spinning…" : "Spin!"}
+                                {spinning ? t("Spinning…") : t("Spin!")}
                             </Button>
                         </div>
 
@@ -249,17 +246,17 @@ export default function SpinWheelPage() {
                 {/* Items editor + History */}
                 <Col xs={24} lg={10}>
                     <Space orientation="vertical" style={{ width: "100%" }} size={16}>
-                        <Card size="small" style={{ background: cardBg }} title={<Text strong>Items <Tag>{items.length} / 12</Tag></Text>}>
+                        <Card size="small" style={{ background: cardBg }} title={<Text strong>{t("Items")} <Tag>{items.length} / 12</Tag></Text>}>
                             <Space.Compact style={{ width: "100%", marginBottom: 12 }}>
-                                <Input
+                                <Input aria-label={t("Add option…")} dir="auto" style={{ fontSize: 16 }}
                                     value={newItem}
                                     onChange={e => setNewItem(e.target.value)}
                                     onPressEnter={addItem}
-                                    placeholder="Add option…"
+                                    placeholder={t("Add option…")}
                                     maxLength={30}
-                                    disabled={items.length >= 12}
+                                    disabled={spinning || items.length >= 12}
                                 />
-                                <Button aria-label="Add" icon={<PlusOutlined />} onClick={addItem} disabled={!newItem.trim() || items.length >= 12} />
+                                <Button aria-label={t("Add")} icon={<PlusOutlined />} onClick={addItem} disabled={spinning || !newItem.trim() || items.length >= 12} />
                             </Space.Compact>
 
                             <div style={{ maxHeight: 280, overflowY: "auto" }}>
@@ -274,11 +271,11 @@ export default function SpinWheelPage() {
                                             background: SEGMENT_COLORS[i % SEGMENT_COLORS.length],
                                         }} />
                                         <Text style={{ flex: 1, fontSize: 13 }}>{item}</Text>
-                                        <Button aria-label="Delete"
+                                        <Button aria-label={t("Delete")}
                                             type="text" danger size="small"
                                             icon={<DeleteOutlined />}
                                             onClick={() => removeItem(i)}
-                                            disabled={items.length <= 2}
+                                            disabled={spinning || items.length <= 2}
                                         />
                                     </div>
                                 ))}
@@ -287,17 +284,17 @@ export default function SpinWheelPage() {
                             <div style={{ marginTop: 8 }}>
                                 <Button
                                     size="small" icon={<ReloadOutlined />}
-                                    onClick={() => { saveItems(DEFAULT_ITEMS); setWinner(null); setWinnerIdx(null); }}
+                                    disabled={spinning}
+                                    onClick={() => { if (spinning) return; saveItems(DEFAULT_ITEMS); setWinner(null); setWinnerIdx(null); }}
                                 >
-                                    Reset to defaults
-                                </Button>
+                                    {t("Reset to defaults")}</Button>
                             </div>
                         </Card>
 
                         {history.length > 0 && (
                             <Card size="small" style={{ background: cardBg }}
-                                title={<Text strong>Spin History</Text>}
-                                extra={<Button size="small" danger onClick={() => setHistory([])}>Clear</Button>}
+                                title={<Text strong>{t("Spin History")}</Text>}
+                                extra={<Button size="small" danger onClick={() => setHistory([])}>{t("Clear")}</Button>}
                             >
                                 {history.map((h, i) => (
                                     <div key={i} style={{

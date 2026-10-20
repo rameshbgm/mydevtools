@@ -3,6 +3,9 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Button, Card, Space, Typography, Row, Col, Select, InputNumber, Segmented, Tag, Alert } from "antd";
 import { CreditCardOutlined, CopyOutlined, ReloadOutlined, DownloadOutlined } from "@ant-design/icons";
+import { downloadText } from "@/lib/download";
+import { tableToCsv } from "@/lib/table-export";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
 import { CARD_TYPES, generateCard, type GeneratedCard } from "@/lib/credit-card";
@@ -30,6 +33,7 @@ function BrandMark({ brand }: Readonly<{ brand: string }>) {
 
 /** A card rendered to look like a real one: gradient face, chip, embossed digits. */
 function CardFace({ card, onCopy }: Readonly<{ card: GeneratedCard; onCopy: (v: string, label: string) => void }>) {
+    const { t } = useLanguage();
     return (
         <div
             style={{
@@ -74,10 +78,10 @@ function CardFace({ card, onCopy }: Readonly<{ card: GeneratedCard; onCopy: (v: 
                 <BrandMark brand={card.brand} />
             </div>
 
-            <button
+            <button dir="ltr"
                 type="button"
                 onClick={() => onCopy(card.number, "Card number")}
-                title="Copy card number"
+                title={t("Copy card number")}
                 style={{
                     zIndex: 1,
                     background: "none",
@@ -103,19 +107,18 @@ function CardFace({ card, onCopy }: Readonly<{ card: GeneratedCard; onCopy: (v: 
             <div style={{ display: "flex", gap: 20, alignItems: "flex-end", zIndex: 1 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 8, letterSpacing: 1, opacity: 0.7, textTransform: "uppercase" }}>
-                        Card holder
-                    </div>
+                        {t("Card holder")}</div>
                     <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {card.holder}
                     </div>
                 </div>
                 <div>
-                    <div style={{ fontSize: 8, letterSpacing: 1, opacity: 0.7, textTransform: "uppercase" }}>Expires</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.8 }}>{card.expiry}</div>
+                    <div style={{ fontSize: 8, letterSpacing: 1, opacity: 0.7, textTransform: "uppercase" }}>{t("Expires")}</div>
+                    <div dir="ltr" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.8 }}>{card.expiry}</div>
                 </div>
                 <div>
-                    <div style={{ fontSize: 8, letterSpacing: 1, opacity: 0.7, textTransform: "uppercase" }}>CVV</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.8 }}>{card.cvv}</div>
+                    <div style={{ fontSize: 8, letterSpacing: 1, opacity: 0.7, textTransform: "uppercase" }}>{t("CVV")}</div>
+                    <div dir="ltr" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.8 }}>{card.cvv}</div>
                 </div>
             </div>
         </div>
@@ -137,12 +140,13 @@ function serialise(cards: GeneratedCard[], format: ExportFormat): string {
         );
     }
     if (format === "csv") {
-        return ["brand,number,cvv,expiry,holder", ...cards.map((c) => `${c.brand},${c.number},${c.cvv},${c.expiry},${c.holder}`)].join("\n");
+        return tableToCsv(["brand", "number", "cvv", "expiry", "holder"], cards.map((card) => [card.brand, card.number, card.cvv, card.expiry, card.holder]), false);
     }
     return cards.map((c) => c.number).join("\n");
 }
 
 export default function CreditCardGeneratorPage() {
+    const { t } = useLanguage();
     const [mounted, setMounted] = useState(false);
     const [brand, setBrand] = useState<string>("Visa");
     // "any" = let the generator pick a random supported length for the brand.
@@ -160,6 +164,7 @@ export default function CreditCardGeneratorPage() {
     const generate = useCallback(() => {
         const type = CARD_TYPES.find((t) => t.name === brand) ?? CARD_TYPES[0];
         const len = length !== "any" && type.lengths.includes(length) ? length : undefined;
+        if (!Number.isInteger(count) || count < 1 || count > 50) return;
         setCards(Array.from({ length: count }, () => generateCard(type, len)));
     }, [brand, length, count]);
 
@@ -171,108 +176,81 @@ export default function CreditCardGeneratorPage() {
     }, [mounted]);
 
     const handleCopy = useCallback((value: string, label: string) => {
-        copyToClipboard(value, `${label} copied`);
-    }, []);
+        copyToClipboard(value, t("{label} copied", { label: t(label) }));
+    }, [t]);
 
     const copyAll = useCallback(() => {
         if (!cards.length) return;
-        handleCopy(serialise(cards, format), `${cards.length} cards (${format.toUpperCase()})`);
-    }, [cards, format, handleCopy]);
+        copyToClipboard(serialise(cards, format), t("{count} cards ({format}) copied", { count: cards.length, format: format === "plain" ? t("Plain") : format.toUpperCase() }));
+    }, [cards, format, t]);
 
     const download = useCallback(() => {
         if (!cards.length) return;
         const ext = format === "plain" ? "txt" : format;
-        const blob = new Blob([serialise(cards, format)], { type: "text/plain;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `test-cards.${ext}`;
-        a.click();
-        URL.revokeObjectURL(url);
+        const mime = format === "json" ? "application/json;charset=utf-8" : format === "csv" ? "text/csv;charset=utf-8" : "text/plain;charset=utf-8";
+        downloadText(serialise(cards, format), `test-cards.${ext}`, mime);
     }, [cards, format]);
 
     return (
         <ToolPageLayout
-            title="Credit Card Generator"
-            description="Generate Luhn-valid test card numbers for every major brand — with CVV, expiry and card-style preview"
+            title={t("Credit Card Generator")}
+            description={t("Generate synthetic Luhn-valid card fixtures with security codes and expiry dates")}
             icon={<CreditCardOutlined />}
             color="#0891b2"
             learnMore={{
-                whatIs: "This tool generates syntactically valid credit card numbers for every major brand — Visa, Mastercard, American Express, Discover, JCB, Diners Club, Maestro, UnionPay, RuPay, Elo, Hipercard, Mir, Troy and InterPayment. Each number carries a correct brand prefix (IIN), a supported length, and a valid Luhn (mod-10) check digit, alongside a matching CVV, a future expiry date and a placeholder holder name.",
-                whyUse: "Payment forms, checkout flows and validation libraries need input that passes format and checksum checks. Typing a real card number into a dev environment is a genuine security risk. These numbers pass client-side validation but belong to no account and will be declined by every real payment processor.",
-                howToUse: [
-                    "Pick a card brand — the CVV length and available number lengths follow the brand automatically",
-                    "Optionally pin a specific number length; leave it on Any for a random supported length",
-                    "Choose how many cards to generate, then press Generate",
-                    "Click a card number on the card face to copy just that number",
-                    "Use Copy all or Download to export the whole batch as plain text, CSV or JSON",
-                ],
-                tips: [
-                    "These numbers are for testing only — they are not real accounts and cannot be charged",
-                    "American Express uses a 4-digit CID; every other brand here uses a 3-digit CVV",
-                    "Amex numbers are 15 digits and display in 4-6-5 grouping rather than groups of four",
-                    "Payment gateways publish their own sandbox card numbers — use those to test specific approve/decline responses",
-                    "Generation runs entirely in your browser; nothing is sent to a server",
-                ],
-                useCases: [
-                    "Filling checkout and payment forms in development and staging",
-                    "Testing Luhn validation and brand-detection logic",
-                    "Seeding test fixtures and QA datasets",
-                    "Verifying card-input masking and formatting in a UI",
-                    "Demonstrating payment flows without exposing real card data",
-                ],
+                whatIs: t("Generate synthetic format fixtures from the listed prefix and length patterns, with a Luhn check digit, synthetic security code, future expiry and placeholder holder. Brand patterns are hints, not issuer lookups."),
+                howToUse: [t("Choose a brand, an optional supported length and a count. Generate, copy a single value or export the batch as plain text, CSV or JSON. Changing settings does not change an existing batch until you generate again.")],
+                tips: [t("No account lookup or transaction is performed. Account allocation and payment responses are unknown; use provider-published sandbox fixtures for transaction tests. Everything is generated locally."), t("American Express uses a 4-digit security code and 15-digit number displayed in 4-6-5 groups. Other listed brands use 3-digit security codes. Exported field names and generated data are not translated.")],
             }}
         >
             <Space orientation="vertical" size={16} style={{ width: "100%" }}>
                 <Alert
                     type="warning"
                     showIcon
-                    title="Test data only"
-                    description="These numbers pass format and Luhn checks but are not linked to any account. They cannot be used for real payments, and attempting to do so is fraud."
+                    title={t("Test data only")}
+                    description={t("Synthetic format fixtures only. No account lookup is performed, and payment outcomes are unknown. Use your provider’s published sandbox fixtures for transaction tests.")}
                 />
 
                 <Card>
                     <Row gutter={[16, 16]} align="bottom">
                         <Col xs={24} sm={12} md={7}>
                             <Text strong style={{ display: "block", marginBottom: 6 }}>
-                                Card brand
-                            </Text>
+                                {t("Card brand")}</Text>
                             {mounted && (
-                                <Select
+                                <Select aria-label={t("Card brand")}
                                     value={brand}
                                     onChange={(v) => {
                                         setBrand(v);
                                         setLength("any");
                                     }}
                                     style={{ width: "100%" }}
-                                    options={CARD_TYPES.map((t) => ({ value: t.name, label: t.name }))}
+                                    options={CARD_TYPES.map((type) => ({ value: type.name, label: type.name }))}
                                 />
                             )}
                         </Col>
                         <Col xs={12} sm={12} md={5}>
                             <Text strong style={{ display: "block", marginBottom: 6 }}>
-                                Number length
-                            </Text>
+                                {t("Number length")}</Text>
                             {mounted && (
-                                <Select<number | "any">
+                                <Select<number | "any"> aria-label={t("Number length")}
                                     value={length}
                                     onChange={setLength}
                                     style={{ width: "100%" }}
                                     options={[
-                                        { value: "any" as const, label: "Any" },
-                                        ...selectedType.lengths.map((l) => ({ value: l, label: `${l} digits` })),
+                                        { value: "any" as const, label: t("Any") },
+                                        ...selectedType.lengths.map((l) => ({ value: l, label: t("{count} digits", { count: l }) })),
                                     ]}
                                 />
                             )}
                         </Col>
                         <Col xs={12} sm={8} md={4}>
                             <Text strong style={{ display: "block", marginBottom: 6 }}>
-                                How many
-                            </Text>
+                                {t("How many")}</Text>
                             {mounted && (
-                                <InputNumber
+                                <InputNumber aria-label={t("How many")}
                                     min={1}
                                     max={50}
+                                    precision={0}
                                     value={count}
                                     onChange={(v) => setCount(v ?? 1)}
                                     style={{ width: "100%" }}
@@ -281,36 +259,32 @@ export default function CreditCardGeneratorPage() {
                         </Col>
                         <Col xs={24} sm={16} md={8}>
                             <Space wrap>
-                                <Button type="primary" icon={<ReloadOutlined />} onClick={generate}>
-                                    Generate
-                                </Button>
+                                <Button type="primary" icon={<ReloadOutlined />} disabled={!Number.isInteger(count) || count < 1 || count > 50} onClick={generate}>
+                                    {t("Generate")}</Button>
                                 <Button icon={<CopyOutlined />} onClick={copyAll} disabled={!cards.length}>
-                                    Copy all
-                                </Button>
+                                    {t("Copy all")}</Button>
                                 <Button icon={<DownloadOutlined />} onClick={download} disabled={!cards.length}>
-                                    Download
-                                </Button>
+                                    {t("Download")}</Button>
                             </Space>
                         </Col>
                     </Row>
 
                     <div style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                            Export format
-                        </Text>
+                            {t("Export format")}</Text>
                         {mounted && (
                             <Segmented
                                 value={format}
                                 onChange={(v) => setFormat(v as ExportFormat)}
                                 options={[
-                                    { value: "plain", label: "Plain" },
+                                    { value: "plain", label: t("Plain") },
                                     { value: "csv", label: "CSV" },
                                     { value: "json", label: "JSON" },
                                 ]}
                             />
                         )}
-                        <Tag color="blue">CVV {selectedType.cvvLength} digits</Tag>
-                        <Tag>Lengths: {selectedType.lengths.join(", ")}</Tag>
+                        <Tag color="blue">{t("Security code: {count} digits", { count: selectedType.cvvLength })}</Tag>
+                        <Tag>{t("Lengths: {lengths}", { lengths: selectedType.lengths.join(", ") })}</Tag>
                     </div>
                 </Card>
 
@@ -321,17 +295,15 @@ export default function CreditCardGeneratorPage() {
                                 <Space orientation="vertical" size={8} style={{ width: "100%" }}>
                                     <CardFace card={card} onCopy={handleCopy} />
                                     <Space size={6} wrap>
-                                        <Tag>{card.length} digits</Tag>
+                                        <Tag>{t("{count} digits", { count: card.length })}</Tag>
                                         <Button
                                             size="small"
                                             icon={<CopyOutlined />}
                                             onClick={() => handleCopy(card.number, "Card number")}
                                         >
-                                            Number
-                                        </Button>
+                                            {t("Number")}</Button>
                                         <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(card.cvv, "CVV")}>
-                                            CVV
-                                        </Button>
+                                            {t("CVV")}</Button>
                                     </Space>
                                 </Space>
                             </Col>
@@ -341,12 +313,11 @@ export default function CreditCardGeneratorPage() {
 
                 <Card size="small">
                     <Title level={5} style={{ marginTop: 0 }}>
-                        Supported brands
-                    </Title>
+                        {t("Supported brands")}</Title>
                     <Space wrap size={[8, 8]}>
-                        {CARD_TYPES.map((t) => (
-                            <Tag key={t.name} color={t.name === brand ? "blue" : undefined}>
-                                {t.name} · {t.lengths.join("/")} digits
+                        {CARD_TYPES.map((type) => (
+                            <Tag key={type.name} color={type.name === brand ? "blue" : undefined}>
+                                {type.name} · {type.lengths.join("/")} {t("digits")}
                             </Tag>
                         ))}
                     </Space>

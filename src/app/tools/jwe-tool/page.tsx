@@ -10,8 +10,10 @@ import {
     CheckOutlined,
     ClearOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
+import { localizeJoseError } from "@/lib/i18n/jose-tools";
+import { decryptCompactJwe, encryptCompactJwe, jweKeyBytes } from "@/lib/jwe-crypto";
 import ToolPageLayout from "@/components/ToolPageLayout";
-import { useAppStore } from "@/lib/store";
 import { copyToClipboard } from "@/lib/clipboard";
 
 const { TextArea } = Input;
@@ -43,12 +45,13 @@ const CONTENT_ALGORITHMS: { value: ContentAlgorithm; label: string }[] = [
 const SAMPLE_PLAINTEXT = JSON.stringify({
     secret: "This is confidential data",
     user: "john.doe@example.com",
-    timestamp: new Date().toISOString(),
+    timestamp: "2026-01-01T00:00:00.000Z",
 }, null, 2);
 
 export default function JWEToolPage() {
-    const { darkMode } = useAppStore();
+    const { t } = useLanguage();
     const [activeTab, setActiveTab] = useState<"encrypt" | "decrypt">("encrypt");
+    const [working, setWorking] = useState(false);
 
     // Encrypt state
     const [plaintext, setPlaintext] = useState(SAMPLE_PLAINTEXT);
@@ -66,385 +69,111 @@ export default function JWEToolPage() {
 
     const getKeyType = (alg: KeyAlgorithm) => KEY_ALGORITHMS.find(a => a.value === alg)?.type || "symmetric";
 
-    const base64UrlEncode = (data: Uint8Array): string => {
-        return btoa(String.fromCharCode(...data))
-            .replaceAll("+", "-")
-            .replaceAll("/", "_")
-            .replace(/=+$/, "");
-    };
-
-    const base64UrlDecode = (str: string): Uint8Array => {
-        let base64 = str.replaceAll("-", "+").replaceAll("_", "/");
-        while (base64.length % 4) base64 += "=";
-        return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-    };
-
-    // Helper to convert Uint8Array to ArrayBuffer for crypto operations
-    const toArrayBuffer = (arr: Uint8Array): ArrayBuffer => {
-        const buffer = new ArrayBuffer(arr.length);
-        new Uint8Array(buffer).set(arr);
-        return buffer;
-    };
-
-    const getKeyBits = (enc: ContentAlgorithm): number => {
-        switch (enc) {
-            case "A128GCM":
-            case "A128CBC-HS256": return 128;
-            case "A192GCM":
-            case "A192CBC-HS384": return 192;
-            case "A256GCM":
-            case "A256CBC-HS512": return 256;
-            default: return 256;
-        }
-    };
-
     const handleEncrypt = useCallback(async () => {
-        try {
-            const keyType = getKeyType(keyAlgorithm);
-            const encoder = new TextEncoder();
-            const plaintextBytes = encoder.encode(plaintext);
-
-            // Generate a random Content Encryption Key (CEK)
-            const cekBits = getKeyBits(contentAlgorithm);
-            const cek = crypto.getRandomValues(new Uint8Array(cekBits / 8));
-
-            // Generate IV (96 bits for GCM, 128 bits for CBC)
-            const ivSize = contentAlgorithm.includes("GCM") ? 12 : 16;
-            const iv = crypto.getRandomValues(new Uint8Array(ivSize));
-
-            // Import CEK for content encryption
-            const cekKey = await crypto.subtle.importKey(
-                "raw",
-                cek,
-                { name: contentAlgorithm.includes("GCM") ? "AES-GCM" : "AES-CBC", length: cekBits },
-                false,
-                ["encrypt"]
-            );
-
-            // Create protected header
-            const header = { alg: keyAlgorithm, enc: contentAlgorithm };
-            const encodedHeader = base64UrlEncode(encoder.encode(JSON.stringify(header)));
-
-            // Encrypt content
-            let ciphertext: Uint8Array;
-            let authTag: Uint8Array = new Uint8Array(0);
-
-            if (contentAlgorithm.includes("GCM")) {
-                const aad = encoder.encode(encodedHeader);
-                const encrypted = await crypto.subtle.encrypt(
-                    { name: "AES-GCM", iv, additionalData: aad, tagLength: 128 },
-                    cekKey,
-                    plaintextBytes
-                );
-                // GCM appends auth tag to ciphertext
-                const encryptedArray = new Uint8Array(encrypted);
-                ciphertext = encryptedArray.slice(0, -16);
-                authTag = encryptedArray.slice(-16);
-            } else {
-                // For CBC-HS, we need HMAC - simplified here
-                const encrypted = await crypto.subtle.encrypt(
-                    { name: "AES-CBC", iv },
-                    cekKey,
-                    plaintextBytes
-                );
-                ciphertext = new Uint8Array(encrypted);
-            }
-
-            // Encrypt the CEK with the key encryption algorithm
-            let encryptedKey: Uint8Array;
-
-            if (keyType === "asymmetric") {
-                if (!publicKey.trim()) {
-                    message.error("Public key is required for RSA encryption");
-                    return;
-                }
-                const pemContent = publicKey
-                    .replace(/-----BEGIN [A-Z ]+-----/, "")
-                    .replace(/-----END [A-Z ]+-----/, "")
-                    .replace(/\s/g, "");
-                const binaryKey = Uint8Array.from(atob(pemContent), c => c.charCodeAt(0));
-
-                const hashMap: Record<string, string> = {
-                    "RSA-OAEP": "SHA-1",
-                    "RSA-OAEP-256": "SHA-256",
-                    "RSA-OAEP-384": "SHA-384",
-                    "RSA-OAEP-512": "SHA-512",
-                };
-
-                const rsaKey = await crypto.subtle.importKey(
-                    "spki",
-                    binaryKey,
-                    { name: "RSA-OAEP", hash: hashMap[keyAlgorithm] || "SHA-256" },
-                    false,
-                    ["encrypt"]
-                );
-
-                const encrypted = await crypto.subtle.encrypt(
-                    { name: "RSA-OAEP" },
-                    rsaKey,
-                    cek
-                );
-                encryptedKey = new Uint8Array(encrypted);
-            } else if (keyType === "symmetric") {
-                // AES Key Wrap
-                if (!encryptKey.trim()) {
-                    message.error("Encryption key is required");
-                    return;
-                }
-                const keyBits = parseInt(keyAlgorithm.replace("A", "").replace("KW", ""));
-                const keyBytes = encoder.encode(encryptKey.padEnd(keyBits / 8, "0").slice(0, keyBits / 8));
-
-                const wrapKey = await crypto.subtle.importKey(
-                    "raw",
-                    keyBytes,
-                    { name: "AES-KW", length: keyBits },
-                    false,
-                    ["wrapKey"]
-                );
-
-                const cekToWrap = await crypto.subtle.importKey(
-                    "raw",
-                    cek,
-                    { name: "AES-GCM", length: cekBits },
-                    true,
-                    ["encrypt"]
-                );
-
-                const wrapped = await crypto.subtle.wrapKey(
-                    "raw",
-                    cekToWrap,
-                    wrapKey,
-                    { name: "AES-KW" }
-                );
-                encryptedKey = new Uint8Array(wrapped);
-            } else {
-                // Direct encryption - no encrypted key
-                encryptedKey = new Uint8Array(0);
-            }
-
-            // Construct JWE compact serialization
-            const jwe = [
-                encodedHeader,
-                base64UrlEncode(encryptedKey),
-                base64UrlEncode(iv),
-                base64UrlEncode(ciphertext),
-                base64UrlEncode(authTag),
-            ].join(".");
-
-            setEncryptedJwe(jwe);
-            message.success("JWE encrypted successfully!");
-        } catch (error) {
-            message.error(`Encryption failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+        if (working) return;
+        setEncryptedJwe("");
+        if (getKeyType(keyAlgorithm) === "asymmetric" && !publicKey.trim()) {
+            message.error(t("Public key is required for RSA encryption"));
+            return;
         }
-    }, [plaintext, keyAlgorithm, contentAlgorithm, encryptKey, publicKey]);
+        if (getKeyType(keyAlgorithm) !== "asymmetric" && !encryptKey) {
+            message.error(t("Encryption key is required"));
+            return;
+        }
+        setWorking(true);
+        try {
+            const token = await encryptCompactJwe(plaintext, keyAlgorithm, contentAlgorithm,
+                getKeyType(keyAlgorithm) === "asymmetric" ? publicKey : encryptKey);
+            setEncryptedJwe(token);
+            message.success(t("JWE encrypted successfully!"));
+        } catch {
+            message.error(t("Encryption failed. Check the algorithm and key, then try again."));
+        } finally { setWorking(false); }
+    }, [working, plaintext, keyAlgorithm, contentAlgorithm, encryptKey, publicKey, t]);
 
     const handleDecrypt = useCallback(async () => {
-        try {
-            const parts = jweToDecrypt.split(".");
-            if (parts.length !== 5) {
-                setDecryptResult({ success: false, error: "Invalid JWE format - must have 5 parts" });
-                return;
-            }
-
-            const [encodedHeader, encodedEncryptedKey, encodedIv, encodedCiphertext, encodedAuthTag] = parts;
-            const header = JSON.parse(new TextDecoder().decode(base64UrlDecode(encodedHeader)));
-            const alg = header.alg as KeyAlgorithm;
-            const enc = header.enc as ContentAlgorithm;
-
-            const encryptedKeyBytes = base64UrlDecode(encodedEncryptedKey);
-            const iv = base64UrlDecode(encodedIv);
-            const ciphertext = base64UrlDecode(encodedCiphertext);
-            const authTag = base64UrlDecode(encodedAuthTag);
-
-            const keyType = getKeyType(alg);
-            let cek: Uint8Array;
-
-            if (keyType === "asymmetric") {
-                if (!privateKey.trim()) {
-                    setDecryptResult({ success: false, error: "Private key is required for RSA decryption" });
-                    return;
-                }
-                const pemContent = privateKey
-                    .replace(/-----BEGIN [A-Z ]+-----/, "")
-                    .replace(/-----END [A-Z ]+-----/, "")
-                    .replace(/\s/g, "");
-                const binaryKey = Uint8Array.from(atob(pemContent), c => c.charCodeAt(0));
-
-                const hashMap: Record<string, string> = {
-                    "RSA-OAEP": "SHA-1",
-                    "RSA-OAEP-256": "SHA-256",
-                    "RSA-OAEP-384": "SHA-384",
-                    "RSA-OAEP-512": "SHA-512",
-                };
-
-                const rsaKey = await crypto.subtle.importKey(
-                    "pkcs8",
-                    binaryKey,
-                    { name: "RSA-OAEP", hash: hashMap[alg] || "SHA-256" },
-                    false,
-                    ["decrypt"]
-                );
-
-                const decrypted = await crypto.subtle.decrypt(
-                    { name: "RSA-OAEP" },
-                    rsaKey,
-                    toArrayBuffer(encryptedKeyBytes)
-                );
-                cek = new Uint8Array(decrypted);
-            } else if (keyType === "symmetric") {
-                if (!decryptKey.trim()) {
-                    setDecryptResult({ success: false, error: "Decryption key is required" });
-                    return;
-                }
-                const keyBits = Number.parseInt(alg.replace("A", "").replace("KW", ""));
-                const encoder = new TextEncoder();
-                const keyBytes = encoder.encode(decryptKey.padEnd(keyBits / 8, "0").slice(0, keyBits / 8));
-
-                const unwrapKey = await crypto.subtle.importKey(
-                    "raw",
-                    keyBytes,
-                    { name: "AES-KW", length: keyBits },
-                    false,
-                    ["unwrapKey"]
-                );
-
-                const cekBits = getKeyBits(enc);
-                const unwrapped = await crypto.subtle.unwrapKey(
-                    "raw",
-                    toArrayBuffer(encryptedKeyBytes),
-                    unwrapKey,
-                    { name: "AES-KW" },
-                    { name: enc.includes("GCM") ? "AES-GCM" : "AES-CBC", length: cekBits },
-                    false,
-                    ["decrypt"]
-                );
-
-                const exported = await crypto.subtle.exportKey("raw", unwrapped);
-                cek = new Uint8Array(exported);
-            } else {
-                // Direct encryption
-                const encoder = new TextEncoder();
-                cek = encoder.encode(decryptKey.padEnd(32, "0").slice(0, 32));
-            }
-
-            // Import CEK for decryption
-            const cekBitsFinal = getKeyBits(enc);
-            const cekKey = await crypto.subtle.importKey(
-                "raw",
-                toArrayBuffer(cek),
-                { name: enc.includes("GCM") ? "AES-GCM" : "AES-CBC", length: cekBitsFinal },
-                false,
-                ["decrypt"]
-            );
-
-            // Decrypt content
-            let decryptedBytes: Uint8Array;
-
-            if (enc.includes("GCM")) {
-                // Combine ciphertext and auth tag for GCM
-                const combined = new Uint8Array(ciphertext.length + authTag.length);
-                combined.set(ciphertext);
-                combined.set(authTag, ciphertext.length);
-
-                const encoder = new TextEncoder();
-                const aad = encoder.encode(encodedHeader);
-                const decrypted = await crypto.subtle.decrypt(
-                    { name: "AES-GCM", iv: toArrayBuffer(iv), additionalData: toArrayBuffer(aad), tagLength: 128 },
-                    cekKey,
-                    toArrayBuffer(combined)
-                );
-                decryptedBytes = new Uint8Array(decrypted);
-            } else {
-                const decrypted = await crypto.subtle.decrypt(
-                    { name: "AES-CBC", iv: toArrayBuffer(iv) },
-                    cekKey,
-                    toArrayBuffer(ciphertext)
-                );
-                decryptedBytes = new Uint8Array(decrypted);
-            }
-
-            const plaintextStr = new TextDecoder().decode(decryptedBytes);
-
-            // Try to pretty-print JSON
-            let formattedPlaintext: string;
-            try {
-                formattedPlaintext = JSON.stringify(JSON.parse(plaintextStr), null, 2);
-            } catch {
-                formattedPlaintext = plaintextStr;
-            }
-
-            setDecryptResult({ success: true, plaintext: formattedPlaintext });
-        } catch (error) {
-            setDecryptResult({
-                success: false,
-                error: `Decryption failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-            });
+        if (working) return;
+        setDecryptResult(null);
+        if (jweToDecrypt.trim().split(".").length !== 5) {
+            setDecryptResult({ success: false, error: "Invalid JWE format - must have 5 parts" });
+            return;
         }
-    }, [jweToDecrypt, decryptKey, privateKey]);
+        setWorking(true);
+        try {
+            const plaintext = await decryptCompactJwe(jweToDecrypt, privateKey || decryptKey);
+            // Preserve the exact authenticated UTF-8 text, including JSON number precision and whitespace.
+            setDecryptResult({ success: true, plaintext });
+        } catch {
+            setDecryptResult({ success: false, error: "Decryption failed: " });
+        } finally { setWorking(false); }
+    }, [working, jweToDecrypt, decryptKey, privateKey]);
 
     const tabItems = [
         {
             key: "encrypt",
             label: (
                 <span>
-                    <LockOutlined /> Encrypt
-                </span>
+                    <LockOutlined /> {t("Encrypt")}</span>
             ),
             children: (
                 <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-                    <div style={{ display: "flex", gap: 16 }}>
-                        <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
                             <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                                <Text strong>Key Algorithm (alg)</Text>
-                                <Tooltip title="Algorithm used to encrypt the Content Encryption Key">
+                                <Text strong>{t("Key Algorithm (alg)")}</Text>
+                                <Tooltip title={t("Algorithm used to encrypt the Content Encryption Key")}>
                                     <InfoCircleOutlined style={{ color: "var(--wb-text-muted)" }} />
                                 </Tooltip>
                             </div>
-                            <Select
+                            <Select aria-label={t("Key Algorithm (alg)")}
                                 value={keyAlgorithm}
+                                disabled={working}
                                 onChange={setKeyAlgorithm}
                                 style={{ width: "100%" }}
                                 options={KEY_ALGORITHMS.map(a => ({
                                     value: a.value,
-                                    label: a.label,
+                                    label: t(a.label),
                                 }))}
                             />
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
                             <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                                <Text strong>Content Algorithm (enc)</Text>
-                                <Tooltip title="Algorithm used to encrypt the actual content">
+                                <Text strong>{t("Content Algorithm (enc)")}</Text>
+                                <Tooltip title={t("Algorithm used to encrypt the actual content")}>
                                     <InfoCircleOutlined style={{ color: "var(--wb-text-muted)" }} />
                                 </Tooltip>
                             </div>
-                            <Select
+                            <Select aria-label={t("Content Algorithm (enc)")}
                                 value={contentAlgorithm}
+                                disabled={working}
                                 onChange={setContentAlgorithm}
                                 style={{ width: "100%" }}
                                 options={CONTENT_ALGORITHMS.map(a => ({
                                     value: a.value,
-                                    label: a.label,
+                                    label: t(a.label),
                                 }))}
                             />
                         </div>
                     </div>
 
                     <div>
-                        <Text strong>Plaintext</Text>
-                        <TextArea
+                        <Text strong>{t("Plaintext")}</Text>
+                        <TextArea aria-label={t("Plaintext")} dir="ltr" styles={{ textarea: { direction: "ltr" } }}
+                            disabled={working}
                             value={plaintext}
                             onChange={(e) => setPlaintext(e.target.value)}
                             rows={6}
                             style={{ marginTop: 8, fontFamily: "monospace" }}
-                            placeholder="Enter data to encrypt..."
+                            placeholder={t("Enter data to encrypt...")}
                         />
                     </div>
 
                     {getKeyType(keyAlgorithm) === "asymmetric" ? (
                         <div>
-                            <Text strong>Public Key (PEM)</Text>
-                            <TextArea
-                                value={publicKey}
+                            <Text strong>{t("Public Key (PEM)")}</Text>
+                            <TextArea aria-label={t("Public Key (PEM)")} dir="ltr" styles={{ textarea: { direction: "ltr" } }}
+                                disabled={working}
+                            value={publicKey}
                                 onChange={(e) => setPublicKey(e.target.value)}
                                 rows={6}
                                 style={{ marginTop: 8, fontFamily: "monospace" }}
@@ -453,13 +182,20 @@ export default function JWEToolPage() {
                         </div>
                     ) : (
                         <div>
-                            <Text strong>Encryption Key</Text>
-                            <Input.Password
-                                value={encryptKey}
+                            <Text strong>{t("Encryption Key")}</Text>
+                            <Input.Password aria-label={t("Encryption Key")} dir="ltr" styles={{ input: { direction: "ltr" } }}
+                                disabled={working}
+                            value={encryptKey}
                                 onChange={(e) => setEncryptKey(e.target.value)}
                                 style={{ marginTop: 8, fontFamily: "monospace" }}
-                                placeholder={`Enter ${keyAlgorithm === "A128KW" ? "16" : keyAlgorithm === "A192KW" ? "24" : "32"}-character key`}
+                                placeholder={t("Enter an exact {length}-byte key", { length: jweKeyBytes(keyAlgorithm, contentAlgorithm) })}
                             />
+                            <Text type="secondary" style={{ display: "block", marginTop: 8 }}>
+                                {t("Use an exact {length}-byte key (UTF-8, hex: or base64url:). Keys are never padded or truncated.", { length: jweKeyBytes(keyAlgorithm, contentAlgorithm) })}
+                            </Text>
+                            <Text type="secondary" style={{ display: "block", marginTop: 8 }}>
+                                {t("Use random key bytes, not a password. For dir, the key is the content encryption key; CBC-HS uses twice the AES key length.")}
+                            </Text>
                         </div>
                     )}
 
@@ -467,25 +203,24 @@ export default function JWEToolPage() {
                         type="primary"
                         icon={<LockOutlined />}
                         onClick={handleEncrypt}
+                        loading={working}
                         size="large"
                         block
                     >
-                        Encrypt JWE
-                    </Button>
+                        {t("Encrypt JWE")}</Button>
 
                     {encryptedJwe && (
                         <div>
                             <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <Text strong>Encrypted JWE</Text>
+                                <Text strong>{t("Encrypted JWE")}</Text>
                                 <Button
                                     size="small"
                                     icon={<CopyOutlined />}
                                     onClick={() => copyToClipboard(encryptedJwe)}
                                 >
-                                    Copy
-                                </Button>
+                                    {t("Copy")}</Button>
                             </div>
-                            <TextArea
+                            <TextArea aria-label={t("Encrypted JWE")} dir="ltr" styles={{ textarea: { direction: "ltr" } }}
                                 value={encryptedJwe}
                                 readOnly
                                 rows={4}
@@ -500,14 +235,14 @@ export default function JWEToolPage() {
             key: "decrypt",
             label: (
                 <span>
-                    <UnlockOutlined /> Decrypt
-                </span>
+                    <UnlockOutlined /> {t("Decrypt")}</span>
             ),
             children: (
                 <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <div>
-                        <Text strong>JWE Token</Text>
-                        <TextArea
+                        <Text strong>{t("JWE Token")}</Text>
+                        <TextArea aria-label={t("JWE Token")} dir="ltr" styles={{ textarea: { direction: "ltr" } }}
+                            disabled={working}
                             value={jweToDecrypt}
                             onChange={(e) => {
                                 setJweToDecrypt(e.target.value);
@@ -520,8 +255,9 @@ export default function JWEToolPage() {
                     </div>
 
                     <div>
-                        <Text strong>Decryption Key or Private Key</Text>
-                        <TextArea
+                        <Text strong>{t("Decryption Key or Private Key")}</Text>
+                        <TextArea aria-label={t("Decryption Key or Private Key")} dir="ltr" styles={{ textarea: { direction: "ltr" } }}
+                            disabled={working}
                             value={decryptKey || privateKey}
                             onChange={(e) => {
                                 const val = e.target.value;
@@ -535,29 +271,32 @@ export default function JWEToolPage() {
                             }}
                             rows={6}
                             style={{ marginTop: 8, fontFamily: "monospace" }}
-                            placeholder="Enter symmetric key or private key (PEM) for RSA"
+                            placeholder={t("Enter symmetric key or private key (PEM) for RSA")}
                         />
                     </div>
 
+                    <Text type="secondary">
+                        {t("Use random key bytes, not a password. For dir, the key is the content encryption key; CBC-HS uses twice the AES key length.")}
+                    </Text>
                     <Button
                         type="primary"
                         icon={<UnlockOutlined />}
                         onClick={handleDecrypt}
+                        loading={working}
                         size="large"
                         block
                     >
-                        Decrypt JWE
-                    </Button>
+                        {t("Decrypt JWE")}</Button>
 
                     {decryptResult && (
                         <Alert
                             type={decryptResult.success ? "success" : "error"}
-                            title={decryptResult.success ? "Decryption Successful" : "Decryption Failed"}
+                            title={t(decryptResult.success ? "Decryption Successful" : "Decryption Failed")}
                             description={
                                 decryptResult.success ? (
                                     <div>
-                                        <Text strong>Decrypted Content:</Text>
-                                        <pre style={{
+                                        <Text strong>{t("Decrypted Content:")}</Text>
+                                        <pre dir="ltr" style={{
                                             marginTop: 8,
                                             padding: 12,
                                             background: "var(--wb-card-solid-bg)",
@@ -568,7 +307,7 @@ export default function JWEToolPage() {
                                         </pre>
                                     </div>
                                 ) : (
-                                    decryptResult.error
+                                    localizeJoseError(t, decryptResult.error ?? "")
                                 )
                             }
                             showIcon
@@ -582,8 +321,8 @@ export default function JWEToolPage() {
 
     return (
         <ToolPageLayout
-            title="JWE Encrypt & Decrypt"
-            description="Encrypt and decrypt data using JSON Web Encryption"
+            title={t("JWE Encrypt & Decrypt")}
+            description={t("Encrypt and decrypt data using JSON Web Encryption")}
             icon={<LockOutlined style={{ fontSize: 24 }} />}
             color="#f5222d"
             learnMore={{

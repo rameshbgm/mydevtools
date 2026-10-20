@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Button, Input, Card, Typography, App, Spin } from "antd";
 import { LockOutlined, CopyOutlined, ReloadOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { useLanguage } from "@/components/LanguageProvider";
+import { CRYPTO_UTILITY_HELP } from "@/lib/i18n/crypto-utilities";
 import SendToButton from "@/components/SendToButton";
 import ShareButton from "@/components/ShareButton";
 import ToolBridgeBanner from "@/components/ToolBridgeBanner";
@@ -26,28 +28,37 @@ async function computeHashes(input: string): Promise<Record<string, string>> {
         "SHA-256": CryptoJS.SHA256(input).toString(),
         "SHA-384": CryptoJS.SHA384(input).toString(),
         "SHA-512": CryptoJS.SHA512(input).toString(),
-        "SHA-3 (224)": CryptoJS.SHA3(input, { outputLength: 224 }).toString(),
-        "SHA-3 (256)": CryptoJS.SHA3(input, { outputLength: 256 }).toString(),
-        "SHA-3 (384)": CryptoJS.SHA3(input, { outputLength: 384 }).toString(),
-        "SHA-3 (512)": CryptoJS.SHA3(input, { outputLength: 512 }).toString(),
+        "Keccak-224": CryptoJS.SHA3(input, { outputLength: 224 }).toString(),
+        "Keccak-256": CryptoJS.SHA3(input, { outputLength: 256 }).toString(),
+        "Keccak-384": CryptoJS.SHA3(input, { outputLength: 384 }).toString(),
+        "Keccak-512": CryptoJS.SHA3(input, { outputLength: 512 }).toString(),
         "RIPEMD-160": CryptoJS.RIPEMD160(input).toString(),
     };
 }
 
+// Name the existing CryptoJS SHA3 digests accurately; the algorithm and digest bytes are unchanged.
+function hashAlgorithmLabel(id: string): string {
+    const keccak = /^Keccak-(224|256|384|512)$/.exec(id);
+    return keccak ? `Keccak-${keccak[1]} (CryptoJS SHA3)` : id;
+}
+
 export default function HashGeneratorPage() {
+    const { t } = useLanguage();
+    const latestT = useRef(t);
+    useEffect(() => { latestT.current = t; }, [t]);
     const { message } = App.useApp();
     const [input, setInput] = useState("Hello, mydevtools!");
     const [hashes, setHashes] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
 
     const generate = useCallback(async () => {
-        if (!input) { message.warning("Enter some text first"); return; }
+        if (!input) { message.warning(latestT.current("Enter some text first")); return; }
         setLoading(true);
         try {
             const result = await computeHashes(input);
             setHashes(result);
-        } catch {
-            message.error("Error generating hashes");
+        } catch (cause: unknown) {
+            message.error(cause instanceof Error ? latestT.current("Crypto operation failed: {detail}", { detail: cause.message }) : latestT.current("Error generating hashes"));
         } finally {
             setLoading(false);
         }
@@ -60,57 +71,36 @@ export default function HashGeneratorPage() {
         setLoading(true);
         void computeHashes(s.input)
             .then(setHashes)
-            .catch(() => message.error("Error generating hashes"))
+            .catch((cause: unknown) => message.error(cause instanceof Error ? latestT.current("Crypto operation failed: {detail}", { detail: cause.message }) : latestT.current("Error generating hashes")))
             .finally(() => setLoading(false));
     });
 
     const copyAll = () => {
         const text = Object.entries(hashes).map(([k, v]) => `${k}: ${v}`).join("\n");
-        copyToClipboard(text, "All hashes copied!");
+        copyToClipboard(text, t("All hashes copied!"));
     };
 
     return (
         <ToolPageLayout
-            title="Hash Generator"
-            description="Generate MD5, SHA-1, SHA-224, SHA-256, SHA-384, SHA-512, SHA-3, RIPEMD-160 hashes"
+            title={t("Hash Generator")}
+            description={t("Generate MD5, SHA-1, SHA-224, SHA-256, SHA-384, SHA-512, Keccak (CryptoJS SHA3), RIPEMD-160 hashes")}
             icon={<LockOutlined style={{ fontSize: 24, color: "#f5222d" }} />}
             color="#f5222d"
-            learnMore={{
-                whatIs: "A cryptographic hash function takes any input and produces a fixed-size output (hash/digest). The same input always produces the same hash, but it's practically impossible to reverse the process or find two inputs with the same hash.",
-                whyUse: "Hashes are essential for password storage, data integrity verification, digital signatures, and checksums. They provide a way to verify data hasn't been tampered with without storing the original data.",
-                howToUse: [
-                    "Enter your text in the input field",
-                    "Click 'Generate Hashes' to compute all hash algorithms",
-                    "Copy individual hashes or all at once",
-                    "Compare hashes to verify data integrity"
-                ],
-                tips: [
-                    "SHA-256 is the most commonly used secure hash algorithm today",
-                    "MD5 and SHA-1 are considered weak - don't use for security",
-                    "SHA-3 is the newest standard with different internal design",
-                    "Even a tiny change in input completely changes the hash output"
-                ],
-                useCases: [
-                    "Verifying file downloads match expected checksums",
-                    "Generating content-based cache keys",
-                    "Creating deterministic IDs from data",
-                    "Comparing data integrity across systems"
-                ]
-            }}
+            learnMore={CRYPTO_UTILITY_HELP["hash-generator"]}
         >
             <ToolBridgeBanner
                 accepts={["text"]}
                 onAccept={(p) => setInput(p.data)}
             />
 
-            <Card size="small" title="Input Text" style={{ marginBottom: 16 }}>
-                <TextArea rows={4} value={input} onChange={(e) => setInput(e.target.value)} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
+            <Card size="small" title={t("Input Text")} style={{ marginBottom: 16 }}>
+                <TextArea aria-label={t("Input Text")} dir="auto" rows={4} value={input} onChange={(e) => setInput(e.target.value)} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
                 <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <Button type="primary" icon={<ReloadOutlined spin={loading} />} onClick={generate} loading={loading}>
-                        Generate Hashes
+                        {t("Generate Hashes")}
                     </Button>
                     {Object.keys(hashes).length > 0 && (
-                        <Button icon={<CopyOutlined />} onClick={copyAll}>Copy All</Button>
+                        <Button icon={<CopyOutlined />} onClick={copyAll}>{t("Copy All")}</Button>
                     )}
                     <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input })} />
                     <SendToButton data={input} kind="text" sourceToolId="hash-generator" />
@@ -122,10 +112,10 @@ export default function HashGeneratorPage() {
             ) : (
                 <div className="tool-split-pane" style={{ gap: 12 }}>
                     {Object.entries(hashes).map(([algo, hash]) => (
-                        <Card key={algo} size="small" title={algo} extra={
-                            <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(hash, `${algo} copied!`)} />
+                        <Card key={algo} size="small" title={<bdi dir="ltr">{hashAlgorithmLabel(algo)}</bdi>} extra={
+                            <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(hash, t("{algorithm} copied!", { algorithm: hashAlgorithmLabel(algo) }))} />
                         }>
-                            <Text code copyable style={{ fontSize: 12, wordBreak: "break-all" }}>{hash}</Text>
+                            <Text dir="ltr" code copyable={{ tooltips: [t("Copy"), t("Copied!")] }} style={{ fontSize: 12, wordBreak: "break-all" }}>{hash}</Text>
                         </Card>
                     ))}
                 </div>

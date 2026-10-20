@@ -4,7 +4,9 @@
 //
 // Run with: npx tsx scripts/toon-roundtrip.test.ts  (also wired as `npm run test:toon`)
 
-import assert from "node:assert";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { encodeToon, decodeToon } from "../src/lib/toon";
 
 const fixtures: { name: string; data: unknown }[] = [
@@ -47,3 +49,20 @@ for (const f of fixtures) {
 }
 
 console.log(`✓ ${pass}/${fixtures.length} TOON round-trip fixtures passed`);
+
+// Expected values are from the independently maintained official MIT fixtures,
+// not values produced by this codec. Non-strict mode is outside our subset.
+const official = JSON.parse(readFileSync(resolve("scripts/fixtures/toon/official-decode.json"), "utf8")) as { tests: { name: string; input: string; expected: unknown }[] };
+for (const row of official.tests) assert.deepEqual(decodeToon(row.input), row.expected, `Official: ${row.name}`);
+const edgeCases: unknown[] = [null, true, false, 0, -3, 1e-7, "hello", "true", "42", "1e+2", "#note", "-item", "", {}, [], [[], {}], { data: [1, 2] },
+    [{ "a,b": "true", 'x:y': "001", 'say"hi': "null" }, { "a,b": "42", 'x:y': "1e+2", 'say"hi': " leading " }],
+    JSON.parse('{"__proto__":{"value":1},"constructor":[{"__proto__":"x"},{"__proto__":"y"}]}'),
+    { rows: [null, { a: [[], {}, [true, "false"]] }, [1, { "a:b": " x " }]] }, { "quoted:key": { 'other,key': ["a\\b", "\t", "\u0000", "🌍 العربية"] } },
+];
+for (const value of edgeCases) assert.deepEqual(decodeToon(encodeToon(value)), value, JSON.stringify(value));
+for (const source of ["a[2]: 1", "a[1]: 1,2", "a[1]{id,name}:\n  1", "a[2]{id}:\n  1", "a:\n   b: 1", "a: 1\n  b: 2", "a: 1\na: 2", "a[01]: x", "a[1|]: x", "a[1]{x,x}:\n  1,2", "a[1]:\n  1", "[1]: a\ntrailing: value", 'a: "unterminated', "1e999"]) assert.throws(() => decodeToon(source), { name: "Error" }, source);
+assert.deepEqual(decodeToon("data[2]: 1,2"), { data: [1, 2] }, "A named data field remains an object rather than being silently unwrapped");
+assert.deepEqual(decodeToon("data[2]: 1,2", { legacyDataRootArray: true }), [1, 2]);
+assert.equal(encodeToon([1, 2]), "[2]: 1,2");
+assert.throws(() => encodeToon("\ud800"));
+console.log(`✓ ${official.tests.length} independent official strict vectors and ${edgeCases.length} structural/type round trips; malformed counts/keys/indentation rejected`);

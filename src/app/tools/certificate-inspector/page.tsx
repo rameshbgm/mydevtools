@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage } from "@/components/LanguageProvider";
 
 import React, { Suspense, useState, useCallback } from "react";
 import {
@@ -30,6 +31,7 @@ import {
     WarningOutlined,
 } from "@ant-design/icons";
 import { useSearchParams, useRouter } from "next/navigation";
+import ToolBridgeBanner from "@/components/ToolBridgeBanner";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
@@ -55,9 +57,17 @@ type ConvertFormat = "pem" | "der-base64" | "der-bytes";
 interface ParsedBlock {
     label: string;
     body: string;
-    summary: string;
+    summary: React.ReactNode;
     detail: React.ReactNode;
     valid: boolean;
+}
+
+function CertificateText({ source, values }: { source: string; values?: Record<string, string | number> }) {
+    const { t } = useLanguage();
+    return <>{t(source, values)}</>;
+}
+function certificateText(source: string, values?: Record<string, string | number>) {
+    return <CertificateText source={source} values={values} />;
 }
 
 // ─── DN label map (shared with decoder) ───────────────────────────────────────
@@ -90,7 +100,12 @@ function useFileUpload(onText: (t: string) => void) {
                 onText(result);
             } else if (result instanceof ArrayBuffer) {
                 const bytes = new Uint8Array(result);
-                onText(btoa(Array.from(bytes).map((b) => String.fromCharCode(b)).join("")));
+                const text = new TextDecoder().decode(bytes);
+                // .crt and .cer may contain PEM text or binary DER. Preserve the
+                // original encoded material rather than base64-wrapping PEM again.
+                onText(/^\s*-----BEGIN [^-]+-----/.test(text)
+                    ? text
+                    : btoa(Array.from(bytes).map((b) => String.fromCharCode(b)).join("")));
             }
         };
         if (file.name.match(/\.(der|cer|crt)$/i)) {
@@ -124,12 +139,8 @@ function extractHostAndPort(raw: string): { host: string; port: number } {
 // ─── Cert view (same structure as certificate-decoder) ────────────────────────
 
 function CertView({ info }: { info: ParsedCertificate }) {
-    const { message } = App.useApp();
-
-    const copy = (text: string, label = "Copied") => {
-        copyToClipboard(text, label);
-        message.success(label);
-    };
+    const { t } = useLanguage();
+    const copy = (text: string, label = t("Copied")) => void copyToClipboard(text, label);
 
     const downloadDer = () => {
         downloadBytes(
@@ -143,7 +154,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
         <div>
             {info.isExpired && (
                 <Alert
-                    title="This certificate is EXPIRED"
+                    title={t("This certificate is EXPIRED")}
                     type="error"
                     icon={<CloseCircleOutlined />}
                     showIcon
@@ -152,7 +163,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
             )}
             {!info.isExpired && info.daysUntilExpiry < 30 && (
                 <Alert
-                    title={`Expires in ${info.daysUntilExpiry} days`}
+                    title={t("Expires in {days} days", { days: info.daysUntilExpiry })}
                     type="warning"
                     icon={<WarningOutlined />}
                     showIcon
@@ -161,7 +172,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
             )}
             {!info.isExpired && info.daysUntilExpiry >= 30 && (
                 <Alert
-                    title={`Valid (${info.daysUntilExpiry} days remaining)`}
+                    title={t("Valid ({days} days remaining)", { days: info.daysUntilExpiry })}
                     type="success"
                     icon={<CheckCircleOutlined />}
                     showIcon
@@ -174,32 +185,31 @@ function CertView({ info }: { info: ParsedCertificate }) {
                 items={[
                     {
                         key: "summary",
-                        label: "Summary",
+                        label: t("Summary"),
                         children: (
                             <Descriptions bordered size="small" column={1} styles={{ label: { width: 180 } }}>
-                                <Descriptions.Item label="Common Name">{info.subject.CN ?? "—"}</Descriptions.Item>
-                                <Descriptions.Item label="Issuer">{formatDN(info.issuer)}</Descriptions.Item>
-                                <Descriptions.Item label="Serial Number">
-                                    <Text
-                                        code
+                                <Descriptions.Item label={t("Common Name")}>{info.subject.CN ?? "—"}</Descriptions.Item>
+                                <Descriptions.Item label={t("Issuer")}>{formatDN(info.issuer)}</Descriptions.Item>
+                                <Descriptions.Item label={t("Serial Number")}>
+                                    <Text dir="ltr" code
                                         copyable={{ text: info.serialNumber.replace(/:/g, "") }}
-                                        style={{ fontSize: 11 }}
+                                        style={{ fontSize: 16 }}
                                     >
                                         {info.serialNumber}
                                     </Text>
                                 </Descriptions.Item>
-                                <Descriptions.Item label="Version">v{info.version}</Descriptions.Item>
-                                <Descriptions.Item label="Signature Algorithm">{info.signatureAlgorithm}</Descriptions.Item>
-                                <Descriptions.Item label="Public Key">
-                                    {info.publicKeyAlgorithm} {info.publicKeySize ? `${info.publicKeySize} bits` : ""}
+                                <Descriptions.Item label={t("Version")}>v{info.version}</Descriptions.Item>
+                                <Descriptions.Item label={t("Signature Algorithm")}>{info.signatureAlgorithm}</Descriptions.Item>
+                                <Descriptions.Item label={t("Public Key")}>
+                                    {info.publicKeyAlgorithm} {info.publicKeySize ? t("{count} bits", { count: info.publicKeySize }) : ""}
                                 </Descriptions.Item>
-                                <Descriptions.Item label="Valid From">{info.notBefore.toUTCString()}</Descriptions.Item>
-                                <Descriptions.Item label="Valid Until">{info.notAfter.toUTCString()}</Descriptions.Item>
-                                <Descriptions.Item label="Self-Signed">
-                                    {info.isSelfSigned ? <Tag color="purple">Yes</Tag> : <Tag>No</Tag>}
+                                <Descriptions.Item label={t("Valid From")}>{info.notBefore.toUTCString()}</Descriptions.Item>
+                                <Descriptions.Item label={t("Valid Until")}>{info.notAfter.toUTCString()}</Descriptions.Item>
+                                <Descriptions.Item label={t("Self-Signed")}>
+                                    {info.isSelfSigned ? <Tag color="purple">{t("Yes")}</Tag> : <Tag>{t("No")}</Tag>}
                                 </Descriptions.Item>
                                 {info.basicConstraints && (
-                                    <Descriptions.Item label="Basic Constraints">
+                                    <Descriptions.Item label={t("Basic Constraints")}>
                                         {info.basicConstraints.ca ? (
                                             <Tag color="orange">CA: TRUE</Tag>
                                         ) : (
@@ -215,22 +225,22 @@ function CertView({ info }: { info: ParsedCertificate }) {
                     },
                     {
                         key: "subject",
-                        label: "Subject / Issuer",
+                        label: t("Subject / Issuer"),
                         children: (
                             <Space orientation="vertical" style={{ width: "100%" }} size="middle">
-                                <Card size="small" title="Subject">
+                                <Card size="small" title={t("Subject")}>
                                     <Descriptions bordered size="small" column={1}>
                                         {Object.entries(info.subject).map(([k, v]) => (
-                                            <Descriptions.Item key={k} label={`${DN_LABELS[k] ?? k} (${k})`}>
+                                            <Descriptions.Item key={k} label={`${t(DN_LABELS[k] ?? k)} (${k})`}>
                                                 {v}
                                             </Descriptions.Item>
                                         ))}
                                     </Descriptions>
                                 </Card>
-                                <Card size="small" title="Issuer">
+                                <Card size="small" title={t("Issuer")}>
                                     <Descriptions bordered size="small" column={1}>
                                         {Object.entries(info.issuer).map(([k, v]) => (
-                                            <Descriptions.Item key={k} label={`${DN_LABELS[k] ?? k} (${k})`}>
+                                            <Descriptions.Item key={k} label={`${t(DN_LABELS[k] ?? k)} (${k})`}>
                                                 {v}
                                             </Descriptions.Item>
                                         ))}
@@ -241,32 +251,30 @@ function CertView({ info }: { info: ParsedCertificate }) {
                     },
                     {
                         key: "sans",
-                        label: `SANs (${info.sans.length})`,
+                        label: t("SANs ({count})", { count: info.sans.length }),
                         children:
                             info.sans.length > 0 ? (
                                 <Space orientation="vertical" style={{ width: "100%" }}>
                                     {info.sans.map((san, i) => (
                                         <Tag
                                             key={i}
-                                            icon={<CopyOutlined onClick={() => copy(san, "SAN copied")} />}
+                                            icon={<CopyOutlined onClick={() => copy(san, t("SAN copied"))} />}
                                         >
                                             {san}
                                         </Tag>
                                     ))}
                                 </Space>
                             ) : (
-                                <Empty description="No Subject Alternative Names" />
+                                <Empty description={t("No Subject Alternative Names")} />
                             ),
                     },
                     {
                         key: "usage",
-                        label: "Key Usage",
+                        label: t("Key Usage"),
                         children: (
                             <Space orientation="vertical" style={{ width: "100%" }}>
                                 <div>
-                                    <Text strong style={{ display: "block", marginBottom: 6 }}>
-                                        Key Usage
-                                    </Text>
+                                    <Text strong style={{ display: "block", marginBottom: 6 }}>{t("Key Usage")}</Text>
                                     {info.keyUsage.length > 0 ? (
                                         info.keyUsage.map((u, i) => (
                                             <Tag key={i} color="blue">
@@ -274,13 +282,11 @@ function CertView({ info }: { info: ParsedCertificate }) {
                                             </Tag>
                                         ))
                                     ) : (
-                                        <Text type="secondary">None</Text>
+                                        <Text type="secondary">{t("None")}</Text>
                                     )}
                                 </div>
                                 <div>
-                                    <Text strong style={{ display: "block", marginBottom: 6 }}>
-                                        Extended Key Usage
-                                    </Text>
+                                    <Text strong style={{ display: "block", marginBottom: 6 }}>{t("Extended Key Usage")}</Text>
                                     {info.extendedKeyUsage.length > 0 ? (
                                         info.extendedKeyUsage.map((u, i) => (
                                             <Tag key={i} color="cyan">
@@ -288,7 +294,7 @@ function CertView({ info }: { info: ParsedCertificate }) {
                                             </Tag>
                                         ))
                                     ) : (
-                                        <Text type="secondary">None</Text>
+                                        <Text type="secondary">{t("None")}</Text>
                                     )}
                                 </div>
                             </Space>
@@ -296,32 +302,29 @@ function CertView({ info }: { info: ParsedCertificate }) {
                     },
                     {
                         key: "fingerprints",
-                        label: "Fingerprints",
+                        label: t("Fingerprints"),
                         children: (
                             <Descriptions bordered size="small" column={1} styles={{ label: { width: 100 } }}>
                                 <Descriptions.Item label="SHA-256">
-                                    <Text
-                                        code
+                                    <Text dir="ltr" code
                                         copyable={{ text: info.fingerprintSha256 }}
-                                        style={{ fontSize: 11, wordBreak: "break-all" }}
+                                        style={{ fontSize: 16, wordBreak: "break-all" }}
                                     >
                                         {info.fingerprintSha256}
                                     </Text>
                                 </Descriptions.Item>
                                 <Descriptions.Item label="SHA-1">
-                                    <Text
-                                        code
+                                    <Text dir="ltr" code
                                         copyable={{ text: info.fingerprintSha1 }}
-                                        style={{ fontSize: 11, wordBreak: "break-all" }}
+                                        style={{ fontSize: 16, wordBreak: "break-all" }}
                                     >
                                         {info.fingerprintSha1}
                                     </Text>
                                 </Descriptions.Item>
                                 <Descriptions.Item label="MD5">
-                                    <Text
-                                        code
+                                    <Text dir="ltr" code
                                         copyable={{ text: info.fingerprintMd5 }}
-                                        style={{ fontSize: 11, wordBreak: "break-all" }}
+                                        style={{ fontSize: 16, wordBreak: "break-all" }}
                                     >
                                         {info.fingerprintMd5}
                                     </Text>
@@ -331,55 +334,49 @@ function CertView({ info }: { info: ParsedCertificate }) {
                     },
                     {
                         key: "publickey",
-                        label: "Public Key",
+                        label: t("Public Key"),
                         children: (
                             <Space orientation="vertical" style={{ width: "100%" }}>
-                                <TextArea
+                                <TextArea aria-label={t("Public key PEM output")} dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                     rows={10}
                                     value={info.publicKeyPem}
                                     readOnly
-                                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
+                                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16 }}
                                 />
                                 <Button
                                     icon={<CopyOutlined />}
-                                    onClick={() => copy(info.publicKeyPem, "Public key copied")}
-                                >
-                                    Copy public key PEM
-                                </Button>
+                                    onClick={() => copy(info.publicKeyPem, t("Public key copied"))}
+                                >{t("Copy public key PEM")}</Button>
                             </Space>
                         ),
                     },
                     {
                         key: "raw",
-                        label: "Raw",
+                        label: t("Raw"),
                         children: (
                             <Space orientation="vertical" style={{ width: "100%" }}>
                                 <Card size="small" title="PEM">
-                                    <TextArea
+                                    <TextArea aria-label={t("Certificate PEM output")} dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                         rows={8}
                                         value={info.pem}
                                         readOnly
-                                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
+                                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16 }}
                                     />
                                     <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
                                         <Button
                                             size="small"
                                             icon={<CopyOutlined />}
-                                            onClick={() => copy(info.pem, "PEM copied")}
-                                        >
-                                            Copy PEM
-                                        </Button>
-                                        <Button size="small" icon={<DownloadOutlined />} onClick={downloadDer}>
-                                            Download DER
-                                        </Button>
+                                            onClick={() => copy(info.pem, t("PEM copied"))}
+                                        >{t("Copy PEM")}</Button>
+                                        <Button size="small" icon={<DownloadOutlined />} onClick={downloadDer}>{t("Download DER")}</Button>
                                     </div>
                                 </Card>
                                 <Card size="small" title="Base64 DER">
-                                    <TextArea
+                                    <TextArea aria-label={t("Base64 DER output")} dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                         rows={6}
                                         value={info.derBase64}
                                         readOnly
-                                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
+                                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16 }}
                                     />
                                 </Card>
                             </Space>
@@ -394,14 +391,15 @@ function CertView({ info }: { info: ParsedCertificate }) {
 // ─── Decode Tab ───────────────────────────────────────────────────────────────
 
 function DecodeTab({ input }: { input: string }) {
+    const { t } = useLanguage();
     const { message } = App.useApp();
     const [info, setInfo] = useState<ParsedCertificate | null>(null);
-    const [err, setErr] = useState<string | null>(null);
+    const [err, setErr] = useState<{ detail: string; authored: "empty" | "fallback" | null } | null>(null);
     const [loading, setLoading] = useState(false);
 
     const decode = useCallback(async () => {
         if (!input.trim()) {
-            setErr("Paste a certificate in the input area above");
+            setErr({ detail: "", authored: "empty" });
             return;
         }
         setLoading(true);
@@ -409,29 +407,27 @@ function DecodeTab({ input }: { input: string }) {
         try {
             const parsed = await parseCertificate(input.trim());
             setInfo(parsed);
-            message.success("Certificate decoded");
+            message.success(t("Certificate decoded"));
         } catch (e) {
             setInfo(null);
             const msg = e instanceof Error ? e.message : "Failed to parse certificate";
-            setErr(msg);
-            message.error(msg);
+            setErr({ detail: msg, authored: e instanceof Error ? null : "fallback" });
+            message.error(e instanceof Error ? msg : t("Failed to parse certificate"));
         } finally {
             setLoading(false);
         }
-    }, [input, message]);
+    }, [input, message, t]);
 
     return (
         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <Button type="primary" icon={<SafetyCertificateOutlined />} loading={loading} onClick={decode}>
-                    Decode
-                </Button>
-                {err && <Tag color="error">{err}</Tag>}
+                <Button type="primary" icon={<SafetyCertificateOutlined />} loading={loading} onClick={decode}>{t("Decode")}</Button>
+                {err && <Tag color="error">{err.authored === "empty" ? t("Paste a certificate in the input area above") : err.authored === "fallback" ? t("Failed to parse certificate") : <bdi dir="ltr">{err.detail}</bdi>}</Tag>}
             </div>
 
-            <Card size="small" title="Decoded Output">
+            <Card size="small" title={t("Decoded Output")}>
                 {!info ? (
-                    <Empty description="Decode a certificate to see its fields" />
+                    <Empty description={t("Decode a certificate to see its fields")} />
                 ) : (
                     <CertView info={info} />
                 )}
@@ -443,6 +439,7 @@ function DecodeTab({ input }: { input: string }) {
 // ─── Fingerprint Tab ──────────────────────────────────────────────────────────
 
 function FingerprintTab({ input }: { input: string }) {
+    const { t, language } = useLanguage();
     const { message } = App.useApp();
     const [info, setInfo] = useState<ParsedCertificate | null>(null);
     const [fps, setFps] = useState<{ sha1: string; sha256: string; md5: string } | null>(null);
@@ -450,7 +447,7 @@ function FingerprintTab({ input }: { input: string }) {
 
     const compute = useCallback(async () => {
         if (!input.trim()) {
-            message.warning("Paste a certificate in the input area above");
+            message.warning(t("Paste a certificate in the input area above"));
             return;
         }
         setLoading(true);
@@ -462,39 +459,34 @@ function FingerprintTab({ input }: { input: string }) {
             setInfo(parsed);
             setFps(computed);
         } catch (e) {
-            message.error(e instanceof Error ? e.message : "Could not parse certificate");
+            message.error(e instanceof Error ? e.message : t("Could not parse certificate"));
             setInfo(null);
             setFps(null);
         } finally {
             setLoading(false);
         }
-    }, [input, message]);
+    }, [input, message, t]);
 
-    const copy = (text: string, label: string) => {
-        copyToClipboard(text, label);
-        message.success(label);
-    };
+    const copy = (text: string, label: string) => void copyToClipboard(text, label);
 
     return (
         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <div>
-                <Button type="primary" icon={<SearchOutlined />} loading={loading} onClick={compute}>
-                    Compute Fingerprints
-                </Button>
+                <Button type="primary" icon={<SearchOutlined />} loading={loading} onClick={compute}>{t("Compute Fingerprints")}</Button>
             </div>
 
             {fps ? (
-                <Card size="small" title="Fingerprints">
+                <Card size="small" title={t("Fingerprints")}>
                     {info && (
                         <div style={{ marginBottom: 12 }}>
                             <Tag color="success">CN: {info.subject.CN ?? "?"}</Tag>
                             <Tag>
-                                {info.publicKeyAlgorithm} {info.publicKeySize ? `${info.publicKeySize} bits` : ""}
+                                {info.publicKeyAlgorithm} {info.publicKeySize ? t("{count} bits", { count: info.publicKeySize }) : ""}
                             </Tag>
                             <Tag color={info.isExpired ? "error" : "default"}>
                                 {info.isExpired
-                                    ? "Expired"
-                                    : `Valid until ${info.notAfter.toLocaleDateString()}`}
+                                    ? t("Expired")
+                                    : t("Valid until {date}", { date: info.notAfter.toLocaleDateString(language) })}
                             </Tag>
                         </div>
                     )}
@@ -502,80 +494,74 @@ function FingerprintTab({ input }: { input: string }) {
                         <Descriptions.Item
                             label={
                                 <Space>
-                                    SHA-256 <Tag color="success">recommended</Tag>
+                                    SHA-256 <Tag color="success">{t("recommended")}</Tag>
                                 </Space>
                             }
                         >
                             <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                                <Text code style={{ fontSize: 11, wordBreak: "break-all", flex: 1 }}>
+                                <Text dir="ltr" code style={{ fontSize: 16, wordBreak: "break-all", flex: 1 }}>
                                     {fps.sha256}
                                 </Text>
-                                <Button aria-label="Copy"
+                                <Button aria-label={t("Copy")}
                                     size="small"
                                     icon={<CopyOutlined />}
-                                    onClick={() => copy(fps.sha256, "SHA-256 copied")}
+                                    onClick={() => copy(fps.sha256, t("SHA-256 copied"))}
                                 />
                                 <Button
                                     size="small"
                                     onClick={() =>
-                                        copy(fps.sha256.replace(/:/g, "").toLowerCase(), "Plain hex copied")
+                                        copy(fps.sha256.replace(/:/g, "").toLowerCase(), t("Plain hex copied"))
                                     }
-                                >
-                                    plain
-                                </Button>
+                                >{t("plain")}</Button>
                             </div>
                         </Descriptions.Item>
                         <Descriptions.Item label="SHA-1">
                             <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                                <Text code style={{ fontSize: 11, wordBreak: "break-all", flex: 1 }}>
+                                <Text dir="ltr" code style={{ fontSize: 16, wordBreak: "break-all", flex: 1 }}>
                                     {fps.sha1}
                                 </Text>
-                                <Button aria-label="Copy"
+                                <Button aria-label={t("Copy")}
                                     size="small"
                                     icon={<CopyOutlined />}
-                                    onClick={() => copy(fps.sha1, "SHA-1 copied")}
+                                    onClick={() => copy(fps.sha1, t("SHA-1 copied"))}
                                 />
                                 <Button
                                     size="small"
                                     onClick={() =>
-                                        copy(fps.sha1.replace(/:/g, "").toLowerCase(), "Plain hex copied")
+                                        copy(fps.sha1.replace(/:/g, "").toLowerCase(), t("Plain hex copied"))
                                     }
-                                >
-                                    plain
-                                </Button>
+                                >{t("plain")}</Button>
                             </div>
                         </Descriptions.Item>
                         <Descriptions.Item
                             label={
                                 <Space>
-                                    MD5 <Tag color="warning">legacy</Tag>
+                                    MD5 <Tag color="warning">{t("legacy")}</Tag>
                                 </Space>
                             }
                         >
                             <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                                <Text code style={{ fontSize: 11, wordBreak: "break-all", flex: 1 }}>
+                                <Text dir="ltr" code style={{ fontSize: 16, wordBreak: "break-all", flex: 1 }}>
                                     {fps.md5}
                                 </Text>
-                                <Button aria-label="Copy"
+                                <Button aria-label={t("Copy")}
                                     size="small"
                                     icon={<CopyOutlined />}
-                                    onClick={() => copy(fps.md5, "MD5 copied")}
+                                    onClick={() => copy(fps.md5, t("MD5 copied"))}
                                 />
                                 <Button
                                     size="small"
                                     onClick={() =>
-                                        copy(fps.md5.replace(/:/g, "").toLowerCase(), "Plain hex copied")
+                                        copy(fps.md5.replace(/:/g, "").toLowerCase(), t("Plain hex copied"))
                                     }
-                                >
-                                    plain
-                                </Button>
+                                >{t("plain")}</Button>
                             </div>
                         </Descriptions.Item>
                     </Descriptions>
                 </Card>
             ) : (
                 <Card size="small">
-                    <Empty description="Compute fingerprints to view results" />
+                    <Empty description={t("Compute fingerprints to view results")} />
                 </Card>
             )}
         </Space>
@@ -585,16 +571,18 @@ function FingerprintTab({ input }: { input: string }) {
 // ─── Convert Tab ──────────────────────────────────────────────────────────────
 
 function ConvertTab({ input }: { input: string }) {
+    const { t, language } = useLanguage();
     const { message } = App.useApp();
     const [target, setTarget] = useState<ConvertFormat>("pem");
     const [output, setOutput] = useState("");
+    const [resultFormat, setResultFormat] = useState<ConvertFormat>("pem");
     const [info, setInfo] = useState<ParsedCertificate | null>(null);
     const [downloadBytesOut, setDownloadBytesOut] = useState<Uint8Array | null>(null);
     const [loading, setLoading] = useState(false);
 
     const convert = useCallback(async () => {
         if (!input.trim()) {
-            message.warning("Paste or upload a certificate in the input area above");
+            message.warning(t("Paste or upload a certificate in the input area above"));
             return;
         }
         setLoading(true);
@@ -603,27 +591,28 @@ function ConvertTab({ input }: { input: string }) {
             setInfo(parsed);
 
             const result = convertCertificate(input.trim(), target);
+            setResultFormat(target);
             if (target === "der-bytes") {
                 setDownloadBytesOut(result as Uint8Array);
-                setOutput(`Binary DER (${(result as Uint8Array).length} bytes) — click Download`);
+                setOutput("");
             } else {
                 setDownloadBytesOut(null);
                 setOutput(result as string);
             }
-            message.success(`Converted to ${target.toUpperCase()}`);
+            message.success(t("Converted to {format}", { format: target.toUpperCase() }));
         } catch (e) {
-            message.error(e instanceof Error ? e.message : "Conversion failed");
+            message.error(e instanceof Error ? e.message : t("Conversion failed"));
         } finally {
             setLoading(false);
         }
-    }, [input, target, message]);
+    }, [input, target, message, t]);
 
     const handleDownload = () => {
         const name = info?.subject.CN ?? "certificate";
-        if (target === "der-bytes" && downloadBytesOut) {
+        if (resultFormat === "der-bytes" && downloadBytesOut) {
             downloadBytes(downloadBytesOut, `${name}.der`, "application/x-x509-ca-cert");
         } else if (output) {
-            const ext = target === "pem" ? "pem" : "txt";
+            const ext = resultFormat === "pem" ? "pem" : "txt";
             downloadText(output, `${name}.${ext}`, "application/x-pem-file");
         }
     };
@@ -631,19 +620,17 @@ function ConvertTab({ input }: { input: string }) {
     return (
         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-                <Text strong>Convert to:</Text>
-                <Select
+                <Text strong>{t("Convert to:")}</Text>
+                <Select styles={{ root: { maxWidth: "100%", minWidth: 0 }, input: { fontSize: 16 }, popup: { root: { maxWidth: "calc(100vw - 32px)", overflowWrap: "anywhere" } } }} aria-label={t("Conversion format")}
                     value={target}
                     onChange={setTarget}
-                    style={{ minWidth: 280 }}
+                    style={{ width: "min(100%, 360px)", minWidth: 0 }}
                     options={(Object.keys(FORMAT_LABEL) as ConvertFormat[]).map((f) => ({
                         value: f,
-                        label: FORMAT_LABEL[f],
+                        label: t(FORMAT_LABEL[f]),
                     }))}
                 />
-                <Button type="primary" icon={<SwapOutlined />} loading={loading} onClick={convert}>
-                    Convert
-                </Button>
+                <Button type="primary" icon={<SwapOutlined />} loading={loading} onClick={convert}>{t("Convert")}</Button>
             </div>
 
             {info && (
@@ -653,57 +640,51 @@ function ConvertTab({ input }: { input: string }) {
                         <Space wrap>
                             <Tag color="success">{info.subject.CN ?? "?"}</Tag>
                             <Tag>
-                                {info.publicKeyAlgorithm} {info.publicKeySize} bits
-                            </Tag>
+                                {info.publicKeyAlgorithm} {info.publicKeySize}{t("bits")}</Tag>
                             <Tag color={info.isExpired ? "error" : "default"}>
                                 {info.isExpired
-                                    ? "Expired"
-                                    : `Valid until ${info.notAfter.toLocaleDateString()}`}
+                                    ? t("Expired")
+                                    : t("Valid until {date}", { date: info.notAfter.toLocaleDateString(language) })}
                             </Tag>
                         </Space>
                     }
                 />
             )}
 
-            {output ? (
+            {(output || downloadBytesOut) ? (
                 <Card
                     size="small"
-                    title={`Output (${FORMAT_LABEL[target]})`}
+                    title={t("Output ({format})", { format: t(FORMAT_LABEL[resultFormat]) })}
                     extra={
                         <Space size={4}>
-                            {target !== "der-bytes" && (
+                            {resultFormat !== "der-bytes" && (
                                 <Button
                                     size="small"
                                     icon={<CopyOutlined />}
                                     onClick={() => {
-                                        copyToClipboard(output, "Output copied");
-                                        message.success("Copied");
+                                        copyToClipboard(output, t("Output copied"));
                                     }}
-                                >
-                                    Copy
-                                </Button>
+                                >{t("Copy")}</Button>
                             )}
                             <Button
                                 size="small"
                                 type="primary"
                                 icon={<DownloadOutlined />}
                                 onClick={handleDownload}
-                            >
-                                Download
-                            </Button>
+                            >{t("Download")}</Button>
                         </Space>
                     }
                 >
-                    <TextArea
-                        rows={target === "der-bytes" ? 3 : 12}
-                        value={output}
+                    <TextArea aria-label={t("Converted certificate output")} dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                        rows={resultFormat === "der-bytes" ? 3 : 12}
+                        value={downloadBytesOut ? t("Binary DER ({count} bytes) — click Download", { count: downloadBytesOut.length }) : output}
                         readOnly
-                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
+                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16 }}
                     />
                 </Card>
             ) : (
                 <Card size="small">
-                    <Empty description="Choose a format and click Convert" />
+                    <Empty description={t("Choose a format and click Convert")} />
                 </Card>
             )}
         </Space>
@@ -721,20 +702,19 @@ async function parseSingleBlock(label: string, body: string): Promise<ParsedBloc
                 label,
                 body,
                 valid: true,
-                summary: `Subject: ${c.subject.CN ?? formatDN(c.subject)}`,
+                summary: certificateText("Subject: {subject}", { subject: c.subject.CN ?? formatDN(c.subject) }),
                 detail: (
                     <Descriptions bordered size="small" column={1}>
-                        <Descriptions.Item label="Subject">{formatDN(c.subject)}</Descriptions.Item>
-                        <Descriptions.Item label="Issuer">{formatDN(c.issuer)}</Descriptions.Item>
-                        <Descriptions.Item label="Valid Until">
+                        <Descriptions.Item label={certificateText("Subject")}>{formatDN(c.subject)}</Descriptions.Item>
+                        <Descriptions.Item label={certificateText("Issuer")}>{formatDN(c.issuer)}</Descriptions.Item>
+                        <Descriptions.Item label={certificateText("Valid Until")}>
                             {c.notAfter.toUTCString()}{" "}
-                            {c.isExpired && <Tag color="error">expired</Tag>}
+                            {c.isExpired && <Tag color="error">{certificateText("expired")}</Tag>}
                         </Descriptions.Item>
-                        <Descriptions.Item label="Public Key">
-                            {c.publicKeyAlgorithm} {c.publicKeySize} bits
-                        </Descriptions.Item>
+                        <Descriptions.Item label={certificateText("Public Key")}>
+                            {c.publicKeyAlgorithm} {c.publicKeySize}{certificateText("bits")}</Descriptions.Item>
                         <Descriptions.Item label="SHA-256">
-                            <Text code style={{ fontSize: 10, wordBreak: "break-all" }}>
+                            <Text dir="ltr" code style={{ fontSize: 10, wordBreak: "break-all" }}>
                                 {c.fingerprintSha256}
                             </Text>
                         </Descriptions.Item>
@@ -752,14 +732,13 @@ async function parseSingleBlock(label: string, body: string): Promise<ParsedBloc
                 label,
                 body,
                 valid: true,
-                summary: `CSR for: ${csr.subject.CN ?? formatDN(csr.subject)}`,
+                summary: certificateText("CSR for: {subject}", { subject: csr.subject.CN ?? formatDN(csr.subject) }),
                 detail: (
                     <Descriptions bordered size="small" column={1}>
-                        <Descriptions.Item label="Subject">{formatDN(csr.subject)}</Descriptions.Item>
-                        <Descriptions.Item label="Public Key">
-                            {csr.publicKeyAlgorithm} {csr.publicKeySize} bits
-                        </Descriptions.Item>
-                        <Descriptions.Item label="Signature Algorithm">
+                        <Descriptions.Item label={certificateText("Subject")}>{formatDN(csr.subject)}</Descriptions.Item>
+                        <Descriptions.Item label={certificateText("Public Key")}>
+                            {csr.publicKeyAlgorithm} {csr.publicKeySize}{certificateText("bits")}</Descriptions.Item>
+                        <Descriptions.Item label={certificateText("Signature Algorithm")}>
                             {csr.signatureAlgorithm}
                         </Descriptions.Item>
                         {csr.sans.length > 0 && (
@@ -791,17 +770,17 @@ async function parseSingleBlock(label: string, body: string): Promise<ParsedBloc
                 label,
                 body,
                 valid: true,
-                summary: `${algo} private key${bits ? ` (${bits} bits)` : ""}`,
+                summary: certificateText("{algorithm} private key ({bits} bits)", { algorithm: algo, bits }),
                 detail: (
                     <Descriptions bordered size="small" column={1}>
-                        <Descriptions.Item label="Algorithm">{algo}</Descriptions.Item>
+                        <Descriptions.Item label={certificateText("Algorithm")}>{algo}</Descriptions.Item>
                         {bits > 0 && (
-                            <Descriptions.Item label="Key Size">{bits} bits</Descriptions.Item>
+                            <Descriptions.Item label={certificateText("Key Size")}>{bits}{certificateText("bits")}</Descriptions.Item>
                         )}
-                        <Descriptions.Item label="Format">
+                        <Descriptions.Item label={certificateText("Format")}>
                             PKCS#{upperLabel.startsWith("PRIVATE") ? "8" : "1"}
                         </Descriptions.Item>
-                        <Descriptions.Item label="Block Length">{body.length} chars</Descriptions.Item>
+                        <Descriptions.Item label={certificateText("Block Length")}>{body.length}{certificateText("chars")}</Descriptions.Item>
                     </Descriptions>
                 ),
             };
@@ -816,12 +795,12 @@ async function parseSingleBlock(label: string, body: string): Promise<ParsedBloc
                 label,
                 body,
                 valid: true,
-                summary: `${algo} public key${bits ? ` (${bits} bits)` : ""}`,
+                summary: certificateText("{algorithm} public key ({bits} bits)", { algorithm: algo, bits }),
                 detail: (
                     <Descriptions bordered size="small" column={1}>
-                        <Descriptions.Item label="Algorithm">{algo}</Descriptions.Item>
+                        <Descriptions.Item label={certificateText("Algorithm")}>{algo}</Descriptions.Item>
                         {bits > 0 && (
-                            <Descriptions.Item label="Key Size">{bits} bits</Descriptions.Item>
+                            <Descriptions.Item label={certificateText("Key Size")}>{bits}{certificateText("bits")}</Descriptions.Item>
                         )}
                     </Descriptions>
                 ),
@@ -836,12 +815,9 @@ async function parseSingleBlock(label: string, body: string): Promise<ParsedBloc
             label,
             body,
             valid: true,
-            summary: `${der.length} bytes raw DER (unrecognised label)`,
+            summary: certificateText("Raw DER bytes: {count} (unrecognised label)", { count: der.length }),
             detail: (
-                <Text type="secondary">
-                    Block decoded but parser does not have a specific handler for label &quot;{label}&quot;.
-                    Length: {der.length} bytes.
-                </Text>
+                <Text type="secondary">                    {certificateText("No specific parser for PEM label {label}. Decoded length: {count} bytes.", { label, count: der.length })}</Text>
             ),
         };
     } catch (e) {
@@ -849,27 +825,28 @@ async function parseSingleBlock(label: string, body: string): Promise<ParsedBloc
             label,
             body,
             valid: false,
-            summary: e instanceof Error ? e.message : "Failed to parse",
+            summary: e instanceof Error ? <bdi dir="ltr">{e.message}</bdi> : certificateText("Failed to parse certificate"),
             detail: <Text type="danger">{e instanceof Error ? e.message : String(e)}</Text>,
         };
     }
 }
 
 function PemParserTab({ input }: { input: string }) {
+    const { t } = useLanguage();
     const { message } = App.useApp();
     const [blocks, setBlocks] = useState<ParsedBlock[]>([]);
     const [loading, setLoading] = useState(false);
 
     const parse = useCallback(async () => {
         if (!input.trim()) {
-            message.warning("Paste PEM data in the input area above");
+            message.warning(t("Paste PEM data in the input area above"));
             return;
         }
         setLoading(true);
         try {
             const found = listPemBlocks(input);
             if (found.length === 0) {
-                message.error("No PEM blocks found in input");
+                message.error(t("No PEM blocks found in input"));
                 setBlocks([]);
                 return;
             }
@@ -877,23 +854,21 @@ function PemParserTab({ input }: { input: string }) {
                 found.map((b) => parseSingleBlock(b.label, b.body))
             );
             setBlocks(parsed);
-            message.success(`Parsed ${parsed.length} block${parsed.length === 1 ? "" : "s"}`);
+            message.success(t("PEM blocks parsed: {count}", { count: parsed.length }));
         } finally {
             setLoading(false);
         }
-    }, [input, message]);
+    }, [input, message, t]);
 
     return (
         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <div>
-                <Button type="primary" icon={<EyeOutlined />} loading={loading} onClick={parse}>
-                    Parse PEM Blocks
-                </Button>
+                <Button type="primary" icon={<EyeOutlined />} loading={loading} onClick={parse}>{t("Parse PEM Blocks")}</Button>
             </div>
 
             {blocks.length === 0 ? (
                 <Card size="small">
-                    <Empty description="Parse PEM to see all blocks" />
+                    <Empty description={t("Parse PEM to see all blocks")} />
                 </Card>
             ) : (
                 <Space orientation="vertical" style={{ width: "100%" }}>
@@ -920,6 +895,7 @@ function PemParserTab({ input }: { input: string }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 function CertificateInspectorPageContent() {
+    const { t } = useLanguage();
     const { message } = App.useApp();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -934,12 +910,12 @@ function CertificateInspectorPageContent() {
 
     const handleFetch = useCallback(async () => {
         if (!urlInput.trim()) {
-            message.warning("Enter a hostname or URL");
+            message.warning(t("Enter a hostname or URL"));
             return;
         }
         const { host, port } = extractHostAndPort(urlInput);
         if (!host) {
-            message.error("Could not parse hostname");
+            message.error(t("Could not parse hostname"));
             return;
         }
         setFetchLoading(true);
@@ -947,16 +923,17 @@ function CertificateInspectorPageContent() {
             const res = await fetch(`/api/fetch-cert?host=${encodeURIComponent(host)}&port=${port}`);
             const data = await parseCertificateFetchResponse(res);
             if (!data.pems || data.pems.length === 0) {
-                throw new Error("No certificates returned");
+                message.error(t("The server returned no certificates. Check the hostname and try again."));
+                return;
             }
             setInput(data.pems.join("\n\n"));
-            message.success(`Fetched ${data.pems.length} certificate${data.pems.length === 1 ? "" : "s"} from ${host}`);
+            message.success(t("Certificates fetched from {host}: {count}", { host, count: data.pems.length }));
         } catch (e) {
-            message.error(e instanceof Error ? e.message : "Failed to fetch certificate");
+            message.error(e instanceof Error ? e.message : t("Failed to fetch certificate"));
         } finally {
             setFetchLoading(false);
         }
-    }, [urlInput, message]);
+    }, [urlInput, message, t]);
 
     const handleTabChange = (key: string) => {
         setActiveTab(key);
@@ -970,51 +947,51 @@ function CertificateInspectorPageContent() {
 
     return (
         <ToolPageLayout
-            title="Certificate Inspector"
-            description="Decode, fingerprint, convert, and parse X.509 certificates"
+            title={t("Certificate Inspector")}
+            description={t("Decode, fingerprint, convert, and parse X.509 certificates")}
             icon={<SearchOutlined style={{ fontSize: 24, color: "#eb2f96" }} />}
             color="#eb2f96"
             learnMore={{
                 whatIs:
-                    "A comprehensive X.509 certificate inspection suite. Decode certificate fields, compute fingerprints, convert between PEM/DER formats, and parse bundled PEM files — all in one place. Supports live URL fetching to inspect any server's certificate directly.",
+                    t("A comprehensive X.509 certificate inspection suite. Decode certificate fields, compute fingerprints, convert between PEM/DER formats, and parse bundled PEM files — all in one place. Supports live URL fetching to inspect any server's certificate directly."),
                 whyUse:
-                    "Stop switching between openssl commands and online tools. Paste a cert or enter a URL and get fingerprints, decoded fields, format conversions, and PEM block analysis in seconds.",
+                    t("Stop switching between openssl commands and online tools. Paste a cert or enter a URL and get fingerprints, decoded fields, format conversions, and PEM block analysis in seconds."),
                 howToUse: [
-                    "Paste a PEM/DER certificate or enter a URL to fetch live",
-                    "Switch tabs for Decode, Fingerprints, Convert, or PEM Parser",
-                    "Upload .crt/.cer/.der files directly",
+                    t("Paste a PEM/DER certificate or enter a URL to fetch live"),
+                    t("Switch tabs for Decode, Fingerprints, Convert, or PEM Parser"),
+                    t("Upload .crt/.cer/.der files directly"),
                 ],
                 tips: [
-                    "URL fetch retrieves the live certificate chain from the server",
-                    "Fingerprints tab shows SHA-256 (recommended), SHA-1, and MD5",
-                    "PEM Parser handles bundles with multiple certificates, keys, and CSRs",
+                    t("URL fetch retrieves the live certificate chain from the server"),
+                    t("Fingerprints tab shows SHA-256 (recommended), SHA-1, and MD5"),
+                    t("PEM Parser handles bundles with multiple certificates, keys, and CSRs"),
                 ],
                 useCases: [
-                    "Debugging TLS handshake errors",
-                    "Computing fingerprints for SSL pinning",
-                    "Converting PEM to DER for Java truststore",
-                    "Inspecting certificate bundles",
+                    t("Debugging TLS handshake errors"),
+                    t("Computing fingerprints for SSL pinning"),
+                    t("Converting PEM to DER for Java truststore"),
+                    t("Inspecting certificate bundles"),
                 ],
                 serverNotice: {
                     route: "fetch-cert",
-                    purpose: "The 'Fetch from URL' button is the only feature that contacts a server. Browsers cannot open raw TLS sockets to a remote host, so the server opens a TLS connection on your behalf, captures the certificate chain, and returns the PEM blocks.",
+                    purpose: t("The 'Fetch from URL' button is the only feature that contacts a server. Browsers cannot open raw TLS sockets to a remote host, so the server opens a TLS connection on your behalf, captures the certificate chain, and returns the PEM blocks."),
                     sentFields: [
-                        "Hostname (e.g. example.com)",
-                        "Port number (default 443)",
+                        t("Hostname (e.g. example.com)"),
+                        t("Port number (default 443)"),
                     ],
                     extra: (
-                        <Typography.Paragraph style={{ fontSize: 12, marginBottom: 0 }}>
-                            <Text strong>Local-only alternative:</Text> paste a PEM/DER cert or use the Upload button —
-                            those paths run 100% in your browser and never touch the server.
+                        <Typography.Paragraph style={{ fontSize: 16, marginBottom: 0 }}>
+                            <Text strong>{t("Local-only alternative:")}</Text>{" "}{t("paste a PEM/DER cert or use the Upload button — those paths run 100% in your browser and never touch the server.")}
                         </Typography.Paragraph>
                     ),
                 },
             }}
         >
+            <ToolBridgeBanner accepts={["text"]} onAccept={(payload) => setInput(payload.data)} />
             {/* ── Shared Input Section ── */}
             <Card
                 size="small"
-                title="Certificate Input"
+                title={t("Certificate Input")}
                 style={{ marginBottom: 16 }}
                 extra={
                     <Space size={4}>
@@ -1023,29 +1000,25 @@ function CertificateInspectorPageContent() {
                             beforeUpload={handleUpload}
                             showUploadList={false}
                         >
-                            <Button size="small" icon={<UploadOutlined />}>
-                                Upload
-                            </Button>
+                            <Button size="small" icon={<UploadOutlined />}>{t("Upload")}</Button>
                         </Upload>
-                        <Button size="small" onClick={handleClear}>
-                            Clear
-                        </Button>
+                        <Button size="small" onClick={handleClear}>{t("Clear")}</Button>
                     </Space>
                 }
             >
-                <TextArea
+                <TextArea aria-label={t("Certificate input")} dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                     rows={10}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Paste PEM-encoded or base64-DER certificate (or multiple PEM blocks)"
-                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12, marginBottom: 12 }}
+                    placeholder={t("Paste PEM-encoded or base64-DER certificate (or multiple PEM blocks)")}
+                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16, marginBottom: 12 }}
                 />
 
                 {/* URL fetch row */}
                 <div style={{ display: "flex", gap: 0 }}>
-                    <Input
+                    <Input aria-label={t("Hostname or URL")} styles={{ input: { fontSize: 16, direction: "ltr", textAlign: "left" } }}
                         prefix={<GlobalOutlined style={{ color: "#8c8c8c" }} />}
-                        placeholder="example.com or https://example.com"
+                        placeholder={t("example.com or https://example.com")}
                         value={urlInput}
                         onChange={(e) => setUrlInput(e.target.value)}
                         onPressEnter={handleFetch}
@@ -1057,9 +1030,7 @@ function CertificateInspectorPageContent() {
                         loading={fetchLoading}
                         onClick={handleFetch}
                         style={{ borderRadius: "0 6px 6px 0" }}
-                    >
-                        Fetch
-                    </Button>
+                    >{t("Fetch")}</Button>
                 </div>
             </Card>
 
@@ -1072,9 +1043,7 @@ function CertificateInspectorPageContent() {
                         key: "decode",
                         label: (
                             <Space size={4}>
-                                <SafetyCertificateOutlined />
-                                Decode
-                            </Space>
+                                <SafetyCertificateOutlined />{t("Decode")}</Space>
                         ),
                         children: <DecodeTab input={input} />,
                     },
@@ -1082,9 +1051,7 @@ function CertificateInspectorPageContent() {
                         key: "fingerprint",
                         label: (
                             <Space size={4}>
-                                <SearchOutlined />
-                                Fingerprints
-                            </Space>
+                                <SearchOutlined />{t("Fingerprints")}</Space>
                         ),
                         children: <FingerprintTab input={input} />,
                     },
@@ -1092,9 +1059,7 @@ function CertificateInspectorPageContent() {
                         key: "convert",
                         label: (
                             <Space size={4}>
-                                <SwapOutlined />
-                                Convert
-                            </Space>
+                                <SwapOutlined />{t("Convert")}</Space>
                         ),
                         children: <ConvertTab input={input} />,
                     },
@@ -1102,9 +1067,7 @@ function CertificateInspectorPageContent() {
                         key: "pem-parser",
                         label: (
                             <Space size={4}>
-                                <EyeOutlined />
-                                PEM Parser
-                            </Space>
+                                <EyeOutlined />{t("PEM Parser")}</Space>
                         ),
                         children: <PemParserTab input={input} />,
                     },

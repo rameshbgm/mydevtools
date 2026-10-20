@@ -3,6 +3,7 @@
 import React from "react";
 import { Switch, Input, Typography, Space, Alert, Tooltip } from "antd";
 import { SafetyCertificateOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -42,6 +43,7 @@ interface Props {
 }
 
 export default function SslConfigSection({ value, onChange, compact }: Props) {
+    const { t } = useLanguage();
     const update = (patch: Partial<SslConfig>) => onChange({ ...value, ...patch });
 
     return (
@@ -51,8 +53,8 @@ export default function SslConfigSection({ value, onChange, compact }: Props) {
                     type="info"
                     showIcon
                     icon={<SafetyCertificateOutlined />}
-                    title="SSL / TLS configuration"
-                    description="These options are applied when the request is made through the server proxy (i.e. when the browser cannot reach the host directly due to CORS or cert errors). They have no effect on direct browser fetches."
+                    title={t("SSL / TLS configuration")}
+                    description={t("These options are applied when the request is made through the server proxy (i.e. when the browser cannot reach the host directly due to CORS or cert errors). They have no effect on direct browser fetches.")}
                     style={{ fontSize: 12 }}
                 />
             )}
@@ -62,14 +64,15 @@ export default function SslConfigSection({ value, onChange, compact }: Props) {
                 gap: 12, padding: "8px 0",
             }}>
                 <div>
-                    <Text strong style={{ fontSize: 13 }}>Verify SSL certificate</Text>
+                    <Text strong style={{ fontSize: 13 }}>{t("Verify SSL certificate")}</Text>
                     <div>
                         <Text type="secondary" style={{ fontSize: 11 }}>
-                            On by default. Turn it off only for a deliberately trusted development endpoint with a self-signed or expired certificate.
+                            {t("On by default. Turn it off only for a deliberately trusted development endpoint with a self-signed or expired certificate.")}
                         </Text>
                     </div>
                 </div>
                 <Switch
+                    aria-label={t("Verify SSL certificate")}
                     checked={value.sslVerify}
                     onChange={(v) => update({ sslVerify: v })}
                 />
@@ -77,12 +80,14 @@ export default function SslConfigSection({ value, onChange, compact }: Props) {
 
             <div>
                 <Text strong style={{ fontSize: 12, display: "block", marginBottom: 4 }}>
-                    Custom CA bundle (PEM){" "}
-                    <Tooltip title="Paste one or more BEGIN CERTIFICATE blocks. The proxy will trust these in addition to the system CA store.">
-                        <InfoCircleOutlined style={{ color: "#9a9a9a" }} />
+                    {t("Custom CA bundle (PEM)")}{" "}
+                    <Tooltip title={t("Paste one or more BEGIN CERTIFICATE blocks. The proxy will trust these in addition to the system CA store.")}>
+                        <InfoCircleOutlined aria-label={t("About custom CA bundles")} style={{ color: "#9a9a9a" }} />
                     </Tooltip>
                 </Text>
                 <TextArea
+                    aria-label={t("Custom CA bundle (PEM)")}
+                    dir="ltr"
                     value={value.sslCaCert}
                     onChange={(e) => update({ sslCaCert: e.target.value })}
                     placeholder="-----BEGIN CERTIFICATE-----&#10;…&#10;-----END CERTIFICATE-----"
@@ -93,9 +98,11 @@ export default function SslConfigSection({ value, onChange, compact }: Props) {
 
             <div>
                 <Text strong style={{ fontSize: 12, display: "block", marginBottom: 4 }}>
-                    Client certificate (mTLS — PEM)
+                    {t("Client certificate (mTLS — PEM)")}
                 </Text>
                 <TextArea
+                    aria-label={t("Client certificate (mTLS — PEM)")}
+                    dir="ltr"
                     value={value.sslClientCert}
                     onChange={(e) => update({ sslClientCert: e.target.value })}
                     placeholder="-----BEGIN CERTIFICATE-----&#10;…&#10;-----END CERTIFICATE-----"
@@ -106,15 +113,18 @@ export default function SslConfigSection({ value, onChange, compact }: Props) {
 
             <div>
                 <Text strong style={{ fontSize: 12, display: "block", marginBottom: 4 }}>
-                    Client private key (PEM)
+                    {t("Client private key (PEM)")}
                 </Text>
                 <TextArea
+                    aria-label={t("Client private key (PEM)")}
+                    dir="ltr"
                     value={value.sslClientKey}
                     onChange={(e) => update({ sslClientKey: e.target.value })}
                     placeholder="-----BEGIN PRIVATE KEY-----&#10;…&#10;-----END PRIVATE KEY-----"
                     rows={3}
                     style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 11 }}
                 />
+                <Text type="secondary" style={{ fontSize: 11 }}>{t("The client private key is sensitive. When you send a proxied request, the configured certificate and key are sent to the proxy server. Use them only with a server you trust.")}</Text>
             </div>
         </Space>
     );

@@ -1,0 +1,470 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-19T18:51:48.219206+00:00",
+  "title": "Design System: My Dev Tools — Introduction",
+  "extensions": {
+    "colorMeta": {
+      "landing-ground": {
+        "role": "neutral",
+        "displayName": "Landing Ground",
+        "tonalRamp": [
+          "oklch(15% 0.0057 264.53)",
+          "oklch(26.43% 0.0057 264.53)",
+          "oklch(37.86% 0.0057 264.53)",
+          "oklch(49.29% 0.0057 264.53)",
+          "oklch(60.71% 0.0057 264.53)",
+          "oklch(72.14% 0.0057 264.53)",
+          "oklch(83.57% 0.0057 264.53)",
+          "oklch(95% 0.0057 264.53)"
+        ]
+      },
+      "landing-paper": {
+        "role": "neutral",
+        "displayName": "Landing Paper",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26.43% 0.0000 89.88)",
+          "oklch(37.86% 0.0000 89.88)",
+          "oklch(49.29% 0.0000 89.88)",
+          "oklch(60.71% 0.0000 89.88)",
+          "oklch(72.14% 0.0000 89.88)",
+          "oklch(83.57% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "landing-ink": {
+        "role": "neutral",
+        "displayName": "Landing Ink",
+        "tonalRamp": [
+          "oklch(15% 0.0528 248.44)",
+          "oklch(26.43% 0.0528 248.44)",
+          "oklch(37.86% 0.0528 248.44)",
+          "oklch(49.29% 0.0528 248.44)",
+          "oklch(60.71% 0.0528 248.44)",
+          "oklch(72.14% 0.0528 248.44)",
+          "oklch(83.57% 0.0528 248.44)",
+          "oklch(95% 0.0528 248.44)"
+        ]
+      },
+      "landing-muted": {
+        "role": "neutral",
+        "displayName": "Landing Muted",
+        "tonalRamp": [
+          "oklch(15% 0.0376 249.98)",
+          "oklch(26.43% 0.0376 249.98)",
+          "oklch(37.86% 0.0376 249.98)",
+          "oklch(49.29% 0.0376 249.98)",
+          "oklch(60.71% 0.0376 249.98)",
+          "oklch(72.14% 0.0376 249.98)",
+          "oklch(83.57% 0.0376 249.98)",
+          "oklch(95% 0.0376 249.98)"
+        ]
+      },
+      "landing-teal": {
+        "role": "primary",
+        "displayName": "Landing Teal",
+        "tonalRamp": [
+          "oklch(15% 0.0838 210.41)",
+          "oklch(26.43% 0.0838 210.41)",
+          "oklch(37.86% 0.0838 210.41)",
+          "oklch(49.29% 0.0838 210.41)",
+          "oklch(60.71% 0.0838 210.41)",
+          "oklch(72.14% 0.0838 210.41)",
+          "oklch(83.57% 0.0838 210.41)",
+          "oklch(95% 0.0838 210.41)"
+        ]
+      },
+      "landing-indigo": {
+        "role": "primary",
+        "displayName": "Landing Indigo",
+        "tonalRamp": [
+          "oklch(15% 0.1968 267.64)",
+          "oklch(26.43% 0.1968 267.64)",
+          "oklch(37.86% 0.1968 267.64)",
+          "oklch(49.29% 0.1968 267.64)",
+          "oklch(60.71% 0.1968 267.64)",
+          "oklch(72.14% 0.1968 267.64)",
+          "oklch(83.57% 0.1968 267.64)",
+          "oklch(95% 0.1968 267.64)"
+        ]
+      },
+      "landing-line": {
+        "role": "neutral",
+        "displayName": "Landing Line",
+        "tonalRamp": [
+          "oklch(15% 0.0200 245.66)",
+          "oklch(26.43% 0.0200 245.66)",
+          "oklch(37.86% 0.0200 245.66)",
+          "oklch(49.29% 0.0200 245.66)",
+          "oklch(60.71% 0.0200 245.66)",
+          "oklch(72.14% 0.0200 245.66)",
+          "oklch(83.57% 0.0200 245.66)",
+          "oklch(95% 0.0200 245.66)"
+        ]
+      },
+      "landing-tint": {
+        "role": "neutral",
+        "displayName": "Landing Tint",
+        "tonalRamp": [
+          "oklch(15% 0.0120 209.80)",
+          "oklch(26.43% 0.0120 209.80)",
+          "oklch(37.86% 0.0120 209.80)",
+          "oklch(49.29% 0.0120 209.80)",
+          "oklch(60.71% 0.0120 209.80)",
+          "oklch(72.14% 0.0120 209.80)",
+          "oklch(83.57% 0.0120 209.80)",
+          "oklch(95% 0.0120 209.80)"
+        ]
+      },
+      "landing-code": {
+        "role": "neutral",
+        "displayName": "Landing Code",
+        "tonalRamp": [
+          "oklch(15% 0.0093 242.84)",
+          "oklch(26.43% 0.0093 242.84)",
+          "oklch(37.86% 0.0093 242.84)",
+          "oklch(49.29% 0.0093 242.84)",
+          "oklch(60.71% 0.0093 242.84)",
+          "oklch(72.14% 0.0093 242.84)",
+          "oklch(83.57% 0.0093 242.84)",
+          "oklch(95% 0.0093 242.84)"
+        ]
+      },
+      "dark-ground": {
+        "role": "neutral",
+        "displayName": "Dark Ground",
+        "tonalRamp": [
+          "oklch(15% 0.0341 254.54)",
+          "oklch(26.43% 0.0341 254.54)",
+          "oklch(37.86% 0.0341 254.54)",
+          "oklch(49.29% 0.0341 254.54)",
+          "oklch(60.71% 0.0341 254.54)",
+          "oklch(72.14% 0.0341 254.54)",
+          "oklch(83.57% 0.0341 254.54)",
+          "oklch(95% 0.0341 254.54)"
+        ]
+      },
+      "dark-paper": {
+        "role": "neutral",
+        "displayName": "Dark Paper",
+        "tonalRamp": [
+          "oklch(15% 0.0407 250.85)",
+          "oklch(26.43% 0.0407 250.85)",
+          "oklch(37.86% 0.0407 250.85)",
+          "oklch(49.29% 0.0407 250.85)",
+          "oklch(60.71% 0.0407 250.85)",
+          "oklch(72.14% 0.0407 250.85)",
+          "oklch(83.57% 0.0407 250.85)",
+          "oklch(95% 0.0407 250.85)"
+        ]
+      },
+      "dark-ink": {
+        "role": "neutral",
+        "displayName": "Dark Ink",
+        "tonalRamp": [
+          "oklch(15% 0.0131 251.56)",
+          "oklch(26.43% 0.0131 251.56)",
+          "oklch(37.86% 0.0131 251.56)",
+          "oklch(49.29% 0.0131 251.56)",
+          "oklch(60.71% 0.0131 251.56)",
+          "oklch(72.14% 0.0131 251.56)",
+          "oklch(83.57% 0.0131 251.56)",
+          "oklch(95% 0.0131 251.56)"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "Dark Muted",
+        "tonalRamp": [
+          "oklch(15% 0.0329 246.77)",
+          "oklch(26.43% 0.0329 246.77)",
+          "oklch(37.86% 0.0329 246.77)",
+          "oklch(49.29% 0.0329 246.77)",
+          "oklch(60.71% 0.0329 246.77)",
+          "oklch(72.14% 0.0329 246.77)",
+          "oklch(83.57% 0.0329 246.77)",
+          "oklch(95% 0.0329 246.77)"
+        ]
+      },
+      "dark-teal": {
+        "role": "primary",
+        "displayName": "Dark Teal",
+        "tonalRamp": [
+          "oklch(15% 0.0913 200.82)",
+          "oklch(26.43% 0.0913 200.82)",
+          "oklch(37.86% 0.0913 200.82)",
+          "oklch(49.29% 0.0913 200.82)",
+          "oklch(60.71% 0.0913 200.82)",
+          "oklch(72.14% 0.0913 200.82)",
+          "oklch(83.57% 0.0913 200.82)",
+          "oklch(95% 0.0913 200.82)"
+        ]
+      },
+      "dark-indigo": {
+        "role": "primary",
+        "displayName": "Dark Indigo",
+        "tonalRamp": [
+          "oklch(15% 0.0911 272.58)",
+          "oklch(26.43% 0.0911 272.58)",
+          "oklch(37.86% 0.0911 272.58)",
+          "oklch(49.29% 0.0911 272.58)",
+          "oklch(60.71% 0.0911 272.58)",
+          "oklch(72.14% 0.0911 272.58)",
+          "oklch(83.57% 0.0911 272.58)",
+          "oklch(95% 0.0911 272.58)"
+        ]
+      },
+      "dark-line": {
+        "role": "neutral",
+        "displayName": "Dark Line",
+        "tonalRamp": [
+          "oklch(15% 0.0511 250.10)",
+          "oklch(26.43% 0.0511 250.10)",
+          "oklch(37.86% 0.0511 250.10)",
+          "oklch(49.29% 0.0511 250.10)",
+          "oklch(60.71% 0.0511 250.10)",
+          "oklch(72.14% 0.0511 250.10)",
+          "oklch(83.57% 0.0511 250.10)",
+          "oklch(95% 0.0511 250.10)"
+        ]
+      },
+      "dark-tint": {
+        "role": "neutral",
+        "displayName": "Dark Tint",
+        "tonalRamp": [
+          "oklch(15% 0.0427 230.70)",
+          "oklch(26.43% 0.0427 230.70)",
+          "oklch(37.86% 0.0427 230.70)",
+          "oklch(49.29% 0.0427 230.70)",
+          "oklch(60.71% 0.0427 230.70)",
+          "oklch(72.14% 0.0427 230.70)",
+          "oklch(83.57% 0.0427 230.70)",
+          "oklch(95% 0.0427 230.70)"
+        ]
+      },
+      "dark-code": {
+        "role": "neutral",
+        "displayName": "Dark Code",
+        "tonalRamp": [
+          "oklch(15% 0.0424 253.59)",
+          "oklch(26.43% 0.0424 253.59)",
+          "oklch(37.86% 0.0424 253.59)",
+          "oklch(49.29% 0.0424 253.59)",
+          "oklch(60.71% 0.0424 253.59)",
+          "oklch(72.14% 0.0424 253.59)",
+          "oklch(83.57% 0.0424 253.59)",
+          "oklch(95% 0.0424 253.59)"
+        ]
+      },
+      "dark-error": {
+        "role": "neutral",
+        "displayName": "Dark Error",
+        "tonalRamp": [
+          "oklch(15% 0.0918 11.62)",
+          "oklch(26.43% 0.0918 11.62)",
+          "oklch(37.86% 0.0918 11.62)",
+          "oklch(49.29% 0.0918 11.62)",
+          "oklch(60.71% 0.0918 11.62)",
+          "oklch(72.14% 0.0918 11.62)",
+          "oklch(83.57% 0.0918 11.62)",
+          "oklch(95% 0.0918 11.62)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Sora Display",
+        "purpose": "Introduction hero headline; French/German and Hindi/Arabic have source-specific size/spacing overrides; Japanese/Chinese fragments omit inserted whitespace."
+      },
+      "headline": {
+        "displayName": "Sora Headline",
+        "purpose": "Introduction section headings."
+      },
+      "body": {
+        "displayName": "Geist Body",
+        "purpose": "Explanations and story descriptions."
+      },
+      "label": {
+        "displayName": "Geist Label",
+        "purpose": "Navigation and text actions."
+      },
+      "data": {
+        "displayName": "Geist Mono Data",
+        "purpose": "Actual editable input and output remain left-to-right; narrow-container textarea uses 16px while output remains 12px."
+      }
+    },
+    "shadows": [
+      {
+        "name": "project-preview",
+        "value": "0 16px 42px -18px rgb(18 43 66 / 24%)",
+        "purpose": "Illustrative project work surface."
+      }
+    ],
+    "motion": [
+      {
+        "name": "project-story",
+        "value": "280ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Bounded project-story transition; duration zero under reduced motion."
+      },
+      {
+        "name": "control-transition",
+        "value": "160ms",
+        "purpose": "Primary action background/lift and trailing task arrow; CSS transitions removed under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "landing-mid-container-max",
+        "value": "929px"
+      },
+      {
+        "name": "landing-narrow-container-max",
+        "value": "650px"
+      },
+      {
+        "name": "landing-compact-container-max",
+        "value": "360px"
+      },
+      {
+        "name": "story-auto-selection-element-min",
+        "value": "850px"
+      }
+    ],
+    "scope": {
+      "paths": [
+        "src/components/LandingMarketing.tsx",
+        "src/app/globals.css:978 onward (landing introduction rules)"
+      ],
+      "excludes": [
+        "src/app/workspace.css",
+        "sidebar",
+        "app header",
+        "tool wrappers"
+      ],
+      "authority": "Built source and rendered review captures; no approved comp.",
+      "rampNote": "Tonal ramps are synthesized OKLCH inspection aids; source semantic colors remain the normative frontmatter primitives.",
+      "localization": "The complete introduction has authored English, Hindi, Spanish, French, German, Japanese, Chinese and Arabic copy; full-product localization remains in progress."
+    },
+    "localization": {
+      "languages": [
+        "en",
+        "hi",
+        "es",
+        "fr",
+        "de",
+        "ja",
+        "zh",
+        "ar"
+      ],
+      "scope": "Marketing introduction only.",
+      "direction": "Root lang/dir follow selection; Arabic mirrors interface flow and action arrows. Structured previews, query tables and technical filenames remain LTR.",
+      "state": "Navigation, actions, task descriptions, project previews and supporting copy follow the selected language; technical example data remains unchanged.",
+      "typeOverrides": [
+        {
+          "languages": [
+            "fr",
+            "de"
+          ],
+          "fontSize": "clamp(36px, 4.3cqi, 56px)",
+          "maxWidth": "24ch"
+        },
+        {
+          "languages": [
+            "hi",
+            "ar"
+          ],
+          "fontSize": "clamp(35px, 4.5cqi, 58px)",
+          "lineHeight": 1.25,
+          "letterSpacing": "normal",
+          "maxWidth": "100%"
+        }
+      ],
+      "cjkHeadline": "Japanese and Chinese concatenate translated fragments without an added space.",
+      "mobile": "Hero description uses16px at container widths up to650px; the introduction has no editable inputs."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary catalog action",
+      "kind": "button",
+      "description": "Solid ink action with teal hover and bounded lift.",
+      "html": "<a class=\"ds-primary\" href=\"#catalog\">Explore 147 tools <svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" aria-hidden=\"true\"><path d=\"M4 12h16m-6-6 6 6-6 6\"/></svg></a>",
+      "css": ".ds-primary{font-family:var(--font-geist-sans,Geist),sans-serif;color:var(--landing-ink,#122b42);display:inline-flex;align-items:center;justify-content:center;gap:14px;min-height:48px;padding:12px 20px;border:1px solid transparent;border-radius:9px;background:var(--landing-ink,#122b42);color:var(--landing-paper,#ffffff);text-decoration:none;font-size:14px;font-weight:650;transition:background 160ms,transform 160ms}.ds-primary:hover{background:var(--landing-teal,#006b79);transform:translateY(-2px)}.ds-primary:focus-visible{outline:3px solid var(--landing-indigo,#3859d7);outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}.ds-primary:hover{transform:none}}.ds-primary:dir(rtl)>svg{transform:scaleX(-1)}",
+      "refersTo": "button-primary"
+    },
+    {
+      "name": "Text action",
+      "kind": "button",
+      "description": "Inline secondary navigation, underlined on hover.",
+      "html": "<a class=\"ds-text-action\" href=\"#catalog\">Search all tools</a>",
+      "css": ".ds-text-action{font-family:var(--font-geist-sans,Geist),sans-serif;color:var(--landing-ink,#122b42);display:inline-flex;align-items:center;min-height:36px;font-size:13px;font-weight:600;text-decoration:none;text-underline-offset:4px}.ds-text-action:hover{text-decoration:underline}.ds-text-action:focus-visible{outline:3px solid var(--landing-indigo,#3859d7);outline-offset:4px;}"
+    },
+    {
+      "name": "Introduction section navigation",
+      "kind": "nav",
+      "description": "Compact section links with document-scroll positioning in the page.",
+      "html": "<nav class=\"ds-section-nav\" aria-label=\"Introduction sections\"><a href=\"#workspace\">Workspace</a><a href=\"#data\">Your data</a><a href=\"#catalog\">All tools <svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" aria-hidden=\"true\"><path d=\"M12 4v16m-6-6 6 6 6-6\"/></svg></a></nav>",
+      "css": ".ds-section-nav{font-family:var(--font-geist-sans,Geist),sans-serif;color:var(--landing-ink,#122b42);display:flex;align-items:center;gap:24px;background:var(--landing-ground,#f5f7fb);padding:17px 0;border-bottom:1px solid var(--landing-line,#cdd9e4);font-size:13px;font-weight:600}.ds-section-nav a{display:inline-flex;align-items:center;min-height:28px;gap:8px;white-space:nowrap;color:inherit;text-decoration:none}.ds-section-nav a:last-child{margin-inline-start:auto;color:var(--landing-teal,#006b79)}.ds-section-nav a:hover{color:var(--landing-teal,#006b79)}.ds-section-nav a:focus-visible{outline:3px solid var(--landing-indigo,#3859d7);outline-offset:4px;}@media(max-width:420px){.ds-section-nav{gap:10px;font-size:10px}}"
+    },
+    {
+      "name": "Project preview surface",
+      "kind": "card",
+      "description": "Paper work surface with an explicit illustrative-project label.",
+      "html": "<figure class=\"ds-preview\"><div class=\"ds-preview-bar\"><strong><bdi dir=\"ltr\">checkout-api</bdi></strong><span>Example project</span></div><div class=\"ds-preview-content\"><h4>Ready for the next release</h4><p>Validate the API response</p><p>Compare the schema changes</p></div><figcaption>Illustrative workspace. Your saved projects stay separate.</figcaption></figure>",
+      "css": ".ds-preview{font-family:var(--font-geist-sans,Geist),sans-serif;color:var(--landing-ink,#122b42);margin:0;background:var(--landing-paper,#fff);border-radius:12px;overflow:clip;box-shadow:0 16px 42px -18px rgb(18 43 66 / 24%)}.ds-preview-bar{padding:16px 18px;display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--landing-line,#cdd9e4);font-size:12px}.ds-preview-bar span{font-size:10px;color:var(--landing-muted,#526477)}.ds-preview-content{padding:24px 22px;min-height:180px}.ds-preview-content h4{font-size:17px;font-weight:650;line-height:1.4;margin:0 0 20px}.ds-preview-content p{font-size:12px;margin:0 0 13px}.ds-preview figcaption{padding:10px 18px;background:var(--landing-tint,#e7f2f4);color:var(--landing-teal,#006b79);font-size:11px}",
+      "refersTo": "preview"
+    },
+    {
+      "name": "Task link",
+      "kind": "custom",
+      "description": "Flat tool-discovery row with a title and concrete task.",
+      "html": "<a class=\"ds-task\" href=\"#json\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" aria-hidden=\"true\"><path d=\"M8 7 3 12l5 5m8-10 5 5-5 5m-3-13-2 20\"/></svg><span><strong>JSON Formatter</strong><small>Make a payload readable</small></span><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" aria-hidden=\"true\"><path d=\"M4 12h16m-6-6 6 6-6 6\"/></svg></a>",
+      "css": ".ds-task{font-family:var(--font-geist-sans,Geist),sans-serif;color:var(--landing-ink,#122b42);display:flex;align-items:center;gap:12px;padding:18px 0;border-bottom:1px solid var(--landing-line,#cdd9e4);text-decoration:none}.ds-task>svg:first-child{color:var(--landing-teal,#006b79)}.ds-task>span{display:grid;gap:3px}.ds-task strong{font-size:13px;font-weight:600}.ds-task small{font-size:12px;color:var(--landing-muted,#526477)}.ds-task>svg:last-child{margin-inline-start:auto;color:var(--landing-muted,#526477);transition:transform 160ms}.ds-task:hover strong{color:var(--landing-teal,#006b79)}.ds-task:hover>svg:last-child{transform:translateX(3px)}.ds-task:focus-visible{outline:3px solid var(--landing-indigo,#3859d7);outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-task>svg:last-child{transition:none}.ds-task:hover>svg:last-child{transform:none}}.ds-task:dir(rtl)>svg:last-child{scale:-1 1}.ds-task:dir(rtl):hover>svg:last-child{transform:translateX(-3px)}@media(prefers-reduced-motion:reduce){.ds-task:dir(rtl):hover>svg:last-child{transform:none}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Active Developer Workbench",
+    "overview": "The introduction explains the developer workspace, leads directly to the catalog and illustrates project organization. The user-requested simplification removes the live demo and its entry points, leaving a single-column hero with one primary catalog action. Scope remains LandingMarketing.tsx and its landing-* rules; app workspace styles are independent.",
+    "keyCharacteristics": [
+      "Direct tool discovery and labeled illustrative project workspaces.",
+      "Sora display, Geist reading text and mono data.",
+      "Paired light/dark surfaces with visible separation.",
+      "Container-responsive layouts and bounded, meaningful motion.",
+      "Eight authored introduction languages with direction-aware chrome and left-to-right data."
+    ],
+    "rules": [
+      {
+        "name": "The Paired Surface Rule",
+        "body": "Switch the complete semantic color set with the introduction's dark state; preserve the relationships between ground, paper, code well, text and dividers.",
+        "section": "colors"
+      },
+      {
+        "name": "The Data Face Rule",
+        "body": "Use the mono face for payloads and filenames; use Geist for explanations and controls, and Sora for the principal heading hierarchy.",
+        "section": "typography"
+      },
+      {
+        "name": "The Working Surface Rule",
+        "body": "Reserve broad ambient elevation for the illustrative project preview; organize supporting links and explanations with alignment, spacing and dividers.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep these rules bounded to the introduction and preserve the workspace's independent styling contract.",
+      "**Do** switch light/dark semantic colors together and retain visible keyboard focus.",
+      "**Do** use canonical links to the actual tools when extending discovery.",
+      "**Do** keep catalog counts derived from the registry; the verified build has 147 tools across 15 categories.",
+      "**Do** state the processing boundary: local browser transformations, explicitly triggered network calls to the shown services, and desktop/local runtime for native database/storage access.",
+      "**Do** keep illustrative projects labeled and separate from saved browser-local user work.",
+      "**Do** provide immediate reduced-motion state changes and keyboard-operable selections.",
+      "**Do** localize the complete introduction, preserve technical example data on language changes and keep data direction independent of interface direction.",
+      "**Do** allow translated labels to wrap and preserve script-specific heading rhythm."
+    ],
+    "donts": [
+      "**Don't** claim JWT decoding verifies signatures, or imply every tool is offline or network-free.",
+      "**Don't** turn introduction-specific panel spacing, composition or motion into workspace-wide rules.",
+      "**Don't** reintroduce the removed live demo or add fake terminal activity or invented customer claims.",
+      "**Don't** infer full-product multilingual coverage from the eight-language introduction; global localization remains in progress."
+    ]
+  }
+}

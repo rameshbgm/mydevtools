@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
+import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import {
     Card,
     Input,
@@ -28,6 +29,7 @@ import {
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
+import { messageService as message } from "@/lib/messageService";
 import { downloadText } from "@/lib/download";
 import { copyToClipboard } from "@/lib/clipboard";
 
@@ -652,7 +654,7 @@ interface MACInfo {
     oui: string;
     nic: string;
     type: "Unicast" | "Multicast";
-    scope: "Globally Unique (UAA)" | "Locally Administered (LAA)";
+    scope: "Universally Administered (UAA)" | "Locally Administered (LAA)";
     isBroadcast: boolean;
     isMulticast: boolean;
     isUnicast: boolean;
@@ -716,7 +718,7 @@ function analyzeMac(input: string): MACInfo {
             oui: "",
             nic: "",
             type: "Unicast",
-            scope: "Globally Unique (UAA)",
+            scope: "Universally Administered (UAA)",
             isBroadcast: false,
             isMulticast: false,
             isUnicast: false,
@@ -760,7 +762,7 @@ function analyzeMac(input: string): MACInfo {
         oui: formatMac(oui + "000000", "colon").substring(0, 8),
         nic: formatMac("000000" + nic, "colon").substring(9),
         type: isMulticast ? "Multicast" : "Unicast",
-        scope: isLocallyAdministered ? "Locally Administered (LAA)" : "Globally Unique (UAA)",
+        scope: isLocallyAdministered ? "Locally Administered (LAA)" : "Universally Administered (UAA)",
         isBroadcast,
         isMulticast,
         isUnicast: !isMulticast,
@@ -817,6 +819,9 @@ function generateRandomMac(options: {
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function MACAddressToolsPage() {
+    const { t } = useLanguage();
+    const tCurrent = useRef(t);
+    useEffect(() => { tCurrent.current = t; }, [t]);
     const { darkMode } = useAppStore();
     const [inputMAC, setInputMAC] = useState("");
     const [generateCount, setGenerateCount] = useState(10);
@@ -839,9 +844,12 @@ export default function MACAddressToolsPage() {
             .slice(0, 50);
     }, [vendorSearch]);
 
-    const handleCopy = (text: string, label: string) => copyToClipboard(text, `${label} copied!`);
+    const handleCopy = (text: string) => copyToClipboard(text);
 
     const handleGenerate = useCallback(() => {
+        const prefix = generatePrefix.replace(/[:\-.\s]/g, "");
+        if (prefix && !/^(?:[0-9a-fA-F]{2}){1,6}$/.test(prefix)) { message.error(tCurrent.current("Enter a MAC prefix containing 1 to 6 complete hex bytes")); return; }
+        if (!Number.isInteger(generateCount) || generateCount < 1 || generateCount > 1000) { message.error(tCurrent.current("Choose a count from 1 to 1000")); return; }
         const macs: string[] = [];
         for (let i = 0; i < generateCount; i++) {
             macs.push(generateRandomMac({
@@ -853,7 +861,7 @@ export default function MACAddressToolsPage() {
         setGeneratedMACs(macs);
     }, [generateCount, generatePrefix, generateUnicast, generateUniversal]);
 
-    const handleCopyAll = () => copyToClipboard(generatedMACs.join("\n"), "All MAC addresses copied!");
+    const handleCopyAll = () => copyToClipboard(generatedMACs.join("\n"));
 
     const handleDownload = () => downloadText(generatedMACs.join("\n"), "mac-addresses.txt");
 
@@ -863,56 +871,34 @@ export default function MACAddressToolsPage() {
     };
 
     const sampleColumns = [
-        { title: "MAC Address", dataIndex: "mac", key: "mac", render: (mac: string) => <Text code style={{ fontSize: 10 }}>{mac}</Text> },
-        { title: "Type", dataIndex: "desc", key: "desc", render: (desc: string) => <Text style={{ fontSize: 11 }}>{desc}</Text> },
+        { title: t("MAC Address"), dataIndex: "mac", key: "mac", render: (mac: string) => <Text code style={{ fontSize: 10 }}>{mac}</Text> },
+        { title: t("Type"), dataIndex: "desc", key: "desc", render: (desc: string) => <Text style={{ fontSize: 11 }}>{t(desc)}</Text> },
         {
             title: "",
             key: "action",
             width: 50,
             render: (_: unknown, record: { mac: string }) => (
-                <Button size="small" type="link" onClick={() => setInputMAC(record.mac)}>Use</Button>
+                <Button size="small" type="link" onClick={() => setInputMAC(record.mac)}>{t("Use")}</Button>
             )
         },
     ];
 
     const vendorColumns = [
-        { title: "OUI", dataIndex: "oui", key: "oui", render: (oui: string) => <Text code>{oui}</Text> },
-        { title: "Vendor", dataIndex: "vendor", key: "vendor" },
+        { title: t("OUI"), dataIndex: "oui", key: "oui", render: (oui: string) => <Text code>{oui}</Text> },
+        { title: t("Vendor"), dataIndex: "vendor", key: "vendor" },
     ];
 
     return (
         <ToolPageLayout
-            title="MAC Address Tools"
-            description="Comprehensive MAC address analyzer, generator, and vendor lookup"
+            title={t("MAC Address Tools")}
+            description={t("Comprehensive MAC address analyzer, generator, and vendor lookup")}
             icon={<WifiOutlined style={{ fontSize: 24, color: "#722ed1" }} />}
             color="#722ed1"
             learnMore={{
-                whatIs: "MAC (Media Access Control) addresses are 48-bit (EUI-48) hardware identifiers burned into every Ethernet, Wi-Fi, and Bluetooth interface. The leading 24 bits (OUI — Organizationally Unique Identifier) are assigned by the IEEE to a vendor; the trailing 24 bits identify the specific NIC. EUI-64 extends this to 64 bits for IPv6 SLAAC and some industrial protocols.",
-                whyUse: "MACs surface in DHCP logs, ARP tables, switch CAM lookups, captive portals, MDM enrollment, and BLE scans. Looking up an OUI tells you whether a mystery device on the LAN is an Apple laptop, a Raspberry Pi, an HP printer, or a Sonos speaker — and randomized MACs (a common privacy feature on iOS, Android, Windows 10+) explain why the same phone shows up under different addresses every day.",
-                howToUse: [
-                    "Paste any MAC in colon, hyphen, dotted, or bare-hex format — normalization runs as you type",
-                    "Inspect the OUI vendor lookup, broadcast/multicast/unicast bit, and U/L bit",
-                    "Switch to the generate tab to mint random locally-administered MACs for VMs, containers, or test rigs",
-                    "Search the vendor database by company name or OUI prefix",
-                    "Convert a MAC to its EUI-64 form for IPv6 SLAAC interface IDs",
-                ],
-                tips: [
-                    "The least-significant bit of the first octet is the I/G bit: 0 = unicast, 1 = multicast",
-                    "The second-least-significant bit is the U/L bit: 0 = universal (vendor-assigned), 1 = locally administered",
-                    "Locally administered prefixes (x2, x6, xA, xE in the first octet) are safe for VMs/containers",
-                    "FF:FF:FF:FF:FF:FF is the L2 broadcast — every NIC on the segment processes it",
-                    "01:00:5E:* maps to IPv4 multicast (RFC 1112); 33:33:* maps to IPv6 multicast",
-                    "iOS, Android, and modern Windows randomize the MAC per-SSID for privacy — vendor lookups will show 'Locally administered'",
-                    "Apple's randomized MACs always set the U/L bit; it's a quick way to spot them in logs",
-                ],
-                useCases: [
-                    "Identifying mystery devices on a corporate or home LAN from DHCP/ARP logs",
-                    "Generating unique non-conflicting MACs for VMs, KVM/QEMU bridges, and Docker macvlan networks",
-                    "Pre-loading MAC allow-lists for 802.1X, captive portals, and MDM",
-                    "Auditing wireless surveys and BLE scans for unknown vendors",
-                    "Building EUI-64 IPv6 addresses for SLAAC-only environments",
-                    "Detecting MAC spoofing and randomization in IDS/SIEM analytics",
-                ],
+                whatIs: t("Analyze EUI-48 addresses, convert formats and generate synthetic MAC addresses locally."),
+                whyUse: t("Look up known prefixes in the bundled vendor sample; it is not a complete or live IEEE registry."),
+                howToUse: [t("Enter a MAC address or select generation count, scope, type and optional prefix.")],
+                tips: [t("Generation adjusts the multicast and local bits to match your choices, including when a prefix is supplied."), t("Use locally administered unicast addresses for synthetic devices; uniqueness is not guaranteed.")],
             }}
         >
             <Tabs
@@ -920,7 +906,7 @@ export default function MACAddressToolsPage() {
                 items={[
                     {
                         key: "analyze",
-                        label: <span><SearchOutlined /> Analyze</span>,
+                        label: <span><SearchOutlined /> {t("Analyze")}</span>,
                         children: (
                             <Row gutter={[16, 16]}>
                                 <Col xs={24} lg={16}>
@@ -928,7 +914,7 @@ export default function MACAddressToolsPage() {
                                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                             <Input
                                                 size="large"
-                                                placeholder="Enter MAC address (e.g., 00:1C:B3:00:00:01, 001CB3000001)"
+                                                placeholder={t("Enter MAC address (e.g., 00:1C:B3:00:00:01, 001CB3000001)")}
                                                 value={inputMAC}
                                                 onChange={(e) => setInputMAC(e.target.value)}
                                                 prefix={<WifiOutlined />}
@@ -942,19 +928,19 @@ export default function MACAddressToolsPage() {
                                                             <CloseCircleOutlined style={{ color: "#ff4d4f" }} />
                                                         )
                                                     )
-                                                }
+                                                } dir="ltr" aria-label={t("MAC address")}
                                             />
 
                                             <Space wrap>
-                                                <Text type="secondary">Generate:</Text>
+                                                <Text type="secondary">{t("Generate:")}</Text>
                                                 <Button size="small" onClick={() => setInputMAC(generateRandomMac({ unicast: true, universal: true }))}>
-                                                    Random Universal
+                                                    {t("Random Universal")}
                                                 </Button>
                                                 <Button size="small" onClick={() => setInputMAC(generateRandomMac({ unicast: true, universal: false }))}>
-                                                    Random Local
+                                                    {t("Random Local")}
                                                 </Button>
                                                 <Button size="small" onClick={() => setInputMAC(generateRandomMac({ unicast: false, universal: true }))}>
-                                                    Random Multicast
+                                                    {t("Random Multicast")}
                                                 </Button>
                                             </Space>
                                         </Space>
@@ -963,34 +949,34 @@ export default function MACAddressToolsPage() {
                                     {macInfo.isValid && (
                                         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
                                             <Col xs={24} md={12}>
-                                                <Card title="Address Information" size="small">
+                                                <Card title={t("Address Information")} size="small">
                                                     <Descriptions column={1} size="small">
-                                                        <Descriptions.Item label="Vendor">
+                                                        <Descriptions.Item label={t("Vendor")}>
                                                             <Tag color={macInfo.vendor === "Unknown Vendor" ? "default" : "blue"}>
-                                                                {macInfo.vendor}
+                                                                {(macInfo.vendor === "Unknown Vendor" ? t("Unknown Vendor") : macInfo.vendor)}
                                                             </Tag>
                                                         </Descriptions.Item>
-                                                        <Descriptions.Item label="OUI (Manufacturer)">
+                                                        <Descriptions.Item label={t("OUI (Manufacturer)")}>
                                                             <Text code>{macInfo.oui}</Text>
                                                         </Descriptions.Item>
-                                                        <Descriptions.Item label="NIC (Device)">
+                                                        <Descriptions.Item label={t("NIC (Device)")}>
                                                             <Text code>{macInfo.nic}</Text>
                                                         </Descriptions.Item>
-                                                        <Descriptions.Item label="Type">
+                                                        <Descriptions.Item label={t("Type")}>
                                                             <Tag color={macInfo.isMulticast ? "orange" : "green"}>
-                                                                {macInfo.type}
+                                                                {t(macInfo.type)}
                                                             </Tag>
                                                         </Descriptions.Item>
-                                                        <Descriptions.Item label="Scope">
+                                                        <Descriptions.Item label={t("Scope")}>
                                                             <Tag color={macInfo.isLocallyAdministered ? "purple" : "cyan"}>
-                                                                {macInfo.scope}
+                                                                {t(macInfo.scope)}
                                                             </Tag>
                                                         </Descriptions.Item>
-                                                        <Descriptions.Item label="Properties">
+                                                        <Descriptions.Item label={t("Properties")}>
                                                             <Space wrap size={[4, 4]}>
-                                                                {macInfo.isBroadcast && <Tag color="red">Broadcast</Tag>}
-                                                                {macInfo.isMulticast && <Tag color="orange">Multicast</Tag>}
-                                                                {macInfo.isUnicast && <Tag color="green">Unicast</Tag>}
+                                                                {macInfo.isBroadcast && <Tag color="red">{t("Broadcast")}</Tag>}
+                                                                {macInfo.isMulticast && <Tag color="orange">{t("Multicast")}</Tag>}
+                                                                {macInfo.isUnicast && <Tag color="green">{t("Unicast")}</Tag>}
                                                             </Space>
                                                         </Descriptions.Item>
                                                     </Descriptions>
@@ -998,14 +984,14 @@ export default function MACAddressToolsPage() {
                                             </Col>
 
                                             <Col xs={24} md={12}>
-                                                <Card title="Formats" size="small">
+                                                <Card title={t("Formats")} size="small">
                                                     <Space orientation="vertical" style={{ width: "100%" }} size="small">
                                                         {Object.entries(macInfo.formats).map(([format, value]) => (
                                                             <div key={format} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                                <Text type="secondary" style={{ textTransform: "capitalize" }}>{format}:</Text>
+                                                                <Text type="secondary" style={{ textTransform: "capitalize" }}>{t(({ colon: "Colon", hyphen: "Hyphen", dot: "Dotted", bare: "Bare", cisco: "Cisco" } as Record<string, string>)[format])}:</Text>
                                                                 <Space>
                                                                     <Text code>{value}</Text>
-                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(value, format)} />
+                                                                    <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(value)} />
                                                                 </Space>
                                                             </div>
                                                         ))}
@@ -1013,14 +999,14 @@ export default function MACAddressToolsPage() {
                                                             <Text type="secondary">EUI-64:</Text>
                                                             <Space>
                                                                 <Text code style={{ fontSize: 11 }}>{macInfo.eui64}</Text>
-                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(macInfo.eui64, "EUI-64")} />
+                                                                <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(macInfo.eui64)} />
                                                             </Space>
                                                         </div>
                                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-                                                            <Text type="secondary">Binary:</Text>
+                                                            <Text type="secondary">{t("Binary:")}</Text>
                                                             <Space>
                                                                 <Text code style={{ fontSize: 9, wordBreak: "break-all" }}>{macInfo.binaryFormat}</Text>
-                                                                <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(macInfo.binaryFormat, "Binary")} />
+                                                                <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(macInfo.binaryFormat)} />
                                                             </Space>
                                                         </div>
                                                     </Space>
@@ -1033,15 +1019,15 @@ export default function MACAddressToolsPage() {
                                         <Alert
                                             style={{ marginTop: 16 }}
                                             type="error"
-                                            title="Invalid MAC Address"
-                                            description="Enter a valid 48-bit MAC address (6 bytes). Supported formats: 00:1C:B3:00:00:01, 00-1C-B3-00-00-01, 001C.B300.0001, 001CB3000001"
+                                            title={t("Invalid MAC Address")}
+                                            description={t("Enter a valid 48-bit MAC address (6 bytes). Supported formats: 00:1C:B3:00:00:01, 00-1C-B3-00-00-01, 001C.B300.0001, 001CB3000001")}
                                             showIcon
                                         />
                                     )}
                                 </Col>
 
                                 <Col xs={24} lg={8}>
-                                    <Card title="Example MAC Addresses" size="small">
+                                    <Card title={t("Example MAC Addresses")} size="small">
                                         <Table
                                             dataSource={SAMPLE_MACS}
                                             columns={sampleColumns}
@@ -1056,70 +1042,70 @@ export default function MACAddressToolsPage() {
                     },
                     {
                         key: "generate",
-                        label: <span><SyncOutlined /> Generate</span>,
+                        label: <span><SyncOutlined /> {t("Generate")}</span>,
                         children: (
                             <Row gutter={[16, 16]}>
                                 <Col xs={24} lg={16}>
-                                    <Card title="Generate MAC Addresses" size="small">
+                                    <Card title={t("Generate MAC Addresses")} size="small">
                                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                             <Row gutter={16} align="middle">
                                                 <Col xs={24} md={6}>
-                                                    <Text type="secondary">Count:</Text>
+                                                    <Text type="secondary">{t("Count:")}</Text>
                                                     <InputNumber
                                                         min={1}
                                                         max={1000}
                                                         value={generateCount}
                                                         onChange={(v) => setGenerateCount(v || 10)}
-                                                        style={{ width: "100%", marginTop: 4 }}
+                                                        style={{ width: "100%", marginTop: 4 }} dir="ltr" aria-label={t("MAC count")}
                                                     />
                                                 </Col>
                                                 <Col xs={24} md={8}>
-                                                    <Text type="secondary">Prefix (OUI):</Text>
+                                                    <Text type="secondary">{t("Prefix (OUI):")}</Text>
                                                     <Input
                                                         value={generatePrefix}
                                                         onChange={(e) => setGeneratePrefix(e.target.value)}
-                                                        placeholder="e.g., 00:50:56 for VMware"
-                                                        style={{ marginTop: 4 }}
+                                                        placeholder={t("e.g., 00:50:56 for VMware")}
+                                                        style={{ marginTop: 4 }} dir="ltr" aria-label={t("MAC prefix")}
                                                     />
                                                 </Col>
                                                 <Col xs={24} md={5}>
-                                                    <Text type="secondary">Type:</Text>
+                                                    <Text type="secondary">{t("Type:")}</Text>
                                                     <Select
                                                         value={generateUnicast ? "unicast" : "multicast"}
                                                         onChange={(v) => setGenerateUnicast(v === "unicast")}
                                                         style={{ width: "100%", marginTop: 4 }}
                                                         options={[
-                                                            { value: "unicast", label: "Unicast" },
-                                                            { value: "multicast", label: "Multicast" },
+                                                            { value: "unicast", label: t("Unicast") },
+                                                            { value: "multicast", label: t("Multicast") },
                                                         ]}
                                                     />
                                                 </Col>
                                                 <Col xs={24} md={5}>
-                                                    <Text type="secondary">Scope:</Text>
+                                                    <Text type="secondary">{t("Scope:")}</Text>
                                                     <Select
                                                         value={generateUniversal ? "universal" : "local"}
                                                         onChange={(v) => setGenerateUniversal(v === "universal")}
                                                         style={{ width: "100%", marginTop: 4 }}
                                                         options={[
-                                                            { value: "universal", label: "Universal" },
-                                                            { value: "local", label: "Local" },
+                                                            { value: "universal", label: t("Universal") },
+                                                            { value: "local", label: t("Local") },
                                                         ]}
                                                     />
                                                 </Col>
                                             </Row>
 
                                             <Button type="primary" icon={<SyncOutlined />} onClick={handleGenerate} block>
-                                                Generate MAC Addresses
+                                                {t("Generate MAC Addresses")}
                                             </Button>
 
                                             {generatedMACs.length > 0 && (
                                                 <>
                                                     <Space>
                                                         <Button icon={<CopyOutlined />} onClick={handleCopyAll}>
-                                                            Copy All
+                                                            {t("Copy All")}
                                                         </Button>
                                                         <Button icon={<DownloadOutlined />} onClick={handleDownload}>
-                                                            Download
+                                                            {t("Download")}
                                                         </Button>
                                                     </Space>
 
@@ -1139,9 +1125,9 @@ export default function MACAddressToolsPage() {
                                                                 <Text code>{mac}</Text>
                                                                 <Space size="small">
                                                                     <Button size="small" type="link" onClick={() => setInputMAC(mac)}>
-                                                                        Analyze
+                                                                        {t("Analyze")}
                                                                     </Button>
-                                                                    <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => handleCopy(mac, "MAC")} />
+                                                                    <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => handleCopy(mac)} />
                                                                 </Space>
                                                             </div>
                                                         ))}
@@ -1153,7 +1139,7 @@ export default function MACAddressToolsPage() {
                                 </Col>
 
                                 <Col xs={24} lg={8}>
-                                    <Card title="Common OUI Prefixes" size="small">
+                                    <Card title={t("Common OUI Prefixes")} size="small">
                                         <Space orientation="vertical" style={{ width: "100%" }} size="small">
                                             <Button size="small" block onClick={() => setGeneratePrefix("00:50:56")}>
                                                 00:50:56 - VMware
@@ -1174,15 +1160,15 @@ export default function MACAddressToolsPage() {
                                                 00:0C:29 - VMware
                                             </Button>
                                             <Button size="small" block onClick={() => setGeneratePrefix("")}>
-                                                Clear Prefix
+                                                {t("Clear Prefix")}
                                             </Button>
                                         </Space>
 
                                         <Alert
                                             style={{ marginTop: 16 }}
                                             type="info"
-                                            title="Tip"
-                                            description="Use 'Local' scope for VMs and containers to avoid conflicts with real hardware addresses."
+                                            title={t("Tip")}
+                                            description={t("Use 'Local' scope for VMs and containers to avoid conflicts with real hardware addresses.")}
                                             showIcon
                                         />
                                     </Card>
@@ -1192,19 +1178,19 @@ export default function MACAddressToolsPage() {
                     },
                     {
                         key: "vendors",
-                        label: <span><SearchOutlined /> Vendor Lookup</span>,
+                        label: <span><SearchOutlined /> {t("Vendor Lookup")}</span>,
                         children: (
                             <Row gutter={[16, 16]}>
                                 <Col xs={24}>
-                                    <Card title="Search Vendor Database" size="small">
+                                    <Card title={t("Search Vendor Database")} size="small">
                                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                             <Input
                                                 size="large"
-                                                placeholder="Search by OUI (e.g., 00:1C:B3) or vendor name (e.g., Apple)"
+                                                placeholder={t("Search by OUI (e.g., 00:1C:B3) or vendor name (e.g., Apple)")}
                                                 value={vendorSearch}
                                                 onChange={(e) => setVendorSearch(e.target.value)}
                                                 prefix={<SearchOutlined />}
-                                                allowClear
+                                                allowClear dir="ltr" aria-label={t("Vendor search")}
                                             />
 
                                             {filteredVendors.length > 0 && (
@@ -1224,8 +1210,8 @@ export default function MACAddressToolsPage() {
                                             {vendorSearch && filteredVendors.length === 0 && (
                                                 <Alert
                                                     type="info"
-                                                    title="No Results"
-                                                    description="No vendors found matching your search. Try a different OUI prefix or vendor name."
+                                                    title={t("No Results")}
+                                                    description={t("No vendors found matching your search. Try a different OUI prefix or vendor name.")}
                                                     showIcon
                                                 />
                                             )}
@@ -1233,8 +1219,8 @@ export default function MACAddressToolsPage() {
                                             {!vendorSearch && (
                                                 <Alert
                                                     type="info"
-                                                    title="Vendor Database"
-                                                    description={`This database contains ${Object.keys(VENDOR_DATABASE).length}+ OUI prefixes from major manufacturers including Apple, Samsung, Intel, Cisco, HP, VMware, and many more.`}
+                                                    title={t("Vendor Database")}
+                                                    description={t("Bundled sample: {count} OUI prefixes. No live lookup or complete IEEE coverage.", { count: Object.keys(VENDOR_DATABASE).length })}
                                                     showIcon
                                                 />
                                             )}

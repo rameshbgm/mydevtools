@@ -1,5 +1,8 @@
 "use client";
 
+import { AuthoredDiagnosticError, authoredDiagnosticText } from "@/lib/i18n/authored-diagnostics";
+import { useLanguage } from "@/components/LanguageProvider";
+
 import React, { useEffect, useRef, useState } from "react";
 import { Card, Typography, Upload, Button, Row, Col, Space, Tag, Radio, Slider, App, Empty } from "antd";
 import { PictureOutlined, UploadOutlined, ReloadOutlined } from "@ant-design/icons";
@@ -18,10 +21,10 @@ function loadImageFromFile(file: File): Promise<LoadedImage> {
         reader.onload = () => {
             const img = new Image();
             img.onload = () => resolve({ name: file.name, img, w: img.naturalWidth, h: img.naturalHeight });
-            img.onerror = () => reject(new Error("Could not decode image"));
+            img.onerror = () => reject(new AuthoredDiagnosticError("Could not decode image"));
             img.src = reader.result as string;
         };
-        reader.onerror = () => reject(new Error("Could not read file"));
+        reader.onerror = () => reject(new AuthoredDiagnosticError("Could not read file"));
         reader.readAsDataURL(file);
     });
 }
@@ -29,6 +32,9 @@ function loadImageFromFile(file: File): Promise<LoadedImage> {
 interface DiffStats { totalPixels: number; diffPixels: number; }
 
 export default function ImageDiffPage() {
+    const { t, language } = useLanguage();
+    const translation = useRef(t);
+    useEffect(() => { translation.current = t; }, [t]);
     const { message } = App.useApp();
     const [left, setLeft] = useState<LoadedImage | null>(null);
     const [right, setRight] = useState<LoadedImage | null>(null);
@@ -38,19 +44,15 @@ export default function ImageDiffPage() {
     const [stats, setStats] = useState<DiffStats | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    const upload = (which: "left" | "right") => ({
-        beforeUpload: async (file: File) => {
+    const beforeUpload = async (which: "left" | "right", file: File) => {
             try {
                 const img = await loadImageFromFile(file);
                 (which === "left" ? setLeft : setRight)(img);
             } catch (err) {
-                message.error(err instanceof Error ? err.message : String(err));
+                message.error(<>{translation.current("Image could not be loaded.")} <bdi dir={err instanceof AuthoredDiagnosticError ? "auto" : "ltr"}>{authoredDiagnosticText(translation.current, err)}</bdi></>);
             }
             return false;
-        },
-        showUploadList: false,
-        accept: "image/*",
-    });
+    };
 
     useEffect(() => {
         if (!left || !right) { setStats(null); return; }
@@ -115,8 +117,8 @@ export default function ImageDiffPage() {
 
     return (
         <ToolPageLayout
-            title="Image Diff"
-            description="Pixel-perfect visual comparison with side-by-side, overlay and difference modes"
+            title={t("Image Diff")}
+            description={t("Pixel-perfect visual comparison with side-by-side, overlay and difference modes")}
             icon={<PictureOutlined style={{ fontSize: 24, color: "#fa541c" }} />}
             color="#fa541c"
             learnMore={{
@@ -143,31 +145,31 @@ export default function ImageDiffPage() {
         >
             <Row gutter={[16, 16]}>
                 <Col xs={24} md={12}>
-                    <Card size="small" title={<Space><Text strong>Left</Text>{left && <Tag>{left.w}×{left.h}</Tag>}</Space>}>
+                    <Card size="small" title={<Space><Text strong>{t("Left")}</Text>{left && <Tag><bdi dir="ltr">{left.w}×{left.h}</bdi></Tag>}</Space>}>
                         {left ? (
                             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                                 <img src={left.img.src} alt={left.name} style={{ maxWidth: "100%", maxHeight: 200, objectFit: "contain", background: "rgba(0,0,0,0.04)", borderRadius: 4 }} />
-                                <Space><Text type="secondary" style={{ fontSize: 12 }}>{left.name}</Text><Button size="small" onClick={() => setLeft(null)}>Remove</Button></Space>
+                                <Space wrap><Text type="secondary" style={{ fontSize: 12, overflowWrap: "anywhere" }}><bdi dir="ltr">{left.name}</bdi></Text><Button size="small" onClick={() => setLeft(null)}>{t("Remove")}</Button></Space>
                             </div>
                         ) : (
-                            <Dragger {...upload("left")} style={{ padding: 12 }}>
+                            <Dragger beforeUpload={(file) => beforeUpload("left", file)} showUploadList={false} accept="image/*" style={{ padding: 12 }}>
                                 <UploadOutlined style={{ fontSize: 24, color: "#fa541c" }} />
-                                <Text style={{ display: "block", marginTop: 8 }}>Drop image or click</Text>
+                                <Text style={{ display: "block", marginTop: 8 }}>{t("Drop image or click")}</Text>
                             </Dragger>
                         )}
                     </Card>
                 </Col>
                 <Col xs={24} md={12}>
-                    <Card size="small" title={<Space><Text strong>Right</Text>{right && <Tag>{right.w}×{right.h}</Tag>}</Space>}>
+                    <Card size="small" title={<Space><Text strong>{t("Right")}</Text>{right && <Tag><bdi dir="ltr">{right.w}×{right.h}</bdi></Tag>}</Space>}>
                         {right ? (
                             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                                 <img src={right.img.src} alt={right.name} style={{ maxWidth: "100%", maxHeight: 200, objectFit: "contain", background: "rgba(0,0,0,0.04)", borderRadius: 4 }} />
-                                <Space><Text type="secondary" style={{ fontSize: 12 }}>{right.name}</Text><Button size="small" onClick={() => setRight(null)}>Remove</Button></Space>
+                                <Space wrap><Text type="secondary" style={{ fontSize: 12, overflowWrap: "anywhere" }}><bdi dir="ltr">{right.name}</bdi></Text><Button size="small" onClick={() => setRight(null)}>{t("Remove")}</Button></Space>
                             </div>
                         ) : (
-                            <Dragger {...upload("right")} style={{ padding: 12 }}>
+                            <Dragger beforeUpload={(file) => beforeUpload("right", file)} showUploadList={false} accept="image/*" style={{ padding: 12 }}>
                                 <UploadOutlined style={{ fontSize: 24, color: "#fa541c" }} />
-                                <Text style={{ display: "block", marginTop: 8 }}>Drop image or click</Text>
+                                <Text style={{ display: "block", marginTop: 8 }}>{t("Drop image or click")}</Text>
                             </Dragger>
                         )}
                     </Card>
@@ -177,41 +179,42 @@ export default function ImageDiffPage() {
             <Card style={{ marginTop: 16 }}>
                 <Space wrap size="middle">
                     <Radio.Group
+                        aria-label={t("Comparison mode")}
                         value={mode}
                         onChange={(e) => setMode(e.target.value)}
                         options={[
-                            { value: "side-by-side", label: "Side-by-side" },
-                            { value: "overlay", label: "Overlay" },
-                            { value: "difference", label: "Difference" },
+                            { value: "side-by-side", label: t("Side-by-side") },
+                            { value: "overlay", label: t("Overlay") },
+                            { value: "difference", label: t("Difference") },
                         ]}
                         optionType="button"
                         buttonStyle="solid"
                     />
-                    <Button icon={<ReloadOutlined />} onClick={swap} disabled={!left || !right}>Swap</Button>
+                    <Button icon={<ReloadOutlined />} onClick={swap} disabled={!left || !right}>{t("Swap")}</Button>
                     {mode === "difference" && (
                         <Space>
-                            <Text type="secondary">Tolerance: {tolerance}</Text>
-                            <Slider value={tolerance} onChange={setTolerance} min={0} max={64} style={{ width: 140 }} />
+                            <Text type="secondary">{t("Tolerance: {count}", { count: tolerance.toLocaleString(language) })}</Text>
+                            <Slider aria-label={t("Pixel tolerance")} value={tolerance} onChange={setTolerance} min={0} max={64} style={{ width: 140 }} />
                         </Space>
                     )}
                     {mode === "overlay" && (
                         <Space>
-                            <Text type="secondary">Top opacity: {overlayAlpha}%</Text>
-                            <Slider value={overlayAlpha} onChange={setOverlayAlpha} min={0} max={100} style={{ width: 140 }} />
+                            <Text type="secondary">{t("Top opacity: {percent}", { percent: new Intl.NumberFormat(language, { style: "percent" }).format(overlayAlpha / 100) })}</Text>
+                            <Slider aria-label={t("Overlay opacity")} value={overlayAlpha} onChange={setOverlayAlpha} min={0} max={100} style={{ width: 140 }} />
                         </Space>
                     )}
                     {stats && (
                         <Space>
-                            <Tag color="red">{stats.diffPixels.toLocaleString()} different pixels</Tag>
-                            <Tag color="blue">{((stats.diffPixels / stats.totalPixels) * 100).toFixed(2)}%</Tag>
+                            <Tag color="red">{t("Different pixels: {count}", { count: stats.diffPixels.toLocaleString(language) })}</Tag>
+                            <Tag color="blue">{new Intl.NumberFormat(language, { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(stats.diffPixels / stats.totalPixels)}</Tag>
                         </Space>
                     )}
                 </Space>
             </Card>
 
-            <Card style={{ marginTop: 16 }} title="Comparison">
+            <Card style={{ marginTop: 16 }} title={t("Comparison")}>
                 {(!left || !right) ? (
-                    <Empty description="Load images on both sides" />
+                    <Empty description={t("Load images on both sides")} />
                 ) : (
                     <div style={{ overflow: "auto", maxHeight: 600, background: "rgba(0,0,0,0.04)", borderRadius: 6 }}>
                         <canvas ref={canvasRef} style={{ display: "block", margin: "0 auto", maxWidth: "100%" }} />

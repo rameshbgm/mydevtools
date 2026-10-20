@@ -50,6 +50,8 @@ export function proxy(request: NextRequest) {
 
 export const config = {
     matcher: [
-        "/((?!_next/static|_next/image|.*\\.(?:ico|png|jpg|jpeg|gif|svg|webp|txt|xml|webmanifest|json)$).*)",
+        // API handlers own their authentication and streaming body limits.
+        // Proxy cloning truncates large Base64 uploads at Next's 10 MiB default.
+        "/((?!api/|api$|_next/static|_next/image|.*\\.(?:ico|png|jpg|jpeg|gif|svg|webp|txt|xml|webmanifest|json)$).*)",
     ],
 };

@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, message, Slider, ColorPicker, Select, Tabs, Segmented } from "antd";
-import { QrcodeOutlined, CopyOutlined, DownloadOutlined, BgColorsOutlined } from "@ant-design/icons";
+import { Card, Input, Typography, Row, Col, Button, Space, message, Slider, ColorPicker, Select } from "antd";
+import { QrcodeOutlined, CopyOutlined, DownloadOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { downloadText } from "@/lib/download";
 import QRCode from "qrcode";
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 const { TextArea } = Input;
 
 type ErrorCorrectionLevel = "L" | "M" | "Q" | "H";
@@ -29,18 +30,26 @@ const PRESETS = [
 ];
 
 export default function QRCodeGeneratorPage() {
+    const { t } = useLanguage();
+    const translation = useRef(t);
+    useEffect(() => { translation.current = t; }, [t]);
     const [content, setContent] = useState("https://example.com");
     const [size, setSize] = useState(256);
     const [errorLevel, setErrorLevel] = useState<ErrorCorrectionLevel>("M");
     const [foreground, setForeground] = useState("#000000");
     const [background, setBackground] = useState("#ffffff");
-    const [qrDataUrl, setQrDataUrl] = useState<string>("");
+    const [qrResult, setQrResult] = useState<{ signature: string; url: string } | null>(null);
+    const [generationError, setGenerationError] = useState("");
     const [margin, setMargin] = useState(2);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const generation = useRef(0);
+    const signature = JSON.stringify([content, size, margin, errorLevel, foreground, background]);
+    const qrDataUrl = qrResult?.signature === signature ? qrResult.url : "";
 
     const generateQR = useCallback(async () => {
+        const request = ++generation.current;
+        setGenerationError("");
+        setQrResult(null);
         if (!content.trim()) {
-            setQrDataUrl("");
             return;
         }
 
@@ -54,19 +63,21 @@ export default function QRCodeGeneratorPage() {
                     light: background,
                 },
             });
-            setQrDataUrl(dataUrl);
+            if (request === generation.current) setQrResult({ signature, url: dataUrl });
         } catch (err: unknown) {
-            console.error("QR generation error:", err);
+            if (request === generation.current) { setQrResult(null); setGenerationError(err instanceof Error ? err.message : String(err)); }
         }
-    }, [content, size, margin, errorLevel, foreground, background]);
+    }, [content, size, margin, errorLevel, foreground, background, signature]);
 
+    const cancelGeneration = useCallback(() => { generation.current++; }, []);
     useEffect(() => {
         void generateQR();
-    }, [generateQR]);
+        return cancelGeneration;
+    }, [generateQR, cancelGeneration]);
 
     const downloadQR = async (format: "png" | "svg") => {
         if (!content.trim()) {
-            message.warning("Please enter content first");
+            message.warning(translation.current("Please enter content first"));
             return;
         }
 
@@ -103,9 +114,9 @@ export default function QRCodeGeneratorPage() {
                 a.download = "qrcode.png";
                 a.click();
             }
-            message.success(`QR code downloaded as ${format.toUpperCase()}`);
-        } catch (err: any) {
-            message.error("Failed to download: " + err.message);
+            message.success(translation.current("QR code prepared as {format}", { format: format.toUpperCase() }));
+        } catch (err: unknown) {
+            message.error(`${translation.current("Unable to prepare this QR code. Check the content and try PNG or SVG again.")}\n${err instanceof Error ? err.message : String(err)}`);
         }
     };
 
@@ -118,11 +129,13 @@ export default function QRCodeGeneratorPage() {
             await navigator.clipboard.write([
                 new ClipboardItem({ [blob.type]: blob }),
             ]);
-            message.success("QR code copied to clipboard!");
+            message.success(translation.current("QR code copied to clipboard!"));
         } catch {
             // Fallback: copy data URL
-            navigator.clipboard.writeText(qrDataUrl);
-            message.success("QR code data URL copied!");
+            try {
+                await navigator.clipboard.writeText(qrDataUrl);
+                message.success(translation.current("QR code data URL copied!"));
+            } catch { message.error(translation.current("Unable to copy the QR code. Download PNG or SVG instead.")); }
         }
     };
 
@@ -132,8 +145,8 @@ export default function QRCodeGeneratorPage() {
 
     return (
         <ToolPageLayout
-            title="QR Code Generator"
-            description="Generate QR codes from text, URLs, or data with customization options"
+            title={t("QR Code Generator")}
+            description={t("Generate QR codes from text, URLs, or data with customization options")}
             icon={<QrcodeOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
             color="#1677ff"
             learnMore={{
@@ -161,37 +174,35 @@ export default function QRCodeGeneratorPage() {
         >
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={14}>
-                    <Card title="Content">
+                    <Card title={t("Content")}>
                         <Space wrap style={{ marginBottom: 16 }}>
                             {PRESETS.map((preset) => (
                                 <Button
-                                    key={preset.label}
+                                    key={t(preset.label)}
                                     size="small"
                                     onClick={() => loadPreset(preset.placeholder)}
                                 >
-                                    {preset.label}
+                                    {t(preset.label)}
                                 </Button>
                             ))}
                         </Space>
 
-                        <TextArea
+                        <TextArea aria-label={t("Content to encode")} dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
-                            placeholder="Enter text, URL, or data to encode..."
+                            placeholder={t("Enter text, URL, or data to encode...")}
                             rows={4}
                             showCount
                             maxLength={2000}
                         />
-                        <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 8 }}>
-                            Supports URLs, plain text, vCards, WiFi configs, and more
-                        </Text>
+                        <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 8 }}>{t("Supports URLs, plain text, vCards, WiFi configs, and more")}</Text>
                     </Card>
 
-                    <Card title="Customization" style={{ marginTop: 16 }}>
+                    <Card title={t("Customization")} style={{ marginTop: 16 }}>
                         <Row gutter={[16, 16]}>
                             <Col span={12}>
-                                <Text style={{ display: "block", marginBottom: 8 }}>Size: {size}px</Text>
-                                <Slider
+                                <Text style={{ display: "block", marginBottom: 8 }}>{t("Size:")}{size}{t("px")}</Text>
+                                <Slider aria-label={t("QR size in pixels")}
                                     value={size}
                                     onChange={setSize}
                                     min={128}
@@ -200,8 +211,8 @@ export default function QRCodeGeneratorPage() {
                                 />
                             </Col>
                             <Col span={12}>
-                                <Text style={{ display: "block", marginBottom: 8 }}>Margin: {margin}</Text>
-                                <Slider
+                                <Text style={{ display: "block", marginBottom: 8 }}>{t("Margin:")}{margin}</Text>
+                                <Slider aria-label={t("QR margin")}
                                     value={margin}
                                     onChange={setMargin}
                                     min={0}
@@ -209,28 +220,28 @@ export default function QRCodeGeneratorPage() {
                                 />
                             </Col>
                             <Col span={12}>
-                                <Text style={{ display: "block", marginBottom: 8 }}>Error Correction</Text>
-                                <Select
+                                <Text style={{ display: "block", marginBottom: 8 }}>{t("Error Correction")}</Text>
+                                <Select aria-label={t("Error Correction")}
                                     value={errorLevel}
                                     onChange={setErrorLevel}
                                     style={{ width: "100%" }}
                                     options={ERROR_LEVELS.map((l) => ({
                                         value: l.value,
-                                        label: `${l.label} - ${l.recovery}`,
+                                        label: `${t(l.label)} - ${t(l.recovery)}`,
                                     }))}
                                 />
                             </Col>
                             <Col span={6}>
-                                <Text style={{ display: "block", marginBottom: 8 }}>Foreground</Text>
-                                <ColorPicker
+                                <Text style={{ display: "block", marginBottom: 8 }}>{t("Foreground")}</Text>
+                                <ColorPicker aria-label={t("Foreground")}
                                     value={foreground}
                                     onChange={(c) => setForeground(c.toHexString())}
                                     showText
                                 />
                             </Col>
                             <Col span={6}>
-                                <Text style={{ display: "block", marginBottom: 8 }}>Background</Text>
-                                <ColorPicker
+                                <Text style={{ display: "block", marginBottom: 8 }}>{t("Background")}</Text>
+                                <ColorPicker aria-label={t("Background")}
                                     value={background}
                                     onChange={(c) => setBackground(c.toHexString())}
                                     showText
@@ -242,13 +253,11 @@ export default function QRCodeGeneratorPage() {
 
                 <Col xs={24} lg={10}>
                     <Card
-                        title="QR Code"
+                        title={t("QR Code")}
                         extra={
                             qrDataUrl && (
                                 <Space>
-                                    <Button icon={<CopyOutlined />} size="small" onClick={copyToClipboard}>
-                                        Copy
-                                    </Button>
+                                    <Button icon={<CopyOutlined />} size="small" onClick={copyToClipboard}>{t("Copy")}</Button>
                                 </Space>
                             )
                         }
@@ -264,14 +273,14 @@ export default function QRCodeGeneratorPage() {
                                 padding: 16,
                             }}
                         >
-                            {qrDataUrl ? (
+                            {generationError ? <div role="alert"><p>{t("Unable to generate this QR code. Shorten the content or lower error correction, then try again.")}</p><pre dir="ltr" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{generationError}</pre><Button onClick={() => void generateQR()}>{t("Try again")}</Button></div> : qrDataUrl ? (
                                 <img
                                     src={qrDataUrl}
-                                    alt="QR Code"
+                                    alt={t("QR Code")}
                                     style={{ maxWidth: "100%", imageRendering: "pixelated" }}
                                 />
                             ) : (
-                                <Text type="secondary">Enter content to generate QR code</Text>
+                                <Text type="secondary">{t("Enter content to generate QR code")}</Text>
                             )}
                         </div>
 
@@ -280,20 +289,16 @@ export default function QRCodeGeneratorPage() {
                                 <Button
                                     icon={<DownloadOutlined />}
                                     onClick={() => downloadQR("png")}
-                                >
-                                    Download PNG
-                                </Button>
+                                >{t("Download PNG")}</Button>
                                 <Button
                                     icon={<DownloadOutlined />}
                                     onClick={() => downloadQR("svg")}
-                                >
-                                    Download SVG
-                                </Button>
+                                >{t("Download SVG")}</Button>
                             </Space>
                         )}
                     </Card>
 
-                    <Card title="WiFi QR Generator" style={{ marginTop: 16 }}>
+                    <Card title={t("WiFi QR Generator")} style={{ marginTop: 16 }}>
                         <WifiGenerator onGenerate={setContent} />
                     </Card>
                 </Col>
@@ -303,10 +308,11 @@ export default function QRCodeGeneratorPage() {
 }
 
 function WifiGenerator({ onGenerate }: { onGenerate: (content: string) => void }) {
+    const { t } = useLanguage();
     const [ssid, setSsid] = useState("");
     const [password, setPassword] = useState("");
     const [encryption, setEncryption] = useState<"WPA" | "WEP" | "nopass">("WPA");
-    const [hidden, setHidden] = useState(false);
+    const [hidden] = useState(false);
 
     const generate = () => {
         const config = `WIFI:T:${encryption};S:${ssid};P:${password};H:${hidden};;`;
@@ -315,29 +321,27 @@ function WifiGenerator({ onGenerate }: { onGenerate: (content: string) => void }
 
     return (
         <Space orientation="vertical" style={{ width: "100%" }} size="small">
-            <Input
-                placeholder="Network Name (SSID)"
+            <Input aria-label={t("Network Name (SSID)")} dir="ltr" styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                placeholder={t("Network Name (SSID)")}
                 value={ssid}
                 onChange={(e) => setSsid(e.target.value)}
             />
-            <Input.Password
-                placeholder="Password"
+            <Input.Password aria-label={t("Password")} dir="ltr" styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                placeholder={t("Password")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
             />
-            <Select
+            <Select aria-label={t("WiFi encryption")}
                 value={encryption}
                 onChange={setEncryption}
                 style={{ width: "100%" }}
                 options={[
-                    { value: "WPA", label: "WPA/WPA2" },
-                    { value: "WEP", label: "WEP" },
-                    { value: "nopass", label: "No Password" },
+                    { value: "WPA", label: t("WPA/WPA2") },
+                    { value: "WEP", label: t("WEP") },
+                    { value: "nopass", label: t("No Password") },
                 ]}
             />
-            <Button type="primary" onClick={generate} disabled={!ssid} block>
-                Generate WiFi QR
-            </Button>
+            <Button type="primary" onClick={generate} disabled={!ssid} block>{t("Generate WiFi QR")}</Button>
         </Space>
     );
 }

@@ -1,6 +1,7 @@
 "use client";
+import { projectStorage } from "@/lib/project-storage";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
     Button,
     Tabs,
@@ -39,6 +40,7 @@ import {
     BgColorsOutlined,
     EditOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { downloadText } from "@/lib/download";
 
@@ -61,7 +63,7 @@ function uid() {
 function loadDocs(): RichDoc[] {
     if (typeof window === "undefined") return [];
     try {
-        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]") as unknown;
+        const parsed = JSON.parse(projectStorage.getItem(STORAGE_KEY) ?? "[]") as unknown;
         if (!Array.isArray(parsed)) return [];
         return parsed
             .filter((doc): doc is RichDoc => Boolean(doc && typeof doc === "object" && typeof (doc as RichDoc).id === "string" && typeof (doc as RichDoc).title === "string" && typeof (doc as RichDoc).content === "string"))
@@ -72,7 +74,11 @@ function loadDocs(): RichDoc[] {
 }
 
 function saveDocs(docs: RichDoc[]) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
+    projectStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
+}
+
+function escapeHtmlText(value: string): string {
+    return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
 }
 
 function defaultDoc(title = "Untitled Document"): RichDoc {
@@ -153,6 +159,8 @@ function VerticalDivider() {
 }
 
 export default function RichTextEditorPage() {
+    const { t, language } = useLanguage();
+    const initialTranslate = useRef(t);
     const [docs, setDocs] = useState<RichDoc[]>([]);
     const [activeId, setActiveId] = useState<string>("");
     const [sourceView, setSourceView] = useState(false);
@@ -169,7 +177,7 @@ export default function RichTextEditorPage() {
             setDocs(stored);
             setActiveId(stored[0].id);
         } else {
-            const d = defaultDoc();
+            const d = defaultDoc(initialTranslate.current("Untitled Document"));
             setDocs([d]);
             setActiveId(d.id);
             saveDocs([d]);
@@ -217,12 +225,13 @@ export default function RichTextEditorPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeId, sourceView]);
 
-    const wordCount = (activeDoc?.content ?? "")
-        .replace(/<[^>]*>/g, " ")
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean).length;
-    const charCount = (activeDoc?.content ?? "").replace(/<[^>]*>/g, "").length;
+    const { wordCount, charCount } = useMemo(() => {
+        const content = activeDoc?.content ?? "";
+        return {
+            wordCount: content.replace(/<[^>]*>/g, " ").trim().split(/\s+/).filter(Boolean).length,
+            charCount: content.replace(/<[^>]*>/g, "").length,
+        };
+    }, [activeDoc?.content]);
 
     const restoreSelection = () => {
         if (!editorRef.current) return;
@@ -254,7 +263,7 @@ export default function RichTextEditorPage() {
     };
 
     const addDoc = () => {
-        const d = defaultDoc();
+        const d = defaultDoc(t("Untitled Document"));
         setDocs(prev => {
             const updated = [...prev, d];
             saveDocs(updated);
@@ -268,7 +277,7 @@ export default function RichTextEditorPage() {
         setDocs(prev => {
             const updated = prev.filter(d => d.id !== id);
             if (!updated.length) {
-                const fresh = defaultDoc();
+                const fresh = defaultDoc(t("Untitled Document"));
                 saveDocs([fresh]);
                 setActiveId(fresh.id);
                 return [fresh];
@@ -283,15 +292,15 @@ export default function RichTextEditorPage() {
         if (!activeDoc) return;
         const content =
             type === "html"
-                ? `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${activeDoc.title}</title></head><body>${sanitizeRichTextHtml(activeDoc.content)}</body></html>`
+                ? `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtmlText(activeDoc.title)}</title></head><body>${sanitizeRichTextHtml(activeDoc.content)}</body></html>`
                 : activeDoc.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
         downloadText(content, `${activeDoc.title}.${type === "html" ? "html" : "txt"}`, type === "html" ? "text/html" : "text/plain");
     };
 
     const exportMenu: MenuProps = {
         items: [
-            { key: "html", label: "Export as HTML", icon: <CodeOutlined /> },
-            { key: "txt", label: "Export as Plain Text", icon: <FileTextOutlined /> },
+            { key: "html", label: t("Export as HTML"), icon: <CodeOutlined /> },
+            { key: "txt", label: t("Export as Plain Text"), icon: <FileTextOutlined /> },
         ],
         onClick: ({ key }) => exportDoc(key as "html" | "txt"),
     };
@@ -313,14 +322,15 @@ export default function RichTextEditorPage() {
             key: doc.id,
             closable: docs.length > 1,
             label: isRenaming ? (
-                <Input
+                <Input dir="ltr" styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                     size="small"
+                    aria-label={t("Document name")}
                     value={renameVal}
                     onChange={e => setRenameVal(e.target.value)}
                     onBlur={confirmRename}
                     onPressEnter={confirmRename}
                     onKeyDown={e => { if (e.key === "Escape") setRenaming(null); }}
-                    style={{ width: 160, fontSize: 12 }}
+                    style={{ width: 160, fontSize: 16 }}
                     autoFocus
                     onClick={e => e.stopPropagation()}
                 />
@@ -337,7 +347,7 @@ export default function RichTextEditorPage() {
                         e.stopPropagation();
                         startRename(doc.id, doc.title);
                     }}
-                    title={isActive ? "Click to rename" : doc.title}
+                    title={isActive ? t("Click to rename") : doc.title}
                     style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
                 >
                     <FileTextOutlined style={{ fontSize: 11, opacity: 0.65 }} />
@@ -354,25 +364,18 @@ export default function RichTextEditorPage() {
 
     return (
         <ToolPageLayout
-            title="Rich Text Editor"
-            description="WYSIWYG document editor with full formatting, multiple documents, local save, and HTML export — all in your browser."
+            title={t("Rich Text Editor")}
+            description={t("WYSIWYG document editor with full formatting, multiple documents, local save, and HTML export — all in your browser.")}
             icon={<FormOutlined />}
             color="#0891b2"
             learnMore={{
-                whatIs: "A full-featured WYSIWYG (What You See Is What You Get) rich text editor. Multiple documents, full formatting toolbar, raw HTML source view, and export — all stored locally.",
-                whyUse: "Draft API documentation, write formatted notes, or author HTML content without any sign-in or cloud service.",
+                whatIs: "Edit formatted documents locally with headings, lists, links and HTML source.",
+                whyUse: "Draft documentation and notes with automatic local saving.",
                 howToUse: [
-                    "Use the toolbar to format selected text: headings, bold, italic, lists, links, colors, and more.",
-                    "Click the '+' at the end of the tab bar to open a new document.",
-                    "Click the active tab title (or double-click any tab) to rename inline.",
-                    "Toggle 'Source' to inspect or paste raw HTML directly.",
-                    "Click 'Export' to download as an HTML file or plain text.",
+                    "Use the toolbar to format selected text. Add documents with the tab bar and rename a tab inline.",
                 ],
                 tips: [
-                    "Documents auto-save on every keystroke — no save button needed.",
-                    "Ctrl+B / Cmd+B = Bold · Ctrl+I = Italic · Ctrl+Z = Undo.",
-                    "Use Export → HTML to get clean, embeddable HTML markup.",
-                    "Source view lets you clean up or paste HTML from external sources.",
+                    "Source view edits sanitized HTML. Export saves HTML or plain text. Documents stay in the current workspace.",
                 ],
             }}
         >
@@ -417,9 +420,10 @@ export default function RichTextEditorPage() {
                 >
                     <Select
                         size="small"
-                        style={{ width: 132 }}
+                        aria-label={t("Block format")}
+                        style={{ minWidth: 132, maxWidth: "100%" }}
                         defaultValue="p"
-                        options={BLOCK_FORMATS}
+                        options={BLOCK_FORMATS.map(option => ({ ...option, label: t(option.label) }))}
                         disabled={sourceView}
                         onChange={v => exec("formatBlock", v)}
                         popupMatchSelectWidth={false}
@@ -427,6 +431,7 @@ export default function RichTextEditorPage() {
                     <span style={{ width: 6 }} />
                     <Select
                         size="small"
+                        aria-label={t("Font size")}
                         style={{ width: 80 }}
                         defaultValue="4"
                         options={FONT_SIZES}
@@ -437,12 +442,12 @@ export default function RichTextEditorPage() {
 
                     <VerticalDivider />
 
-                    <ToolbarButton tip="Bold (Ctrl+B)" cmd="bold" disabled={sourceView} onExecute={exec}><BoldOutlined /></ToolbarButton>
-                    <ToolbarButton tip="Italic (Ctrl+I)" cmd="italic" disabled={sourceView} onExecute={exec}><ItalicOutlined /></ToolbarButton>
-                    <ToolbarButton tip="Underline (Ctrl+U)" cmd="underline" disabled={sourceView} onExecute={exec}><UnderlineOutlined /></ToolbarButton>
-                    <ToolbarButton tip="Strikethrough" cmd="strikeThrough" disabled={sourceView} onExecute={exec}><StrikethroughOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Bold (Ctrl+B)")} cmd="bold" disabled={sourceView} onExecute={exec}><BoldOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Italic (Ctrl+I)")} cmd="italic" disabled={sourceView} onExecute={exec}><ItalicOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Underline (Ctrl+U)")} cmd="underline" disabled={sourceView} onExecute={exec}><UnderlineOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Strikethrough")} cmd="strikeThrough" disabled={sourceView} onExecute={exec}><StrikethroughOutlined /></ToolbarButton>
 
-                    <Tooltip title="Text Color">
+                    <Tooltip title={t("Text Color")}>
                         <Button
                             size="small"
                             type="text"
@@ -453,8 +458,8 @@ export default function RichTextEditorPage() {
                             <FontColorsOutlined />
                             <input
                                 type="color"
-                                aria-label="Text color"
-                                title="Text color"
+                                aria-label={t("Text color")}
+                                title={t("Text color")}
                                 disabled={sourceView}
                                 style={{
                                     position: "absolute",
@@ -468,7 +473,7 @@ export default function RichTextEditorPage() {
                             />
                         </Button>
                     </Tooltip>
-                    <Tooltip title="Highlight Color">
+                    <Tooltip title={t("Highlight Color")}>
                         <Button
                             size="small"
                             type="text"
@@ -479,8 +484,8 @@ export default function RichTextEditorPage() {
                             <BgColorsOutlined />
                             <input
                                 type="color"
-                                aria-label="Highlight color"
-                                title="Highlight color"
+                                aria-label={t("Highlight color")}
+                                title={t("Highlight color")}
                                 defaultValue="#ffff00"
                                 disabled={sourceView}
                                 style={{
@@ -498,22 +503,22 @@ export default function RichTextEditorPage() {
 
                     <VerticalDivider />
 
-                    <ToolbarButton tip="Align Left" cmd="justifyLeft" disabled={sourceView} onExecute={exec}><AlignLeftOutlined /></ToolbarButton>
-                    <ToolbarButton tip="Align Center" cmd="justifyCenter" disabled={sourceView} onExecute={exec}><AlignCenterOutlined /></ToolbarButton>
-                    <ToolbarButton tip="Align Right" cmd="justifyRight" disabled={sourceView} onExecute={exec}><AlignRightOutlined /></ToolbarButton>
-                    <ToolbarButton tip="Justify" cmd="justifyFull" disabled={sourceView} onExecute={exec}><MenuOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Align Left")} cmd="justifyLeft" disabled={sourceView} onExecute={exec}><AlignLeftOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Align Center")} cmd="justifyCenter" disabled={sourceView} onExecute={exec}><AlignCenterOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Align Right")} cmd="justifyRight" disabled={sourceView} onExecute={exec}><AlignRightOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Justify")} cmd="justifyFull" disabled={sourceView} onExecute={exec}><MenuOutlined /></ToolbarButton>
 
                     <VerticalDivider />
 
-                    <ToolbarButton tip="Ordered List" cmd="insertOrderedList" disabled={sourceView} onExecute={exec}><OrderedListOutlined /></ToolbarButton>
-                    <ToolbarButton tip="Unordered List" cmd="insertUnorderedList" disabled={sourceView} onExecute={exec}><UnorderedListOutlined /></ToolbarButton>
-                    <ToolbarButton tip="Indent" cmd="indent" disabled={sourceView} onExecute={exec}><MenuFoldOutlined /></ToolbarButton>
-                    <ToolbarButton tip="Outdent" cmd="outdent" disabled={sourceView} onExecute={exec}><MenuUnfoldOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Ordered List")} cmd="insertOrderedList" disabled={sourceView} onExecute={exec}><OrderedListOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Unordered List")} cmd="insertUnorderedList" disabled={sourceView} onExecute={exec}><UnorderedListOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Indent")} cmd="indent" disabled={sourceView} onExecute={exec}><MenuFoldOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Outdent")} cmd="outdent" disabled={sourceView} onExecute={exec}><MenuUnfoldOutlined /></ToolbarButton>
 
                     <VerticalDivider />
 
-                    <Tooltip title="Insert Link">
-                        <Button aria-label="Link"
+                    <Tooltip title={t("Insert Link")}>
+                        <Button aria-label={t("Link")}
                             size="small"
                             type="text"
                             icon={<LinkOutlined />}
@@ -523,17 +528,17 @@ export default function RichTextEditorPage() {
                             style={{ width: 32, height: 32, borderRadius: 6 }}
                         />
                     </Tooltip>
-                    <ToolbarButton tip="Remove Link" cmd="unlink" disabled={sourceView} onExecute={exec}><DisconnectOutlined /></ToolbarButton>
-                    <ToolbarButton tip="Horizontal Rule" cmd="insertHorizontalRule" disabled={sourceView} onExecute={exec}><MinusOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Remove Link")} cmd="unlink" disabled={sourceView} onExecute={exec}><DisconnectOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Horizontal Rule")} cmd="insertHorizontalRule" disabled={sourceView} onExecute={exec}><MinusOutlined /></ToolbarButton>
 
                     <VerticalDivider />
 
-                    <ToolbarButton tip="Undo (Ctrl+Z)" cmd="undo" disabled={sourceView} onExecute={exec}><UndoOutlined /></ToolbarButton>
-                    <ToolbarButton tip="Redo (Ctrl+Y)" cmd="redo" disabled={sourceView} onExecute={exec}><RedoOutlined /></ToolbarButton>
-                    <ToolbarButton tip="Clear Formatting" cmd="removeFormat" disabled={sourceView} onExecute={exec}><ClearOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Undo (Ctrl+Z)")} cmd="undo" disabled={sourceView} onExecute={exec}><UndoOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Redo (Ctrl+Y)")} cmd="redo" disabled={sourceView} onExecute={exec}><RedoOutlined /></ToolbarButton>
+                    <ToolbarButton tip={t("Clear Formatting")} cmd="removeFormat" disabled={sourceView} onExecute={exec}><ClearOutlined /></ToolbarButton>
 
-                    <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-                        <Tooltip title={sourceView ? "Back to WYSIWYG" : "View / edit raw HTML"}>
+                    <div style={{ marginInlineStart: "auto", display: "flex", gap: 6 }}>
+                        <Tooltip title={t(sourceView ? "Back to WYSIWYG" : "View / edit raw HTML")}>
                             <Button
                                 size="small"
                                 icon={<CodeOutlined />}
@@ -541,8 +546,7 @@ export default function RichTextEditorPage() {
                                 onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => { if (!sourceView) flush(); setSourceView(v => !v); }}
                             >
-                                Source
-                            </Button>
+                                {t("Source")}</Button>
                         </Tooltip>
                         <Dropdown menu={exportMenu}>
                             <Button
@@ -550,8 +554,7 @@ export default function RichTextEditorPage() {
                                 icon={<DownloadOutlined />}
                                 onMouseDown={(e) => e.preventDefault()}
                             >
-                                Export
-                            </Button>
+                                {t("Export")}</Button>
                         </Dropdown>
                     </div>
                 </div>
@@ -564,12 +567,13 @@ export default function RichTextEditorPage() {
                     }}
                 >
                     {sourceView ? (
-                        <Input.TextArea
+                        <Input.TextArea dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                            aria-label={t("HTML source editor")}
                             value={activeDoc?.content ?? ""}
                             onChange={e => activeDoc && updateDoc(activeDoc.id, { content: e.target.value })}
                             style={{
                                 fontFamily: "var(--font-geist-mono), monospace",
-                                fontSize: 13,
+                                fontSize: 16,
                                 background: "var(--wb-card-solid-bg)",
                                 color: "var(--wb-text-body)",
                                 border: "1px solid var(--wb-card-border)",
@@ -584,8 +588,9 @@ export default function RichTextEditorPage() {
                         <div
                             ref={editorRef}
                             contentEditable
+                            dir="auto"
                             role="textbox"
-                            aria-label="Rich text editor"
+                            aria-label={t("Rich text editor")}
                             aria-multiline="true"
                             suppressContentEditableWarning
                             spellCheck
@@ -599,7 +604,7 @@ export default function RichTextEditorPage() {
                                 background: "var(--wb-card-solid-bg)",
                                 color: "var(--wb-text-body)",
                                 fontFamily: "var(--font-geist-sans), system-ui, -apple-system, sans-serif",
-                                fontSize: 15,
+                                fontSize: 16,
                                 lineHeight: 1.75,
                                 maxWidth: 920,
                                 margin: "0 auto",
@@ -619,22 +624,22 @@ export default function RichTextEditorPage() {
                         padding: "8px 18px",
                         background: "var(--wb-card-solid-bg)",
                         borderTop: "1px solid var(--wb-card-border)",
-                        fontSize: 12,
+                        fontSize: 16,
                         color: "var(--wb-text-muted)",
                         userSelect: "none",
                         alignItems: "center",
                     }}
                 >
-                    <Text style={{ fontSize: 12, color: "var(--wb-text-muted)" }}>
-                        Words <span style={{ color: "var(--wb-text-body)", fontWeight: 600 }}>{wordCount}</span>
+                    <Text style={{ fontSize: 16, color: "var(--wb-text-muted)" }}>
+                        {t("Words")} {" "}<span style={{ color: "var(--wb-text-body)", fontWeight: 600 }}>{wordCount}</span>
                     </Text>
-                    <Text style={{ fontSize: 12, color: "var(--wb-text-muted)" }}>
-                        Characters <span style={{ color: "var(--wb-text-body)", fontWeight: 600 }}>{charCount}</span>
+                    <Text style={{ fontSize: 16, color: "var(--wb-text-muted)" }}>
+                        {t("Characters")} {" "}<span style={{ color: "var(--wb-text-body)", fontWeight: 600 }}>{charCount}</span>
                     </Text>
                     {activeDoc && (
                         <Text
                             style={{
-                                fontSize: 12,
+                                fontSize: 16,
                                 marginLeft: "auto",
                                 color: "var(--wb-text-muted)",
                                 display: "inline-flex",
@@ -651,7 +656,7 @@ export default function RichTextEditorPage() {
                                     display: "inline-block",
                                 }}
                             />
-                            Auto-saved · {new Date(activeDoc.updatedAt).toLocaleTimeString()}
+                            {t("Auto-saved")} ·{new Date(activeDoc.updatedAt).toLocaleTimeString(language)}
                         </Text>
                     )}
                 </div>
@@ -680,7 +685,7 @@ export default function RichTextEditorPage() {
                     overflow-x: auto;
                 }
                 .rte-canvas a { color: var(--wb-accent); text-decoration: underline; }
-                .rte-canvas ul, .rte-canvas ol { margin: 0.6em 0 0.8em; padding-left: 1.6em; }
+                .rte-canvas ul, .rte-canvas ol { margin: 0.6em 0 0.8em; padding-inline-start: 1.6em; }
                 .rte-canvas li { margin: 0.25em 0; }
                 .rte-canvas hr { border: none; border-top: 1px solid var(--wb-card-border); margin: 1.5em 0; }
                 .rte-canvas:focus { outline: none; }
@@ -688,14 +693,16 @@ export default function RichTextEditorPage() {
 
             {/* Insert link modal */}
             <Modal
-                title="Insert Link"
+                title={t("Insert Link")}
                 open={linkOpen}
                 onOk={insertLink}
                 onCancel={() => { setLinkOpen(false); setLinkUrl(""); }}
-                okText="Insert"
+                okText={t("Insert")}
+                cancelText={t("Cancel")}
                 destroyOnHidden
             >
-                <Input
+                <Input dir="ltr" styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                    aria-label={t("Link URL")}
                     placeholder="https://example.com"
                     value={linkUrl}
                     onChange={e => setLinkUrl(e.target.value)}

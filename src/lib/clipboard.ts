@@ -1,4 +1,6 @@
 import { messageService } from "@/lib/messageService";
+import { translate } from "@/lib/i18n/catalog";
+import { readLanguage } from "@/lib/i18n/preference";
 
 function fallbackCopy(text: string) {
     const textarea = document.createElement("textarea");
@@ -7,8 +9,9 @@ function fallbackCopy(text: string) {
     textarea.style.left = "-9999px";
     document.body.appendChild(textarea);
     textarea.select();
-    document.execCommand("copy");
-    textarea.remove();
+    try {
+        if (!document.execCommand("copy")) throw new Error("Copy was rejected.");
+    } finally { textarea.remove(); }
 }
 
 export async function copyToClipboard(text: string, label?: string) {
@@ -18,13 +21,16 @@ export async function copyToClipboard(text: string, label?: string) {
         } else {
             fallbackCopy(text);
         }
-        messageService.success(label ?? "Copied!");
+        messageService.success(label ?? translate(readLanguage(), "Copied!"));
+        return true;
     } catch {
         try {
             fallbackCopy(text);
-            messageService.success(label ?? "Copied!");
+            messageService.success(label ?? translate(readLanguage(), "Copied!"));
+            return true;
         } catch {
-            messageService.error("Copy failed — please copy manually");
+            messageService.error(translate(readLanguage(), "Copy failed — please copy manually"));
+            return false;
         }
     }
 }

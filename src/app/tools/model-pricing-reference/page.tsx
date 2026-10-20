@@ -3,18 +3,21 @@
 import { useState, useMemo } from "react";
 import { Input, Typography, Table, Tag, Card, Space, Select } from "antd";
 import { SearchOutlined, DollarOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { LLM_MODELS, LLM_PROVIDERS, PRICES_LAST_VERIFIED, type LlmModel } from "@/lib/llm-models";
 
 const { Text } = Typography;
 
 function formatTokens(n: number): string {
-    if (n >= 1_000_000) return `${n / 1_000_000}M`;
-    if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
-    return String(n);
+    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
+}
+function formatUsd(value: number): string {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 20 }).format(value);
 }
 
 export default function ModelPricingReferencePage() {
+    const { t } = useLanguage();
     const [search, setSearch] = useState("");
     const [provider, setProvider] = useState<string>("all");
 
@@ -32,14 +35,14 @@ export default function ModelPricingReferencePage() {
 
     const columns = [
         {
-            title: "Provider",
+            title: t("Provider"),
             dataIndex: "provider",
             key: "provider",
             width: 100,
             render: (p: string) => <Tag>{p}</Tag>,
         },
         {
-            title: "Model",
+            title: t("Model"),
             dataIndex: "model",
             key: "model",
             render: (_: unknown, record: LlmModel) => (
@@ -49,7 +52,7 @@ export default function ModelPricingReferencePage() {
             ),
         },
         {
-            title: "Context",
+            title: t("Context"),
             dataIndex: "contextWindow",
             key: "contextWindow",
             width: 130,
@@ -57,89 +60,90 @@ export default function ModelPricingReferencePage() {
             render: (v: number) => formatTokens(v),
         },
         {
-            title: "Max Output",
+            title: t("Max Output"),
             dataIndex: "maxOutput",
             key: "maxOutput",
             width: 100,
             render: (v: number) => formatTokens(v),
         },
         {
-            title: "Input / 1M",
+            title: t("Input / 1M"),
             dataIndex: "inputPrice",
             key: "inputPrice",
             width: 100,
             sorter: (a: LlmModel, b: LlmModel) => a.inputPrice - b.inputPrice,
-            render: (v: number) => `$${v.toFixed(2)}`,
+            render: (v: number) => formatUsd(v),
         },
         {
-            title: "Output / 1M",
+            title: t("Output / 1M"),
             dataIndex: "outputPrice",
             key: "outputPrice",
             width: 100,
             sorter: (a: LlmModel, b: LlmModel) => a.outputPrice - b.outputPrice,
-            render: (v: number) => `$${v.toFixed(2)}`,
+            render: (v: number) => formatUsd(v),
         },
         {
-            title: "Cached Input",
+            title: t("Cached Input"),
             dataIndex: "cachedInputPrice",
             key: "cachedInputPrice",
             width: 100,
-            render: (v?: number) => (v === undefined ? <Text type="secondary">—</Text> : `$${v.toFixed(2)}`),
+            render: (v?: number) => (v === undefined ? <Text type="secondary">—</Text> : formatUsd(v)),
         },
         {
-            title: "Vision",
+            title: t("Vision"),
             dataIndex: "vision",
             key: "vision",
             width: 70,
-            render: (v: boolean) => (v ? <Tag color="green">Yes</Tag> : <Tag>No</Tag>),
+            render: (v: boolean) => (v ? <Tag color="green">{t("Yes")}</Tag> : <Tag>{t("No")}</Tag>),
         },
         {
-            title: "Tools",
+            title: t("Tools"),
             dataIndex: "tools",
             key: "tools",
             width: 70,
-            render: (v: boolean) => (v ? <Tag color="green">Yes</Tag> : <Tag>No</Tag>),
+            render: (v: boolean) => (v ? <Tag color="green">{t("Yes")}</Tag> : <Tag>{t("No")}</Tag>),
         },
-        { title: "Cutoff", dataIndex: "knowledgeCutoff", key: "knowledgeCutoff", width: 90 },
+        { title: t("Review / pricing scope"), key: "review", width: 280, render: (_: unknown, model: LlmModel) => <span>{model.verifiedAt ? t("Reviewed {at}", { at: model.verifiedAt }) : t("Historical · verify before use")}<br />{model.pricingNote && t(model.pricingNote)}<br />{model.metadataUrl && <a href={model.metadataUrl} target="_blank" rel="noopener noreferrer">{t("Model specification")}</a>}</span> },
+        { title: t("Cutoff"), dataIndex: "knowledgeCutoff", key: "knowledgeCutoff", width: 90, render: (value: string) => value === "Not listed" ? t(value) : value },
     ];
 
     return (
         <ToolPageLayout
-            title="Model & Pricing Comparison"
-            description="Compare context windows, output limits and per-token pricing across major LLM providers"
+            title={t("Model & Pricing Comparison")}
+            description={t("Compare context windows, output limits and per-token pricing across major LLM providers")}
             icon={<DollarOutlined style={{ fontSize: 24 }} />}
             color="#fa8c16"
             learnMore={{
-                whatIs: "A comparison table of publicly listed API pricing and capabilities for current LLM models from Anthropic, OpenAI, Google, Meta, and Mistral — context window size, max output tokens, per-million-token input/output cost, cached-input discounts, and modality support.",
-                whyUse: "Model pricing changes frequently and differs meaningfully across providers and tiers (e.g. long-context surcharges, cached-input discounts). This gives a single place to compare the numbers that actually drive cost when choosing a model for a project.",
+                whatIs: t("Compare a dated snapshot of selected LLM model prices, context windows and listed capabilities. Historical rows are not reverified."),
+                whyUse: t("Compare the listed values in one place, then check the provider's current pricing and model documentation for your workload."),
                 howToUse: [
-                    "Search by model or provider name",
-                    "Filter by provider using the dropdown",
-                    "Sort by input or output price to find the cheapest option for your workload",
-                    "Click a model name to open the provider's own pricing page for the current, authoritative number",
+                    t("Search by model or provider name"),
+                    t("Filter by provider using the dropdown"),
+                    t("Sort the listed input and output prices, and review each row's pricing scope"),
+                    t("Open the provider's pricing and specification links before relying on a row"),
                 ],
                 tips: [
-                    "Cached input pricing (prompt caching) can cut input costs by up to 90% for repeated context — check if your workload benefits",
-                    "Some providers charge more once a request crosses a context-length threshold (e.g. Gemini Pro above 200K tokens) — this table shows the standard tier",
-                    "Batch APIs (where offered) typically halve both input and output pricing in exchange for asynchronous processing",
+                    t("Amounts are USD per million tokens. Different token classes, context thresholds, regions and service tiers can change the effective price."),
+                    t("Cached-input prices apply only under the provider's eligibility and retention rules."),
+                    t("Storage, request fees and other modality charges may be outside the listed text-token rates."),
                 ],
                 useCases: [
-                    "Estimating monthly cost for a planned LLM feature before committing to a provider",
-                    "Comparing context window size across providers for a RAG or long-document use case",
-                    "Checking whether a model supports vision or tool-calling before building against it",
+                    t("Comparing dated pricing snapshots"),
+                    t("Finding provider documentation for a model"),
+                    t("Reviewing context and output limits before integration"),
                 ],
             }}
         >
             <Card>
                 <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                        Prices last verified {PRICES_LAST_VERIFIED}. LLM pricing changes often — click a model name to confirm the current rate on the provider&rsquo;s own page before relying on it for budgeting.
+                        {t("Selected models reviewed {at}. Historical rows are unverified. Open the provider's page to confirm current prices and terms before budgeting.", { at: PRICES_LAST_VERIFIED })}
                     </Text>
 
                     <Space wrap style={{ width: "100%" }}>
                         <Input
-                            style={{ width: 280 }}
-                            placeholder="Search by model or provider..."
+                            style={{ width: 280, maxWidth: "100%", fontSize: 16 }}
+                            placeholder={t("Search by model or provider...")}
                             prefix={<SearchOutlined />}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -148,8 +152,8 @@ export default function ModelPricingReferencePage() {
                         <Select
                             value={provider}
                             onChange={setProvider}
-                            style={{ width: 160 }}
-                            options={providers.map((p) => ({ value: p, label: p === "all" ? "All providers" : p }))}
+                            style={{ width: 160, maxWidth: "100%" }}
+                            options={providers.map((p) => ({ value: p, label: p === "all" ? t("All providers") : p }))}
                         />
                     </Space>
 

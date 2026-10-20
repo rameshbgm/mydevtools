@@ -1,4 +1,5 @@
 "use client";
+import { projectStorage } from "@/lib/project-storage";
 
 import React, { useState, useEffect } from "react";
 import { Button, Input, Tooltip, Popconfirm, Empty, Typography } from "antd";
@@ -11,6 +12,7 @@ import {
     SearchOutlined,
 } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
 const { Text } = Typography;
@@ -46,17 +48,18 @@ function uid() {
 function loadNotes(): StickyNote[] {
     if (typeof window === "undefined") return [];
     try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+        return JSON.parse(projectStorage.getItem(STORAGE_KEY) ?? "[]");
     } catch {
         return [];
     }
 }
 
 function persist(notes: StickyNote[]) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    projectStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
 }
 
 export default function StickyNotesPage() {
+    const { t, language } = useLanguage();
     const [notes, setNotes] = useState<StickyNote[]>([]);
     const [search, setSearch] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -64,11 +67,6 @@ export default function StickyNotesPage() {
     useEffect(() => {
         setNotes(loadNotes());
     }, []);
-
-    const save = (updated: StickyNote[]) => {
-        setNotes(updated);
-        persist(updated);
-    };
 
     const patch = (id: string, changes: Partial<StickyNote>) => {
         setNotes(prev => {
@@ -83,7 +81,7 @@ export default function StickyNotesPage() {
     const addNote = () => {
         const note: StickyNote = {
             id: uid(),
-            title: "New Note",
+            title: t("New Note"),
             content: "",
             color: NOTE_COLORS[0].bg,
             createdAt: Date.now(),
@@ -120,43 +118,42 @@ export default function StickyNotesPage() {
 
     return (
         <ToolPageLayout
-            title="Sticky Notes"
-            description="Create, organize, and persist colorful sticky notes. Notes auto-save to your browser's localStorage — no account needed."
+            title={t("Sticky Notes")}
+            description={t("Create, organize, and persist colorful sticky notes. Notes auto-save to your browser's localStorage — no account needed.")}
             icon={<PushpinOutlined />}
             color="#f59e0b"
             learnMore={{
-                whatIs: "A digital sticky notes board that lives entirely in your browser. All notes are stored in localStorage — no server, no account, no sync required.",
-                whyUse: "Keep quick reminders, API keys, command snippets, or anything useful close at hand while working with other developer tools.",
+                whatIs: t("A digital sticky notes board that lives entirely in your browser. All notes are stored in localStorage — no server, no account, no sync required."),
+                whyUse: t("Keep reminders and non-sensitive snippets near your tools. Notes are not encrypted; do not store API keys, passwords or other secrets here."),
                 howToUse: [
-                    "Click 'New Note' to create a note.",
-                    "Click any note to start editing its title and content.",
-                    "Pick a color from the swatches at the bottom of each note.",
-                    "Pin important notes to keep them at the top of the board.",
-                    "Use the search bar to filter notes by title or content.",
+                    t("Click 'New Note' to create a note."),
+                    t("Click any note to start editing its title and content."),
+                    t("Pick a color from the swatches at the bottom of each note."),
+                    t("Pin important notes to keep them at the top of the board."),
+                    t("Use the search bar to filter notes by title or content."),
                 ],
                 tips: [
-                    "Notes auto-save on every keystroke — no save button needed.",
-                    "Pinned notes always stay at the top of the board.",
-                    "Clearing browser localStorage will erase notes — copy important content elsewhere if needed.",
+                    t("Notes auto-save on every keystroke — no save button needed."),
+                    t("Pinned notes always stay at the top of the board."),
+                    t("Clearing browser localStorage will erase notes — copy important content elsewhere if needed."),
                 ],
             }}
         >
             {/* Toolbar */}
             <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center", flexWrap: "wrap" }}>
                 <Button type="primary" icon={<PlusOutlined />} onClick={addNote}>
-                    New Note
-                </Button>
-                <Input
+                    {t("New Note")}</Button>
+                <Input dir="auto" styles={{ input: { fontSize: 16 } }}
                     prefix={<SearchOutlined />}
-                    placeholder="Search notes…"
+                    placeholder={t("Search notes…")}
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     allowClear
                     style={{ maxWidth: 260 }}
                 />
                 {notes.length > 0 && (
-                    <Text type="secondary" style={{ marginLeft: "auto", fontSize: 13 }}>
-                        {sorted.length} of {notes.length} note{notes.length !== 1 ? "s" : ""}
+                    <Text type="secondary" style={{ marginInlineStart: "auto", fontSize: 13 }}>
+                        {t("Notes shown: {visible} / {total}", { visible: sorted.length, total: notes.length })}
                     </Text>
                 )}
             </div>
@@ -166,8 +163,8 @@ export default function StickyNotesPage() {
                 <Empty
                     description={
                         search
-                            ? "No notes match your search"
-                            : "No notes yet — click 'New Note' to get started"
+                            ? t("No notes match your search")
+                            : t("No notes yet — click 'New Note' to get started")
                     }
                     style={{ padding: "60px 0" }}
                 />
@@ -175,7 +172,7 @@ export default function StickyNotesPage() {
                 <div
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(min(230px, 100%), 1fr))",
                         gap: 16,
                         alignItems: "start",
                     }}
@@ -217,7 +214,7 @@ export default function StickyNotesPage() {
                                             style={{
                                                 position: "absolute",
                                                 top: -8,
-                                                right: 12,
+                                                insetInlineEnd: 12,
                                                 color: "#dc2626",
                                                 fontSize: 16,
                                                 filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))",
@@ -227,15 +224,15 @@ export default function StickyNotesPage() {
 
                                     {/* Title */}
                                     {isEditing ? (
-                                        <Input
-                                            value={note.title}
+                                        <Input dir="auto" styles={{ input: { fontSize: 16 } }}
+                                            aria-label={t("Note title")} value={note.title}
                                             onChange={e => patch(note.id, { title: e.target.value })}
                                             variant="borderless"
                                             autoFocus
                                             style={{
                                                 padding: "0 0 4px",
                                                 fontWeight: 700,
-                                                fontSize: 14,
+                                                fontSize: 16,
                                                 color: "#111827",
                                                 borderBottom: "1px dashed rgba(0,0,0,0.25)",
                                                 borderRadius: 0,
@@ -249,7 +246,7 @@ export default function StickyNotesPage() {
                                             strong
                                             style={{
                                                 display: "block",
-                                                fontSize: 14,
+                                                fontSize: 16,
                                                 color: "#111827",
                                                 marginBottom: 6,
                                                 overflow: "hidden",
@@ -257,22 +254,22 @@ export default function StickyNotesPage() {
                                                 whiteSpace: "nowrap",
                                             }}
                                         >
-                                            {note.title || "Untitled"}
+                                            {note.title || t("Untitled")}
                                         </Text>
                                     )}
 
                                     {/* Content */}
                                     {isEditing ? (
-                                        <TextArea
-                                            value={note.content}
+                                        <TextArea dir="auto"
+                                            aria-label={t("Note content")} value={note.content}
                                             onChange={e => patch(note.id, { content: e.target.value })}
                                             autoSize={{ minRows: 3, maxRows: 14 }}
                                             variant="borderless"
-                                            placeholder="Write your note…"
+                                            placeholder={t("Write your note…")}
                                             style={{
                                                 padding: 0,
                                                 flex: 1,
-                                                fontSize: 13,
+                                                fontSize: 16,
                                                 color: "#1f2937",
                                                 background: "transparent",
                                                 resize: "none",
@@ -283,7 +280,7 @@ export default function StickyNotesPage() {
                                         <div
                                             style={{
                                                 flex: 1,
-                                                fontSize: 13,
+                                                fontSize: 16,
                                                 color: "#374151",
                                                 whiteSpace: "pre-wrap",
                                                 wordBreak: "break-word",
@@ -294,9 +291,8 @@ export default function StickyNotesPage() {
                                             } as React.CSSProperties}
                                         >
                                             {note.content || (
-                                                <span style={{ opacity: 0.45, fontStyle: "italic" }}>
-                                                    Empty note…
-                                                </span>
+                                                <span style={{ opacity: 0.8, fontStyle: "italic" }}>
+                                                    {t("Empty note…")}</span>
                                             )}
                                         </div>
                                     )}
@@ -305,12 +301,12 @@ export default function StickyNotesPage() {
                                     <div
                                         style={{
                                             fontSize: 11,
-                                            color: "rgba(0,0,0,0.38)",
+                                            color: "#374151",
                                             marginTop: 8,
-                                            textAlign: "right",
+                                            textAlign: "end",
                                         }}
                                     >
-                                        {new Date(note.updatedAt).toLocaleDateString(undefined, {
+                                        {new Date(note.updatedAt).toLocaleDateString(language, {
                                             month: "short",
                                             day: "numeric",
                                             hour: "2-digit",
@@ -332,15 +328,15 @@ export default function StickyNotesPage() {
                                         {/* Color swatches */}
                                         <div style={{ display: "flex", gap: 4, flex: 1, flexWrap: "wrap" }}>
                                             {NOTE_COLORS.map(c => (
-                                                <Tooltip key={c.name} title={c.name} mouseEnterDelay={0.6}>
-                                                    <div
+                                                <Tooltip key={c.name} title={t(c.name)} mouseEnterDelay={0.6}>
+                                                    <button type="button" aria-label={t("Set note color: {color}", { color: t(c.name) })} aria-pressed={note.color === c.bg}
                                                         onClick={e => {
                                                             e.stopPropagation();
                                                             patch(note.id, { color: c.bg });
                                                         }}
                                                         style={{
-                                                            width: 13,
-                                                            height: 13,
+                                                            width: 24,
+                                                            height: 24,
                                                             borderRadius: "50%",
                                                             background: c.bg,
                                                             border: note.color === c.bg
@@ -348,15 +344,16 @@ export default function StickyNotesPage() {
                                                                 : `1px solid ${c.border}`,
                                                             cursor: "pointer",
                                                             flexShrink: 0,
+                                                            padding: 0,
                                                         }}
                                                     />
                                                 </Tooltip>
                                             ))}
                                         </div>
 
-                                        <Tooltip title={note.pinned ? "Unpin" : "Pin to top"}>
+                                        <Tooltip title={note.pinned ? t("Unpin") : t("Pin to top")}>
                                             <Button
-                                                type="text"
+                                                aria-label={note.pinned ? t("Unpin") : t("Pin to top")} type="text"
                                                 size="small"
                                                 icon={note.pinned ? <PushpinFilled /> : <PushpinOutlined />}
                                                 onClick={e => {
@@ -368,8 +365,8 @@ export default function StickyNotesPage() {
                                         </Tooltip>
 
                                         {isEditing && (
-                                            <Tooltip title="Done editing">
-                                                <Button aria-label="Confirm"
+                                            <Tooltip title={t("Done editing")}>
+                                                <Button aria-label={t("Done editing")}
                                                     type="text"
                                                     size="small"
                                                     icon={<CheckOutlined />}
@@ -380,15 +377,16 @@ export default function StickyNotesPage() {
                                         )}
 
                                         <Popconfirm
-                                            title="Delete this note?"
-                                            description="This cannot be undone."
+                                            title={t("Delete this note?")}
+                                            description={t("This cannot be undone.")}
                                             onConfirm={() => deleteNote(note.id)}
-                                            okText="Delete"
+                                            okText={t("Delete")}
+                                            cancelText={t("Cancel")}
                                             okType="danger"
                                             onPopupClick={e => e.stopPropagation()}
                                         >
-                                            <Tooltip title="Delete">
-                                                <Button aria-label="Delete"
+                                            <Tooltip title={t("Delete")}>
+                                                <Button aria-label={t("Delete")}
                                                     type="text"
                                                     size="small"
                                                     danger

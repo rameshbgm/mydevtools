@@ -1,5 +1,6 @@
 "use client";
 
+import { formatJsonText } from "@/lib/json-formatting";
 import React, { useState, useEffect } from "react";
 import { Button, Space, Card, Segmented, App, Tag, Typography } from "antd";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -10,6 +11,7 @@ import {
     CheckCircleOutlined,
     CloseCircleOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SendToButton from "@/components/SendToButton";
@@ -27,6 +29,7 @@ interface ShareState { input: string; mode: Mode; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "json-formatter", version: 1 };
 
 export default function JsonFormatterPage() {
+    const { t } = useLanguage();
     const { message } = App.useApp();
     const [input, setInput] = useState(SAMPLE);
     const [output, setOutput] = useState("");
@@ -37,26 +40,26 @@ export default function JsonFormatterPage() {
         setValidState(null);
         if (m === "Prettify") {
             try {
-                setOutput(JSON.stringify(JSON.parse(src), null, 2));
+                setOutput(formatJsonText(src));
             } catch (e: unknown) {
-                message.error("Invalid JSON: " + (e instanceof Error ? e.message : "Parse error"));
+                message.error(<div>{t("Invalid JSON. Check the syntax and try again.")}<pre dir="ltr" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{e instanceof Error ? e.message : t("Parse error")}</pre></div>);
                 setOutput("");
             }
         } else if (m === "Minify") {
             try {
-                setOutput(JSON.stringify(JSON.parse(src)));
+                setOutput(formatJsonText(src, true));
             } catch (e: unknown) {
-                message.error("Invalid JSON: " + (e instanceof Error ? e.message : "Parse error"));
+                message.error(<div>{t("Invalid JSON. Check the syntax and try again.")}<pre dir="ltr" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{e instanceof Error ? e.message : t("Parse error")}</pre></div>);
                 setOutput("");
             }
         } else {
             try {
                 JSON.parse(src);
                 setValidState("valid");
-                message.success("✅ Valid JSON!");
+                message.success(t("Valid JSON"));
             } catch (e: unknown) {
                 setValidState("invalid");
-                message.error("❌ Invalid JSON: " + (e instanceof Error ? e.message : "Parse error"));
+                message.error(<div>{t("Invalid JSON. Check the syntax and try again.")}<pre dir="ltr" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{e instanceof Error ? e.message : t("Parse error")}</pre></div>);
             }
             setOutput("");
         }
@@ -75,8 +78,8 @@ export default function JsonFormatterPage() {
 
     return (
         <ToolPageLayout
-            title="JSON Formatter"
-            description="Prettify, minify and validate JSON"
+            title={t("JSON Formatter")}
+            description={t("Prettify, minify and validate JSON")}
             icon={<CodeOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
             color="#1677ff"
             learnMore={{
@@ -109,26 +112,27 @@ export default function JsonFormatterPage() {
 
             <Space style={{ marginBottom: 16 }} wrap>
                 <Segmented<Mode>
-                    options={["Prettify", "Minify", "Validate"]}
+                    options={[{ value: "Prettify", label: t("Prettify") }, { value: "Minify", label: t("Minify") }, { value: "Validate", label: t("Validate") }]}
                     value={mode}
                     onChange={(v) => setMode(v)}
                     size="large"
                 />
                 {validState === "valid" && (
-                    <Tag icon={<CheckCircleOutlined />} color="success">Valid JSON</Tag>
+                    <Tag icon={<CheckCircleOutlined />} color="success">{t("Valid JSON")}</Tag>
                 )}
                 {validState === "invalid" && (
-                    <Tag icon={<CloseCircleOutlined />} color="error">Invalid JSON</Tag>
+                    <Tag icon={<CloseCircleOutlined />} color="error">{t("Invalid JSON")}</Tag>
                 )}
-                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output || input)}>Copy</Button>
-                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setValidState(null); }}>Clear</Button>
+                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output || input, t("Copied!"))}>{t("Copy")}</Button>
+                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setValidState(null); }}>{t("Clear")}</Button>
                 <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, mode })} size="middle" />
                 <SendToButton data={output || input} kind="json" sourceToolId="json-formatter" size="middle" />
             </Space>
 
             <div className="tool-split-pane" style={{ gap: 16 }}>
-                <Card size="small" title="Input" styles={{ body: { padding: 0 } }}>
+                <Card size="small" title={t("Input")} styles={{ body: { padding: 0 } }}>
                     <CodeEditor
+                        ariaLabel={t("JSON input editor")}
                         value={input}
                         onChange={(v) => { setInput(v); run(mode, v); }}
                         language="json"
@@ -137,13 +141,13 @@ export default function JsonFormatterPage() {
                 </Card>
                 <Card
                     size="small"
-                    title={mode === "Validate" ? "Validation" : "Output"}
+                    title={t(mode === "Validate" ? "Validation" : "Output")}
                     styles={{ body: mode === "Validate" ? { padding: 24 } : { padding: 0 } }}
                 >
                     {mode === "Validate" ? (
-                        <ValidationResult state={validState} type="JSON" />
+                        <ValidationResult state={validState} />
                     ) : (
-                        <CodeEditor value={output} language="json" height="500px" readOnly />
+                        <CodeEditor ariaLabel={t("JSON result editor")} value={output} language="json" height="500px" readOnly />
                     )}
                 </Card>
             </div>
@@ -151,11 +155,12 @@ export default function JsonFormatterPage() {
     );
 }
 
-function ValidationResult({ state, type }: { state: "valid" | "invalid" | null; type: string }) {
+function ValidationResult({ state }: { state: "valid" | "invalid" | null }) {
+    const { t } = useLanguage();
     if (!state) {
         return (
             <Text type="secondary" style={{ display: "block", padding: "80px 0", textAlign: "center" }}>
-                Paste {type} and it will be validated automatically
+                {t("Paste JSON and it will be validated automatically")}
             </Text>
         );
     }
@@ -167,7 +172,7 @@ function ValidationResult({ state, type }: { state: "valid" | "invalid" | null; 
             }
             <div style={{ marginTop: 16, fontSize: 18 }}>
                 <Text type={state === "valid" ? "success" : "danger"}>
-                    {state === "valid" ? `${type} is valid!` : `${type} is invalid`}
+                    {t(state === "valid" ? "JSON is valid!" : "JSON is invalid")}
                 </Text>
             </div>
         </div>

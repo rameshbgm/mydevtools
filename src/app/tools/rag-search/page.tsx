@@ -12,7 +12,6 @@ import {
     Progress,
     Upload,
     Slider,
-    Select,
     Switch,
     Table,
     Tooltip,
@@ -31,6 +30,8 @@ import {
     ClockCircleOutlined,
 } from "@ant-design/icons";
 import type { UploadProps } from "antd";
+import { formatAiDiagnostic } from "@/lib/i18n/remaining-ai";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
 const { TextArea } = Input;
@@ -152,6 +153,7 @@ const EXAMPLE_QUERIES = [
 ];
 
 export default function RagSearchPage() {
+    const { t } = useLanguage();
     const [documents, setDocuments] = useState<string>(SAMPLE_DOC);
     const [chunks, setChunks] = useState<Chunk[]>([]);
     const [query, setQuery] = useState("");
@@ -179,9 +181,11 @@ export default function RagSearchPage() {
     const [queryVector, setQueryVector] = useState<number[] | null>(null);
 
     const extractorRef = useRef<Extractor | null>(null);
+    const modelLoadRef = useRef<Promise<void> | null>(null);
+    const extractorDeviceRef = useRef<"webgpu" | "wasm" | null>(null);
     // Chunk settings that produced the current index, so we can tell the user
     // when the sliders have drifted from what's actually indexed.
-    const indexedWithRef = useRef<{ chunkSize: number; overlap: number } | null>(null);
+    const indexedWithRef = useRef<{ documents: string; chunkSize: number; overlap: number } | null>(null);
     const [indexStale, setIndexStale] = useState(false);
 
     const hasWebGpu = useCallback(
@@ -199,13 +203,28 @@ export default function RagSearchPage() {
         );
     };
 
-    const loadModel = async () => {
-        if (extractorRef.current) return;
+    const loadModel = (): Promise<void> => {
+        if (extractorRef.current) return Promise.resolve();
+        if (modelLoadRef.current) return modelLoadRef.current;
+        const pending = (async () => {
         setLoadState("loading");
         setLoadError("");
         setProgress(0);
         try {
-            const { pipeline } = await import("@huggingface/transformers");
+            const { pipeline, env } = await import("@huggingface/transformers");
+            const wasm = env.backends.onnx.wasm;
+            if (!wasm) throw new Error("The local inference runtime is unavailable.");
+            // Keep Transformers' older-Safari fallback while self-hosting both
+            // matching factories. Avoid its CDN-to-blob factory cache so the
+            // desktop renderer can retain a same-origin script policy.
+            const plainWasm = typeof wasm.wasmPaths === "object" &&
+                String(wasm.wasmPaths.mjs).endsWith("/ort-wasm-simd-threaded.mjs");
+            const factory = plainWasm ? "ort-wasm-simd-threaded" : "ort-wasm-simd-threaded.asyncify";
+            wasm.wasmPaths = {
+                mjs: new URL(`/onnx/${factory}.mjs`, window.location.href).href,
+                wasm: new URL(`/onnx/${factory}.wasm`, window.location.href).href,
+            };
+            env.useWasmCache = false;
             const onProgress = (p: { status: string; progress?: number }) => {
                 if (p.status === "progress" && typeof p.progress === "number") {
                     setProgress(Math.round(p.progress));
@@ -217,6 +236,7 @@ export default function RagSearchPage() {
             try {
                 extractor = await pipeline("feature-extraction", MODEL_ID, {
                     device: useWebGpu ? "webgpu" : "wasm",
+                    dtype: "fp32",
                     progress_callback: onProgress,
                 });
                 resolvedDevice = useWebGpu ? "webgpu" : "wasm";
@@ -225,17 +245,23 @@ export default function RagSearchPage() {
                 // WebGPU init can fail even when navigator.gpu exists (driver/adapter issues) — fall back to WASM.
                 extractor = await pipeline("feature-extraction", MODEL_ID, {
                     device: "wasm",
+                    dtype: "fp32",
                     progress_callback: onProgress,
                 });
                 resolvedDevice = "wasm";
             }
             extractorRef.current = extractor as unknown as Extractor;
+            extractorDeviceRef.current = resolvedDevice;
             setDevice(resolvedDevice);
             setLoadState("ready");
         } catch (err) {
             setLoadState("error");
             setLoadError(err instanceof Error ? err.message : String(err));
         }
+        })();
+        modelLoadRef.current = pending;
+        void pending.finally(() => { if (modelLoadRef.current === pending) modelLoadRef.current = null; });
+        return pending;
     };
 
     const embed = async (texts: string[]): Promise<number[][]> => {
@@ -263,7 +289,7 @@ export default function RagSearchPage() {
                 setStep("load", "pending", "model failed to load");
                 return;
             }
-            setStep("load", "done", `running on ${hasWebGpu() ? "WebGPU" : "WASM"}`);
+            setStep("load", "done", `running on ${extractorDeviceRef.current === "webgpu" ? "WebGPU" : "WASM"}`);
 
             setStep("chunk", "active");
             const tChunk = performance.now();
@@ -298,7 +324,7 @@ export default function RagSearchPage() {
             );
             setResults([]);
             setQueryVector(null);
-            indexedWithRef.current = { chunkSize, overlap };
+            indexedWithRef.current = { documents, chunkSize, overlap };
             setIndexStale(false);
             setStep(
                 "store",
@@ -360,8 +386,8 @@ export default function RagSearchPage() {
     useEffect(() => {
         const indexedWith = indexedWithRef.current;
         if (!indexedWith) return;
-        setIndexStale(indexedWith.chunkSize !== chunkSize || indexedWith.overlap !== overlap);
-    }, [chunkSize, overlap]);
+        setIndexStale(indexedWith.documents !== documents || indexedWith.chunkSize !== chunkSize || indexedWith.overlap !== overlap);
+    }, [documents, chunkSize, overlap]);
 
     useEffect(() => {
         // Nothing persisted anywhere — clearing the ref on unmount is enough,
@@ -405,40 +431,31 @@ export default function RagSearchPage() {
 
     return (
         <ToolPageLayout
-            title="Semantic Search Playground"
-            description="Real embedding-based search over your own text, computed entirely in your browser — no server, no API key"
+            title={t("Semantic Search Playground")}
+            description={t("Real embedding-based search over your own text, computed entirely in your browser — no server, no API key")}
             icon={<DatabaseOutlined style={{ fontSize: 24 }} />}
             color="#9254de"
             learnMore={{
-                whatIs:
-                    "A semantic search playground using real sentence embeddings (all-MiniLM-L6-v2, 384 dimensions) instead of keyword matching. Paste or upload text, it's split into overlapping chunks and embedded locally using WebGPU or WASM, then a query is embedded the same way and ranked against the chunks by cosine similarity — so a query can match a chunk that uses different words but means the same thing. Every stage of the pipeline is shown with its timing, and each result is compared against what plain keyword scoring would have returned.",
-                whyUse:
-                    "Keyword search fails when a query and a document describe the same idea with different words (\"car\" vs \"automobile\"). Embedding-based search captures meaning, not just literal string overlap. This runs the same class of embedding model production RAG pipelines use, but entirely on your machine — and it exposes the chunking, embedding, and ranking steps that are normally hidden inside a vector database.",
-                howToUse: [
-                    "Click 'Load model' once — this downloads ~25 MB of model weights from the Hugging Face CDN and caches them in your browser",
-                    "Paste or upload the text you want to search over, tune chunk size and overlap, then click 'Index documents'",
-                    "Type a natural-language query and click 'Search'",
-                    "Compare the semantic rank against the keyword rank column — rows that jump are ones keyword search would have missed",
+                "whatIs": "Retrieves text chunks using local all-MiniLM-L6-v2 sentence embeddings and cosine similarity. It finds passages; it does not generate answers.",
+                "whyUse": "Compare semantic retrieval with literal keyword overlap and inspect chunk boundaries, vectors and timings.",
+                "howToUse": [
+                                "Load the model; about 91 MB of FP32 weights and metadata download from Hugging Face and may be cached.",
+                                "Paste or upload text, choose chunk size and overlap, then index documents.",
+                                "Enter a query, search, and compare semantic and keyword ranks."
                 ],
-                tips: [
-                    "The model download only happens once per browser — subsequent visits reuse the cache",
-                    "WebGPU is much faster than the WASM fallback; check the device badge to see which one loaded",
-                    "Chunk overlap stops an answer that straddles a boundary from being cut in half — raise it if results look truncated",
-                    "This is retrieval only, not generation — it finds the most relevant chunks, it doesn't write an answer from them",
-                    "A cosine score above ~0.5 is usually a strong match; below ~0.2 is often noise. Use the minimum-score slider to cut the tail",
+                "tips": [
+                                "Text stays on this device. WebGPU falls back to WASM when unavailable; clearing browser storage may require another model download.",
+                                "Similarity scores are not calibrated probabilities. Re-index after editing documents or chunk settings."
                 ],
-                useCases: [
-                    "Prototyping the retrieval half of a RAG pipeline before wiring up a real vector database",
-                    "Tuning chunk size and overlap against your own documents before committing to them in production",
-                    "Showing why semantic retrieval beats keyword search on a concrete example",
-                    "Understanding how embedding similarity behaves on your own text before choosing a production embedding model",
-                ],
-            }}
+                "useCases": [
+                                "Prototype retrieval and tune chunking against known relevant passages."
+                ]
+}}
         >
             <Alert
                 type="info"
                 showIcon
-                title="Model weights (~25 MB) download once from the Hugging Face CDN on first use and are cached by your browser. Your text is never uploaded — embeddings are computed locally."
+                title={t("About 91 MB of FP32 model files download from Hugging Face on first use. Cached files can be reused while browser storage retains them. The inference runtime is bundled locally, and your text is processed on this device.")}
                 style={{ marginBottom: 16 }}
             />
 
@@ -451,39 +468,38 @@ export default function RagSearchPage() {
                             loading={loadState === "loading"}
                             onClick={loadModel}
                         >
-                            {loadState === "loading" ? `Loading model… ${progress}%` : "Load model"}
+                            {loadState === "loading" ? t("Loading model… {progress}%", { progress }) : t("Load model")}
                         </Button>
                     )}
                     {loadState === "ready" && device && (
                         <Tag color={device === "webgpu" ? "green" : "orange"}>
-                            Model loaded — running on {device === "webgpu" ? "WebGPU" : "WASM (no WebGPU detected)"}
+                            {t("Model loaded — running on {device}", { device: device === "webgpu" ? "WebGPU" : "WASM" })}
                         </Tag>
                     )}
                     {loadState === "ready" && <Tag>{MODEL_ID}</Tag>}
-                    {loadState === "ready" && <Tag>{EMBED_DIMS} dimensions</Tag>}
+                    {loadState === "ready" && <Tag>{t("{count} dimensions", { count: EMBED_DIMS })}</Tag>}
                     {loadState === "loading" && <Progress percent={progress} size="small" style={{ width: 200 }} />}
                 </Space>
                 {loadState === "error" && (
-                    <Alert type="error" showIcon title={`Failed to load model: ${loadError}`} style={{ marginTop: 12 }} />
+                    <Alert type="error" showIcon title={t("Failed to load model: {detail}", { detail: formatAiDiagnostic(loadError, t) })} style={{ marginTop: 12 }} />
                 )}
             </Card>
 
             {steps.length > 0 && (
-                <Card size="small" title="Pipeline" style={{ marginBottom: 16 }}>
+                <Card size="small" title={t("Pipeline")} style={{ marginBottom: 16 }}>
                     <Space orientation="vertical" size={8} style={{ width: "100%" }}>
                         {steps.map((s) => (
                             <div key={s.key} style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                                 <span style={{ width: 18, flexShrink: 0 }}>{stepIcon(s.state)}</span>
                                 <Text strong={s.state !== "pending"} style={{ minWidth: 210 }}>
-                                    {s.label}
+                                    {t(s.label)}
                                 </Text>
                                 <Text type="secondary" style={{ fontSize: 12, flex: 1 }}>
-                                    {s.detail}
+                                    {formatAiDiagnostic(s.detail, t)}
                                 </Text>
                                 {s.ms !== undefined && (
                                     <Tag color="blue" style={{ marginInlineEnd: 0 }}>
-                                        {s.ms.toFixed(0)} ms
-                                    </Tag>
+                                        {s.ms.toFixed(0)} {t("ms")}</Tag>
                                 )}
                             </div>
                         ))}
@@ -494,68 +510,64 @@ export default function RagSearchPage() {
             {indexStats && (
                 <Row gutter={16} style={{ marginBottom: 16 }}>
                     <Col xs={12} md={6}>
-                        <Card size="small"><Statistic title="Chunks indexed" value={indexStats.count} /></Card>
+                        <Card size="small"><Statistic title={t("Chunks indexed")} value={indexStats.count} /></Card>
                     </Col>
                     <Col xs={12} md={6}>
-                        <Card size="small"><Statistic title="Avg chunk size" value={indexStats.avgChars} suffix="chars" /></Card>
+                        <Card size="small"><Statistic title={t("Avg chunk size")} value={indexStats.avgChars} suffix={t("chars")} /></Card>
                     </Col>
                     <Col xs={12} md={6}>
                         <Card size="small">
-                            <Statistic title="Vector memory" value={indexStats.vectorKb.toFixed(1)} suffix="KB" />
+                            <Statistic title={t("Vector memory")} value={indexStats.vectorKb.toFixed(1)} suffix={t("KB")} />
                         </Card>
                     </Col>
                     <Col xs={12} md={6}>
                         <Card size="small">
-                            <Statistic title="Index time" value={indexMs === null ? "—" : indexMs.toFixed(0)} suffix={indexMs === null ? "" : "ms"} />
+                            <Statistic title={t("Index time")} value={indexMs === null ? "—" : indexMs.toFixed(0)} suffix={indexMs === null ? "" : "ms"} />
                         </Card>
                     </Col>
                 </Row>
             )}
 
-            <Card size="small" title="Documents" style={{ marginBottom: 16 }}>
+            <Card size="small" title={t("Documents")} style={{ marginBottom: 16 }}>
                 <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
                     <Upload {...uploadProps}>
-                        <Button size="small" icon={<UploadOutlined />}>Upload .txt / .md</Button>
+                        <Button size="small" icon={<UploadOutlined />}>{t("Upload .txt / .md")}</Button>
                     </Upload>
                     <TextArea
                         rows={8}
                         value={documents}
                         onChange={(e) => setDocuments(e.target.value)}
-                        placeholder="Paste the text you want to search over..."
+                        placeholder={t("Paste the text you want to search over...")}
                     />
 
                     <Row gutter={24}>
                         <Col xs={24} md={12}>
                             <Text style={{ fontSize: 12 }}>
-                                Chunk size: <Text strong>{chunkSize}</Text> chars
-                            </Text>
+                                {t("Chunk size:")}{" "}<Text strong>{chunkSize}</Text> {t("chars")}</Text>
                             <Slider min={100} max={1000} step={50} value={chunkSize} onChange={setChunkSize} />
                         </Col>
                         <Col xs={24} md={12}>
                             <Text style={{ fontSize: 12 }}>
-                                Chunk overlap: <Text strong>{overlap}</Text> chars
-                            </Text>
+                                {t("Chunk overlap:")}{" "}<Text strong>{overlap}</Text> {t("chars")}</Text>
                             <Slider min={0} max={300} step={20} value={overlap} onChange={setOverlap} />
                         </Col>
                     </Row>
 
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                        Current settings would produce <Text strong>{chunkPreview.length}</Text> chunk(s) from{" "}
-                        {documents.length.toLocaleString()} characters.
+                        {t("Current settings produce {chunks} chunks from {chars} characters.", { chunks: chunkPreview.length, chars: documents.length.toLocaleString() })}
                     </Text>
 
                     <Space wrap>
                         <Button type="primary" onClick={handleIndex} loading={indexing} disabled={!documents.trim()}>
-                            Index documents
-                        </Button>
-                        {chunks.length > 0 && <Tag color="blue">Indexed {chunks.length} chunk(s)</Tag>}
+                            {t("Index documents")}</Button>
+                        {chunks.length > 0 && <Tag color="blue">{t("Indexed {count} chunks", { count: chunks.length })}</Tag>}
                     </Space>
 
                     {indexStale && (
                         <Alert
                             type="warning"
                             showIcon
-                            title="Chunk settings changed since the last index — re-index to apply them."
+                            title={t("Documents or chunk settings changed since the last index — re-index to apply them.")}
                         />
                     )}
 
@@ -565,7 +577,7 @@ export default function RagSearchPage() {
                             items={[
                                 {
                                     key: "chunks",
-                                    label: `Inspect indexed chunks (${chunks.length})`,
+                                    label: t("Inspect indexed chunks ({count})", { count: chunks.length }),
                                     children: (
                                         <Table
                                             dataSource={chunks}
@@ -573,11 +585,11 @@ export default function RagSearchPage() {
                                             size="small"
                                             pagination={chunks.length > 10 ? { pageSize: 10 } : false}
                                             columns={[
-                                                { title: "#", dataIndex: "id", width: 50, render: (v: number) => v + 1 },
-                                                { title: "Chars", dataIndex: "chars", width: 70 },
-                                                { title: "Words", dataIndex: "words", width: 70 },
+                                                { title: t("#"), dataIndex: "id", width: 50, render: (v: number) => v + 1 },
+                                                { title: t("Chars"), dataIndex: "chars", width: 70 },
+                                                { title: t("Words"), dataIndex: "words", width: 70 },
                                                 {
-                                                    title: "Text",
+                                                    title: t("Text"),
                                                     dataIndex: "text",
                                                     render: (t: string) => (
                                                         <Text style={{ fontSize: 12 }}>{t}</Text>
@@ -593,14 +605,14 @@ export default function RagSearchPage() {
                 </Space>
             </Card>
 
-            <Card size="small" title="Search">
+            <Card size="small" title={t("Search")}>
                 <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
                     <Space.Compact style={{ width: "100%" }}>
                         <Input
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             onPressEnter={handleSearch}
-                            placeholder="Ask a question about the documents above..."
+                            placeholder={t("Ask a question about the documents above...")}
                             disabled={chunks.length === 0}
                         />
                         <Button
@@ -610,12 +622,11 @@ export default function RagSearchPage() {
                             loading={searching}
                             disabled={chunks.length === 0 || !query.trim()}
                         >
-                            Search
-                        </Button>
+                            {t("Search")}</Button>
                     </Space.Compact>
 
                     <Space wrap size={4}>
-                        <Text type="secondary" style={{ fontSize: 12 }}>Try:</Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>{t("Try:")}</Text>
                         {EXAMPLE_QUERIES.map((q) => (
                             <Tag
                                 key={q}
@@ -630,38 +641,35 @@ export default function RagSearchPage() {
 
                     <Row gutter={24} align="middle">
                         <Col xs={24} md={8}>
-                            <Text style={{ fontSize: 12 }}>Top K: <Text strong>{topK}</Text></Text>
+                            <Text style={{ fontSize: 12 }}>{t("Top K:")}<Text strong>{topK}</Text></Text>
                             <Slider min={1} max={20} value={topK} onChange={setTopK} />
                         </Col>
                         <Col xs={24} md={8}>
                             <Text style={{ fontSize: 12 }}>
-                                Min similarity: <Text strong>{minScore.toFixed(2)}</Text>
+                                {t("Min similarity:")}{" "}<Text strong>{minScore.toFixed(2)}</Text>
                             </Text>
                             <Slider min={0} max={0.9} step={0.05} value={minScore} onChange={setMinScore} />
                         </Col>
                         <Col xs={24} md={8}>
                             <Space>
                                 <Switch size="small" checked={showKeywordCompare} onChange={setShowKeywordCompare} />
-                                <Text style={{ fontSize: 12 }}>Compare vs keyword search</Text>
+                                <Text style={{ fontSize: 12 }}>{t("Compare vs keyword search")}</Text>
                             </Space>
                         </Col>
                     </Row>
 
-                    {searchError && <Alert type="error" showIcon title={searchError} />}
+                    {searchError && <Alert type="error" showIcon title={formatAiDiagnostic(searchError, t)} />}
 
                     {searchMs !== null && results.length > 0 && (
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                            Embedded the query into a {EMBED_DIMS}-dim vector and scored it against{" "}
-                            {chunks.length} chunk(s) in <Text strong>{searchMs.toFixed(0)} ms</Text>. Showing{" "}
-                            {results.length} result(s) above a {minScore.toFixed(2)} similarity floor.
-                        </Text>
+                            {t("Scored a {dimensions}-dimension query against {chunks} chunks in {ms} ms. Showing {results} results above {floor} similarity.", { dimensions: EMBED_DIMS, chunks: chunks.length, ms: searchMs.toFixed(0), results: results.length, floor: minScore.toFixed(2) })}</Text>
                     )}
 
                     {searchMs !== null && results.length === 0 && !searchError && (
                         <Alert
                             type="info"
                             showIcon
-                            title={`No chunk scored above the ${minScore.toFixed(2)} similarity floor for "${lastQuery}". Lower the minimum similarity slider or re-index with a smaller chunk size.`}
+                            title={t("No chunk exceeded {floor} similarity for “{query}”. Lower the threshold or re-index with smaller chunks.", { floor: minScore.toFixed(2), query: lastQuery })}
                         />
                     )}
 
@@ -680,25 +688,25 @@ export default function RagSearchPage() {
                                         <Space orientation="vertical" size={6} style={{ width: "100%" }}>
                                             <Space wrap size={4}>
                                                 <Tag color="purple">#{i + 1}</Tag>
-                                                <Tooltip title="Cosine similarity between the query vector and this chunk's vector. 1.0 is identical direction.">
-                                                    <Tag color="blue">similarity {r.score.toFixed(3)}</Tag>
+                                                <Tooltip title={t("Cosine similarity between the query vector and this chunk's vector. 1.0 is identical direction.")}>
+                                                    <Tag color="blue">{t("similarity")}{" "}{r.score.toFixed(3)}</Tag>
                                                 </Tooltip>
-                                                <Tag>chunk {r.chunk.id + 1}</Tag>
+                                                <Tag>{t("chunk")}{" "}{r.chunk.id + 1}</Tag>
                                                 {showKeywordCompare && (
                                                     <>
-                                                        <Tooltip title="Fraction of the query's non-stopword terms that appear literally in this chunk.">
+                                                        <Tooltip title={t("Fraction of the query's non-stopword terms that appear literally in this chunk.")}>
                                                             <Tag color={r.keywordScore > 0 ? "gold" : undefined}>
-                                                                keyword {r.keywordScore.toFixed(2)}
+                                                                {t("keyword")}{" "}{r.keywordScore.toFixed(2)}
                                                             </Tag>
                                                         </Tooltip>
                                                         {jump > 0 && (
-                                                            <Tooltip title={`Keyword ranking put this chunk at #${r.keywordRank}. Semantic search moved it up ${jump} place(s).`}>
-                                                                <Tag color="green">▲ {jump} vs keyword</Tag>
+                                                            <Tooltip title={t("Keyword rank: #{rank}. Semantic search moved this chunk up {jump} places.", { rank: r.keywordRank, jump })}>
+                                                                <Tag color="green">▲ {jump} {t("vs keyword")}</Tag>
                                                             </Tooltip>
                                                         )}
                                                         {r.keywordScore === 0 && (
-                                                            <Tooltip title="No query term appears literally in this chunk — pure keyword search would have scored it zero.">
-                                                                <Tag color="red">keyword search would miss this</Tag>
+                                                            <Tooltip title={t("No query term appears literally in this chunk — pure keyword search would have scored it zero.")}>
+                                                                <Tag color="red">{t("keyword search would miss this")}</Tag>
                                                             </Tooltip>
                                                         )}
                                                     </>
@@ -713,7 +721,7 @@ export default function RagSearchPage() {
                                             <Text>{r.chunk.text}</Text>
                                             {showKeywordCompare && r.matchedTerms.length > 0 && (
                                                 <Text type="secondary" style={{ fontSize: 12 }}>
-                                                    Literal term matches: {r.matchedTerms.join(", ")}
+                                                    {t("Literal term matches:")}{" "}{r.matchedTerms.join(", ")}
                                                 </Text>
                                             )}
                                         </Space>
@@ -729,20 +737,16 @@ export default function RagSearchPage() {
                             items={[
                                 {
                                     key: "vector",
-                                    label: "Inspect the query vector",
+                                    label: t("Inspect the query vector"),
                                     children: (
                                         <Space orientation="vertical" size={8} style={{ width: "100%" }}>
                                             <Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 0 }}>
-                                                This is what &ldquo;{lastQuery}&rdquo; looks like to the model: {EMBED_DIMS}{" "}
-                                                floats, L2-normalised. Ranking is just a dot product between this and each
-                                                chunk vector — there is no keyword index anywhere in the pipeline.
-                                            </Paragraph>
+                                                {t("The query “{query}” becomes {dimensions} L2-normalized floats. Ranking compares this vector with each chunk by dot product.", { query: lastQuery, dimensions: EMBED_DIMS })}</Paragraph>
                                             <Text
                                                 code
                                                 style={{ fontSize: 11, display: "block", wordBreak: "break-all" }}
                                             >
-                                                [{queryVector.slice(0, 12).map((v) => v.toFixed(4)).join(", ")}, … {EMBED_DIMS - 12} more]
-                                            </Text>
+                                                [{queryVector.slice(0, 12).map((v) => v.toFixed(4)).join(", ")}, … {t("{count} more", { count: EMBED_DIMS - 12 })}]</Text>
                                         </Space>
                                     ),
                                 },

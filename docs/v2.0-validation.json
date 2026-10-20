@@ -1,0 +1,707 @@
+{
+  "recordedAt": "2026-10-20T18:55:46.133049+00:00",
+  "release": "2.0.0",
+  "implementationRequirements": {
+    "total": 42,
+    "complete": 42,
+    "basis": "Source/component callback and independent oracle acceptance; final no-UI instruction honored."
+  },
+  "application": {
+    "verifiedAt": "2026-10-20T18:51:35.700606+00:00",
+    "version": "2.0.0",
+    "productionBuild": 72,
+    "status": "passed",
+    "registeredTools": 147,
+    "categories": 15,
+    "toolRoutesIncludingAliases": 153,
+    "prerenderedPages": 173,
+    "main": {
+      "buildId": "hKxH5rvTopqVcW1Bd_kCT",
+      "buildLog": "/private/tmp/mydevtools-final-build-72.log",
+      "tests": {
+        "suites": 92,
+        "exitCode": 0,
+        "log": "/private/tmp/mydevtools-final-tests-72c.log"
+      },
+      "typecheck": {
+        "exitCode": 0,
+        "log": "/private/tmp/mydevtools-final-types-72c.log"
+      },
+      "lint": {
+        "exitCode": 0,
+        "errors": 0,
+        "warnings": 66,
+        "log": "/private/tmp/mydevtools-final-lint-72b.log"
+      },
+      "productionOrigin": "http://127.0.0.1:3100",
+      "discovery": "/private/tmp/mydevtools-final-production-discovery-72.log"
+    },
+    "clean": {
+      "workspace": "/private/tmp/mydevtools-final-clean-20261021-6867qe5w",
+      "buildId": "vEchmBxQf_KCgyDt9n8vE",
+      "buildLog": "/private/tmp/mydevtools-final-clean-build-72.log",
+      "normalNpmCi": {
+        "exitCode": 0,
+        "log": "/private/tmp/mydevtools-final-clean-ci-final72.log",
+        "packages": 1386,
+        "audited": 1387,
+        "seconds": 20,
+        "electronBinarySkipped": true,
+        "normalAssetPostinstall": true
+      },
+      "installPolicyInvariance": "/private/tmp/mydevtools-final-install-invariance-72.json",
+      "tests": {
+        "suites": 92,
+        "exitCode": 0,
+        "log": "/private/tmp/mydevtools-final-clean-tests-72c.log"
+      },
+      "typecheck": {
+        "exitCode": 0,
+        "log": "/private/tmp/mydevtools-final-clean-types-72c.log"
+      },
+      "assets": {
+        "files": 130,
+        "evidence": "/private/tmp/mydevtools-final-clean-assets-final72.json"
+      },
+      "lockSha256": "1d3d497924ea4fb603edf0b66a81685085392e4e516f6ebe377cd82d1ed494da",
+      "dependencyAudit": {
+        "moderate": 11,
+        "high": 6,
+        "critical": 0,
+        "note": "Existing locked dependency advisories from normal npm ci; no forced dependency updates."
+      }
+    },
+    "containerEvidence": "/private/tmp/mydevtools-final-clean-validation-20261021.json",
+    "nativeFixtureEvidence": "/private/tmp/mydevtools-final-native-production72-validation-20261021.json",
+    "desktopEvidence": "desktop-dist/validation-72/validation.json",
+    "browserUIVerification": "not performed for this batch, per explicit user request",
+    "transportLimits": "Handler bytes and independent parsers are checked; browser file delivery and Chrome-installed PWA removal are not claimed.",
+    "desktopArtifact": {
+      "path": "desktop-dist/validation-72/My Dev Tools-2.0.0-arm64-mac.zip",
+      "bytes": 243619001,
+      "sha256": "739ee760f49215e3079d6efd38159e408bb4e2f9ecdd2789124e8f2a12f44c27",
+      "signing": "ad-hoc, not notarized/published/installed",
+      "evidence": "desktop-dist/validation-72/validation.json"
+    },
+    "cleanupEvidence": "/private/tmp/mydevtools-final-fixture-cleanup-20261021.json",
+    "finalApplicationHashVerified": true
+  },
+  "container": {
+    "verifiedAt": "2026-10-20T18:48:12.193954+00:00",
+    "status": "passed",
+    "releaseVersion": "2.0.0",
+    "context": "/private/tmp/mydevtools-final-clean-20261021-6867qe5w",
+    "frozenSnapshot": "/private/tmp/mydevtools-final-source-snapshot-72.json",
+    "sourceFileCount": 792,
+    "sourceHash": "3df1ada400aae5fd49f1204fac86d3d4a8d3ff83b6124ab64cf0fcedb9bdfd2b",
+    "appSourceFileCount": 667,
+    "appSourceHash": "bbbf0d310522fcc4258fa61c6c25148a034c940050d5c6540b1f31b838037c22",
+    "appSourceExclusions": "docs/**, .github/**, README.md, PRODUCT.md, AGENTS.md, DESIGN.md, scripts/* containing .test. or .integration.; includes all remaining frozen source/config/package/vendor/desktop/extension/build helper files",
+    "appSourceMatchesRepositoryAndContext": true,
+    "image": {
+      "tag": "mydevtools:final-clean-20261021",
+      "id": "sha256:705572a5d25da435c6f7bb27e365d82d3ab24564998bacb2e89b1b1465dc168e",
+      "ociManifestListDigest": "sha256:705572a5d25da435c6f7bb27e365d82d3ab24564998bacb2e89b1b1465dc168e",
+      "labels": {
+        "com.mydevtools.expansion": "true",
+        "com.mydevtools.task": "final-clean-20261021"
+      }
+    },
+    "container": {
+      "name": "mydevtools-final-clean-20261021",
+      "id": "29edb487002b5028346bce50bc784ffae5838b5602934c8dc742ae61ae24ce24",
+      "imageId": "sha256:705572a5d25da435c6f7bb27e365d82d3ab24564998bacb2e89b1b1465dc168e",
+      "health": "healthy",
+      "node": "24.22.0",
+      "uid": 1001,
+      "configuredUser": "app",
+      "origin": "http://127.0.0.1:62554",
+      "bindings": {
+        "3000/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "62554"
+          }
+        ]
+      },
+      "labels": {
+        "com.mydevtools.expansion": "true",
+        "com.mydevtools.task": "final-clean-20261021"
+      },
+      "managedRoutesDisabled": true,
+      "nativeConnectorsDisabled": true,
+      "noNewPrivileges": [
+        "no-new-privileges:true"
+      ]
+    },
+    "checks": {
+      "dockerProductionBuild": "passed",
+      "insideContainerNode24NonrootSmoke": "passed",
+      "publicDiscoveryIntegration": "passed",
+      "canonicalToolPages": 147,
+      "additionalCanonicalPages": [
+        "/guides",
+        "/release-notes"
+      ],
+      "textDiscoveryResources": [
+        "/llms.txt",
+        "/llms-full.txt",
+        "/tool-catalog.md",
+        "/guides.md",
+        "/release-notes.md"
+      ],
+      "disabledAPIs": {
+        "/api/proxy": 503,
+        "/api/local-connectors": 503
+      },
+      "servedAssetByteEquality": [
+        {
+          "path": "monaco/vs/editor/editor.main.js",
+          "bytes": 79052,
+          "sha256": "e8cd8b34b0cc10759ad5419d6253bcb2b91b539580ab857e46f2af9096d8e348"
+        },
+        {
+          "path": "sqlite/sql-wasm.js",
+          "bytes": 46635,
+          "sha256": "e72d02af7b79446900af5afc8bd46b66bba0f3d2d84c5183a7393e761cd7939f"
+        },
+        {
+          "path": "sqlite/sql-wasm.wasm",
+          "bytes": 684897,
+          "sha256": "f3aaaa47b7957d084f0a70037fb780b5465d7bfb6e58a5bd485d6f23a9576b74"
+        },
+        {
+          "path": "onnx/ort-wasm-simd-threaded.mjs",
+          "bytes": 24381,
+          "sha256": "c57ca56328877353a575e51bbca6f18450027d6c9bf2307a2cb2c41363b4de9f"
+        },
+        {
+          "path": "onnx/ort-wasm-simd-threaded.wasm",
+          "bytes": 14264838,
+          "sha256": "06ba057753da3847e4c24f02d91ab133455b0817c69a44993a9a53a2146df9e3"
+        },
+        {
+          "path": "onnx/ort-wasm-simd-threaded.asyncify.mjs",
+          "bytes": 53057,
+          "sha256": "0966b6105cd936744498aa60df7a22cbd47af3374dbc64a9ab561c08a71e3611"
+        },
+        {
+          "path": "onnx/ort-wasm-simd-threaded.asyncify.wasm",
+          "bytes": 26861777,
+          "sha256": "49871f5a4409519797e127440868a6d1923339d9185907f301a5b2a1d90af082"
+        },
+        {
+          "path": "onnx/LICENSE.txt",
+          "bytes": 1073,
+          "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+        },
+        {
+          "path": "onnx/ThirdPartyNotices.txt",
+          "bytes": 338088,
+          "sha256": "143764b952fdb1a7c69ce653bfba74a7744d6a8a573bfb73e235fba356c83de3"
+        },
+        {
+          "path": "licenses/jmespath.txt",
+          "bytes": 12268,
+          "sha256": "37c332cf8dc42a50c66c15674976b856a1b00fac276ba44f6dda34bf5b0bfede"
+        }
+      ],
+      "browserUIVerification": "not performed as user requested; historical file delivery/picker limitations remain separately documented"
+    },
+    "artifacts": {
+      "buildLog": "/private/tmp/mydevtools-final-docker-build-20261021.log",
+      "smokeLog": "/private/tmp/mydevtools-final-container-smoke-20261021.log",
+      "discoveryLog": "/private/tmp/mydevtools-final-container-discovery-20261021.log",
+      "runtimeLog": "/private/tmp/mydevtools-final-container-runtime-20261021.log",
+      "containerInspect": "/private/tmp/mydevtools-final-container-inspect-20261021.json",
+      "imageInspect": "/private/tmp/mydevtools-final-image-inspect-20261021.json",
+      "sourceManifest": "/private/tmp/mydevtools-final-container-source-20261021.json",
+      "appSourceManifest": "/private/tmp/mydevtools-final-container-app-source-20261021.json"
+    }
+  },
+  "nativeFixtures": {
+    "verifiedAt": "2026-10-20T18:49:40.705158+00:00",
+    "status": "passed",
+    "productionBuild": 72,
+    "origin": "http://127.0.0.1:3100",
+    "execution": "three requested scripts run sequentially; SQL script independently exercises three owned engines concurrently",
+    "dataScope": "explicit public disposable loopback fixtures only; no browser/user workspace storage accessed",
+    "sourceEdits": false,
+    "browserUIVerification": "not performed",
+    "fixtures": [
+      {
+        "id": "s3",
+        "script": "scripts/s3-production.integration.ts",
+        "scriptSha256": "2d3dfa2e2ee328399c78a3bb469b016ba66735f6f6df2b51ba5932b67e9d2694",
+        "status": "passed",
+        "exitCode": 0,
+        "ports": {
+          "garage": 60839
+        },
+        "checks": [
+          "exact 8 MiB upload/download bytes",
+          "401 native token gate",
+          "308 legacy/wrong-category canonical redirects",
+          "finally cleanup deletes generated UUID object"
+        ],
+        "cleanup": "script finally block completed before exitCode0",
+        "log": "/private/tmp/mydevtools-final-native-s3-production72-20261021.log",
+        "output": "Production 8 MiB upload/download roundtrip, native token gate and legacy/wrong-category redirects passed."
+      },
+      {
+        "id": "sql",
+        "script": "scripts/sql-production.integration.ts",
+        "scriptSha256": "a0daa39c46a81e1362e4780a33686a5934433bac8c268a8f2caa236366494f2f",
+        "status": "passed",
+        "exitCode": 0,
+        "ports": {
+          "postgresql": 56933,
+          "mysql": 56938,
+          "mariadb": 61337
+        },
+        "checks": [
+          "all three token/origin gates",
+          "exact Unicode, bigint and JSON wire text",
+          "read-only DDL rejection and table absence",
+          "PostgreSQL/MariaDB 600-row write commits despite 500-row output truncation",
+          "oversized 2 MiB write result rejects and rolls back",
+          "finally DROP own expansion_production_* fixture tables"
+        ],
+        "cleanup": "script finally block completed before exitCode0",
+        "log": "/private/tmp/mydevtools-final-native-sql-production72-20261021.log",
+        "output": "Production mariadb: token/origin gates, Unicode/bigint/JSON wire precision and read-only DDL passed; truncated-write commit and oversized-result rollback passed.\nProduction mysql: token/origin gates, Unicode/bigint/JSON wire precision and read-only DDL passed.\nProduction postgresql: token/origin gates, Unicode/bigint/JSON wire precision and read-only DDL passed; truncated-write commit and oversized-result rollback passed."
+      },
+      {
+        "id": "native-api",
+        "script": "scripts/api-native-production.integration.ts",
+        "scriptSha256": "49bbbf1101112ceae6877c522340bb10f2f0f73dacec7db28e87290c1a8338a6",
+        "status": "passed",
+        "exitCode": 0,
+        "ports": {},
+        "checks": [
+          "advertised native services",
+          "per-service token and origin rejection",
+          "actual loopback gRPC proto describe and echo RPC",
+          "temporary mock HTTP response and exact Unicode request history",
+          "metadata-host rejection",
+          "finally stop returned mock ID and forceShutdown temporary gRPC server"
+        ],
+        "cleanup": "script finally block completed before exitCode0",
+        "log": "/private/tmp/mydevtools-final-native-api-production72-20261021.log",
+        "output": "Production native route: advertised services, per-service token/origin rejection, proto description and actual RPC, mock start + HTTP request + exact history, and metadata-host rejection passed."
+      }
+    ]
+  },
+  "desktop": {
+    "checkedAt": "2026-10-20T18:52:22.052226+00:00",
+    "version": "2.0.0",
+    "productionBuild": 72,
+    "buildId": "hKxH5rvTopqVcW1Bd_kCT",
+    "platform": "macOS arm64",
+    "electron": "44.9.0",
+    "artifact": "desktop-dist/validation-72/My Dev Tools-2.0.0-arm64-mac.zip",
+    "bytes": 243619001,
+    "sha256": "739ee760f49215e3079d6efd38159e408bb4e2f9ecdd2789124e8f2a12f44c27",
+    "assetAudit": {
+      "checkedAt": "2026-10-20T18:50:02.915Z",
+      "version": "2.0.0",
+      "buildId": "hKxH5rvTopqVcW1Bd_kCT",
+      "verifiedOfflineAssets": 730,
+      "runtimeFiles": 4987,
+      "internalSymlinks": 0,
+      "nativeDependencies": [
+        "next",
+        "pg",
+        "mongodb",
+        "@aws-sdk/client-s3"
+      ],
+      "result": "pass"
+    },
+    "fullTraceShellFuseAudit": "package-proof.json",
+    "archiveContentAudit": "archive-proof.json",
+    "checks": {
+      "typecheckDesktop": "pass",
+      "protocolBoundary": "pass",
+      "stagedRuntime": "pass",
+      "packagedRuntime": "pass",
+      "nativeDriverModuleIsolation": "pass",
+      "offlineAssetHashes": "pass",
+      "fullTracedRuntimeHashes": "pass",
+      "archiveIntegrity": "pass",
+      "exactArchivedFileContents": "pass",
+      "deepStrictCodeSignature": "pass",
+      "electronSecurityFuses": "pass",
+      "packagedShellSourceHashes": "pass"
+    },
+    "nativeDriverIsolationScope": "PostgreSQL/MySQL/MariaDB/Redis/gRPC drivers execute to expected loopback connection refusal with module resolution restricted to bundled runtime; Next/pg/mongodb/@aws-sdk/client-s3 resolve within bundle.",
+    "nativeHashNormalization": "Five Mach-O native binaries differ only through code signing; signatures verified, temporary signature removal and __LINKEDIT virtual-size normalization yield matching content hashes. No installed or packaged file modified by validation.",
+    "nativeUi": "not run; user requested no UI/browser verification",
+    "signing": "ad-hoc; hardened runtime; no Developer ID or notarization; not published or installed",
+    "preservedPreviousPackage": true,
+    "preservedPreviousPackageSha256": "03778d990e00d4813aec461e3e7aa0fee3766d6e3237aed4766cef7ef2722f60",
+    "logs": {
+      "stage": "/private/tmp/mydevtools-desktop-stage-72.log",
+      "package": "/private/tmp/mydevtools-desktop-package-72.log",
+      "archive": "/private/tmp/mydevtools-desktop-archive-72.log",
+      "archiveContent": "/private/tmp/mydevtools-desktop-archive-content-72.log",
+      "signature": "/private/tmp/mydevtools-desktop-signature-72.log",
+      "signatureDetails": "/private/tmp/mydevtools-desktop-signature-details-72.log",
+      "assets": "/private/tmp/mydevtools-desktop-assets-72.log",
+      "stagedRuntime": "/private/tmp/mydevtools-desktop-runtime-staged-72.log",
+      "isolatedPackagedRuntime": "/private/tmp/mydevtools-desktop-runtime-isolated-72.log",
+      "traceShellFuses": "/private/tmp/mydevtools-desktop-package-proofs-72.log",
+      "typecheck": "/private/tmp/mydevtools-desktop-types-72-final.log",
+      "boundary": "/private/tmp/mydevtools-desktop-boundary-72-final.log"
+    }
+  },
+  "cleanup": {
+    "verifiedAt": "2026-10-20T18:54:28.842493+00:00",
+    "status": "completed_with_preservation_exception",
+    "requestedAction": "stop only; preserve containers/images/volumes",
+    "commandsIssued": "docker inspect; docker stop by ten verified immutable IDs; read-only image/volume inspect. No rm/prune/recreate commands.",
+    "stoppedCount": 10,
+    "stoppedContainersPreserved": 2,
+    "autoRemovedContainers": 8,
+    "autoRemovedAnonymousVolumes": 5,
+    "skipped": [],
+    "preservationException": {
+      "cause": "Eight pre-existing service fixtures were created with HostConfig.AutoRemove=true. Docker automatically removed them and their five anonymous volumes when stopped.",
+      "agentError": "Ownership was verified before stop, but AutoRemove was not checked before executing the stop. This failed the requested preservation condition.",
+      "dataScope": "Disposable task-owned public test fixture services only; no user workspace/browser storage was accessed.",
+      "recovery": "No recreation attempted; original runtime fixture data is not claimed recoverable. All ten original images remain present."
+    },
+    "containers": [
+      {
+        "name": "mydevtools-expansion-postgres",
+        "id": "51543a42a97804cc09cbe97fa43510c8026684ec0de050ea5e0fb9cb8fa7e534",
+        "proof": {
+          "exactAuthorizedName": true,
+          "expansionLabel": "true",
+          "taskLabel": null
+        },
+        "before": {
+          "status": "running",
+          "running": true,
+          "autoRemove": true
+        },
+        "after": {
+          "status": "removed by pre-existing Docker AutoRemove policy",
+          "running": false,
+          "containerPreserved": false
+        },
+        "volumeMountsBefore": [
+          {
+            "Type": "volume",
+            "Name": "d5c10abcc7f7dd7ede8f1e0186da9975b083a37402a6221240e85254cfdc0a32",
+            "Source": "/var/lib/docker/volumes/d5c10abcc7f7dd7ede8f1e0186da9975b083a37402a6221240e85254cfdc0a32/_data",
+            "Destination": "/var/lib/postgresql",
+            "Driver": "local",
+            "Mode": "",
+            "RW": true,
+            "Propagation": ""
+          }
+        ]
+      },
+      {
+        "name": "mydevtools-expansion-mysql",
+        "id": "683ce75a979d7beee7d1262c16d087d5d2d826ce53ed102ecc8b46b32e48fc02",
+        "proof": {
+          "exactAuthorizedName": true,
+          "expansionLabel": "true",
+          "taskLabel": null
+        },
+        "before": {
+          "status": "running",
+          "running": true,
+          "autoRemove": true
+        },
+        "after": {
+          "status": "removed by pre-existing Docker AutoRemove policy",
+          "running": false,
+          "containerPreserved": false
+        },
+        "volumeMountsBefore": [
+          {
+            "Type": "volume",
+            "Name": "48986048cb7986ae96078f68358273749b6cbf280bb89247c16c10f0b3dc774c",
+            "Source": "/var/lib/docker/volumes/48986048cb7986ae96078f68358273749b6cbf280bb89247c16c10f0b3dc774c/_data",
+            "Destination": "/var/lib/mysql",
+            "Driver": "local",
+            "Mode": "",
+            "RW": true,
+            "Propagation": ""
+          }
+        ]
+      },
+      {
+        "name": "mydevtools-expansion-mariadb",
+        "id": "ad8cea24e3b03e4797a2ce92f9d67b5726a5da6ae7977805f81b749f57de78d4",
+        "proof": {
+          "exactAuthorizedName": true,
+          "expansionLabel": "true",
+          "taskLabel": null
+        },
+        "before": {
+          "status": "running",
+          "running": true,
+          "autoRemove": true
+        },
+        "after": {
+          "status": "removed by pre-existing Docker AutoRemove policy",
+          "running": false,
+          "containerPreserved": false
+        },
+        "volumeMountsBefore": [
+          {
+            "Type": "volume",
+            "Name": "fbe79e2eb1330f4a4f82e60a54e7e9518c3cf3f17a736926bec156a203395a15",
+            "Source": "/var/lib/docker/volumes/fbe79e2eb1330f4a4f82e60a54e7e9518c3cf3f17a736926bec156a203395a15/_data",
+            "Destination": "/var/lib/mysql",
+            "Driver": "local",
+            "Mode": "",
+            "RW": true,
+            "Propagation": ""
+          }
+        ]
+      },
+      {
+        "name": "mydevtools-expansion-redis",
+        "id": "b041176c9631173754503b3b4f5f45ac3d664b0ac72575eedc7e9a6288ed3505",
+        "proof": {
+          "exactAuthorizedName": true,
+          "expansionLabel": "true",
+          "taskLabel": null
+        },
+        "before": {
+          "status": "running",
+          "running": true,
+          "autoRemove": true
+        },
+        "after": {
+          "status": "removed by pre-existing Docker AutoRemove policy",
+          "running": false,
+          "containerPreserved": false
+        },
+        "volumeMountsBefore": []
+      },
+      {
+        "name": "mydevtools-expansion-s3",
+        "id": "12c17fa1d70ad99aa496c023a717461ea21b518f45e6a662498863dbc05f66f8",
+        "proof": {
+          "exactAuthorizedName": true,
+          "expansionLabel": "true",
+          "taskLabel": null
+        },
+        "before": {
+          "status": "running",
+          "running": true,
+          "autoRemove": true
+        },
+        "after": {
+          "status": "removed by pre-existing Docker AutoRemove policy",
+          "running": false,
+          "containerPreserved": false
+        },
+        "volumeMountsBefore": [
+          {
+            "Type": "bind",
+            "Source": "/private/tmp/mydevtools-garage-fixture/garage.toml",
+            "Destination": "/etc/garage.toml",
+            "Mode": "",
+            "RW": false,
+            "Propagation": "rprivate"
+          }
+        ]
+      },
+      {
+        "name": "mydevtools-expansion-mongo",
+        "id": "8f645b181e4980475056f21f845ebb0cbe510215bc7e1a9824fbcd6f57bd6f16",
+        "proof": {
+          "exactAuthorizedName": true,
+          "expansionLabel": "true",
+          "taskLabel": null
+        },
+        "before": {
+          "status": "running",
+          "running": true,
+          "autoRemove": true
+        },
+        "after": {
+          "status": "removed by pre-existing Docker AutoRemove policy",
+          "running": false,
+          "containerPreserved": false
+        },
+        "volumeMountsBefore": [
+          {
+            "Type": "volume",
+            "Name": "1ac6f5f082687af49225d52eb505c7c39b7b01c02b9fdb4436517293fe54509b",
+            "Source": "/var/lib/docker/volumes/1ac6f5f082687af49225d52eb505c7c39b7b01c02b9fdb4436517293fe54509b/_data",
+            "Destination": "/data/configdb",
+            "Driver": "local",
+            "Mode": "",
+            "RW": true,
+            "Propagation": ""
+          },
+          {
+            "Type": "volume",
+            "Name": "17287df508832fa2e37e6e5485bc93e546b021b750f57d3cb397bfc70c7d66ae",
+            "Source": "/var/lib/docker/volumes/17287df508832fa2e37e6e5485bc93e546b021b750f57d3cb397bfc70c7d66ae/_data",
+            "Destination": "/data/db",
+            "Driver": "local",
+            "Mode": "",
+            "RW": true,
+            "Propagation": ""
+          }
+        ]
+      },
+      {
+        "name": "mydevtools-expansion-firestore",
+        "id": "9295a2d7ffd741a406de00276ea536af5dd4eb1eede74ac9aaf96bc7411a9a58",
+        "proof": {
+          "exactAuthorizedName": true,
+          "expansionLabel": "true",
+          "taskLabel": null
+        },
+        "before": {
+          "status": "running",
+          "running": true,
+          "autoRemove": true
+        },
+        "after": {
+          "status": "removed by pre-existing Docker AutoRemove policy",
+          "running": false,
+          "containerPreserved": false
+        },
+        "volumeMountsBefore": [
+          {
+            "Type": "bind",
+            "Source": "/private/tmp/mydevtools-firestore-fixture",
+            "Destination": "/opt/fixture",
+            "Mode": "",
+            "RW": false,
+            "Propagation": "rprivate"
+          }
+        ]
+      },
+      {
+        "name": "mydevtools-expansion-elasticsearch",
+        "id": "5d5a010971281d8e0b0cef1452f15c83140160084ac5b7a1fd5ef470026238d2",
+        "proof": {
+          "exactAuthorizedName": true,
+          "expansionLabel": "true",
+          "taskLabel": null
+        },
+        "before": {
+          "status": "running",
+          "running": true,
+          "autoRemove": true
+        },
+        "after": {
+          "status": "removed by pre-existing Docker AutoRemove policy",
+          "running": false,
+          "containerPreserved": false
+        },
+        "volumeMountsBefore": []
+      },
+      {
+        "name": "mydevtools-expansion-clean-20261020",
+        "id": "ac5e5760268e91c5d2051825deafc773109a245bd2fb6da086700151cd6066b5",
+        "proof": {
+          "exactAuthorizedName": true,
+          "expansionLabel": "true",
+          "taskLabel": "clean-runtime-20261020"
+        },
+        "before": {
+          "status": "running",
+          "running": true,
+          "autoRemove": false
+        },
+        "after": {
+          "status": "exited",
+          "running": false,
+          "containerPreserved": true
+        },
+        "volumeMountsBefore": []
+      },
+      {
+        "name": "mydevtools-final-clean-20261021",
+        "id": "29edb487002b5028346bce50bc784ffae5838b5602934c8dc742ae61ae24ce24",
+        "proof": {
+          "exactAuthorizedName": true,
+          "expansionLabel": "true",
+          "taskLabel": "final-clean-20261021"
+        },
+        "before": {
+          "status": "running",
+          "running": true,
+          "autoRemove": false
+        },
+        "after": {
+          "status": "exited",
+          "running": false,
+          "containerPreserved": true
+        },
+        "volumeMountsBefore": []
+      }
+    ],
+    "storageInspection": {
+      "imagesPreserved": true,
+      "imageCount": 10,
+      "volumes": [
+        {
+          "id": "17287df508832fa2e37e6e5485bc93e546b021b750f57d3cb397bfc70c7d66ae",
+          "exists": false,
+          "inspect": null,
+          "error": "Error response from daemon: get 17287df508832fa2e37e6e5485bc93e546b021b750f57d3cb397bfc70c7d66ae: no such volume"
+        },
+        {
+          "id": "1ac6f5f082687af49225d52eb505c7c39b7b01c02b9fdb4436517293fe54509b",
+          "exists": false,
+          "inspect": null,
+          "error": "Error response from daemon: get 1ac6f5f082687af49225d52eb505c7c39b7b01c02b9fdb4436517293fe54509b: no such volume"
+        },
+        {
+          "id": "48986048cb7986ae96078f68358273749b6cbf280bb89247c16c10f0b3dc774c",
+          "exists": false,
+          "inspect": null,
+          "error": "Error response from daemon: get 48986048cb7986ae96078f68358273749b6cbf280bb89247c16c10f0b3dc774c: no such volume"
+        },
+        {
+          "id": "d5c10abcc7f7dd7ede8f1e0186da9975b083a37402a6221240e85254cfdc0a32",
+          "exists": false,
+          "inspect": null,
+          "error": "Error response from daemon: get d5c10abcc7f7dd7ede8f1e0186da9975b083a37402a6221240e85254cfdc0a32: no such volume"
+        },
+        {
+          "id": "fbe79e2eb1330f4a4f82e60a54e7e9518c3cf3f17a736926bec156a203395a15",
+          "exists": false,
+          "inspect": null,
+          "error": "Error response from daemon: get fbe79e2eb1330f4a4f82e60a54e7e9518c3cf3f17a736926bec156a203395a15: no such volume"
+        }
+      ]
+    },
+    "mainHostProduction": {
+      "untouched": true,
+      "check": {
+        "url": "http://127.0.0.1:3100/manifest.webmanifest",
+        "status": 200,
+        "name": "mydevtools: Free Online Developer Tools"
+      }
+    },
+    "unrelatedContainersUntouched": true,
+    "artifacts": {
+      "before": "/private/tmp/mydevtools-final-fixture-cleanup-before-20261021.json",
+      "after": "/private/tmp/mydevtools-final-fixture-cleanup-after-20261021.json",
+      "storage": "/private/tmp/mydevtools-final-fixture-cleanup-storage-20261021.json",
+      "stopLog": "/private/tmp/mydevtools-final-fixture-stop-20261021.log"
+    },
+    "sourceEdits": false
+  },
+  "limits": [
+    "No browser/UI verification in the final batch, as requested.",
+    "Handler/format bytes verified; browser download delivery remains unverified.",
+    "Chrome-installed PWA removal could not be performed because automation Chrome internal app pages are blocked; desktop app was preserved.",
+    "macOS package is local/ad-hoc signed; not notarized, installed or published.",
+    "Existing locked dependency audit reports17advisories (11moderate/6high); no forced dependency updates."
+  ]
+}

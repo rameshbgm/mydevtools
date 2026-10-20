@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Button, Card, Typography, Tag, Row, Col, Divider } from "antd";
+import { Button, Card, Typography, Tag, Row, Col } from "antd";
 import { QuestionCircleOutlined, ReloadOutlined } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
 
@@ -42,25 +43,29 @@ const TYPE_COLOR: Record<string, string> = {
 };
 
 const TYPE_LABEL: Record<string, string> = {
-    positive: "Positive",
-    neutral: "Neutral",
-    negative: "Negative",
+    positive: "Positive response",
+    neutral: "Neutral response",
+    negative: "Negative response",
 };
 
 export default function Magic8BallPage() {
     const { darkMode } = useAppStore();
+    const { t } = useLanguage();
     const [question, setQuestion] = useState("");
     const [fortune, setFortune] = useState<typeof FORTUNES[0] | null>(null);
     const [shaking, setShaking] = useState(false);
     const [history, setHistory] = useState<Array<{ q: string; f: typeof FORTUNES[0] }>>([]);
     const [counts, setCounts] = useState({ positive: 0, neutral: 0, negative: 0 });
 
+    const resultRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    React.useEffect(() => () => { if (resultRef.current) clearTimeout(resultRef.current); }, []);
+
     const shake = useCallback(() => {
         if (shaking) return;
         setShaking(true);
         setFortune(null);
 
-        setTimeout(() => {
+        resultRef.current = setTimeout(() => {
             const f = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
             setFortune(f);
             setShaking(false);
@@ -72,6 +77,8 @@ export default function Magic8BallPage() {
     }, [shaking, question]);
 
     const reset = () => {
+        if (resultRef.current) clearTimeout(resultRef.current);
+        setShaking(false);
         setFortune(null);
         setQuestion("");
         setHistory([]);
@@ -84,25 +91,14 @@ export default function Magic8BallPage() {
 
     return (
         <ToolPageLayout
-            title="Magic 8-Ball"
-            description="Ask a yes/no question and let the Magic 8-Ball decide your fate"
+            title={t("Magic 8-Ball")}
+            description={t("Ask a yes/no question and let the Magic 8-Ball decide your fate")}
             icon={<QuestionCircleOutlined style={{ fontSize: 24, color: "#6366f1" }} />}
             color="#6366f1"
             learnMore={{
-                whatIs: "A digital recreation of the classic Magic 8-Ball toy. Ask any yes/no question, shake the ball, and receive one of 20 authentic responses across positive, neutral, and negative categories.",
-                whyUse: "Perfect for settling debates, breaking decision paralysis, or just having fun. Tracks your question history and response distribution across all three outcome types.",
-                howToUse: [
-                    "Type your yes/no question (optional but more fun)",
-                    "Click 'Ask the 8-Ball' or press Enter",
-                    "Wait for the ball to stop shaking",
-                    "Read your fate in the triangle window",
-                ],
-                tips: [
-                    "All 20 responses are from the original Magic 8-Ball toy",
-                    "10 positive, 5 neutral, 5 negative — same distribution as the original",
-                    "History tracks the last 8 questions with answers",
-                ],
-                useCases: ["Team decision making", "Game nights", "Breaking ties", "General cosmic consultation"],
+                whatIs: t("A playful random answer generator with 20 responses: 10 positive, 5 neutral and 5 negative. It does not predict the future."),
+                howToUse: [t("Enter an optional yes/no question, then ask the ball or press Enter. The response appears after the animation.")],
+                tips: [t("Questions stay in this tab only. Changing language translates answer wording without selecting a new answer.")],
             }}
         >
             <Row gutter={[20, 20]}>
@@ -111,11 +107,11 @@ export default function Magic8BallPage() {
                     <Card style={{ background: cardBg, textAlign: "center" }}>
                         {/* Question input */}
                         <div style={{ maxWidth: 400, margin: "0 auto 24px" }}>
-                            <input
+                            <input aria-label={t("Ask a yes or no question…")} dir="auto"
                                 value={question}
                                 onChange={e => setQuestion(e.target.value)}
                                 onKeyDown={e => { if (e.key === "Enter") shake(); }}
-                                placeholder="Ask a yes or no question…"
+                                placeholder={t("Ask a yes or no question…")}
                                 style={{
                                     width: "100%",
                                     padding: "10px 16px",
@@ -123,7 +119,7 @@ export default function Magic8BallPage() {
                                     border: `1px solid ${border}`,
                                     background: darkMode ? "#141414" : "#f8fafc",
                                     color: darkMode ? "#e5e7eb" : "#111827",
-                                    fontSize: 14,
+                                    fontSize: 16,
                                     outline: "none",
                                     textAlign: "center",
                                 }}
@@ -203,7 +199,7 @@ export default function Magic8BallPage() {
                                                     textTransform: "uppercase",
                                                     display: "block",
                                                 }}>
-                                                    {fortune.text}
+                                                    {t(fortune.text)}
                                                 </span>
                                             </div>
                                         </foreignObject>
@@ -232,7 +228,7 @@ export default function Magic8BallPage() {
                                 disabled={shaking}
                                 style={{ background: "#6366f1", borderColor: "#6366f1", minWidth: 160, height: 44 }}
                             >
-                                {shaking ? "Shaking…" : "Ask the 8-Ball"}
+                                {shaking ? t("Shaking…") : t("Ask the 8-Ball")}
                             </Button>
                         </div>
 
@@ -247,10 +243,10 @@ export default function Magic8BallPage() {
                                 >
                                     <Tag color={fortune.type === "positive" ? "success" : fortune.type === "negative" ? "error" : "warning"}
                                         style={{ fontSize: 14, padding: "4px 14px" }}>
-                                        {TYPE_LABEL[fortune.type]}
+                                        {t(TYPE_LABEL[fortune.type])}
                                     </Tag>
                                     <div style={{ marginTop: 8, fontSize: 18, fontWeight: 700, color: TYPE_COLOR[fortune.type] }}>
-                                        {fortune.text}
+                                        {t(fortune.text)}
                                     </div>
                                 </motion.div>
                             )}
@@ -264,8 +260,8 @@ export default function Magic8BallPage() {
                         {/* Stats */}
                         {total > 0 && (
                             <Card size="small" style={{ background: cardBg }}
-                                title={<Text strong>Response Stats ({total} asks)</Text>}
-                                extra={<Button size="small" danger onClick={reset}>Reset</Button>}
+                                title={<Text strong>{t("Response Stats ({count} asks)", { count: total })}</Text>}
+                                extra={<Button size="small" danger onClick={reset}>{t("Reset")}</Button>}
                             >
                                 {(["positive", "neutral", "negative"] as const).map(type => {
                                     const count = counts[type];
@@ -274,7 +270,7 @@ export default function Magic8BallPage() {
                                         <div key={type} style={{ marginBottom: 10 }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                                                 <Text style={{ fontSize: 12, color: TYPE_COLOR[type], fontWeight: 600 }}>
-                                                    {TYPE_LABEL[type]}
+                                                    {t(TYPE_LABEL[type])}
                                                 </Text>
                                                 <Text type="secondary" style={{ fontSize: 12 }}>{count} ({pct}%)</Text>
                                             </div>
@@ -298,7 +294,7 @@ export default function Magic8BallPage() {
 
                         {/* History */}
                         {history.length > 0 && (
-                            <Card size="small" style={{ background: cardBg }} title={<Text strong>Question History</Text>}>
+                            <Card size="small" style={{ background: cardBg }} title={<Text strong>{t("Question History")}</Text>}>
                                 {history.map((h, i) => (
                                     <div key={i} style={{
                                         padding: "8px 0",
@@ -309,7 +305,7 @@ export default function Magic8BallPage() {
                                             {h.q}
                                         </Text>
                                         <Text style={{ fontSize: 13, fontWeight: 600, color: TYPE_COLOR[h.f.type] }}>
-                                            {h.f.text}
+                                            {t(h.f.text)}
                                         </Text>
                                     </div>
                                 ))}
@@ -320,8 +316,7 @@ export default function Magic8BallPage() {
                             <Card size="small" style={{ background: cardBg, textAlign: "center" }}>
                                 <div style={{ fontSize: 48, marginBottom: 8 }}>🎱</div>
                                 <Text type="secondary" style={{ fontSize: 13 }}>
-                                    Ask a question and shake the ball to reveal your destiny.
-                                </Text>
+                                    {t("Ask a question and shake the ball to reveal your destiny.")}</Text>
                             </Card>
                         )}
                     </div>

@@ -1,68 +1,45 @@
-import { asRecord, getArray, isRecord, type DataRecord } from "@/lib/structured-data";
+import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
+import Ajv2019 from "ajv/dist/2019";
+import Ajv2020 from "ajv/dist/2020";
+import addFormats from "ajv-formats";
+import { isRecord } from "@/lib/structured-data";
 
-export type SchemaIssue = { path: string; message: string };
+export type SchemaIssue = { path: string; message: string; kind?: "schema" | "instance" };
+export const SUPPORTED_SCHEMA_DIALECTS = ["2020-12", "2019-09", "draft-07"] as const;
+const validators = new Map<string, ValidateFunction>();
 
-function typeMatches(value: unknown, expected: string): boolean {
-    if (expected === "null") return value === null;
-    if (expected === "array") return Array.isArray(value);
-    if (expected === "object") return isRecord(value);
-    if (expected === "integer") return typeof value === "number" && Number.isInteger(value);
-    return typeof value === expected;
-}
-
-function resolveLocalRef(root: DataRecord, ref: string): DataRecord | null {
-    if (!ref.startsWith("#/")) return null;
-    let value: unknown = root;
-    for (const segment of ref.slice(2).split("/")) {
-        value = asRecord(value)[segment.replace(/~1/g, "/").replace(/~0/g, "~")];
-    }
-    return isRecord(value) ? value : null;
-}
-
+/** No remote loading: unresolved references and unsupported vocabularies are errors. */
 export function validateJsonSchema(value: unknown, schemaValue: unknown): SchemaIssue[] {
-    const root = asRecord(schemaValue);
-    const issues: SchemaIssue[] = [];
-    const visit = (current: unknown, rawSchema: DataRecord, path: string, depth: number) => {
-        if (depth > 48) { issues.push({ path, message: "Schema nesting is too deep to validate safely." }); return; }
-        const ref = typeof rawSchema.$ref === "string" ? resolveLocalRef(root, rawSchema.$ref) : null;
-        const schema = ref ?? rawSchema;
-        if (typeof schema.type === "string" && !typeMatches(current, schema.type)) {
-            issues.push({ path, message: `Expected ${schema.type}, received ${Array.isArray(current) ? "array" : current === null ? "null" : typeof current}.` });
-            return;
+    try {
+        if (typeof schemaValue !== "boolean" && !isRecord(schemaValue)) {
+            return [{ path: "$schema", kind: "schema", message: "A JSON Schema must be an object or a boolean." }];
         }
-        const enumValues = getArray(schema.enum);
-        if (enumValues.length && !enumValues.some((candidate) => JSON.stringify(candidate) === JSON.stringify(current))) {
-            issues.push({ path, message: "Value is not one of the allowed enum values." });
+        const key = JSON.stringify(schemaValue);
+        if (key.length > 1024 * 1024) throw new Error("Schema exceeds the 1 MiB limit.");
+        let validate = validators.get(key);
+        if (!validate) {
+            const dialect = isRecord(schemaValue) ? schemaValue.$schema : undefined;
+            const options = { allErrors: true, strict: true, strictTypes: false, strictTuples: false, strictRequired: false, allowUnionTypes: true, validateFormats: true, ownProperties: true };
+            const ajv = !dialect || dialect === "https://json-schema.org/draft/2020-12/schema"
+                ? new Ajv2020(options)
+                : dialect === "https://json-schema.org/draft/2019-09/schema"
+                    ? new Ajv2019(options)
+                    : dialect === "http://json-schema.org/draft-07/schema#" || dialect === "https://json-schema.org/draft-07/schema"
+                        ? new Ajv(options)
+                        : null;
+            if (!ajv) throw new Error(`Unsupported schema dialect: ${String(dialect)}. Choose ${SUPPORTED_SCHEMA_DIALECTS.join(", ")}.`);
+            addFormats(ajv);
+            validate = ajv.compile(schemaValue);
+            if (validators.size >= 12) validators.clear();
+            validators.set(key, validate);
         }
-        if (typeof current === "string") {
-            if (typeof schema.minLength === "number" && current.length < schema.minLength) issues.push({ path, message: `Must contain at least ${schema.minLength} characters.` });
-            if (typeof schema.maxLength === "number" && current.length > schema.maxLength) issues.push({ path, message: `Must contain at most ${schema.maxLength} characters.` });
-            if (typeof schema.pattern === "string") {
-                try { if (!new RegExp(schema.pattern).test(current)) issues.push({ path, message: `Does not match pattern ${schema.pattern}.` }); }
-                catch { issues.push({ path, message: "Schema contains an invalid regular expression pattern." }); }
-            }
-        }
-        if (typeof current === "number") {
-            if (typeof schema.minimum === "number" && current < schema.minimum) issues.push({ path, message: `Must be at least ${schema.minimum}.` });
-            if (typeof schema.maximum === "number" && current > schema.maximum) issues.push({ path, message: `Must be at most ${schema.maximum}.` });
-        }
-        if (Array.isArray(current)) {
-            if (typeof schema.minItems === "number" && current.length < schema.minItems) issues.push({ path, message: `Must contain at least ${schema.minItems} items.` });
-            const items = asRecord(schema.items);
-            current.forEach((item, index) => { if (Object.keys(items).length) visit(item, items, `${path}/${index}`, depth + 1); });
-        }
-        if (isRecord(current)) {
-            const required = getArray(schema.required).filter((item): item is string => typeof item === "string");
-            for (const field of required) if (!(field in current)) issues.push({ path, message: `Required property \`${field}\` is missing.` });
-            const properties = asRecord(schema.properties);
-            for (const [key, propertySchema] of Object.entries(properties)) {
-                if (key in current && isRecord(propertySchema)) visit(current[key], propertySchema, `${path}/${key.replace(/~/g, "~0").replace(/\//g, "~1")}`, depth + 1);
-            }
-            if (schema.additionalProperties === false) {
-                for (const key of Object.keys(current)) if (!(key in properties)) issues.push({ path: `${path}/${key}`, message: "Additional property is not allowed." });
-            }
-        }
-    };
-    visit(value, root, "$", 0);
-    return issues;
+        if (validate(value)) return [];
+        return (validate.errors ?? []).map((error: ErrorObject) => ({
+            path: `$${error.instancePath}${error.keyword === "required" ? "/" + String(error.params.missingProperty).replace(/~/g, "~0").replace(/\//g, "~1") : ""}`,
+            message: `${error.message ?? "Validation failed"}${error.keyword === "additionalProperties" ? `: ${error.params.additionalProperty}` : ""}`,
+            kind: "instance" as const,
+        }));
+    } catch (error) {
+        return [{ path: "$schema", kind: "schema", message: `Schema cannot be evaluated: ${error instanceof Error ? error.message : "Invalid schema"}. No validity claim can be made.` }];
+    }
 }

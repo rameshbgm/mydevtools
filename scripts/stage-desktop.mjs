@@ -1,0 +1,15 @@
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { resolve, join } from "node:path";
+const root = resolve(import.meta.dirname, ".."), stage = join(root, ".desktop"), runtime = join(stage, "runtime");
+const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+const required = JSON.parse(await readFile(join(root, ".next/required-server-files.json"), "utf8"));
+await readFile(join(root, ".next/BUILD_ID"), "utf8");
+await readFile(join(root, ".next/standalone/server.js"), "utf8");
+await rm(stage, { recursive: true, force: true });
+await mkdir(runtime, { recursive: true });
+await cp(join(root, ".next/standalone"), runtime, { recursive: true });
+await cp(join(root, ".next/static"), join(runtime, ".next/static"), { recursive: true });
+await cp(join(root, "public"), join(runtime, "public"), { recursive: true });
+await writeFile(join(runtime, "desktop-runtime-config.json"), JSON.stringify(required.config));
+await writeFile(join(stage, "stage-info.json"), JSON.stringify({ version: packageJson.version, next: packageJson.dependencies.next, stagedAt: new Date().toISOString() }, null, 2) + "\n");
+console.log("Staged My Dev Tools " + packageJson.version + " with its Next runtime and offline assets.");

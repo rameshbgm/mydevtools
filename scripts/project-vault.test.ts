@@ -1,0 +1,208 @@
+import assert from "node:assert/strict";
+import { ACTIVE_PROJECT_KEY, MAX_PROJECTS, PROJECTS_KEY, PERSONAL_PROJECT, activeProjectId, createProject, deleteProject, queueProjectPurge, readDeletedProjects, readProjects, renameProject, restoreProject, purgeDeletedProject, scopedStorage, appStateStorage, activeSessionProjectId, projectStorage, projectKey } from "../src/lib/project-storage";
+import { createVault, openVault, parseVaultEnvelope } from "../src/lib/local-vault";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+function storage(): Storage {
+    const data = new Map<string, string>();
+    return { get length() { return data.size; }, key: (index) => [...data.keys()][index] ?? null, getItem: (key) => data.get(key) ?? null, setItem: (key, value) => { data.set(key, value); }, removeItem: (key) => { data.delete(key); }, clear: () => data.clear() };
+}
+async function main() {
+    const closing = storage();
+    const closingProject = createProject("Close fixture", closing);
+    const keepProject = createProject("Keep fixture", closing);
+    closing.setItem(ACTIVE_PROJECT_KEY, closingProject.id);
+    closing.setItem(projectKey("saved-notes", closingProject.id), "delete after reload");
+    closing.setItem(projectKey("saved-notes", keepProject.id), "keep other project");
+    closing.setItem("saved-notes", "keep Personal");
+    queueProjectPurge(closingProject.id, closing);
+    assert.equal(activeProjectId(closing), PERSONAL_PROJECT, "A fresh document falls back to Personal before removing an active workspace");
+    assert.equal(closing.getItem(projectKey("saved-notes", closingProject.id)), "delete after reload", "Confirmation queues deletion without running it in the old workspace document");
+    const queued = readDeletedProjects(closing)[0];
+    assert.ok(queued.purgeQueuedAt && queued.purgeQueuedAt === queued.purgeStartedAt);
+    assert.throws(() => restoreProject(closingProject.id, closing), /Permanent deletion has started/);
+    await assert.rejects(purgeDeletedProject(closingProject.id, closing, async () => { throw new Error("interrupted fixture"); }), /interrupted fixture/);
+    assert.ok(readDeletedProjects(closing)[0].purgeQueuedAt, "Failed confirmed closes remain available for a deletion retry");
+    await purgeDeletedProject(closingProject.id, closing, async () => {});
+    assert.equal(closing.getItem(projectKey("saved-notes", closingProject.id)), null);
+    assert.equal(closing.getItem(projectKey("saved-notes", keepProject.id)), "keep other project");
+    assert.equal(closing.getItem("saved-notes"), "keep Personal");
+    assert.equal(readDeletedProjects(closing).length, 0);
+    assert.equal(closing.getItem(ACTIVE_PROJECT_KEY), null);
+    assert.throws(() => queueProjectPurge(PERSONAL_PROJECT, closing), /cannot be permanently deleted/);
+    assert.throws(() => queueProjectPurge(closingProject.id, closing), /not found/);
+    const beforeQueuedFailure = closing.getItem(PROJECTS_KEY);
+    const deniedQueue = { ...closing, setItem() { throw new Error("Fixture quota denied"); } };
+    assert.throws(() => queueProjectPurge(keepProject.id, deniedQueue), /quota denied/);
+    assert.equal(closing.getItem(PROJECTS_KEY), beforeQueuedFailure, "Failed queue writes leave project and content intact");
+    const limited = storage();
+    const nine = Array.from({ length: MAX_PROJECTS - 1 }, (_, i) => createProject(`Workspace ${i + 1}`, limited));
+    assert.equal(readProjects(limited).length, 10, "Personal counts toward the cap");
+    const atLimit = limited.getItem(PROJECTS_KEY);
+    assert.throws(() => createProject("Eleventh", limited), /limit is 10/);
+    assert.equal(limited.getItem(PROJECTS_KEY), atLimit, "failed create leaves data unchanged");
+    deleteProject(nine[0].id, limited);
+    const replacement = createProject("Replacement", limited);
+    assert.throws(() => restoreProject(nine[0].id, limited), /limit is 10/);
+    assert.equal(readDeletedProjects(limited).length, 1);
+    deleteProject(replacement.id, limited);
+    restoreProject(nine[0].id, limited);
+    assert.equal(readProjects(limited).length, 10);
+    // Older installations above the new cap remain visible and usable.
+    const legacy = JSON.parse(limited.getItem(PROJECTS_KEY)!);
+    legacy.push({ id: crypto.randomUUID(), name: "Legacy extra", createdAt: "" });
+    limited.setItem(PROJECTS_KEY, JSON.stringify(legacy));
+    assert.equal(readProjects(limited).length, 11);
+    assert.throws(() => createProject("No silent data loss", limited), /limit is 10/);
+
+    const raw = storage();
+    raw.setItem("notes", "legacy personal notes");
+    const project = createProject("API project", raw);
+    assert.equal(readProjects(raw).length, 2);
+    assert.equal(activeProjectId(raw), PERSONAL_PROJECT);
+
+    // Project deletion is recoverable and must never erase another namespace,
+    // Personal preferences or a deleted project's data during later mutations.
+    const deletion = storage();
+    deletion.setItem("notes", "Personal stays intact");
+    const first = createProject("Delete fixture", deletion);
+    const second = createProject("Keep fixture", deletion);
+    deletion.setItem(projectKey("notes", first.id), "Retained project draft");
+    deletion.setItem(projectKey("notes", second.id), "Other project draft");
+    deletion.setItem(ACTIVE_PROJECT_KEY, first.id);
+    assert.deepEqual(deleteProject(first.id, deletion), { wasActive: true });
+    assert.equal(activeProjectId(deletion), PERSONAL_PROJECT, "a deleted active project falls back to Personal");
+    assert.equal(readProjects(deletion).some((p) => p.id === first.id), false);
+    assert.equal(readDeletedProjects(deletion)[0].id, first.id);
+    assert.equal(deletion.getItem(projectKey("notes", first.id)), "Retained project draft");
+    renameProject(second.id, "Renamed survivor", deletion);
+    createProject("Later project", deletion);
+    assert.equal(readDeletedProjects(deletion)[0].id, first.id, "create and rename preserve deleted metadata");
+    assert.throws(() => renameProject(first.id, "Hidden rename", deletion), /not found/);
+    assert.throws(() => deleteProject(first.id, deletion), /not found/);
+    assert.throws(() => deleteProject(PERSONAL_PROJECT, deletion), /cannot be deleted/);
+    restoreProject(first.id, deletion);
+    assert.equal(readDeletedProjects(deletion).length, 0);
+    assert.equal(readProjects(deletion).find((p) => p.id === first.id)?.name, "Delete fixture");
+    assert.equal(deletion.getItem("notes"), "Personal stays intact");
+    assert.equal(deletion.getItem(projectKey("notes", second.id)), "Other project draft");
+    assert.equal(deletion.getItem(projectKey("notes", first.id)), "Retained project draft");
+    assert.throws(() => restoreProject(first.id, deletion), /not found/);
+    const beforeFailure = deletion.getItem(PROJECTS_KEY);
+    const deniedWrite = { ...deletion, setItem() { throw new Error("Quota denied"); } };
+    assert.throws(() => deleteProject(first.id, deniedWrite), /Quota denied/);
+    assert.equal(deletion.getItem(PROJECTS_KEY), beforeFailure, "failed writes cannot hide the project");
+    await assert.rejects(() => purgeDeletedProject(PERSONAL_PROJECT, deletion, async () => {}), /cannot be permanently deleted/);
+    await assert.rejects(() => purgeDeletedProject(first.id, deletion, async () => {}), /not found/);
+    deleteProject(first.id, deletion);
+    await assert.rejects(() => purgeDeletedProject(first.id, deletion, async () => { throw new Error("Storage interruption"); }), /Storage interruption/);
+    assert.ok(readDeletedProjects(deletion)[0].purgeStartedAt, "incomplete purges remain retryable");
+    assert.throws(() => restoreProject(first.id, deletion), /Permanent deletion has started/);
+    await purgeDeletedProject(first.id, deletion, async (id) => {
+        assert.equal(id, first.id);
+        createProject("Created during purge", deletion);
+    });
+    assert.equal(readDeletedProjects(deletion).length, 0);
+    assert.equal(deletion.getItem(projectKey("notes", first.id)), null);
+    assert.equal(deletion.getItem(projectKey("notes", second.id)), "Other project draft");
+    assert.equal(deletion.getItem("notes"), "Personal stays intact");
+    assert.ok(readProjects(deletion).some((p) => p.name === "Created during purge"), "async purge does not overwrite concurrent project changes");
+    const scoped = scopedStorage(raw, () => activeProjectId(raw));
+    assert.equal(scoped.getItem("notes"), "legacy personal notes");
+    raw.setItem(ACTIVE_PROJECT_KEY, project.id);
+    assert.equal(scoped.getItem("notes"), null, "new project must not copy Personal records");
+    scoped.setItem("notes", "project-only notes");
+    assert.equal(raw.getItem("notes"), "legacy personal notes");
+    assert.equal(scoped.length, 1);
+    assert.equal(scoped.key(0), "notes");
+    renameProject(project.id, "Renamed project", raw);
+    assert.equal(readProjects(raw)[1].name, "Renamed project");
+    assert.throws(() => renameProject("personal", "Other", raw));
+    const store = appStateStorage(raw);
+    raw.setItem("app", JSON.stringify({ state: { darkMode: false, sidebarCollapsed: true, recentTools: ["private-personal"], bookmarks: [{ id: "personal" }] }, version: 0 }));
+    const emptyProject = JSON.parse(store.getItem("app")!);
+    assert.deepEqual(emptyProject.state.recentTools, []);
+    assert.deepEqual(emptyProject.state.bookmarks, []);
+    assert.equal(emptyProject.state.darkMode, false);
+    store.setItem("app", JSON.stringify({ state: { darkMode: true, sidebarCollapsed: false, recentTools: ["project-tool"], bookmarks: [] }, version: 0 }));
+    assert.deepEqual(JSON.parse(raw.getItem("app")!).state.recentTools, ["private-personal"]);
+    assert.equal(JSON.parse(raw.getItem("app")!).state.darkMode, true);
+    scoped.clear();
+    assert.equal(raw.getItem("notes"), "legacy personal notes");
+    assert.ok(raw.getItem(PROJECTS_KEY));
+    raw.setItem(ACTIVE_PROJECT_KEY, "not-a-project");
+    assert.equal(activeProjectId(raw), PERSONAL_PROJECT);
+
+    // Another tab may update the active key before this page receives storage events.
+    // Its existing in-memory operations must keep the original project namespace.
+    const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+    try {
+        raw.setItem(ACTIVE_PROJECT_KEY, project.id);
+        Object.defineProperty(globalThis, "window", { configurable: true, value: { localStorage: raw } });
+        assert.equal(activeSessionProjectId(), project.id);
+        raw.setItem(ACTIVE_PROJECT_KEY, PERSONAL_PROJECT);
+        projectStorage.setItem("race-note", "old project draft");
+        assert.equal(raw.getItem("race-note"), null);
+        assert.equal(raw.getItem(projectKey("race-note", project.id)), "old project draft");
+        assert.equal(activeSessionProjectId(), project.id);
+        queueProjectPurge(project.id, raw);
+        assert.throws(() => projectStorage.setItem("race-note", "late queued write"), /Project not found/);
+        const staleScope = scopedStorage(raw, () => project.id);
+        assert.throws(() => staleScope.setItem("late-note", "must not be recreated"), /Project not found/);
+        const staleApp = appStateStorage(raw, () => project.id);
+        const globalBefore = raw.getItem("app");
+        assert.throws(() => staleApp.setItem("app", JSON.stringify({ state: { darkMode: false } })), /Project not found/);
+        assert.equal(raw.getItem("app"), globalBefore, "Rejected stale app writes cannot alter shared appearance");
+        await purgeDeletedProject(project.id, raw, async () => {});
+        assert.throws(() => projectStorage.setItem("race-note", "late purged write"), /Project not found/);
+        assert.equal(raw.getItem(projectKey("race-note", project.id)), null, "A stale document cannot resurrect a permanently deleted namespace");
+        assert.equal(raw.getItem("notes"), "legacy personal notes");
+        const personal = scopedStorage(raw, () => PERSONAL_PROJECT);
+        personal.setItem("personal-after-purge", "Personal remains writable");
+        assert.equal(raw.getItem("personal-after-purge"), "Personal remains writable");
+    } finally { if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow); else Reflect.deleteProperty(globalThis, "window"); }
+
+    const passphrase = "public fixture passphrase only";
+    const contents = { entries: [{ name: "private-filename.txt", secret: "public-test-secret", folder: "/private-folder", bytes: "AQIDBA==" }] };
+    const vault = await createVault(passphrase, "project:test:credentials", contents);
+    assert.equal(vault.envelope.ciphertext.includes("public-test-secret"), false);
+    const ciphertext = JSON.stringify(vault.envelope);
+    for (const text of [passphrase, "private-filename", "private-folder", "public-test-secret"]) assert.equal(ciphertext.includes(text), false);
+    const recovered = await openVault(JSON.parse(ciphertext), passphrase, "project:test:credentials");
+    assert.deepEqual(recovered.read(), contents);
+    await assert.rejects(() => openVault(vault.envelope, "incorrect passphrase"));
+    await assert.rejects(() => openVault(vault.envelope, passphrase, "different-project"));
+    const tampered = { ...vault.envelope, ciphertext: (vault.envelope.ciphertext[0] === "A" ? "B" : "A") + vault.envelope.ciphertext.slice(1) };
+    await assert.rejects(() => openVault(tampered, passphrase));
+    await assert.rejects(() => openVault({ ...vault.envelope, context: "substituted" }, passphrase));
+    assert.throws(() => parseVaultEnvelope({ ...vault.envelope, iterations: 999999999 }));
+    assert.throws(() => parseVaultEnvelope({ ...vault.envelope, salt: "" }));
+    const nonce = vault.envelope.iv;
+    const size = vault.envelope.ciphertext.length;
+    await vault.seal({ entries: ["new"] });
+    assert.notEqual(vault.envelope.iv, nonce);
+    assert.equal(vault.envelope.ciphertext.length, size, "small payload sizes share a padded bucket");
+    assert.deepEqual((await openVault(vault.envelope, passphrase)).read(), { entries: ["new"] });
+    vault.lock();
+    assert.throws(() => vault.read(), /locked/);
+    await assert.rejects(() => vault.seal({}), /locked/);
+    await assert.rejects(() => createVault("short", "test", {}), /12/);
+    recovered.lock();
+    const directory = mkdtempSync(join(tmpdir(), "mydevtools-vault-test-"));
+    try {
+        const recovery = await createVault(passphrase, "personal:files", { version: 1, records: [{ id: "public-fixture", kind: "file", name: "../../escape.bin", folder: "private", username: "", environment: "", updatedAt: "2026-10-19", value: "AAEC/w==", file: { size: 4, mime: "application/octet-stream", modified: 0 } }] });
+        const file = join(directory, "backup.json"), output = join(directory, "recovered");
+        writeFileSync(file, JSON.stringify(recovery.envelope));
+        const result = execFileSync(process.execPath, ["scripts/decrypt-vault.mjs", "--input", file, "--output", output], { input: passphrase + "\n", encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
+        assert.match(result, /Recovered 1 files/);
+        assert.deepEqual([...readFileSync(join(output, "1-escape.bin"))], [0, 1, 2, 255]);
+        assert.equal(existsSync(join(directory, "escape.bin")), false);
+        assert.throws(() => execFileSync(process.execPath, ["scripts/decrypt-vault.mjs", "--input", file, "--output", join(directory, "bad")], { input: "wrong passphrase\n", encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }));
+        recovery.lock();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+    console.log("Project isolation, recoverable deletion/restoration, appearance migration, authenticated vault encryption, tampering, locking and recovery passed.");
+}
+main().catch((error) => { console.error(error); process.exitCode = 1; });

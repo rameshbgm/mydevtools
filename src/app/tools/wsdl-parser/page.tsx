@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import {
     Card,
     Input,
@@ -220,6 +221,7 @@ function parseWSDL(xmlString: string, xsdEntries: XsdEntry[]): ParsedWSDL {
     if (parseError) throw new Error("Invalid XML: " + parseError.textContent);
 
     const root = doc.documentElement;
+    if (root.localName !== "definitions" || root.namespaceURI !== "http://schemas.xmlsoap.org/wsdl/") throw new Error("Expected a WSDL 1.1 definitions document");
     const targetNamespace = root.getAttribute("targetNamespace") || "";
     const getLocalName = (name: string) => name.includes(":") ? name.split(":")[1] : name;
 
@@ -330,8 +332,9 @@ function parseWSDL(xmlString: string, xsdEntries: XsdEntry[]): ParsedWSDL {
         if (!xsdEntry.content.trim()) continue;
         const xsdDoc = parser.parseFromString(xsdEntry.content, "text/xml");
         const xsdErr = xsdDoc.querySelector("parsererror");
-        if (xsdErr) continue; // skip malformed XSD silently
+        if (xsdErr) throw new Error("Invalid external XSD: " + xsdEntry.label + ": " + xsdErr.textContent);
         const root2 = xsdDoc.documentElement;
+        if (root2.localName !== "schema" || root2.namespaceURI !== "http://www.w3.org/2001/XMLSchema") throw new Error("Expected an XSD schema: " + xsdEntry.label);
         const extracted = extractTypesFromSchema(root2, true);
         for (const t of extracted) {
             const key = `${t.name}::${t.type}::${t.sourceNs || ""}`;
@@ -374,6 +377,15 @@ function generateSampleRequest(operation: WSDLOperation, messages: WSDLMessage[]
 let xsdIdCounter = 0;
 
 export default function WsdlParserPage() {
+    const { t } = useLanguage();
+    const tCurrent = useRef(t);
+    useEffect(() => { tCurrent.current = t; }, [t]);
+    const localizeError = (value: string) => {
+        for (const [prefix, key] of [["Invalid XML: ", "Invalid XML: {error}"], ["Invalid external XSD: ", "Invalid external XSD: {error}"], ["Expected an XSD schema: ", "Expected an XSD schema: {error}"], ["Failed to fetch WSDL: ", "Failed to fetch WSDL: {error}"]]) {
+            if (value.startsWith(prefix)) return t(key, { error: value.slice(prefix.length) });
+        }
+        return value === "Expected a WSDL 1.1 definitions document" || value === "Headers must be a valid JSON object" ? t(value) : value;
+    };
     const [wsdlInput, setWsdlInput] = useState(SAMPLE_WSDL);
     const [wsdlUrl, setWsdlUrl] = useState("");
     const [loading, setLoading] = useState(false);
@@ -417,6 +429,7 @@ export default function WsdlParserPage() {
     const removeHeader = (i: number) => setHeaders(prev => prev.filter((_, idx) => idx !== i));
 
     const buildFetchHeaders = () => {
+        if (headerMode === "json" && !jsonToHeaders(headerJson)) throw new Error("Headers must be a valid JSON object");
         const obj: Record<string, string> = {};
         headers.filter(h => h.enabled && h.key).forEach(h => { obj[h.key] = h.value; });
         return obj;
@@ -429,7 +442,7 @@ export default function WsdlParserPage() {
             body: JSON.stringify({ url, method: "GET", headers: requestHeaders }),
         });
         const data = await parseJsonResponse<ProxyResponsePayload>(res, "Proxy service");
-        return data.bodyIsBase64 ? atob(data.body) : (data.body ?? "");
+        return data.bodyIsBase64 ? new TextDecoder().decode(Uint8Array.from(atob(data.body), char => char.charCodeAt(0))) : (data.body ?? "");
     };
 
     const addXsdEntry = () => {
@@ -445,7 +458,7 @@ export default function WsdlParserPage() {
     };
 
     const fetchXsd = async () => {
-        if (!xsdUrl.trim()) { message.warning("Enter an XSD URL"); return; }
+        if (!xsdUrl.trim()) { message.warning(tCurrent.current("Enter an XSD URL")); return; }
         setXsdLoading(true);
         try {
             const reqHeaders = buildFetchHeaders();
@@ -462,9 +475,9 @@ export default function WsdlParserPage() {
             const label = xsdUrl.split("/").pop()?.split("?")[0] || `XSD ${xsdEntries.length + 1}`;
             setXsdEntries(prev => [...prev, { id: newId, label, content: text }]);
             setXsdUrl("");
-            message.success(`Fetched ${label}`);
+            message.success(tCurrent.current("Fetched {label}", { label }));
         } catch (err: any) {
-            message.error(`Failed to fetch XSD: ${err.message}`);
+            message.error(tCurrent.current("Failed to fetch XSD: {error}", { error: err.message }));
         } finally {
             setXsdLoading(false);
         }
@@ -476,10 +489,7 @@ export default function WsdlParserPage() {
         try {
             const parsed = parseWSDL(wsdlInput, xsdEntries);
             setParsedWsdl(parsed);
-            const msg = parsed.xsdResolved > 0
-                ? `WSDL parsed — ${parsed.xsdResolved} external type(s) resolved from XSD imports`
-                : "WSDL parsed successfully!";
-            message.success(msg);
+            message.success(parsed.xsdResolved > 0 ? tCurrent.current("WSDL parsed: {count} external types resolved", { count: parsed.xsdResolved }) : tCurrent.current("WSDL parsed successfully!"));
         } catch (err: any) {
             setError(err.message);
             setParsedWsdl(null);
@@ -487,7 +497,7 @@ export default function WsdlParserPage() {
     };
 
     const handleFetchWsdl = async () => {
-        if (!wsdlUrl.trim()) { message.warning("Please enter a WSDL URL"); return; }
+        if (!wsdlUrl.trim()) { message.warning(tCurrent.current("Please enter a WSDL URL")); return; }
         setLoading(true);
         setError(null);
         try {
@@ -504,7 +514,7 @@ export default function WsdlParserPage() {
             setWsdlInput(text);
             const parsed = parseWSDL(text, xsdEntries);
             setParsedWsdl(parsed);
-            message.success("WSDL fetched and parsed!");
+            message.success(tCurrent.current("WSDL fetched and parsed!"));
         } catch (err: any) {
             setError(`Failed to fetch WSDL: ${err.message}`);
         } finally {
@@ -543,64 +553,43 @@ export default function WsdlParserPage() {
         return generateSampleRequest(selectedOperation, parsedWsdl.messages, parsedWsdl.targetNamespace);
     }, [selectedOperation, parsedWsdl]);
 
-    const copyToClipboard = (text: string, label: string) => sharedCopy(text, `${label} copied!`);
+    const copyToClipboard = (text: string) => sharedCopy(text);
 
     return (
         <ToolPageLayout
-            title="WSDL Parser"
-            description="Parse and visualize WSDL files for SOAP web services"
+            title={t("WSDL Parser")}
+            description={t("Parse and visualize WSDL files for SOAP web services")}
             icon={<CloudOutlined style={{ fontSize: 24, color: "#722ed1" }} />}
             color="#722ed1"
             learnMore={{
-                whatIs: "A WSDL (Web Services Description Language) Parser unwraps SOAP service contracts into their structural building blocks: services, ports, bindings, port types, operations, messages, and the XSD types that flow across the wire. WSDL 1.1 and 2.0 documents are dense XML; this tool surfaces every node so you can read the contract like an API reference.",
-                whyUse: "SOAP is still the lingua franca for banking, insurance, healthcare (HL7), tax authorities, and telecom OSS/BSS systems. Even with modern REST replacements, integrating with these services means reading a WSDL — and a 5,000-line XML file is brutal without tooling. This parser saves the back-and-forth between the WSDL, the XSD imports, and your IDE.",
-                howToUse: [
-                    "Paste a WSDL document into the editor, or enter a remote URL to fetch (CORS permitting)",
-                    "If the WSDL references external XSD files, switch to the 'External XSD' tab and paste or fetch each schema",
-                    "Click 'Parse' to load the service tree — services, ports, bindings, operations",
-                    "Drill into any operation to see its input message, output message, and SOAP fault types",
-                    "Generate a sample SOAP envelope and copy it straight into the SOAP Client tool",
-                ],
-                tips: [
-                    "Remote WSDLs hosted without CORS headers won't load in the browser — paste the XML directly instead",
-                    "Check `<soap:binding transport>` to confirm SOAP 1.1 (HTTP) vs SOAP 1.2 — they have different envelope namespaces",
-                    "`<wsdl:import>` and `<xsd:import>` pull in additional schemas — use the External XSD tab to paste them and resolve all types",
-                    "Operation style (document/literal vs rpc/encoded) changes how the body is wrapped — most modern services use document/literal-wrapped",
-                    "Multiple XSD files can be imported simultaneously; the parser de-duplicates types by name, kind, and namespace",
-                    "Use the XSD Validator tool to verify a sample message before sending it to the service",
-                ],
-                useCases: [
-                    "Reverse-engineering legacy enterprise SOAP services for integration",
-                    "Generating client stubs in code-first tooling (Apache CXF, JAX-WS, .NET wsdl.exe)",
-                    "Auditing SOAP service contracts during procurement or vendor migration",
-                    "Building documentation for internal SOAP services exposed via API gateways",
-                    "Diagnosing schema mismatches when wire requests fail with `Fault` responses",
-                    "Onboarding to bank, payment, or government SOAP APIs without IDE plugins",
-                ],
+                whatIs: t("Inspect WSDL 1.1 services, ports, bindings, messages and supplied XSD types. WSDL 2.0 is not supported."),
+                whyUse: t("Paste XML locally or fetch a URL. Browser network failures may retry through the server proxy with the same headers."),
+                howToUse: [t("Add external XSD documents manually, then parse and select an operation.")],
+                tips: [t("The generated SOAP envelope is a starting template, not schema-valid client code; fill in parameters and check the binding version."), t("WSDL imports are listed but not fetched or merged automatically.")],
             }}
         >
             <Row gutter={[16, 16]}>
                 {/* Input Panel */}
                 <Col xs={24} lg={12}>
                     <Card
-                        title="WSDL Input"
+                        title={t("WSDL Input")}
                         extra={
                             <Button type="primary" onClick={handleParse} icon={<FileTextOutlined />}>
-                                Parse
+                                {t("Parse")}
                             </Button>
                         }
                     >
                         {/* URL + headers */}
                         <Space.Compact style={{ width: "100%", marginBottom: 8 }}>
                             <Input
-                                placeholder="Enter WSDL URL..."
+                                placeholder={t("Enter WSDL URL...")}
                                 value={wsdlUrl}
                                 onChange={(e) => setWsdlUrl(e.target.value)}
                                 onPressEnter={handleFetchWsdl}
-                                prefix={<LinkOutlined />}
+                                prefix={<LinkOutlined />} dir="ltr" aria-label={t("WSDL URL")}
                             />
                             <Button onClick={handleFetchWsdl} loading={loading} icon={<DownloadOutlined />}>
-                                Fetch
+                                {t("Fetch")}
                             </Button>
                         </Space.Compact>
 
@@ -612,7 +601,7 @@ export default function WsdlParserPage() {
                             onClick={() => setShowHeaders(v => !v)}
                             style={{ marginBottom: showHeaders ? 8 : 12, color: "var(--wb-text-secondary)" }}
                         >
-                            Request Headers {headers.filter(h => h.enabled && h.key).length > 0 && `(${headers.filter(h => h.enabled && h.key).length})`}
+                            {t("Request Headers")} {headers.filter(h => h.enabled && h.key).length > 0 && `(${headers.filter(h => h.enabled && h.key).length})`}
                         </Button>
 
                         {showHeaders && (
@@ -622,7 +611,7 @@ export default function WsdlParserPage() {
                                         size="small"
                                         value={headerMode}
                                         onChange={(v) => switchHeaderMode(v as "form" | "json")}
-                                        options={[{ label: "Form", value: "form" }, { label: "JSON", value: "json" }]}
+                                        options={[{ label: t("Form"), value: "form" }, { label: "JSON", value: "json" }]}
                                     />
                                 </div>
                                 {headerMode === "form" ? (
@@ -636,23 +625,23 @@ export default function WsdlParserPage() {
                                                 />
                                                 <Input
                                                     size="small"
-                                                    placeholder="Header name"
+                                                    placeholder={t("Header name")}
                                                     value={h.key}
                                                     onChange={(e) => updateHeader(i, "key", e.target.value)}
-                                                    style={{ width: 160 }}
+                                                    style={{ width: 160 }} dir="ltr" aria-label={t("Header name")}
                                                 />
                                                 <Input
                                                     size="small"
-                                                    placeholder="Value"
+                                                    placeholder={t("Value")}
                                                     value={h.value}
                                                     onChange={(e) => updateHeader(i, "value", e.target.value)}
-                                                    style={{ width: 200 }}
+                                                    style={{ width: 200 }} dir="ltr" aria-label={t("Value")}
                                                 />
-                                                <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => removeHeader(i)} />
+                                                <Button aria-label={t("Delete")} size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => removeHeader(i)} />
                                             </Space>
                                         ))}
                                         <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addHeader} block>
-                                            Add Header
+                                            {t("Add Header")}
                                         </Button>
                                     </>
                                 ) : (
@@ -665,13 +654,13 @@ export default function WsdlParserPage() {
                                         }}
                                         rows={4}
                                         style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 11 }}
-                                        placeholder={'{\n  "Authorization": "Bearer ..."\n}'}
+                                        placeholder={'{\n  "Authorization": "Bearer ..."\n}'} dir="ltr" aria-label={t("Headers JSON")}
                                     />
                                 )}
                             </div>
                         )}
 
-                        <Divider style={{ margin: "12px 0" }}>Or paste WSDL XML</Divider>
+                        <Divider style={{ margin: "12px 0" }}>{t("Or paste WSDL XML")}</Divider>
                         <CodeEditor
                             value={wsdlInput}
                             onChange={(v) => setWsdlInput(v || "")}
@@ -689,7 +678,7 @@ export default function WsdlParserPage() {
                                 style={{ color: "var(--wb-text-secondary)" }}
                             >
                                 <ImportOutlined style={{ marginRight: 4, color: "#722ed1" }} />
-                                External XSD {xsdEntries.length > 0 && <Badge count={xsdEntries.length} size="small" color="#722ed1" style={{ marginLeft: 6 }} />}
+                                {t("External XSD")} {xsdEntries.length > 0 && <Badge count={xsdEntries.length} size="small" color="#722ed1" style={{ marginLeft: 6 }} />}
                             </Button>
                         </div>
 
@@ -698,26 +687,26 @@ export default function WsdlParserPage() {
                                 <Space.Compact style={{ width: "100%", marginBottom: 10 }}>
                                     <Input
                                         size="small"
-                                        placeholder="Fetch XSD by URL (CORS fallback via proxy)..."
+                                        placeholder={t("Fetch XSD by URL (CORS fallback via proxy)...")}
                                         value={xsdUrl}
                                         onChange={(e) => setXsdUrl(e.target.value)}
                                         onPressEnter={fetchXsd}
-                                        prefix={<LinkOutlined />}
+                                        prefix={<LinkOutlined />} dir="ltr" aria-label={t("XSD XML")}
                                     />
                                     <Button size="small" onClick={fetchXsd} loading={xsdLoading} icon={<DownloadOutlined />}>
-                                        Fetch
+                                        {t("Fetch")}
                                     </Button>
                                 </Space.Compact>
                                 <Button size="small" icon={<PlusOutlined />} onClick={addXsdEntry} style={{ marginBottom: 10 }}>
-                                    Add XSD paste area
+                                    {t("Add XSD paste area")}
                                 </Button>
                                 {xsdEntries.length === 0 && (
                                     <Empty
                                         image={Empty.PRESENTED_IMAGE_SIMPLE}
                                         description={
                                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                                Add external XSD files to resolve{" "}
-                                                <Text code style={{ fontSize: 11 }}>&lt;xsd:import&gt;</Text> references.
+                                                {t("Add external XSD documents referenced by xsd:import.")}{" "}
+
                                             </Text>
                                         }
                                     />
@@ -728,14 +717,14 @@ export default function WsdlParserPage() {
                                         size="small"
                                         style={{ marginBottom: 10 }}
                                         title={<Text style={{ fontSize: 12 }}><ImportOutlined style={{ marginRight: 6, color: "#722ed1" }} />{entry.label}</Text>}
-                                        extra={<Button aria-label="Delete" size="small" danger type="text" icon={<DeleteOutlined />} onClick={() => removeXsdEntry(entry.id)} />}
+                                        extra={<Button aria-label={t("Delete")} size="small" danger type="text" icon={<DeleteOutlined />} onClick={() => removeXsdEntry(entry.id)} />}
                                     >
                                         <TextArea
                                             value={entry.content}
                                             onChange={(e) => updateXsdContent(entry.id, e.target.value)}
-                                            placeholder={`Paste XSD ${idx + 1} content here...`}
+                                            placeholder={t("Paste XSD {count} content here...", { count: idx + 1 })}
                                             rows={5}
-                                            style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 11 }}
+                                            style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 11 }} dir="ltr" aria-label={t("XSD XML")}
                                         />
                                     </Card>
                                 ))}
@@ -749,43 +738,43 @@ export default function WsdlParserPage() {
                     {error && (
                         <Alert
                             type="error"
-                            title="Parse Error"
-                            description={error}
+                            title={t("Parse Error")}
+                            description={localizeError(error)}
                             showIcon
                             style={{ marginBottom: 16 }}
                         />
                     )}
 
                     {parsedWsdl ? (
-                        <Card title="Parsed WSDL">
+                        <Card title={t("Parsed WSDL")}>
                             <Tabs
                                 activeKey={activeTab}
                                 onChange={setActiveTab}
                                 items={[
                                     {
                                         key: "overview",
-                                        label: "Overview",
+                                        label: t("Overview"),
                                         children: (
                                             <div>
                                                 <Descriptions column={1} size="small" bordered>
-                                                    <Descriptions.Item label="Target Namespace">
+                                                    <Descriptions.Item label={t("Target Namespace")}>
                                                         <Text code copyable>{parsedWsdl.targetNamespace}</Text>
                                                     </Descriptions.Item>
-                                                    <Descriptions.Item label="Services">{parsedWsdl.services.length}</Descriptions.Item>
-                                                    <Descriptions.Item label="Port Types">{parsedWsdl.portTypes.length}</Descriptions.Item>
-                                                    <Descriptions.Item label="Bindings">{parsedWsdl.bindings.length}</Descriptions.Item>
-                                                    <Descriptions.Item label="Messages">{parsedWsdl.messages.length}</Descriptions.Item>
-                                                    <Descriptions.Item label="Types">
+                                                    <Descriptions.Item label={t("Services")}>{parsedWsdl.services.length}</Descriptions.Item>
+                                                    <Descriptions.Item label={t("Port Types")}>{parsedWsdl.portTypes.length}</Descriptions.Item>
+                                                    <Descriptions.Item label={t("Bindings")}>{parsedWsdl.bindings.length}</Descriptions.Item>
+                                                    <Descriptions.Item label={t("Messages")}>{parsedWsdl.messages.length}</Descriptions.Item>
+                                                    <Descriptions.Item label={t("Types")}>
                                                         {parsedWsdl.types.length}
                                                         {parsedWsdl.xsdResolved > 0 && (
                                                             <Tag color="purple" style={{ marginLeft: 8 }}>
-                                                                +{parsedWsdl.xsdResolved} from XSD
+                                                                +{parsedWsdl.xsdResolved} {t("from XSD")}
                                                             </Tag>
                                                         )}
                                                     </Descriptions.Item>
                                                 </Descriptions>
 
-                                                <Divider>Service Tree</Divider>
+                                                <Divider>{t("Service Tree")}</Divider>
                                                 <Tree
                                                     treeData={treeData}
                                                     defaultExpandAll
@@ -805,7 +794,7 @@ export default function WsdlParserPage() {
                                     },
                                     {
                                         key: "services",
-                                        label: `Services (${parsedWsdl.services.length})`,
+                                        label: t("Services ({count})", { count: parsedWsdl.services.length }),
                                         children: (
                                             <div>
                                                 {parsedWsdl.services.map(svc => (
@@ -820,10 +809,10 @@ export default function WsdlParserPage() {
                                                             <div key={port.name} style={{ marginTop: 8, paddingLeft: 16 }}>
                                                                 <Text><BranchesOutlined /> {port.name}</Text>
                                                                 <br />
-                                                                <Text type="secondary" style={{ fontSize: 12 }}>Binding: {port.binding}</Text>
+                                                                <Text type="secondary" style={{ fontSize: 12 }}>{t("Binding:")} {port.binding}</Text>
                                                                 <br />
                                                                 <Text type="secondary" style={{ fontSize: 12 }}>
-                                                                    Address: <Text code copyable style={{ fontSize: 11 }}>{port.address}</Text>
+                                                                    {t("Address:")} <Text code copyable style={{ fontSize: 11 }}>{port.address}</Text>
                                                                 </Text>
                                                             </div>
                                                         ))}
@@ -834,7 +823,7 @@ export default function WsdlParserPage() {
                                     },
                                     {
                                         key: "operations",
-                                        label: "Operations",
+                                        label: t("Operations"),
                                         children: (
                                             <Table
                                                 size="small"
@@ -843,7 +832,7 @@ export default function WsdlParserPage() {
                                                 )}
                                                 columns={[
                                                     {
-                                                        title: "Operation",
+                                                        title: t("Operation"),
                                                         dataIndex: "name",
                                                         render: (name, record) => (
                                                             <Button type="link" size="small" onClick={() => setSelectedOperation(record)}>
@@ -851,9 +840,9 @@ export default function WsdlParserPage() {
                                                             </Button>
                                                         ),
                                                     },
-                                                    { title: "Port Type", dataIndex: "portType" },
-                                                    { title: "Input", dataIndex: "input", render: (v) => v && <Tag>{v}</Tag> },
-                                                    { title: "Output", dataIndex: "output", render: (v) => v && <Tag>{v}</Tag> },
+                                                    { title: t("Port Type"), dataIndex: "portType" },
+                                                    { title: t("Input"), dataIndex: "input", render: (v) => v && <Tag>{v}</Tag> },
+                                                    { title: t("Output"), dataIndex: "output", render: (v) => v && <Tag>{v}</Tag> },
                                                 ]}
                                                 pagination={false}
                                                 scroll={{ y: 300 }}
@@ -862,7 +851,7 @@ export default function WsdlParserPage() {
                                     },
                                     {
                                         key: "messages",
-                                        label: `Messages (${parsedWsdl.messages.length})`,
+                                        label: t("Messages ({count})", { count: parsedWsdl.messages.length }),
                                         children: (
                                             <Collapse
                                                 items={parsedWsdl.messages.map(msg => ({
@@ -873,9 +862,9 @@ export default function WsdlParserPage() {
                                                             size="small"
                                                             dataSource={msg.parts.map((p, i) => ({ ...p, key: i }))}
                                                             columns={[
-                                                                { title: "Part", dataIndex: "name" },
-                                                                { title: "Element", dataIndex: "element", render: (v) => v && <Tag color="blue">{v}</Tag> },
-                                                                { title: "Type", dataIndex: "type", render: (v) => v && <Tag color="green">{v}</Tag> },
+                                                                { title: t("Part"), dataIndex: "name" },
+                                                                { title: t("Element"), dataIndex: "element", render: (v) => v && <Tag color="blue">{v}</Tag> },
+                                                                { title: t("Type"), dataIndex: "type", render: (v) => v && <Tag color="green">{v}</Tag> },
                                                             ]}
                                                             pagination={false}
                                                         />
@@ -886,15 +875,15 @@ export default function WsdlParserPage() {
                                     },
                                     {
                                         key: "types",
-                                        label: `Types (${parsedWsdl.types.length})`,
+                                        label: t("Types ({count})", { count: parsedWsdl.types.length }),
                                         children: (
                                             <Table
                                                 size="small"
                                                 dataSource={parsedWsdl.types.map((t, i) => ({ ...t, key: i }))}
                                                 columns={[
-                                                    { title: "Name", dataIndex: "name" },
+                                                    { title: t("Name"), dataIndex: "name" },
                                                     {
-                                                        title: "Kind",
+                                                        title: t("Kind"),
                                                         dataIndex: "type",
                                                         render: (type) => (
                                                             <Tag color={type === "element" ? "blue" : type === "complexType" ? "purple" : "green"}>
@@ -903,7 +892,7 @@ export default function WsdlParserPage() {
                                                         ),
                                                     },
                                                     {
-                                                        title: "Source",
+                                                        title: t("Source"),
                                                         dataIndex: "fromXsd",
                                                         render: (fromXsd, rec: WSDLType) => fromXsd
                                                             ? <Tag color="orange" icon={<ImportOutlined />}>XSD</Tag>
@@ -925,7 +914,7 @@ export default function WsdlParserPage() {
                         </Card>
                     ) : (
                         <Card>
-                            <Empty description="Parse a WSDL to see its structure" />
+                            <Empty description={t("Parse a WSDL to see its structure")} />
                         </Card>
                     )}
 
@@ -937,9 +926,9 @@ export default function WsdlParserPage() {
                                 <Button
                                     size="small"
                                     icon={<CopyOutlined />}
-                                    onClick={() => copyToClipboard(sampleRequest, "Sample request")}
+                                    onClick={() => copyToClipboard(sampleRequest)}
                                 >
-                                    Copy Request
+                                    {t("Copy Request")}
                                 </Button>
                             }
                         >
@@ -947,16 +936,16 @@ export default function WsdlParserPage() {
                                 <Paragraph type="secondary">{selectedOperation.documentation}</Paragraph>
                             )}
                             <Descriptions size="small" column={1}>
-                                <Descriptions.Item label="Input Message"><Tag>{selectedOperation.input}</Tag></Descriptions.Item>
-                                <Descriptions.Item label="Output Message"><Tag>{selectedOperation.output}</Tag></Descriptions.Item>
+                                <Descriptions.Item label={t("Input Message")}><Tag>{selectedOperation.input}</Tag></Descriptions.Item>
+                                <Descriptions.Item label={t("Output Message")}><Tag>{selectedOperation.output}</Tag></Descriptions.Item>
                                 {selectedOperation.soapAction && (
-                                    <Descriptions.Item label="SOAP Action">
+                                    <Descriptions.Item label={t("SOAP Action")}>
                                         <Text code copyable>{selectedOperation.soapAction}</Text>
                                     </Descriptions.Item>
                                 )}
                             </Descriptions>
-                            <Divider>Sample SOAP Request</Divider>
-                            <CodeEditor value={sampleRequest} language="xml" height={200} readOnly />
+                            <Divider>{t("Sample SOAP Request")}</Divider>
+                            <CodeEditor value={sampleRequest} language="xml" height={200} readOnly   />
                         </Card>
                     )}
                 </Col>

@@ -1,10 +1,13 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
+
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toolPathFromId } from "@/lib/category-routes";
 
 export default function CsvToXmlRedirect() {
+    const { t } = useLanguage();
     const router = useRouter();
 
     useEffect(() => {
@@ -14,7 +17,7 @@ export default function CsvToXmlRedirect() {
 
     return (
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
-            <p>Redirecting to CSV Converter...</p>
+            <p>{t("Redirecting to CSV Converter...")}</p>
         </div>
     );
 }

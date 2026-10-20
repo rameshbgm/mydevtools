@@ -1,10 +1,13 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
+
 import React, { useState } from "react";
-import { Button, Card, Space, Select, Switch, App, Typography, Input } from "antd";
+import { Button, Card, Space, Select, Switch, Alert, Typography, Input } from "antd";
 import { CopyOutlined, ClearOutlined, DownloadOutlined, FileExcelOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
 import { downloadText } from "@/lib/download";
+import SpreadsheetConverter from "@/components/SpreadsheetConverter";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SendToButton from "@/components/SendToButton";
@@ -57,14 +60,16 @@ interface ShareState { input: string; delimiter: string; includeHeader: boolean;
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "json-to-csv", version: 1 };
 
 export default function JsonToCsvPage() {
-    const { message } = App.useApp();
+    const { t } = useLanguage();
     const [input, setInput] = useState(SAMPLE);
     const [output, setOutput] = useState("");
+    const [error, setError] = useState<string | null>(null);
     const [delimiter, setDelimiter] = useState(",");
     const [includeHeader, setIncludeHeader] = useState(true);
     const [flattenNested, setFlattenNested] = useState(true);
 
     const convert = (src: string) => {
+        setError(null);
         try {
             const parsed = JSON.parse(src);
             const arr: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
@@ -89,8 +94,8 @@ export default function JsonToCsvPage() {
             }
             setOutput(lines.join("\n"));
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : "Parse error";
-            message.error("Invalid JSON: " + msg);
+            const msg = e instanceof Error ? e.message : String(e);
+            setError(msg);
             setOutput("");
         }
     };
@@ -110,8 +115,8 @@ export default function JsonToCsvPage() {
 
     return (
         <ToolPageLayout
-            title="JSON to CSV Converter"
-            description="Convert JSON arrays to CSV with custom delimiters and flatten options"
+            title={t("JSON to CSV Converter")}
+            description={t("Convert JSON arrays to CSV with custom delimiters and flatten options")}
             icon={<FileExcelOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
             color="#52c41a"
             learnMore={{
@@ -141,37 +146,42 @@ export default function JsonToCsvPage() {
 
             <Space style={{ marginBottom: 16 }} wrap>
                 <span>
-                    <Text type="secondary" style={{ marginRight: 8 }}>Delimiter:</Text>
+                    <Text type="secondary" style={{ marginInlineEnd: 8 }}>{t("Delimiter:")}</Text>
                     <Select
+                        direction="ltr"
+                        styles={{ input: { direction: "ltr", textAlign: "left" }, itemContent: { direction: "ltr", textAlign: "left" } }}
+                        aria-label={t("Delimiter")}
                         value={delimiter}
                         onChange={setDelimiter}
-                        style={{ width: 130 }}
+                        style={{ minWidth: 130 }}
                         options={[
-                            { label: "Comma ,", value: "," },
-                            { label: "Tab \\t", value: "\t" },
-                            { label: "Semicolon ;", value: ";" },
-                            { label: "Pipe |", value: "|" },
+                            { label: t("Comma ,"), value: "," },
+                            { label: t("Tab \\t"), value: "\t" },
+                            { label: t("Semicolon ;"), value: ";" },
+                            { label: t("Pipe |"), value: "|" },
                         ]}
                     />
                 </span>
-                <Switch checked={includeHeader} onChange={setIncludeHeader} /> <Text style={{ fontSize: 13 }}>Headers</Text>
-                <Switch checked={flattenNested} onChange={setFlattenNested} /> <Text style={{ fontSize: 13 }}>Flatten nested</Text>
-                <Button type="primary" onClick={() => convert(input)}>Convert</Button>
-                <Button icon={<CopyOutlined />} disabled={!output} onClick={() => copyToClipboard(output)}>Copy</Button>
-                <Button icon={<DownloadOutlined />} disabled={!output} onClick={handleDownload}>Download</Button>
-                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); }}>Clear</Button>
+                <Switch aria-label={t("Headers")} checked={includeHeader} onChange={setIncludeHeader} /> <Text style={{ fontSize: 13 }}>{t("Headers")}</Text>
+                <Switch aria-label={t("Flatten nested")} checked={flattenNested} onChange={setFlattenNested} /> <Text style={{ fontSize: 13 }}>{t("Flatten nested")}</Text>
+                <Button type="primary" onClick={() => convert(input)}>{t("Convert")}</Button>
+                <Button icon={<CopyOutlined />} disabled={!output} onClick={() => copyToClipboard(output)}>{t("Copy")}</Button>
+                <Button icon={<DownloadOutlined />} disabled={!output} onClick={handleDownload}>{t("Download")}</Button>
+                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setError(null); }}>{t("Clear")}</Button>
                 <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, delimiter, includeHeader, flattenNested })} size="middle" />
                 <SendToButton data={output} kind="csv" sourceToolId="json-to-csv" size="middle" />
             </Space>
 
+            {error && <Alert type="error" showIcon title={t("Conversion failed. Check the input and options, then try again.")} description={<bdi dir="ltr">{error}</bdi>} style={{ marginBottom: 16 }} />}
             <div className="tool-split-pane" style={{ gap: 16 }}>
-                <Card size="small" title="JSON Input" styles={{ body: { padding: 0 } }}>
+                <Card size="small" title={t("JSON Input")} styles={{ body: { padding: 0 } }}>
                     <CodeEditor value={input} onChange={setInput} language="json" height="500px" />
                 </Card>
-                <Card size="small" title="CSV Output" styles={{ body: { padding: 0 } }}>
+                <Card size="small" title={t("CSV Output")} styles={{ body: { padding: 0 } }}>
                     <CodeEditor value={output} language="plaintext" height="500px" readOnly />
                 </Card>
             </div>
+            <SpreadsheetConverter jsonSource={input} onImportJson={setInput} />
         </ToolPageLayout>
     );
 }

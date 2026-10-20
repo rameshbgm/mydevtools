@@ -1,10 +1,12 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
 import React, { useState } from "react";
-import { Button, Input, Card, Space, message, Segmented } from "antd";
+import { Button, Input, Card, Space, Segmented } from "antd";
 import { copyToClipboard } from "@/lib/clipboard";
 import { SwapOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import BinaryBase64 from "@/components/BinaryBase64";
 import SendToButton from "@/components/SendToButton";
 import ShareButton from "@/components/ShareButton";
 import ToolBridgeBanner from "@/components/ToolBridgeBanner";
@@ -16,6 +18,8 @@ interface ShareState { input: string; mode: string; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "base64", version: 1 };
 
 export default function Base64Page() {
+    const { t } = useLanguage();
+    const [error, setError] = useState("");
     const [input, setInput] = useState("");
     const [output, setOutput] = useState("");
     const [mode, setMode] = useState<string>("Encode");
@@ -24,13 +28,14 @@ export default function Base64Page() {
         const m = overrideMode ?? mode;
         const src = overrideInput ?? input;
         try {
+            setError("");
             if (m === "Encode") {
                 setOutput(btoa(unescape(encodeURIComponent(src))));
             } else {
                 setOutput(decodeURIComponent(escape(atob(src))));
             }
         } catch {
-            message.error("Invalid input for " + m.toLowerCase());
+            setError(m === "Encode" ? "Text could not be encoded. Check the input and try again." : "Base64 could not be decoded as UTF-8 text. Check the input or use binary decoding below.");
         }
     };
 
@@ -79,22 +84,24 @@ export default function Base64Page() {
             />
 
             <Space style={{ marginBottom: 16 }} wrap>
-                <Segmented options={["Encode", "Decode"]} value={mode} onChange={(v) => setMode(v as string)} />
-                <Button type="primary" onClick={() => handleAction()}>{mode}</Button>
-                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output)}>Copy Output</Button>
-                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); }}>Clear</Button>
+                <Segmented options={[{ value: "Encode", label: t("Encode") }, { value: "Decode", label: t("Decode") }]} value={mode} onChange={(v) => setMode(v as string)} />
+                <Button type="primary" onClick={() => handleAction()}>{t(mode)}</Button>
+                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output)}>{t("Copy Output")}</Button>
+                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setError(""); }}>{t("Clear")}</Button>
                 <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, mode })} />
                 <SendToButton data={output} kind={mode === "Encode" ? "base64" : "text"} sourceToolId="base64" />
             </Space>
 
             <div className="tool-split-pane" style={{ gap: 16 }}>
-                <Card size="small" title="Input">
-                    <TextArea rows={16} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Enter text to encode/decode..." style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
+                <Card size="small" title={t("Input")}>
+                    <TextArea dir={mode === "Encode" ? "auto" : "ltr"} rows={16} value={input} onChange={(e) => setInput(e.target.value)} placeholder={t("Enter text to encode/decode...")} aria-label={t("Base64 input")} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
                 </Card>
-                <Card size="small" title="Output">
-                    <TextArea rows={16} value={output} readOnly style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
+                <Card size="small" title={t("Output")}>
+                    <TextArea dir={mode === "Encode" ? "ltr" : "auto"} aria-label={t("Base64 output")} rows={16} value={output} readOnly style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
                 </Card>
             </div>
+            {error && <p role="alert">{t(error)}</p>}
+            <BinaryBase64 />
         </ToolPageLayout>
     );
 }

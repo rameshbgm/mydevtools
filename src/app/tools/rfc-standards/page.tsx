@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Input, Typography, Table, Tag, Card, Tabs, Space, Tooltip, Button, Collapse, Divider } from "antd";
+import { Input, Typography, Table, Tag, Card, Tabs, Space, Collapse, Divider } from "antd";
 import {
     SearchOutlined,
     SafetyCertificateOutlined,
@@ -14,30 +14,38 @@ import {
     CloudOutlined,
     DatabaseOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
+import { REFERENCE_STANDARDS_TRANSLATIONS } from "@/lib/i18n/reference-standards";
 import ToolPageLayout from "@/components/ToolPageLayout";
-import { useAppStore } from "@/lib/store";
 
-const { Text, Title, Paragraph } = Typography;
+const { Text, Title } = Typography;
 
 interface RFCStandard {
     rfc: string;
     title: string;
     category: string;
     description: string;
-    status: "Standard" | "Proposed Standard" | "Best Current Practice" | "Informational" | "Experimental" | "Historic";
+    status: "Internet Standard" | "Draft Standard" | "Proposed Standard" | "Best Current Practice" | "Informational" | "Experimental" | "Historic";
     year: number;
     url: string;
     relatedRFCs?: string[];
+    obsoletedBy?: string[];
     keywords: string[];
 }
 
 const RFC_STANDARDS: RFCStandard[] = [
+{"rfc":"RFC 9846","title":"The Transport Layer Security (TLS) Protocol Version 1.3","category":"Security - TLS","description":"TLS 1.3 specification replacing RFC 8446; also updates TLS 1.2 requirements.","status":"Proposed Standard","year":2026,"url":"https://www.rfc-editor.org/rfc/rfc9846.html","relatedRFCs":["RFC 5077","RFC 5246","RFC 6961","RFC 7627","RFC 8422","RFC 8446"],"keywords":["tls","security","tls1.3","9846"]},
+{"rfc":"RFC 9989","title":"Domain-Based Message Authentication, Reporting, and Conformance (DMARC)","category":"Email","description":"DMARC validation and handling preferences; replaces RFC 7489 and 9091.","status":"Proposed Standard","year":2026,"url":"https://www.rfc-editor.org/rfc/rfc9989.html","relatedRFCs":["RFC 7489","RFC 9091"],"keywords":["dmarc","email","reporting","9989"]},
+{"rfc":"RFC 9990","title":"Domain-Based Message Authentication, Reporting, and Conformance (DMARC) Aggregate Reporting","category":"Email","description":"DMARC aggregate XML reports; replaces reporting rules in RFC 7489.","status":"Proposed Standard","year":2026,"url":"https://www.rfc-editor.org/rfc/rfc9990.html","relatedRFCs":["RFC 7489"],"keywords":["dmarc","email","reporting","9990"]},
+{"rfc":"RFC 9991","title":"Domain-Based Message Authentication, Reporting, and Conformance (DMARC) Failure Reporting","category":"Email","description":"DMARC individual-message failure reports; replaces RFC 7489 and updates 6591.","status":"Proposed Standard","year":2026,"url":"https://www.rfc-editor.org/rfc/rfc9991.html","relatedRFCs":["RFC 7489"],"keywords":["dmarc","email","reporting","9991"]},
+    { rfc: "RFC 9700", title: "Best Current Practice for OAuth 2.0 Security", category: "Security - OAuth", description: "OAuth security guidance: use PKCE S256; do not use password grants.", status: "Best Current Practice", year: 2025, url: "https://www.rfc-editor.org/rfc/rfc9700.html", relatedRFCs: ["RFC 6749", "RFC 6750", "RFC 7636"], keywords: ["oauth", "security", "bcp", "pkce", "9700"] },
+    { rfc: "RFC 8725", title: "JSON Web Token Best Current Practices", category: "Security - JOSE", description: "Validate JWT algorithms, keys, issuer and audience; decoding is not verification.", status: "Best Current Practice", year: 2020, url: "https://www.rfc-editor.org/rfc/rfc8725.html", relatedRFCs: ["RFC 7519", "RFC 7515"], keywords: ["jwt", "bcp", "algorithm", "issuer", "audience", "8725"] },
     // JWT/JWE/JWS Family (JOSE)
     {
         rfc: "RFC 7519",
         title: "JSON Web Token (JWT)",
         category: "Security - JOSE",
-        description: "JSON Web Token (JWT) is a compact, URL-safe means of representing claims to be transferred between two parties. The claims in a JWT are encoded as a JSON object used as the payload of a JSON Web Signature (JWS) or plaintext of a JSON Web Encryption (JWE).",
+        description: "Compact claims format carried in JWS or JWE.",
         status: "Proposed Standard",
         year: 2015,
         url: "https://datatracker.ietf.org/doc/html/rfc7519",
@@ -48,7 +56,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7515",
         title: "JSON Web Signature (JWS)",
         category: "Security - JOSE",
-        description: "JSON Web Signature (JWS) represents content secured with digital signatures or Message Authentication Codes (MACs) using JSON-based data structures. Cryptographic algorithms and identifiers are described in RFC 7518.",
+        description: "JSON-based signed or MAC-protected content.",
         status: "Proposed Standard",
         year: 2015,
         url: "https://datatracker.ietf.org/doc/html/rfc7515",
@@ -59,7 +67,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7516",
         title: "JSON Web Encryption (JWE)",
         category: "Security - JOSE",
-        description: "JSON Web Encryption (JWE) represents encrypted content using JSON-based data structures. Encryption operations are described in RFC 7518. JWE provides confidentiality for the plaintext being encrypted.",
+        description: "JSON-based authenticated encryption for confidential content.",
         status: "Proposed Standard",
         year: 2015,
         url: "https://datatracker.ietf.org/doc/html/rfc7516",
@@ -70,7 +78,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7517",
         title: "JSON Web Key (JWK)",
         category: "Security - JOSE",
-        description: "A JSON Web Key (JWK) is a JavaScript Object Notation (JSON) data structure that represents a cryptographic key. This specification also defines a JWK Set JSON data structure for representing a set of JWKs.",
+        description: "JSON representations of cryptographic keys and key sets.",
         status: "Proposed Standard",
         year: 2015,
         url: "https://datatracker.ietf.org/doc/html/rfc7517",
@@ -81,7 +89,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7518",
         title: "JSON Web Algorithms (JWA)",
         category: "Security - JOSE",
-        description: "Registers cryptographic algorithms and identifiers to be used with the JSON Web Signature (JWS), JSON Web Encryption (JWE), and JSON Web Key (JWK) specifications.",
+        description: "Algorithm identifiers and requirements for JOSE cryptography.",
         status: "Proposed Standard",
         year: 2015,
         url: "https://datatracker.ietf.org/doc/html/rfc7518",
@@ -94,8 +102,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 6749",
         title: "OAuth 2.0 Authorization Framework",
         category: "Security - OAuth",
-        description: "The OAuth 2.0 authorization framework enables third-party applications to obtain limited access to an HTTP service, either on behalf of a resource owner or by allowing the application to obtain access on its own behalf.",
-        status: "Standard",
+        description: "Delegated authorization framework; apply RFC 9700 security guidance.",
+        status: "Proposed Standard",
         year: 2012,
         url: "https://datatracker.ietf.org/doc/html/rfc6749",
         relatedRFCs: ["RFC 6750", "RFC 7636", "RFC 8252"],
@@ -105,8 +113,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 6750",
         title: "OAuth 2.0 Bearer Token Usage",
         category: "Security - OAuth",
-        description: "This specification describes how to use bearer tokens in HTTP requests to access OAuth 2.0 protected resources. Any party in possession of a bearer token can use it to get access to the associated resources.",
-        status: "Standard",
+        description: "Bearer token transport; possession enables use, so protect tokens.",
+        status: "Proposed Standard",
         year: 2012,
         url: "https://datatracker.ietf.org/doc/html/rfc6750",
         relatedRFCs: ["RFC 6749"],
@@ -116,8 +124,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7636",
         title: "PKCE - Proof Key for Code Exchange",
         category: "Security - OAuth",
-        description: "Proof Key for Code Exchange (PKCE) is an extension to the Authorization Code flow to prevent CSRF and authorization code injection attacks for public clients.",
-        status: "Standard",
+        description: "Bind authorization-code redemption to a verifier; prefer S256.",
+        status: "Proposed Standard",
         year: 2015,
         url: "https://datatracker.ietf.org/doc/html/rfc7636",
         relatedRFCs: ["RFC 6749"],
@@ -127,7 +135,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 8252",
         title: "OAuth 2.0 for Native Apps",
         category: "Security - OAuth",
-        description: "Best current practice for implementing OAuth 2.0 authorization flows in native applications including mobile apps, desktop applications, and CLI tools.",
+        description: "OAuth guidance for native apps using external user agents.",
         status: "Best Current Practice",
         year: 2017,
         url: "https://datatracker.ietf.org/doc/html/rfc8252",
@@ -138,8 +146,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7662",
         title: "OAuth 2.0 Token Introspection",
         category: "Security - OAuth",
-        description: "Defines a method for a protected resource to query an OAuth 2.0 authorization server to determine the active state of an access token and to determine meta-information about this token.",
-        status: "Standard",
+        description: "Query authorization servers for token state and metadata.",
+        status: "Proposed Standard",
         year: 2015,
         url: "https://datatracker.ietf.org/doc/html/rfc7662",
         relatedRFCs: ["RFC 6749", "RFC 6750"],
@@ -149,8 +157,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7009",
         title: "OAuth 2.0 Token Revocation",
         category: "Security - OAuth",
-        description: "Defines an additional endpoint for OAuth authorization servers, allowing clients to notify the authorization server that a previously obtained token is no longer needed.",
-        status: "Standard",
+        description: "Endpoint for revoking previously issued OAuth tokens.",
+        status: "Proposed Standard",
         year: 2013,
         url: "https://datatracker.ietf.org/doc/html/rfc7009",
         relatedRFCs: ["RFC 6749"],
@@ -162,8 +170,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7033",
         title: "WebFinger",
         category: "Security - Identity",
-        description: "WebFinger is used to discover information about people or other entities on the Internet. Used by OpenID Connect for issuer discovery.",
-        status: "Standard",
+        description: "Discover entity information, including OpenID Connect issuer discovery.",
+        status: "Proposed Standard",
         year: 2013,
         url: "https://datatracker.ietf.org/doc/html/rfc7033",
         relatedRFCs: [],
@@ -175,8 +183,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9110",
         title: "HTTP Semantics",
         category: "HTTP",
-        description: "Defines the semantics of HTTP: the architecture, terminology, and protocol aspects shared by all HTTP versions including methods, status codes, headers, and content negotiation.",
-        status: "Standard",
+        description: "HTTP methods, status codes, fields and representation semantics.",
+        status: "Internet Standard",
         year: 2022,
         url: "https://datatracker.ietf.org/doc/html/rfc9110",
         relatedRFCs: ["RFC 9111", "RFC 9112", "RFC 9113"],
@@ -186,8 +194,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9111",
         title: "HTTP Caching",
         category: "HTTP",
-        description: "Defines HTTP caches and the associated header fields that control cache behavior and indicate cacheable response messages.",
-        status: "Standard",
+        description: "HTTP cache operation, validation and cache-control fields.",
+        status: "Internet Standard",
         year: 2022,
         url: "https://datatracker.ietf.org/doc/html/rfc9111",
         relatedRFCs: ["RFC 9110"],
@@ -197,8 +205,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9112",
         title: "HTTP/1.1",
         category: "HTTP",
-        description: "Defines the HTTP/1.1 message syntax and connection management, including message framing, request and response message format, and persistent connections.",
-        status: "Standard",
+        description: "HTTP/1.1 message syntax, framing and connection management.",
+        status: "Internet Standard",
         year: 2022,
         url: "https://datatracker.ietf.org/doc/html/rfc9112",
         relatedRFCs: ["RFC 9110"],
@@ -208,8 +216,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9113",
         title: "HTTP/2",
         category: "HTTP",
-        description: "HTTP/2 enables more efficient use of network resources through header field compression and allows multiple concurrent exchanges on the same connection using streams and multiplexing.",
-        status: "Standard",
+        description: "Multiplexed HTTP/2 streams and connection behavior.",
+        status: "Proposed Standard",
         year: 2022,
         url: "https://datatracker.ietf.org/doc/html/rfc9113",
         relatedRFCs: ["RFC 9110", "RFC 7541"],
@@ -219,8 +227,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9114",
         title: "HTTP/3",
         category: "HTTP",
-        description: "HTTP/3 is the third major version of HTTP, using QUIC as the transport layer. Provides improved performance through 0-RTT connection establishment and better handling of packet loss.",
-        status: "Standard",
+        description: "HTTP/3 mapping over QUIC; stream loss remains independent.",
+        status: "Proposed Standard",
         year: 2022,
         url: "https://datatracker.ietf.org/doc/html/rfc9114",
         relatedRFCs: ["RFC 9110", "RFC 9000"],
@@ -230,8 +238,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7541",
         title: "HPACK: Header Compression for HTTP/2",
         category: "HTTP",
-        description: "HPACK is a compression format for efficiently representing HTTP header fields in HTTP/2. Reduces overhead through Huffman coding and dynamic tables.",
-        status: "Standard",
+        description: "HTTP/2 header compression with static and dynamic tables.",
+        status: "Proposed Standard",
         year: 2015,
         url: "https://datatracker.ietf.org/doc/html/rfc7541",
         relatedRFCs: ["RFC 9113"],
@@ -243,29 +251,29 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 8446",
         title: "TLS 1.3",
         category: "Security - TLS",
-        description: "The Transport Layer Security (TLS) Protocol Version 1.3. Major update with improved security, reduced handshake latency (1-RTT and 0-RTT), and removal of legacy cryptographic algorithms.",
+        description: "Earlier TLS 1.3 specification; replaced by RFC 9846.",
         status: "Proposed Standard",
         year: 2018,
         url: "https://datatracker.ietf.org/doc/html/rfc8446",
         relatedRFCs: ["RFC 5246"],
         keywords: ["tls", "tls 1.3", "ssl", "encryption", "handshake", "0-rtt", "certificate"],
-    },
+    obsoletedBy: ["RFC 9846"],},
     {
         rfc: "RFC 5246",
         title: "TLS 1.2",
         category: "Security - TLS",
-        description: "The Transport Layer Security (TLS) Protocol Version 1.2. Widely deployed version providing secure communication through authentication, confidentiality, and integrity.",
+        description: "TLS 1.2 specification; follow its replacements and deployment guidance.",
         status: "Proposed Standard",
         year: 2008,
         url: "https://datatracker.ietf.org/doc/html/rfc5246",
         relatedRFCs: ["RFC 8446"],
         keywords: ["tls", "tls 1.2", "ssl", "encryption", "cipher suite", "certificate"],
-    },
+    obsoletedBy: ["RFC 8446","RFC 9846"],},
     {
         rfc: "RFC 6066",
         title: "TLS Extensions",
         category: "Security - TLS",
-        description: "Describes TLS extensions including Server Name Indication (SNI), maximum fragment length negotiation, and certificate status request (OCSP stapling).",
+        description: "TLS extensions including SNI and certificate-status requests.",
         status: "Proposed Standard",
         year: 2011,
         url: "https://datatracker.ietf.org/doc/html/rfc6066",
@@ -278,7 +286,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 6797",
         title: "HTTP Strict Transport Security (HSTS)",
         category: "Security - Web",
-        description: "HSTS allows web servers to declare that browsers should only interact with it using secure HTTPS connections, protecting against protocol downgrade attacks and cookie hijacking.",
+        description: "Tell browsers to require HTTPS for a host.",
         status: "Proposed Standard",
         year: 2012,
         url: "https://datatracker.ietf.org/doc/html/rfc6797",
@@ -289,8 +297,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7469",
         title: "HTTP Public Key Pinning (HPKP)",
         category: "Security - Web",
-        description: "HPKP was a security mechanism allowing HTTPS websites to resist impersonation by attackers using mis-issued or fraudulent certificates. Note: Deprecated in favor of Certificate Transparency.",
-        status: "Historic",
+        description: "Historical browser key-pinning mechanism; RFC maturity is a separate property.",
+        status: "Proposed Standard",
         year: 2015,
         url: "https://datatracker.ietf.org/doc/html/rfc7469",
         relatedRFCs: ["RFC 6797"],
@@ -300,7 +308,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7034",
         title: "HTTP Header Field X-Frame-Options",
         category: "Security - Web",
-        description: "The X-Frame-Options HTTP header field indicates whether a browser should be allowed to render a page in a frame, iframe, or object. Used to prevent clickjacking attacks.",
+        description: "Frame-embedding restrictions through the X-Frame-Options response header.",
         status: "Informational",
         year: 2013,
         url: "https://datatracker.ietf.org/doc/html/rfc7034",
@@ -311,7 +319,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 6454",
         title: "The Web Origin Concept",
         category: "Security - Web",
-        description: "Defines the concept of 'origin' which is used to scope the authority of web content. Foundation for Same-Origin Policy, CORS, and other web security mechanisms.",
+        description: "Origins provide a security boundary for web content.",
         status: "Proposed Standard",
         year: 2011,
         url: "https://datatracker.ietf.org/doc/html/rfc6454",
@@ -322,8 +330,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 6455",
         title: "The WebSocket Protocol",
         category: "Web Protocols",
-        description: "The WebSocket Protocol enables two-way communication between a client and a server through a single TCP connection. Used for real-time web applications.",
-        status: "Standard",
+        description: "Bidirectional messaging protocol established through a WebSocket handshake.",
+        status: "Proposed Standard",
         year: 2011,
         url: "https://datatracker.ietf.org/doc/html/rfc6455",
         relatedRFCs: [],
@@ -335,21 +343,21 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7231",
         title: "HTTP/1.1: Semantics and Content (Superseded)",
         category: "HTTP",
-        description: "Defines HTTP semantics including request methods, response status codes, and header fields. Note: Superseded by RFC 9110 but still widely referenced.",
-        status: "Historic",
+        description: "Earlier HTTP semantics specification, obsoleted by RFC 9110.",
+        status: "Proposed Standard",
         year: 2014,
         url: "https://datatracker.ietf.org/doc/html/rfc7231",
         relatedRFCs: ["RFC 9110"],
         keywords: ["http", "semantics", "methods", "status codes", "superseded"],
-    },
+    obsoletedBy: ["RFC 9110"],},
 
     // DNS
     {
         rfc: "RFC 1035",
         title: "Domain Names - Implementation and Specification",
         category: "DNS",
-        description: "Describes the details of the DNS protocol including message format, transport, and implementation requirements.",
-        status: "Standard",
+        description: "DNS wire messages, resource records and implementation rules.",
+        status: "Internet Standard",
         year: 1987,
         url: "https://datatracker.ietf.org/doc/html/rfc1035",
         relatedRFCs: ["RFC 1034"],
@@ -359,7 +367,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 8484",
         title: "DNS Queries over HTTPS (DoH)",
         category: "DNS",
-        description: "Describes how to run DNS over HTTPS, improving privacy by encrypting DNS queries and preventing observation and modification by network intermediaries.",
+        description: "Transport DNS queries and responses over HTTPS.",
         status: "Proposed Standard",
         year: 2018,
         url: "https://datatracker.ietf.org/doc/html/rfc8484",
@@ -370,7 +378,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7858",
         title: "DNS over TLS (DoT)",
         category: "DNS",
-        description: "Specifies the use of TLS to provide privacy for DNS. DNS queries sent over TLS on port 853.",
+        description: "Encrypt DNS transport using TLS, normally on port 853.",
         status: "Proposed Standard",
         year: 2016,
         url: "https://datatracker.ietf.org/doc/html/rfc7858",
@@ -383,8 +391,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 5321",
         title: "Simple Mail Transfer Protocol (SMTP)",
         category: "Email",
-        description: "Specifies the SMTP protocol for transmitting email. Defines how mail servers exchange messages and deliver to recipients.",
-        status: "Standard",
+        description: "Mail transfer commands and server-to-server delivery behavior.",
+        status: "Draft Standard",
         year: 2008,
         url: "https://datatracker.ietf.org/doc/html/rfc5321",
         relatedRFCs: ["RFC 5322"],
@@ -394,8 +402,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 5322",
         title: "Internet Message Format",
         category: "Email",
-        description: "Specifies the syntax for text messages sent between computer users within the Internet email framework including headers and body structure.",
-        status: "Standard",
+        description: "Internet email message headers and body syntax.",
+        status: "Draft Standard",
         year: 2008,
         url: "https://datatracker.ietf.org/doc/html/rfc5322",
         relatedRFCs: ["RFC 5321"],
@@ -405,8 +413,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7208",
         title: "Sender Policy Framework (SPF)",
         category: "Email",
-        description: "SPF allows domain owners to specify which mail servers are authorized to send email on behalf of their domain, helping to prevent email spoofing.",
-        status: "Standard",
+        description: "Authorize sending hosts for an email envelope domain.",
+        status: "Proposed Standard",
         year: 2014,
         url: "https://datatracker.ietf.org/doc/html/rfc7208",
         relatedRFCs: ["RFC 6376", "RFC 7489"],
@@ -416,8 +424,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 6376",
         title: "DomainKeys Identified Mail (DKIM)",
         category: "Email",
-        description: "DKIM provides a method for validating a domain name identity that is associated with a message through cryptographic authentication using digital signatures.",
-        status: "Standard",
+        description: "Domain-associated digital signatures over email headers and body.",
+        status: "Internet Standard",
         year: 2011,
         url: "https://datatracker.ietf.org/doc/html/rfc6376",
         relatedRFCs: ["RFC 7208", "RFC 7489"],
@@ -427,21 +435,21 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7489",
         title: "DMARC",
         category: "Email",
-        description: "Domain-based Message Authentication, Reporting, and Conformance (DMARC) allows email domain owners to specify how unauthenticated mail should be handled.",
+        description: "Earlier DMARC specification; replaced by RFC 9989, 9990 and 9991.",
         status: "Informational",
         year: 2015,
         url: "https://datatracker.ietf.org/doc/html/rfc7489",
         relatedRFCs: ["RFC 7208", "RFC 6376"],
         keywords: ["dmarc", "email", "authentication", "policy", "reporting"],
-    },
+    obsoletedBy: ["RFC 9989","RFC 9990","RFC 9991"],},
 
     // URI/URL Standards
     {
         rfc: "RFC 3986",
         title: "Uniform Resource Identifier (URI)",
         category: "Web Protocols",
-        description: "Defines the generic URI syntax and a process for resolving URI references. Foundation for URLs, URNs, and all web resource identification.",
-        status: "Standard",
+        description: "Generic URI syntax and relative-reference resolution.",
+        status: "Internet Standard",
         year: 2005,
         url: "https://datatracker.ietf.org/doc/html/rfc3986",
         relatedRFCs: ["RFC 6570"],
@@ -451,7 +459,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 6570",
         title: "URI Template",
         category: "Web Protocols",
-        description: "URI Templates provide a mechanism for describing a range of URIs through variable expansion. Commonly used in REST APIs and hypermedia.",
+        description: "Expand variables into URI templates.",
         status: "Proposed Standard",
         year: 2012,
         url: "https://datatracker.ietf.org/doc/html/rfc6570",
@@ -464,8 +472,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 8259",
         title: "The JavaScript Object Notation (JSON) Data Interchange Format",
         category: "Data Formats",
-        description: "Defines JSON (JavaScript Object Notation), a lightweight data-interchange format that is easy for humans to read and write and for machines to parse and generate.",
-        status: "Standard",
+        description: "JSON data interchange syntax and interoperability considerations.",
+        status: "Internet Standard",
         year: 2017,
         url: "https://datatracker.ietf.org/doc/html/rfc8259",
         relatedRFCs: ["RFC 6901", "RFC 6902"],
@@ -475,7 +483,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 6901",
         title: "JavaScript Object Notation (JSON) Pointer",
         category: "Data Formats",
-        description: "JSON Pointer defines a string syntax for identifying a specific value within a JSON document. Used in JSON Patch and other specifications.",
+        description: "Identify a value within a JSON document.",
         status: "Proposed Standard",
         year: 2013,
         url: "https://datatracker.ietf.org/doc/html/rfc6901",
@@ -486,7 +494,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 6902",
         title: "JavaScript Object Notation (JSON) Patch",
         category: "Data Formats",
-        description: "JSON Patch defines a JSON document structure for expressing a sequence of operations to apply to a JSON document. Operations include add, remove, replace, move, copy, and test.",
+        description: "Apply ordered add, remove, replace, move, copy and test operations.",
         status: "Proposed Standard",
         year: 2013,
         url: "https://datatracker.ietf.org/doc/html/rfc6902",
@@ -497,7 +505,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7396",
         title: "JSON Merge Patch",
         category: "Data Formats",
-        description: "Defines a JSON merge patch format for describing changes to a JSON document. Simpler alternative to JSON Patch for partial updates.",
+        description: "Describe JSON updates by example; null removes object members.",
         status: "Proposed Standard",
         year: 2014,
         url: "https://datatracker.ietf.org/doc/html/rfc7396",
@@ -510,19 +518,19 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7807",
         title: "Problem Details for HTTP APIs",
         category: "API Standards",
-        description: "Defines a standard way to carry machine-readable details of errors in HTTP response content. Commonly used as 'application/problem+json'.",
+        description: "Earlier HTTP problem-details format, obsoleted by RFC 9457.",
         status: "Proposed Standard",
         year: 2016,
         url: "https://datatracker.ietf.org/doc/html/rfc7807",
         relatedRFCs: [],
         keywords: ["problem details", "error", "api", "json", "http", "rest"],
-    },
+    obsoletedBy: ["RFC 9457"],},
     {
         rfc: "RFC 4918",
         title: "HTTP Extensions for Web Distributed Authoring and Versioning (WebDAV)",
         category: "HTTP",
-        description: "Defines the WebDAV extensions to HTTP for collaborative authoring, including status codes 102, 207, 422, 423, 424, and 507 used across the HTTP status code registry.",
-        status: "Standard",
+        description: "WebDAV authoring, properties, collections and locking; not the source of 102.",
+        status: "Proposed Standard",
         year: 2007,
         url: "https://datatracker.ietf.org/doc/html/rfc4918",
         relatedRFCs: ["RFC 9110", "RFC 5842"],
@@ -532,7 +540,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 5789",
         title: "PATCH Method for HTTP",
         category: "HTTP",
-        description: "Defines the HTTP PATCH method for making partial modifications to a resource. Complementary to PUT for partial updates.",
+        description: "Partial resource modification through HTTP PATCH.",
         status: "Proposed Standard",
         year: 2010,
         url: "https://datatracker.ietf.org/doc/html/rfc5789",
@@ -545,7 +553,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9000",
         title: "QUIC: A UDP-Based Multiplexed and Secure Transport",
         category: "Transport",
-        description: "QUIC is a UDP-based multiplexed and secure transport protocol. Provides transport layer security, connection migration, and 0-RTT connection establishment. Foundation for HTTP/3.",
+        description: "Secure multiplexed transport over UDP with connection migration.",
         status: "Proposed Standard",
         year: 2021,
         url: "https://datatracker.ietf.org/doc/html/rfc9000",
@@ -556,7 +564,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9001",
         title: "Using TLS to Secure QUIC",
         category: "Transport",
-        description: "Describes how TLS 1.3 is used to secure QUIC. Defines how TLS handshake messages are carried over QUIC and how keys are derived.",
+        description: "Use TLS handshake and key derivation to secure QUIC.",
         status: "Proposed Standard",
         year: 2021,
         url: "https://datatracker.ietf.org/doc/html/rfc9001",
@@ -569,7 +577,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 8017",
         title: "PKCS #1: RSA Cryptography Specifications",
         category: "Cryptography",
-        description: "Provides recommendations for the implementation of public-key cryptography based on the RSA algorithm, including key generation, encryption, and signatures.",
+        description: "RSA encryption and signature encodings, including OAEP and PSS.",
         status: "Informational",
         year: 2016,
         url: "https://datatracker.ietf.org/doc/html/rfc8017",
@@ -580,7 +588,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7748",
         title: "Elliptic Curves for Security (Curve25519, Curve448)",
         category: "Cryptography",
-        description: "Specifies two elliptic curves - Curve25519 and Curve448 - for use in cryptographic applications. Provides high security with efficient implementation.",
+        description: "X25519 and X448 elliptic-curve key agreement.",
         status: "Informational",
         year: 2016,
         url: "https://datatracker.ietf.org/doc/html/rfc7748",
@@ -591,7 +599,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 8032",
         title: "Edwards-Curve Digital Signature Algorithm (EdDSA)",
         category: "Cryptography",
-        description: "Describes the EdDSA digital signature algorithm using Edwards curves. Includes Ed25519 and Ed448 variants.",
+        description: "Ed25519 and Ed448 digital signature algorithms.",
         status: "Informational",
         year: 2017,
         url: "https://datatracker.ietf.org/doc/html/rfc8032",
@@ -604,8 +612,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 4648",
         title: "Base Encodings (Base16, Base32, Base64)",
         category: "Data Formats",
-        description: "Describes the commonly used base encoding schemes including base16, base32, and base64. Also defines URL-safe base64.",
-        status: "Standard",
+        description: "Base16, Base32, Base64 and URL-safe Base64 encoding rules.",
+        status: "Proposed Standard",
         year: 2006,
         url: "https://datatracker.ietf.org/doc/html/rfc4648",
         relatedRFCs: [],
@@ -617,7 +625,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 3339",
         title: "Date and Time on the Internet: Timestamps",
         category: "Data Formats",
-        description: "Defines a date and time format for use in Internet protocols, derived from ISO 8601. Widely used in JSON and APIs.",
+        description: "Internet timestamp profile with dates, times and numeric offsets.",
         status: "Proposed Standard",
         year: 2002,
         url: "https://datatracker.ietf.org/doc/html/rfc3339",
@@ -630,8 +638,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9562",
         title: "Universally Unique IDentifiers (UUIDs)",
         category: "Data Formats",
-        description: "Defines the format of UUIDs (Universally Unique IDentifiers) and generation algorithms for versions 1-8. Supersedes RFC 4122.",
-        status: "Standard",
+        description: "UUID formats and generation, including versions 6, 7 and 8.",
+        status: "Proposed Standard",
         year: 2024,
         url: "https://datatracker.ietf.org/doc/html/rfc9562",
         relatedRFCs: ["RFC 4122"],
@@ -643,7 +651,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9460",
         title: "Service Binding (SVCB) and HTTPS DNS Records",
         category: "DNS",
-        description: "Defines SVCB and HTTPS DNS record types for conveying service configuration information including port, priority, and transport protocols.",
+        description: "SVCB and HTTPS DNS records for service connection information.",
         status: "Proposed Standard",
         year: 2023,
         url: "https://datatracker.ietf.org/doc/html/rfc9460",
@@ -656,8 +664,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 8693",
         title: "OAuth 2.0 Token Exchange",
         category: "Security - OAuth",
-        description: "Defines a protocol for an HTTP- and JSON-based Security Token Service (STS) by defining an OAuth 2.0 grant type for exchanging tokens.",
-        status: "Standard",
+        description: "OAuth token exchange for delegation and impersonation scenarios.",
+        status: "Proposed Standard",
         year: 2020,
         url: "https://datatracker.ietf.org/doc/html/rfc8693",
         relatedRFCs: ["RFC 6749"],
@@ -667,8 +675,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 8414",
         title: "OAuth 2.0 Authorization Server Metadata",
         category: "Security - OAuth",
-        description: "Defines a metadata format that OAuth 2.0 clients can use to obtain the information needed to interact with OAuth 2.0 authorization servers.",
-        status: "Standard",
+        description: "OAuth server capabilities and endpoints in JSON metadata.",
+        status: "Proposed Standard",
         year: 2018,
         url: "https://datatracker.ietf.org/doc/html/rfc8414",
         relatedRFCs: ["RFC 6749"],
@@ -680,7 +688,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9106",
         title: "Argon2 Memory-Hard Function for Password Hashing",
         category: "Cryptography",
-        description: "Specifies Argon2, winner of the Password Hashing Competition. Defines Argon2d, Argon2i, and Argon2id variants for password hashing and key derivation.",
+        description: "Argon2 password hashing and memory-hard key derivation.",
         status: "Informational",
         year: 2021,
         url: "https://datatracker.ietf.org/doc/html/rfc9106",
@@ -691,7 +699,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7914",
         title: "The scrypt Password-Based Key Derivation Function",
         category: "Cryptography",
-        description: "Specifies the scrypt password-based key derivation function designed to be expensive to perform in hardware with high memory requirements.",
+        description: "scrypt password-based, memory-hard key derivation.",
         status: "Informational",
         year: 2016,
         url: "https://datatracker.ietf.org/doc/html/rfc7914",
@@ -704,7 +712,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 7725",
         title: "An HTTP Status Code to Report Legal Obstacles (451)",
         category: "HTTP",
-        description: "Defines HTTP status code 451 to indicate that a server is denying access to a resource as a consequence of a legal demand.",
+        description: "HTTP 451 indicates access denied because of a legal demand.",
         status: "Proposed Standard",
         year: 2016,
         url: "https://datatracker.ietf.org/doc/html/rfc7725",
@@ -716,8 +724,8 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9293",
         title: "Transmission Control Protocol (TCP)",
         category: "HTTP",
-        description: "Updated specification of TCP, replacing RFC 793 (1981) and consolidating decades of errata, clarifications, and updates. The definitive reference for modern TCP implementations.",
-        status: "Standard",
+        description: "TCP transport specification consolidating earlier requirements and corrections.",
+        status: "Internet Standard",
         year: 2022,
         url: "https://datatracker.ietf.org/doc/html/rfc9293",
         keywords: ["tcp", "transport", "protocol", "stream", "reliable"],
@@ -726,9 +734,9 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9457",
         title: "Problem Details for HTTP APIs",
         category: "HTTP",
-        description: "Updated specification for machine-readable error responses (application/problem+json), obsoleting RFC 7807. The standard format for returning structured error details from HTTP APIs.",
+        description: "Structured HTTP problem details in JSON or XML.",
         status: "Proposed Standard",
-        year: 2024,
+        year: 2023,
         url: "https://datatracker.ietf.org/doc/html/rfc9457",
         relatedRFCs: ["RFC 7807", "RFC 9110"],
         keywords: ["problem details", "errors", "json", "api", "rest", "rfc 7807"],
@@ -737,7 +745,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9421",
         title: "HTTP Message Signatures",
         category: "Security - JOSE",
-        description: "Standard mechanism for cryptographically signing HTTP request/response components (method, URL, headers, body digest). Used for webhooks, B2B APIs, and replacing ad-hoc HMAC schemes.",
+        description: "Sign selected HTTP message components using a signature base.",
         status: "Proposed Standard",
         year: 2024,
         url: "https://datatracker.ietf.org/doc/html/rfc9421",
@@ -747,7 +755,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9530",
         title: "Digest Fields",
         category: "HTTP",
-        description: "Modern replacement for the deprecated Digest and Want-Digest headers (RFC 3230), defining Repr-Digest and Content-Digest using HTTP Structured Fields. Used with HTTP Message Signatures.",
+        description: "Content-Digest and Repr-Digest fields for HTTP integrity information.",
         status: "Proposed Standard",
         year: 2024,
         url: "https://datatracker.ietf.org/doc/html/rfc9530",
@@ -758,7 +766,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9651",
         title: "Structured Field Values for HTTP",
         category: "HTTP",
-        description: "Defines a typed value syntax for HTTP header and trailer fields (lists, dictionaries, items). Replaces RFC 8941. Used by Cookie attributes, modern HTTP signatures, and Client Hints.",
+        description: "Typed HTTP field values: items, lists and dictionaries.",
         status: "Proposed Standard",
         year: 2024,
         url: "https://datatracker.ietf.org/doc/html/rfc9651",
@@ -769,7 +777,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9512",
         title: "YAML Media Type",
         category: "Data Formats",
-        description: "Registers application/yaml as the official media type for YAML documents, with security considerations for parsers handling untrusted input.",
+        description: "Registers application/yaml and describes YAML security considerations.",
         status: "Informational",
         year: 2024,
         url: "https://datatracker.ietf.org/doc/html/rfc9512",
@@ -779,7 +787,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9580",
         title: "OpenPGP",
         category: "Cryptography",
-        description: "Updated OpenPGP specification, replacing RFC 4880. Adds modern algorithms (Ed25519, X25519, AES-OCB), v6 keys, and removes weak primitives. The foundation for modern PGP/GPG.",
+        description: "OpenPGP message, key, encryption and signature formats.",
         status: "Proposed Standard",
         year: 2024,
         url: "https://datatracker.ietf.org/doc/html/rfc9580",
@@ -790,7 +798,7 @@ const RFC_STANDARDS: RFCStandard[] = [
         rfc: "RFC 9325",
         title: "Recommendations for Secure Use of TLS and DTLS",
         category: "Security - TLS",
-        description: "Updated best-current-practice for TLS deployment, replacing RFC 7525. Mandates TLS 1.2+, deprecates SHA-1 and CBC ciphers, and provides current configuration guidance.",
+        description: "TLS and DTLS deployment guidance; review later protocol updates too.",
         status: "Best Current Practice",
         year: 2022,
         url: "https://datatracker.ietf.org/doc/html/rfc9325",
@@ -816,7 +824,8 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-    "Standard": "green",
+    "Internet Standard": "green",
+    "Draft Standard": "lime",
     "Proposed Standard": "blue",
     "Best Current Practice": "cyan",
     "Informational": "orange",
@@ -824,8 +833,11 @@ const STATUS_COLORS: Record<string, string> = {
     "Historic": "default",
 };
 
+const searchable = (value: string) => [value, ...(REFERENCE_STANDARDS_TRANSLATIONS[value] ?? [])].join("\n").toLowerCase();
+
 export default function RFCStandardsPage() {
-    const { darkMode } = useAppStore();
+    const { t } = useLanguage();
+    const [expandedCategories, setExpandedCategories] = useState<string[]>(() => Array.from(new Set(RFC_STANDARDS.map(row => row.category))));
     const [search, setSearch] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
@@ -841,12 +853,13 @@ export default function RFCStandardsPage() {
             result = result.filter(r => r.category === selectedCategory);
         }
 
-        if (search) {
-            const searchLower = search.toLowerCase();
+        if (search.trim()) {
+            const searchLower = search.trim().toLowerCase();
             result = result.filter(r =>
                 r.rfc.toLowerCase().includes(searchLower) ||
                 r.title.toLowerCase().includes(searchLower) ||
-                r.description.toLowerCase().includes(searchLower) ||
+                searchable(r.description).includes(searchLower) ||
+                searchable(r.category).includes(searchLower) ||
                 r.keywords.some(k => k.toLowerCase().includes(searchLower))
             );
         }
@@ -877,36 +890,37 @@ export default function RFCStandardsPage() {
             ),
         },
         {
-            title: "Title",
+            title: t("Title"),
             dataIndex: "title",
             key: "title",
             render: (title: string, record: RFCStandard) => (
                 <div>
                     <Text strong>{title}</Text>
                     <div style={{ marginTop: 4 }}>
-                        <Text type="secondary" style={{ fontSize: 12 }}>{record.description}</Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>{t(record.description)}</Text>
                     </div>
+                    {record.obsoletedBy?.length ? <div>{t("Replaced by:")} {record.obsoletedBy.map(rfc => <a key={rfc} href={`https://www.rfc-editor.org/rfc/${rfc.toLowerCase().replace(" ", "")}.html`} target="_blank" rel="noopener noreferrer" style={{ marginInlineEnd: 8 }}>{rfc}</a>)}</div> : null}
                 </div>
             ),
         },
         {
-            title: "Status",
+            title: t("Maturity"),
             dataIndex: "status",
             key: "status",
             width: 150,
             render: (status: string) => (
-                <Tag color={STATUS_COLORS[status]}>{status}</Tag>
+                <Tag color={STATUS_COLORS[status]}>{t(status)}</Tag>
             ),
         },
         {
-            title: "Year",
+            title: t("Year"),
             dataIndex: "year",
             key: "year",
             width: 80,
             sorter: (a: RFCStandard, b: RFCStandard) => a.year - b.year,
         },
         {
-            title: "Related",
+            title: t("Related"),
             dataIndex: "relatedRFCs",
             key: "relatedRFCs",
             width: 180,
@@ -922,51 +936,32 @@ export default function RFCStandardsPage() {
 
     const tabItems = categories.map(cat => ({
         key: cat,
-        label: cat === "all" ? "All Standards" : cat,
+        label: cat === "all" ? t("All Standards") : t(cat),
         children: null,
     }));
 
     return (
         <ToolPageLayout
-            title="RFC Standards Reference"
-            description="Comprehensive reference for important RFC standards"
+            title={t("RFC Standards Reference")}
+            description={t("Selected RFCs with explanations, maturity levels and replacement links")}
             icon={<SafetyCertificateOutlined style={{ fontSize: 24 }} />}
             color="#722ed1"
             learnMore={{
-                whatIs: "RFC (Request for Comments) documents are technical standards and specifications published by the IETF (Internet Engineering Task Force). They define the protocols, procedures, and conventions that power the Internet, from HTTP and TLS to JWT and OAuth.",
-                whyUse: "Understanding RFC standards is essential for implementing secure and interoperable systems. This reference helps developers quickly find the relevant specifications for authentication (JWT, JWE, OAuth), transport security (TLS), HTTP protocols, and more.",
-                howToUse: [
-                    "Use the search bar to find standards by RFC number, title, or keywords",
-                    "Filter by category to browse related standards (e.g., 'Security - JOSE' for JWT family)",
-                    "Click on RFC numbers to open the official IETF documentation",
-                    "Check related RFCs to understand the full specification family",
-                    "Note the status - 'Standard' and 'Proposed Standard' are widely implemented",
-                ],
-                tips: [
-                    "JWT (RFC 7519) depends on JWS (7515), JWE (7516), JWK (7517), and JWA (7518)",
-                    "For modern OAuth implementations, always use PKCE (RFC 7636)",
-                    "TLS 1.3 (RFC 8446) should be preferred over TLS 1.2",
-                    "HTTP/3 (RFC 9114) uses QUIC (RFC 9000) instead of TCP",
-                    "RFC 9110 consolidates and obsoletes earlier HTTP RFCs (7230-7235)",
-                ],
-                useCases: [
-                    "Implementing JWT-based authentication systems",
-                    "Building OAuth 2.0 / OpenID Connect identity providers",
-                    "Configuring TLS and HTTPS for web servers",
-                    "Designing REST APIs with proper HTTP semantics",
-                    "Setting up email authentication (SPF, DKIM, DMARC)",
-                ],
+                whatIs: t("Browse selected RFCs, their formal maturity and replacement links. Official titles, identifiers and URLs remain unchanged across languages."),
+                whyUse: t("Search an RFC number, title, keyword or translated explanation; select a category or expand a group."),
+                howToUse: [t("Maturity is separate from deployment advice or obsolescence. A superseded RFC can retain its formal standards-track status.")],
+                tips: [t("RFC Editor metadata checked 2026-10-21. This bundled selection does not automatically track later publications, updates or errata."), t("Follow the primary document, its replacement and relevant security guidance before implementing a protocol.")],
             }}
         >
             <Card>
                 <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <Input
                         size="large"
-                        placeholder="Search RFCs by number, title, or keyword (e.g., 'jwt', 'oauth', 'tls')..."
+                        placeholder={t("Search RFCs by number, title, or keyword (e.g., 'jwt', 'oauth', 'tls')...")}
                         prefix={<SearchOutlined />}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        allowClear
+                        allowClear dir="auto" aria-label={t("Search references")}
                     />
 
                     <Tabs
@@ -977,20 +972,21 @@ export default function RFCStandardsPage() {
                     />
 
                     <div>
-                        <Text type="secondary">
-                            Showing {filteredStandards.length} of {RFC_STANDARDS.length} standards
+                        <Text type="secondary" role="status">
+                            {t("Showing {shown} of {total} standards", { shown: filteredStandards.length, total: RFC_STANDARDS.length })}
                         </Text>
                     </div>
 
                     {selectedCategory === "all" ? (
                         <Collapse
-                            defaultActiveKey={Array.from(groupedByCategory.keys())}
+                            activeKey={expandedCategories}
+                            onChange={(keys) => setExpandedCategories((Array.isArray(keys) ? keys : [keys]).map(String))}
                             items={Array.from(groupedByCategory.entries()).map(([category, standards]) => ({
                                 key: category,
                                 label: (
                                     <Space>
                                         {CATEGORY_ICONS[category]}
-                                        <Text strong>{category}</Text>
+                                        <Text strong>{t(category)}</Text>
                                         <Tag>{standards.length}</Tag>
                                     </Space>
                                 ),
@@ -1014,38 +1010,18 @@ export default function RFCStandardsPage() {
                         />
                     )}
 
+                    <Text type="secondary">{t("RFC Editor metadata checked 2026-10-21; follow primary links for later updates.")}</Text>
                     <Divider />
 
                     <div style={{ padding: "16px 0" }}>
-                        <Title level={5}>Quick Reference: Key RFC Families</Title>
+                        <Title level={5}>{t("Quick Reference: Key RFC Families")}</Title>
                         <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
-                            <Card size="small" title={<><KeyOutlined /> JOSE (JSON Object Signing and Encryption)</>}>
-                                <Text>
-                                    <strong>RFC 7519</strong> (JWT) • <strong>RFC 7515</strong> (JWS) •
-                                    <strong> RFC 7516</strong> (JWE) • <strong>RFC 7517</strong> (JWK) •
-                                    <strong> RFC 7518</strong> (JWA)
-                                </Text>
-                            </Card>
-                            <Card size="small" title={<><LockOutlined /> OAuth 2.0 Family</>}>
-                                <Text>
-                                    <strong>RFC 6749</strong> (Core) • <strong>RFC 6750</strong> (Bearer) •
-                                    <strong> RFC 7636</strong> (PKCE) • <strong>RFC 7662</strong> (Introspection) •
-                                    <strong> RFC 8414</strong> (Metadata)
-                                </Text>
-                            </Card>
-                            <Card size="small" title={<><ApiOutlined /> Modern HTTP</>}>
-                                <Text>
-                                    <strong>RFC 9110</strong> (Semantics) • <strong>RFC 9111</strong> (Caching) •
-                                    <strong> RFC 9112</strong> (HTTP/1.1) • <strong>RFC 9113</strong> (HTTP/2) •
-                                    <strong> RFC 9114</strong> (HTTP/3)
-                                </Text>
-                            </Card>
-                            <Card size="small" title={<><MailOutlined /> Email Authentication</>}>
-                                <Text>
-                                    <strong>RFC 7208</strong> (SPF) • <strong>RFC 6376</strong> (DKIM) •
-                                    <strong> RFC 7489</strong> (DMARC)
-                                </Text>
-                            </Card>
+                            {[
+                                { title: t("JOSE family"), rfcs: ["RFC 7519", "RFC 7515", "RFC 7516", "RFC 7517", "RFC 7518"] },
+                                { title: t("OAuth 2.0 family"), rfcs: ["RFC 6749", "RFC 6750", "RFC 7636", "RFC 7662", "RFC 8414", "RFC 9700"] },
+                                { title: t("HTTP specifications"), rfcs: ["RFC 9110", "RFC 9111", "RFC 9112", "RFC 9113", "RFC 9114"] },
+                                { title: t("Email authentication"), rfcs: ["RFC 7208", "RFC 6376", "RFC 9989", "RFC 9990", "RFC 9991"] },
+                            ].map(family => <Card key={family.rfcs[0]} size="small" title={family.title}><Space wrap>{family.rfcs.map(rfc => <Tag key={rfc}>{rfc}</Tag>)}</Space></Card>)}
                         </Space>
                     </div>
                 </Space>

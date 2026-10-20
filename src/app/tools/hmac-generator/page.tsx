@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card, Input, Typography, Row, Col, Select, Button, Space, message, Segmented, Divider, Alert } from "antd";
 import { SafetyOutlined, CopyOutlined, SwapOutlined, LockOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { useLanguage } from "@/components/LanguageProvider";
+import { CRYPTO_UTILITY_HELP } from "@/lib/i18n/crypto-utilities";
 import { copyToClipboard } from "@/lib/clipboard";
 import SendToButton from "@/components/SendToButton";
 import ShareButton from "@/components/ShareButton";
@@ -58,6 +60,9 @@ interface ShareState { inputText: string; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "hmac-generator", version: 1 };
 
 export default function HmacGeneratorPage() {
+    const { t } = useLanguage();
+    const latestT = useRef(t);
+    useEffect(() => { latestT.current = t; }, [t]);
     const [inputText, setInputText] = useState("Hello, World!");
     const [secretKey, setSecretKey] = useState("my-secret-key");
     const [algorithm, setAlgorithm] = useState<Algorithm>("SHA-256");
@@ -68,7 +73,7 @@ export default function HmacGeneratorPage() {
 
     const generateHash = async () => {
         if (!inputText || !secretKey) {
-            message.warning("Please enter both message and secret key");
+            message.warning(latestT.current("Please enter both message and secret key"));
             return;
         }
 
@@ -79,15 +84,15 @@ export default function HmacGeneratorPage() {
                 ? arrayBufferToHex(result)
                 : arrayBufferToBase64(result);
             setHmacResult(formatted);
-        } catch (err: any) {
-            message.error("Failed to generate HMAC: " + err.message);
+        } catch (cause: unknown) {
+            message.error(cause instanceof Error ? latestT.current("Crypto operation failed: {detail}", { detail: cause.message }) : latestT.current("Operation failed"));
         } finally {
             setLoading(false);
         }
     };
 
     const copyResult = () => {
-        if (hmacResult) copyToClipboard(hmacResult, "HMAC copied to clipboard!");
+        if (hmacResult) copyToClipboard(hmacResult, t("HMAC copied to clipboard!"));
     };
 
     const generateRandomKey = () => {
@@ -103,82 +108,67 @@ export default function HmacGeneratorPage() {
 
     return (
         <ToolPageLayout
-            title="HMAC Generator"
-            description="Generate HMAC signatures using various algorithms"
+            title={t("HMAC Generator")}
+            description={t("Generate HMAC signatures using various algorithms")}
             icon={<SafetyOutlined style={{ fontSize: 24, color: "#f5222d" }} />}
             color="#f5222d"
-            learnMore={{
-                whatIs: "HMAC (Hash-based Message Authentication Code) combines a cryptographic hash function with a secret key to produce a signature that verifies both data integrity and authenticity. Unlike simple hashes, HMACs prove the sender knows the secret key.",
-                whyUse: "HMACs are essential for API authentication, webhook verification, and secure message signing. They ensure data hasn't been tampered with and comes from a trusted source that possesses the secret key.",
-                howToUse: [
-                    "Enter your message in the text area",
-                    "Enter your secret key (keep it confidential!)",
-                    "Select the hash algorithm (SHA-256 recommended)",
-                    "Choose output format: hex or base64",
-                    "Generate and copy the HMAC signature"
-                ],
-                tips: [
-                    "Use SHA-256 or higher for new implementations",
-                    "Keep secret keys long and random (at least 32 bytes)",
-                    "Never expose secret keys in client-side code",
-                    "HMAC-SHA1 is still used in OAuth 1.0 but avoid for new projects"
-                ],
-                useCases: [
-                    "Signing API requests (AWS Signature, Stripe webhooks)",
-                    "Verifying webhook payloads from third-party services",
-                    "Creating JWT signatures (HS256, HS384, HS512)",
-                    "Secure cookie and session token generation"
-                ]
-            }}
+            learnMore={CRYPTO_UTILITY_HELP["hmac-generator"]}
         >
             <ToolBridgeBanner accepts={["text"]} onAccept={(p) => setInputText(p.data)} />
 
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
-                    <Card title="Input">
+                    <Card title={t("Input")}>
                         <div style={{ marginBottom: 16 }}>
-                            <Text strong style={{ display: "block", marginBottom: 8 }}>Message</Text>
+                            <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Message")}</Text>
                             <TextArea
+                                aria-label={t("Message")}
+                                dir="auto"
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
-                                placeholder="Enter the message to sign..."
+                                placeholder={t("Enter the message to sign...")}
                                 rows={4}
                             />
                         </div>
 
                         <div style={{ marginBottom: 16 }}>
-                            <Text strong style={{ display: "block", marginBottom: 8 }}>Secret Key</Text>
+                            <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Secret Key")}</Text>
                             <Space.Compact style={{ width: "100%" }}>
                                 <Input.Password
+                                    aria-label={t("Secret Key")}
+                                    dir="ltr"
+                                    styles={{ input: { direction: "ltr" } }}
                                     value={secretKey}
                                     onChange={(e) => setSecretKey(e.target.value)}
-                                    placeholder="Enter secret key..."
+                                    placeholder={t("Enter secret key...")}
                                     visibilityToggle={{ visible: showSecret, onVisibleChange: setShowSecret }}
                                     style={{ flex: 1 }}
                                 />
-                                <Button icon={<LockOutlined />} onClick={generateRandomKey}>
-                                    Generate
+                                <Button aria-label={t("Generate random secret key")} icon={<LockOutlined />} onClick={generateRandomKey}>
+                                    {t("Generate")}
                                 </Button>
                             </Space.Compact>
                         </div>
 
                         <Space wrap style={{ marginBottom: 16 }}>
                             <div>
-                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Algorithm</Text>
+                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>{t("Algorithm")}</Text>
                                 <Select
                                     value={algorithm}
                                     onChange={setAlgorithm}
-                                    style={{ width: 160 }}
-                                    options={ALGORITHMS.map((a) => ({ value: a.value, label: a.label }))}
+                                    aria-label={t("Algorithm")}
+                                    style={{ minWidth: 160 }}
+                                    options={ALGORITHMS.map((a) => ({ value: a.value, label: <bdi dir="ltr">{a.label}</bdi> }))}
                                 />
                             </div>
                             <div>
-                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Output Format</Text>
+                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>{t("Output Format")}</Text>
                                 <Segmented
+                                    aria-label={t("Output Format")}
                                     value={outputFormat}
                                     onChange={(v) => setOutputFormat(v as OutputFormat)}
                                     options={[
-                                        { value: "hex", label: "Hexadecimal" },
+                                        { value: "hex", label: t("Hexadecimal") },
                                         { value: "base64", label: "Base64" },
                                     ]}
                                 />
@@ -194,24 +184,25 @@ export default function HmacGeneratorPage() {
                                 loading={loading}
                                 style={{ background: "#f5222d", borderColor: "#f5222d" }}
                             >
-                                Generate HMAC
+                                {t("Generate HMAC")}
                             </Button>
-                            <ShareButton schema={SHARE_SCHEMA} getState={() => ({ inputText })} sensitiveFieldHint="The secret key is never included in share links — only the message text." size="middle" />
+                            <ShareButton schema={SHARE_SCHEMA} getState={() => ({ inputText })} sensitiveFieldHint={t("The secret key is never included in share links — only the message text.")} size="middle" />
                             <SendToButton data={inputText} kind="text" sourceToolId="hmac-generator" size="middle" />
                         </Space>
                     </Card>
 
                     <Card
-                        title="HMAC Result"
+                        title={t("HMAC Result")}
                         style={{ marginTop: 16 }}
                         extra={
                             hmacResult && (
-                                <Button icon={<CopyOutlined />} onClick={copyResult}>Copy</Button>
+                                <Button icon={<CopyOutlined />} onClick={copyResult}>{t("Copy")}</Button>
                             )
                         }
                     >
                         {hmacResult ? (
                             <div
+                                dir="ltr"
                                 style={{
                                     padding: 16,
                                     background: "rgba(245, 34, 45, 0.05)",
@@ -226,14 +217,14 @@ export default function HmacGeneratorPage() {
                             </div>
                         ) : (
                             <div style={{ textAlign: "center", padding: 40, color: "#8c8c8c" }}>
-                                Click "Generate HMAC" to create a signature
+                                {t("Click “Generate HMAC” to create a signature")}
                             </div>
                         )}
 
                         {hmacResult && (
                             <div style={{ marginTop: 12 }}>
                                 <Text type="secondary">
-                                    Length: {hmacResult.length} characters ({algorithmInfo?.bits} bits)
+                                    {t("Length: {length} characters ({bits} bits)", { length: hmacResult.length, bits: algorithmInfo?.bits ?? 0 })}
                                 </Text>
                             </div>
                         )}
@@ -241,19 +232,16 @@ export default function HmacGeneratorPage() {
                 </Col>
 
                 <Col xs={24} lg={8}>
-                    <Card title="About HMAC">
+                    <Card title={t("About HMAC")}>
                         <Paragraph type="secondary">
-                            HMAC (Hash-based Message Authentication Code) is a specific type of
-                            message authentication code involving a cryptographic hash function
-                            and a secret key.
+                            {t(CRYPTO_UTILITY_HELP["hmac-generator"].whatIs)}
                         </Paragraph>
                         <Paragraph type="secondary">
-                            It can be used to verify both the data integrity and authenticity
-                            of a message.
+                            {t(CRYPTO_UTILITY_HELP["hmac-generator"].whyUse)}
                         </Paragraph>
                     </Card>
 
-                    <Card title="Algorithm Comparison" style={{ marginTop: 16 }}>
+                    <Card title={t("Algorithm Comparison")} style={{ marginTop: 16 }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                             {ALGORITHMS.map((alg) => (
                                 <div
@@ -267,22 +255,25 @@ export default function HmacGeneratorPage() {
                                     }}
                                     onClick={() => setAlgorithm(alg.value)}
                                 >
-                                    <Text strong>{alg.label}</Text>
+                                    <Text strong><bdi dir="ltr">{alg.label}</bdi></Text>
                                     <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
-                                        {alg.bits}-bit output
+                                        {t("{bits}-bit output", { bits: alg.bits })}
+                                    </Text>
+                                    <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
+                                        {t(alg.description)}
                                     </Text>
                                 </div>
                             ))}
                         </div>
                     </Card>
 
-                    <Card title="Common Use Cases" style={{ marginTop: 16 }}>
-                        <ul style={{ paddingLeft: 20, margin: 0 }}>
-                            <li>API authentication signatures</li>
-                            <li>Webhook payload verification</li>
-                            <li>Session token validation</li>
-                            <li>Data integrity checks</li>
-                            <li>OAuth 1.0 signatures</li>
+                    <Card title={t("Common Use Cases")} style={{ marginTop: 16 }}>
+                        <ul style={{ paddingInlineStart: 20, margin: 0 }}>
+                            <li>{t("API authentication signatures")}</li>
+                            <li>{t("Webhook payload verification")}</li>
+                            <li>{t("Session token validation")}</li>
+                            <li>{t("Data integrity checks")}</li>
+                            <li>{t("OAuth 1.0 signatures")}</li>
                         </ul>
                     </Card>
                 </Col>

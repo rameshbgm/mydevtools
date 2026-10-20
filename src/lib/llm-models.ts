@@ -2,7 +2,8 @@
 // (token-counter, jsonl-validator, model-pricing-reference). Previously each
 // page carried its own hard-coded list and they drifted apart.
 //
-// Verified 2026-07. Prices are USD per 1M tokens, standard tier.
+// Selected records reviewed 2026-10-19. Historical records remain explicitly unverified.
+// Prices are USD per million text tokens; notes describe tier and expiry.
 
 export type TokenizerKind =
     | "o200k" // OpenAI GPT-4o / GPT-5.x / o-series
@@ -12,6 +13,10 @@ export type TokenizerKind =
 export interface LlmModel {
     /** Stable key used in URLs and shareable state — do not rename. */
     id: string;
+    apiModelId?: string;
+    verifiedAt?: string;
+    pricingNote?: string;
+    metadataUrl?: string;
     provider: string;
     /** Human label shown in dropdowns. */
     label: string;
@@ -29,11 +34,11 @@ export interface LlmModel {
     tokenizerNote: string;
 }
 
-export const PRICES_LAST_VERIFIED = "2026-07";
+export const PRICES_LAST_VERIFIED = "2026-10-19";
 
-const OPENAI_PRICING = "https://openai.com/api/pricing";
-const ANTHROPIC_PRICING = "https://www.anthropic.com/pricing";
-const GOOGLE_PRICING = "https://ai.google.dev/pricing";
+const OPENAI_PRICING = "https://developers.openai.com/api/docs/pricing";
+const ANTHROPIC_PRICING = "https://platform.claude.com/docs/en/about-claude/pricing";
+const GOOGLE_PRICING = "https://ai.google.dev/gemini-api/docs/pricing";
 const META_PRICING = "https://ai.meta.com/llama/";
 const MISTRAL_PRICING = "https://mistral.ai/pricing";
 const DEEPSEEK_PRICING = "https://api-docs.deepseek.com/quick_start/pricing";
@@ -41,11 +46,19 @@ const XAI_PRICING = "https://x.ai/api";
 const COHERE_PRICING = "https://cohere.com/pricing";
 const QWEN_PRICING = "https://www.alibabacloud.com/help/en/model-studio/models";
 
-const EXACT_NOTE = "Exact — same BPE tokenizer OpenAI uses server-side.";
+const EXACT_NOTE = "Local BPE encoding count for plain text. Model mapping and API message/tool/image overhead are not verified; this is not a billable API count.";
 const ESTIMATE_NOTE =
-    "Estimate only — this provider's tokenizer isn't public. Typically within ±10-15% of the real count.";
+    "Rough character-based heuristic with no measured accuracy guarantee. Language, code and model vocabulary can change the count substantially. Use the provider count endpoint for a request-specific count.";
 
 export const LLM_MODELS: LlmModel[] = [
+    {"id": "gpt-6-sol", "apiModelId": "gpt-6-sol", "provider": "OpenAI", "label": "GPT-6 Sol", "contextWindow": 1050000, "maxOutput": 128000, "inputPrice": 2, "outputPrice": 10, "cachedInputPrice": 0.2, "vision": true, "tools": true, "knowledgeCutoff": "2026-04-20", "pricingUrl": "https://developers.openai.com/api/docs/pricing", "tokenizer": "estimate", "verifiedAt": "2026-10-19", "pricingNote": "Standard text ≤272K input; longer prompts and processing tiers differ. Cache writes cost 1.25× input.", "metadataUrl": "https://developers.openai.com/api/docs/models/gpt-6-sol", "tokenizerNote": ESTIMATE_NOTE },
+    {"id": "gpt-6-1-sol", "apiModelId": "gpt-6.1-sol", "provider": "OpenAI", "label": "GPT-6.1 Sol", "contextWindow": 1050000, "maxOutput": 128000, "inputPrice": 2, "outputPrice": 10, "cachedInputPrice": 0.1, "vision": true, "tools": true, "knowledgeCutoff": "2026-04-30", "pricingUrl": "https://developers.openai.com/api/docs/pricing", "tokenizer": "estimate", "verifiedAt": "2026-10-19", "pricingNote": "Standard text ≤272K input; longer prompts and processing tiers differ. Cache writes cost 1.25× input.", "metadataUrl": "https://developers.openai.com/api/docs/models/gpt-6.1-sol", "tokenizerNote": ESTIMATE_NOTE },
+    {"id": "claude-fable-5-1", "apiModelId": "claude-fable-5-1", "provider": "Anthropic", "label": "Claude Fable 5.1", "contextWindow": 1000000, "maxOutput": 128000, "inputPrice": 10, "outputPrice": 50, "cachedInputPrice": 0.25, "vision": true, "tools": true, "knowledgeCutoff": "2026-06", "pricingUrl": "https://platform.claude.com/docs/en/about-claude/pricing", "tokenizer": "estimate", "verifiedAt": "2026-10-19", "pricingNote": "First-party standard text pricing; batch, cache writes and residency differ.", "metadataUrl": "https://platform.claude.com/docs/en/models/overview", "tokenizerNote": ESTIMATE_NOTE },
+    {"id": "claude-opus-5-5", "apiModelId": "claude-opus-5-5", "provider": "Anthropic", "label": "Claude Opus 5.5", "contextWindow": 1000000, "maxOutput": 128000, "inputPrice": 4, "outputPrice": 20, "cachedInputPrice": 0.2, "vision": true, "tools": true, "knowledgeCutoff": "2026-06", "pricingUrl": "https://platform.claude.com/docs/en/about-claude/pricing", "tokenizer": "estimate", "verifiedAt": "2026-10-19", "pricingNote": "First-party standard text pricing; batch, cache writes and residency differ.", "metadataUrl": "https://platform.claude.com/docs/en/models/overview", "tokenizerNote": ESTIMATE_NOTE },
+    {"id": "claude-sonnet-5-5", "apiModelId": "claude-sonnet-5-5", "provider": "Anthropic", "label": "Claude Sonnet 5.5", "contextWindow": 1000000, "maxOutput": 128000, "inputPrice": 2, "outputPrice": 10, "cachedInputPrice": 0.1, "vision": true, "tools": true, "knowledgeCutoff": "2026-06", "pricingUrl": "https://platform.claude.com/docs/en/about-claude/pricing", "tokenizer": "estimate", "verifiedAt": "2026-10-19", "pricingNote": "First-party standard text pricing; batch, cache writes and residency differ.", "metadataUrl": "https://platform.claude.com/docs/en/models/overview", "tokenizerNote": ESTIMATE_NOTE },
+    {"id": "claude-haiku-5-5", "apiModelId": "claude-haiku-5-5", "provider": "Anthropic", "label": "Claude Haiku 5.5", "contextWindow": 1000000, "maxOutput": 128000, "inputPrice": 0.1, "outputPrice": 0.5, "cachedInputPrice": 0.01, "vision": true, "tools": true, "knowledgeCutoff": "2026-06", "pricingUrl": "https://platform.claude.com/docs/en/about-claude/pricing", "tokenizer": "estimate", "verifiedAt": "2026-10-19", "pricingNote": "Prompts ≤100K input. Above 100K: $0.50 input / $2.50 output, $0.05 cache hit per million.", "metadataUrl": "https://platform.claude.com/docs/en/models/overview", "tokenizerNote": ESTIMATE_NOTE },
+    {"id": "gemini-3-8-flash", "apiModelId": "gemini-3.8-flash", "provider": "Google", "label": "Gemini 3.8 Flash", "contextWindow": 1048576, "maxOutput": 65536, "inputPrice": 0.75, "outputPrice": 3.75, "cachedInputPrice": 0.075, "vision": true, "tools": true, "knowledgeCutoff": "Not listed", "pricingUrl": "https://ai.google.dev/gemini-api/docs/pricing", "tokenizer": "estimate", "verifiedAt": "2026-10-19", "pricingNote": "Standard text through 2026-12-31; then $1.50/$7.50. Audio and storage differ.", "metadataUrl": "https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash", "tokenizerNote": ESTIMATE_NOTE },
+    {"id": "gemini-4-argon", "apiModelId": "gemini-4-argon", "provider": "Google", "label": "Gemini 4 Argon", "contextWindow": 1048576, "maxOutput": 65536, "inputPrice": 2, "outputPrice": 10, "cachedInputPrice": 0.1, "vision": true, "tools": true, "knowledgeCutoff": "Not listed", "pricingUrl": "https://ai.google.dev/gemini-api/docs/pricing", "tokenizer": "estimate", "verifiedAt": "2026-10-19", "pricingNote": "Unified input/output window; default synchronous max output. $2/$10 through 2026-11-30, then $4/$20. Long-decode limits differ.", "metadataUrl": "https://ai.google.dev/gemini-api/docs/models/gemini-4-argon", "tokenizerNote": ESTIMATE_NOTE },
     // ── Anthropic ──
     {
         id: "claude-opus-5",
@@ -64,13 +77,14 @@ export const LLM_MODELS: LlmModel[] = [
     },
     {
         id: "claude-sonnet-5",
+        apiModelId: "claude-sonnet-5", pricingNote: "Prices reviewed 2026-10-19; historical capability metadata is not reverified.",
         provider: "Anthropic",
         label: "Claude Sonnet 5",
         contextWindow: 1_000_000,
         maxOutput: 128_000,
-        inputPrice: 3,
-        outputPrice: 15,
-        cachedInputPrice: 0.3,
+        inputPrice: 2,
+        outputPrice: 10,
+        cachedInputPrice: 0.2,
         vision: true,
         tools: true,
         knowledgeCutoff: "2026-05",
@@ -128,18 +142,20 @@ export const LLM_MODELS: LlmModel[] = [
     // ── OpenAI ──
     {
         id: "gpt-5-6-sol",
+        apiModelId: "gpt-5.6-sol", verifiedAt: "2026-10-19", metadataUrl: "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+        pricingNote: "Standard text ≤272K input. Promotional $4/$20 at least through 2026-11-21; longer prompts cost $8/$30. Cache writes cost 1.25× input. Output includes reasoning tokens.",
         provider: "OpenAI",
         label: "GPT-5.6 Sol",
-        contextWindow: 1_000_000,
-        maxOutput: 64_000,
-        inputPrice: 5,
-        outputPrice: 30,
+        contextWindow: 1_050_000,
+        maxOutput: 128_000,
+        inputPrice: 4,
+        outputPrice: 20,
         vision: true,
         tools: true,
-        knowledgeCutoff: "2026-06",
+        knowledgeCutoff: "2026-02-16",
         pricingUrl: OPENAI_PRICING,
-        tokenizer: "o200k",
-        tokenizerNote: EXACT_NOTE,
+        tokenizer: "estimate",
+        tokenizerNote: ESTIMATE_NOTE,
     },
     {
         id: "gpt-5-6-terra",
@@ -252,12 +268,13 @@ export const LLM_MODELS: LlmModel[] = [
     },
     {
         id: "gemini-3-6-flash",
+        apiModelId: "gemini-3.6-flash", pricingNote: "Prices reviewed 2026-10-19: $0.75/$3.75 through 2026-12-31; then $1.50/$7.50. Historical capability metadata is not reverified.",
         provider: "Google",
         label: "Gemini 3.6 Flash",
         contextWindow: 1_000_000,
         maxOutput: 64_000,
-        inputPrice: 1.5,
-        outputPrice: 7.5,
+        inputPrice: 0.75,
+        outputPrice: 3.75,
         vision: true,
         tools: true,
         knowledgeCutoff: "2026-06",
@@ -445,14 +462,12 @@ export function modelSelectOptions() {
         label: provider,
         options: LLM_MODELS.filter((m) => m.provider === provider).map((m) => ({
             value: m.id,
-            label: m.label,
+            label: `${m.label}${m.verifiedAt ? "" : " · historical / unverified"}`,
         })),
     }));
 }
 
-// ponytail: a char-ratio approximation for the tokenizers gpt-tokenizer doesn't
-// implement (Anthropic, Google, and most open-weight vocabularies are private).
-// Anthropic's docs suggest ~3.5 chars/token as a rule of thumb for English prose.
+// A deliberately rough local fallback, with no bounded error claim.
 export function estimateTokens(text: string): number {
     if (!text) return 0;
     return Math.ceil(text.length / 3.5);

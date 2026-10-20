@@ -57,7 +57,6 @@ export function generateToolMetadata(params: ToolMetadataParams): Metadata {
             title,
             description,
             images: [ogImage],
-            creator: "@mydevtools",
         },
         robots: {
             index: true,

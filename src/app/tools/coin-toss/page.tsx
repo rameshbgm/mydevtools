@@ -4,6 +4,7 @@ import React, { useState, useCallback } from "react";
 import { Button, Card, Row, Col, Statistic, Typography, Space, Switch, InputNumber } from "antd";
 import { SyncOutlined, ReloadOutlined, ClearOutlined, StopOutlined } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
 
@@ -12,6 +13,7 @@ const { Text, Title } = Typography;
 // ─── Coin SVG faces ──────────────────────────────────────────────────────────
 
 function HeadsFace({ size }: { size: number }) {
+    const { t } = useLanguage();
     return (
         <svg width={size} height={size} viewBox="0 0 200 200">
             <defs>
@@ -35,12 +37,13 @@ function HeadsFace({ size }: { size: number }) {
                 <circle cx="0" cy="-38" r="5" fill="#3b82f6" />
                 <circle cx="22" cy="-22" r="5" fill="#22c55e" />
             </g>
-            <text x="100" y="155" textAnchor="middle" fontSize="14" fontWeight="700" fill="rgba(255,255,255,0.7)" fontFamily="sans-serif" letterSpacing="3">HEADS</text>
+            <text x="100" y="155" textAnchor="middle" fontSize="14" fontWeight="700" fill="rgba(255,255,255,0.7)" fontFamily="sans-serif" letterSpacing="3">{t("Heads")}</text>
         </svg>
     );
 }
 
 function TailsFace({ size }: { size: number }) {
+    const { t } = useLanguage();
     return (
         <svg width={size} height={size} viewBox="0 0 200 200">
             <defs>
@@ -62,7 +65,7 @@ function TailsFace({ size }: { size: number }) {
                 <polygon points="0,-36 8,-14 32,-14 14,4 22,28 0,16 -22,28 -14,4 -32,-14 -8,-14"
                     fill="rgba(255,255,255,0.85)" />
             </g>
-            <text x="100" y="155" textAnchor="middle" fontSize="14" fontWeight="700" fill="rgba(255,255,255,0.6)" fontFamily="sans-serif" letterSpacing="3">TAILS</text>
+            <text x="100" y="155" textAnchor="middle" fontSize="14" fontWeight="700" fill="rgba(255,255,255,0.6)" fontFamily="sans-serif" letterSpacing="3">{t("Tails")}</text>
         </svg>
     );
 }
@@ -101,6 +104,7 @@ function Coin({ result, isFlipping, size = 160 }: CoinProps) {
 
 export default function CoinTossPage() {
     const { darkMode } = useAppStore();
+    const { t } = useLanguage();
 
     const [result, setResult] = useState<"heads" | "tails" | null>(null);
     const [isFlipping, setIsFlipping] = useState(false);
@@ -111,12 +115,18 @@ export default function CoinTossPage() {
     const [autoMaxFlips, setAutoMaxFlips] = useState(0);
     const autoRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    const flipTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    React.useEffect(() => () => {
+        if (flipTimeout.current) clearTimeout(flipTimeout.current);
+        if (autoRef.current) clearTimeout(autoRef.current);
+    }, []);
+
     const flip = useCallback(() => {
         if (isFlipping) return;
         setIsFlipping(true);
         setResult(null);
 
-        setTimeout(() => {
+        flipTimeout.current = setTimeout(() => {
             const outcome: "heads" | "tails" = Math.random() < 0.5 ? "heads" : "tails";
             setResult(outcome);
             setIsFlipping(false);
@@ -126,6 +136,9 @@ export default function CoinTossPage() {
     }, [isFlipping]);
 
     const clearStats = useCallback(() => {
+        if (flipTimeout.current) clearTimeout(flipTimeout.current);
+        if (autoRef.current) clearTimeout(autoRef.current);
+        setIsFlipping(false);
         setStats({ heads: 0, tails: 0 });
         setHistory([]);
         setResult(null);
@@ -133,23 +146,15 @@ export default function CoinTossPage() {
     }, []);
 
     // Auto-flip mode: after each flip completes, schedule the next one after the interval
-    const autoStartedRef = React.useRef(false);
     React.useEffect(() => {
         const count = stats.heads + stats.tails;
         if (autoFlip && !isFlipping) {
             if (autoMaxFlips > 0 && count >= autoMaxFlips) {
                 setAutoFlip(false);
-                autoStartedRef.current = false;
-                return;
-            }
-            // Skip the interval delay only for the very first flip (already triggered by Switch onChange)
-            if (!autoStartedRef.current) {
-                autoStartedRef.current = true;
                 return;
             }
             autoRef.current = setTimeout(flip, autoInterval * 1000);
         }
-        if (!autoFlip) autoStartedRef.current = false;
         return () => { if (autoRef.current) clearTimeout(autoRef.current); };
     }, [autoFlip, isFlipping, flip, autoInterval, autoMaxFlips, stats]);
 
@@ -162,27 +167,19 @@ export default function CoinTossPage() {
     const muted = darkMode ? "#737373" : "#9a9a9a";
     const border = darkMode ? "#2a2a2a" : "#f0f0f0";
 
-    const resultLabel = result === "heads" ? "HEADS" : result === "tails" ? "TAILS" : null;
+    const resultLabel = result === "heads" ? t("Heads") : result === "tails" ? t("Tails") : null;
     const resultColor = result === "heads" ? "#f59e0b" : result === "tails" ? "#94a3b8" : accent;
 
     return (
         <ToolPageLayout
-            title="Coin Toss"
-            description="Flip a fair virtual coin — heads or tails"
+            title={t("Coin Toss")}
+            description={t("Flip a fair virtual coin — heads or tails")}
             icon={<SyncOutlined style={{ fontSize: 24, color: "#f59e0b" }} />}
             color="#f59e0b"
             learnMore={{
-                whatIs: "A fair virtual coin flip using a cryptographically seeded random number generator. Each flip is statistically independent with a 50/50 probability of heads or tails.",
-                howToUse: [
-                    "Click 'Flip Coin' to toss",
-                    "Enable Auto Flip and set the interval and max count",
-                    "Click Clear Stats to reset your session counters",
-                ],
-                tips: [
-                    "Each flip is truly random — past results don't influence future ones",
-                    "Use auto-flip to run a quick probability experiment",
-                    "Over many flips, the ratio should converge toward 50/50",
-                ],
+                whatIs: t("A virtual coin toss for quick choices and probability experiments. Outcomes use the browser’s Math.random; this is not a security or gambling tool."),
+                howToUse: [t("Flip once, or enable auto flip with a delay and a total-session flip limit.")],
+                tips: [t("Heads and tails counters, percentages and recent results stay in this tab until reset or reload.")],
             }}
         >
             <Row gutter={[20, 20]}>
@@ -196,7 +193,7 @@ export default function CoinTossPage() {
                         <AnimatePresence mode="wait">
                             {resultLabel && !isFlipping && (
                                 <motion.div
-                                    key={resultLabel}
+                                    key={result ?? "idle"}
                                     initial={{ opacity: 0, y: 12, scale: 0.85 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: -8 }}
@@ -216,7 +213,7 @@ export default function CoinTossPage() {
                                     exit={{ opacity: 0 }}
                                     style={{ marginBottom: 16 }}
                                 >
-                                    <Text style={{ color: muted, fontSize: 16 }}>Flipping…</Text>
+                                    <Text style={{ color: muted, fontSize: 16 }}>{t("Flipping…")}</Text>
                                 </motion.div>
                             )}
                             {!resultLabel && !isFlipping && (
@@ -226,7 +223,7 @@ export default function CoinTossPage() {
                                     animate={{ opacity: 1 }}
                                     style={{ marginBottom: 16 }}
                                 >
-                                    <Text style={{ color: muted, fontSize: 15 }}>Press flip to toss the coin</Text>
+                                    <Text style={{ color: muted, fontSize: 15 }}>{t("Press flip to toss the coin")}</Text>
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -240,7 +237,7 @@ export default function CoinTossPage() {
                                 disabled={isFlipping || autoFlip}
                                 style={{ minWidth: 140, background: accent, borderColor: accent, fontWeight: 600 }}
                             >
-                                {isFlipping ? "Flipping…" : "Flip Coin"}
+                                {isFlipping ? t("Flipping…") : t("Flip Coin")}
                             </Button>
                             {autoFlip && (
                                 <Button
@@ -250,8 +247,7 @@ export default function CoinTossPage() {
                                     onClick={() => setAutoFlip(false)}
                                     style={{ fontWeight: 600 }}
                                 >
-                                    Stop
-                                </Button>
+                                    {t("Stop")}</Button>
                             )}
                         </Space>
 
@@ -259,22 +255,22 @@ export default function CoinTossPage() {
                         <div style={{ marginTop: 20, padding: "16px 0 0", borderTop: `1px solid ${border}` }}>
                             <Space orientation="vertical" size={10} style={{ width: "100%" }}>
                                 <Space wrap style={{ justifyContent: "center" }}>
-                                    <Switch
+                                    <Switch aria-label={t("Auto flip")}
                                         checked={autoFlip}
                                         onChange={(checked) => {
                                             setAutoFlip(checked);
-                                            if (checked && !isFlipping) flip();
+                                            if (checked && !isFlipping && (autoMaxFlips === 0 || total < autoMaxFlips)) flip();
                                         }}
                                         size="small"
                                     />
-                                    <Text style={{ color: muted, fontSize: 13 }}>Auto flip</Text>
+                                    <Text style={{ color: muted, fontSize: 13 }}>{t("Auto flip")}</Text>
                                     {autoFlip && total > 0 && autoMaxFlips > 0 && (
                                         <Text style={{ color: accent, fontSize: 12, fontVariantNumeric: "tabular-nums" }}>
-                                            {total} / {autoMaxFlips} flipped
+                                            {t("{count} / {limit} flips", { count: total, limit: autoMaxFlips })}
                                         </Text>
                                     )}
                                     {autoFlip && total > 0 && autoMaxFlips === 0 && (
-                                        <Text style={{ color: muted, fontSize: 12 }}>{total} flipped</Text>
+                                        <Text style={{ color: muted, fontSize: 12 }}>{t("{count} flips", { count: total })}</Text>
                                     )}
                                 </Space>
 
@@ -287,9 +283,8 @@ export default function CoinTossPage() {
                                         <Row gutter={12} style={{ maxWidth: 320, margin: "0 auto" }}>
                                             <Col span={12}>
                                                 <Text style={{ color: muted, fontSize: 11, display: "block", marginBottom: 4 }}>
-                                                    Interval (sec)
-                                                </Text>
-                                                <InputNumber
+                                                    {t("Interval (sec)")}</Text>
+                                                <InputNumber aria-label={t("Interval (sec)")}
                                                     min={0.5}
                                                     max={60}
                                                     step={0.5}
@@ -301,9 +296,8 @@ export default function CoinTossPage() {
                                             </Col>
                                             <Col span={12}>
                                                 <Text style={{ color: muted, fontSize: 11, display: "block", marginBottom: 4 }}>
-                                                    Max flips (0 = ∞)
-                                                </Text>
-                                                <InputNumber
+                                                    {t("Max flips (0 = ∞)")}</Text>
+                                                <InputNumber aria-label={t("Max flips (0 = ∞)")} precision={0}
                                                     min={0}
                                                     max={10000}
                                                     value={autoMaxFlips}
@@ -327,17 +321,17 @@ export default function CoinTossPage() {
                             <Row gutter={16}>
                                 <Col span={12} style={{ textAlign: "center", borderRight: `1px solid ${border}` }}>
                                     <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 4 }}>👑</div>
-                                    <Statistic title="Heads" value={stats.heads} styles={{ content: { color: "#f59e0b", fontWeight: 700 } }} />
+                                    <Statistic title={t("Heads")} value={stats.heads} styles={{ content: { color: "#f59e0b", fontWeight: 700 } }} />
                                     <Text style={{ fontSize: 11, color: muted }}>{headsRate}%</Text>
                                 </Col>
                                 <Col span={12} style={{ textAlign: "center" }}>
                                     <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 4 }}>⭐</div>
-                                    <Statistic title="Tails" value={stats.tails} styles={{ content: { color: "#94a3b8", fontWeight: 700 } }} />
+                                    <Statistic title={t("Tails")} value={stats.tails} styles={{ content: { color: "#94a3b8", fontWeight: 700 } }} />
                                     <Text style={{ fontSize: 11, color: muted }}>{tailsRate}%</Text>
                                 </Col>
                             </Row>
                             <div style={{ textAlign: "center", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${border}` }}>
-                                <Text style={{ color: muted, fontSize: 12 }}>{total} flip{total !== 1 ? "s" : ""} total</Text>
+                                <Text style={{ color: muted, fontSize: 12 }}>{t("{count} flips total", { count: total })}</Text>
                                 {total > 0 && (
                                     <Button
                                         size="small"
@@ -346,8 +340,7 @@ export default function CoinTossPage() {
                                         onClick={clearStats}
                                         style={{ marginLeft: 8, fontSize: 11 }}
                                     >
-                                        Clear All
-                                    </Button>
+                                        {t("Clear All")}</Button>
                                 )}
                             </div>
                         </Card>
@@ -355,9 +348,9 @@ export default function CoinTossPage() {
                         {history.length > 0 && (
                             <Card
                                 size="small"
-                                title={<Text style={{ fontSize: 12, fontWeight: 600 }}>Recent flips</Text>}
+                                title={<Text style={{ fontSize: 12, fontWeight: 600 }}>{t("Recent flips")}</Text>}
                                 extra={
-                                    <Button aria-label="Reset"
+                                    <Button aria-label={t("Reset")}
                                         type="text"
                                         size="small"
                                         icon={<ReloadOutlined />}
@@ -383,7 +376,7 @@ export default function CoinTossPage() {
                                                 boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                                             }}
                                         >
-                                            {h === "heads" ? "H" : "T"}
+                                            {t(h === "heads" ? "Heads" : "Tails").slice(0, 1)}
                                         </motion.span>
                                     ))}
                                 </div>

@@ -1,15 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button, Card, Space, Input, App, InputNumber, Tabs, Typography, Tag } from "antd";
 import { CopyOutlined, LockOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { useLanguage } from "@/components/LanguageProvider";
+import { CRYPTO_UTILITY_HELP } from "@/lib/i18n/crypto-utilities";
 import bcrypt from "bcryptjs";
 
 const { Text } = Typography;
 
 export default function BCryptToolPage() {
+    const { t } = useLanguage();
+    const latestT = useRef(t);
+    useEffect(() => { latestT.current = t; }, [t]);
     const { message } = App.useApp();
 
     const [password, setPassword] = useState("");
@@ -24,17 +29,16 @@ export default function BCryptToolPage() {
 
     const handleHash = async () => {
         if (!password) {
-            message.warning("Enter a password to hash");
+            message.warning(latestT.current("Enter a password to hash"));
             return;
         }
         setHashing(true);
         try {
             const result = await bcrypt.hash(password, rounds);
             setHash(result);
-            message.success("Hash generated");
+            message.success(latestT.current("Hash generated"));
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : "Hash error";
-            message.error(msg);
+            message.error(e instanceof Error ? latestT.current("Crypto operation failed: {detail}", { detail: e.message }) : latestT.current("Operation failed"));
         } finally {
             setHashing(false);
         }
@@ -42,7 +46,7 @@ export default function BCryptToolPage() {
 
     const handleVerify = async () => {
         if (!verifyPwd || !verifyHash) {
-            message.warning("Enter both a password and a BCrypt hash");
+            message.warning(latestT.current("Enter both a password and a BCrypt hash"));
             return;
         }
         setVerifying(true);
@@ -50,8 +54,7 @@ export default function BCryptToolPage() {
             const ok = await bcrypt.compare(verifyPwd, verifyHash);
             setVerifyResult(ok ? "match" : "nomatch");
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : "Verify error";
-            message.error(msg);
+            message.error(e instanceof Error ? latestT.current("Crypto operation failed: {detail}", { detail: e.message }) : latestT.current("Operation failed"));
             setVerifyResult(null);
         } finally {
             setVerifying(false);
@@ -60,55 +63,38 @@ export default function BCryptToolPage() {
 
     return (
         <ToolPageLayout
-            title="BCrypt Hash & Verify"
-            description="Generate BCrypt password hashes and verify passwords"
+            title={t("BCrypt Hash & Verify")}
+            description={t("Generate BCrypt password hashes and verify passwords")}
             icon={<LockOutlined style={{ fontSize: 24, color: "#722ed1" }} />}
             color="#722ed1"
-            learnMore={{
-                whatIs:
-                    "BCrypt is a password-hashing function based on the Blowfish cipher with built-in salt and a tunable cost factor (rounds). Each hash includes its salt and rounds, so verifying just requires the hash and the candidate password.",
-                whyUse:
-                    "Storing plain passwords is unacceptable. BCrypt is widely used (Django, Laravel, Spring) and tunable: higher rounds slow down brute-force attacks. Use this tool to generate test hashes or verify existing ones during development.",
-                howToUse: [
-                    "Hash tab: enter a password and salt rounds (10–12 typical)",
-                    "Click Generate to create a BCrypt hash",
-                    "Verify tab: paste a BCrypt hash and a candidate password to check a match",
-                ],
-                tips: [
-                    "Rounds = 10 is a good starting point; 12 for stronger security",
-                    "Each call produces a different hash because of the random salt",
-                    "Higher rounds = slower (each +1 doubles time)",
-                ],
-                useCases: [
-                    "Generating test passwords for seeding databases",
-                    "Verifying user passwords during debugging",
-                    "Comparing bcrypt rounds performance on your hardware",
-                ],
-            }}
+            learnMore={CRYPTO_UTILITY_HELP["bcrypt-tool"]}
         >
             <Tabs
                 size="large"
                 items={[
                     {
                         key: "hash",
-                        label: "Hash Password",
+                        label: t("Hash Password"),
                         children: (
                             <Card>
                                 <Space orientation="vertical" style={{ width: "100%" }} size="large">
                                     <div>
-                                        <Text strong style={{ display: "block", marginBottom: 8 }}>Password</Text>
+                                        <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Password")}</Text>
                                         <Input.Password
+                                            dir="ltr"
+                                            styles={{ input: { direction: "ltr" } }}
                                             size="large"
+                                            aria-label={t("Password")}
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            placeholder="Enter password to hash"
+                                            placeholder={t("Enter password to hash")}
                                         />
                                     </div>
                                     <div>
-                                        <Text strong style={{ display: "block", marginBottom: 8 }}>Salt rounds</Text>
-                                        <InputNumber min={4} max={15} value={rounds} onChange={(v) => setRounds(v ?? 10)} />
-                                        <Text type="secondary" style={{ marginLeft: 12, fontSize: 12 }}>
-                                            (4–15; higher = slower & more secure)
+                                        <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Salt rounds")}</Text>
+                                        <InputNumber aria-label={t("Salt rounds")} dir="ltr" min={4} max={15} value={rounds} onChange={(v) => setRounds(v ?? 10)} />
+                                        <Text type="secondary" style={{ marginInlineStart: 12, fontSize: 12 }}>
+                                            {t("(4–15; higher = slower & more secure)")}
                                         </Text>
                                     </div>
                                     <Button
@@ -118,11 +104,12 @@ export default function BCryptToolPage() {
                                         icon={<LockOutlined />}
                                         onClick={handleHash}
                                     >
-                                        Generate Hash
+                                        {t("Generate Hash")}
                                     </Button>
                                     {hash && (
-                                        <Card size="small" title="BCrypt Hash">
+                                        <Card size="small" title={t("BCrypt Hash")}>
                                             <div
+                                                dir="ltr"
                                                 style={{
                                                     fontFamily: "var(--font-geist-mono)",
                                                     fontSize: 13,
@@ -139,7 +126,7 @@ export default function BCryptToolPage() {
                                                 icon={<CopyOutlined />}
                                                 onClick={() => copyToClipboard(hash)}
                                             >
-                                                Copy
+                                                {t("Copy")}
                                             </Button>
                                         </Card>
                                     )}
@@ -149,13 +136,16 @@ export default function BCryptToolPage() {
                     },
                     {
                         key: "verify",
-                        label: "Verify Password",
+                        label: t("Verify Password"),
                         children: (
                             <Card>
                                 <Space orientation="vertical" style={{ width: "100%" }} size="large">
                                     <div>
-                                        <Text strong style={{ display: "block", marginBottom: 8 }}>BCrypt hash</Text>
+                                        <Text strong style={{ display: "block", marginBottom: 8 }}>{t("BCrypt hash")}</Text>
                                         <Input
+                                            aria-label={t("BCrypt hash")}
+                                            dir="ltr"
+                                            styles={{ input: { direction: "ltr" } }}
                                             size="large"
                                             value={verifyHash}
                                             onChange={(e) => setVerifyHash(e.target.value)}
@@ -164,12 +154,15 @@ export default function BCryptToolPage() {
                                         />
                                     </div>
                                     <div>
-                                        <Text strong style={{ display: "block", marginBottom: 8 }}>Password to test</Text>
+                                        <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Password to test")}</Text>
                                         <Input.Password
+                                            dir="ltr"
+                                            styles={{ input: { direction: "ltr" } }}
                                             size="large"
+                                            aria-label={t("Password to test")}
                                             value={verifyPwd}
                                             onChange={(e) => setVerifyPwd(e.target.value)}
-                                            placeholder="Candidate password"
+                                            placeholder={t("Candidate password")}
                                         />
                                     </div>
                                     <Button
@@ -178,16 +171,16 @@ export default function BCryptToolPage() {
                                         loading={verifying}
                                         onClick={handleVerify}
                                     >
-                                        Verify
+                                        {t("Verify")}
                                     </Button>
                                     {verifyResult === "match" && (
                                         <Tag icon={<CheckCircleOutlined />} color="success" style={{ fontSize: 14, padding: "6px 12px" }}>
-                                            Password matches the hash
+                                            {t("Password matches the hash")}
                                         </Tag>
                                     )}
                                     {verifyResult === "nomatch" && (
                                         <Tag icon={<CloseCircleOutlined />} color="error" style={{ fontSize: 14, padding: "6px 12px" }}>
-                                            Password does NOT match the hash
+                                            {t("Password does NOT match the hash")}
                                         </Tag>
                                     )}
                                 </Space>

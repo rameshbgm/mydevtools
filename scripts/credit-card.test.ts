@@ -8,6 +8,8 @@
 import assert from "node:assert/strict";
 import {
     CARD_TYPES,
+    cardDigits,
+    appendLuhnCheckDigit,
     luhnCheck,
     detectCardType,
     generateCard,
@@ -23,6 +25,17 @@ for (const known of ["4111111111111111", "5500000000000004", "378282246310005", 
 // A single transposed digit must fail.
 assert.equal(luhnCheck("4111111111111112"), false, "bad checksum should fail Luhn");
 assert.equal(luhnCheck(""), false, "empty string is not a card");
+
+// Reject corrupted input instead of validating a different number after stripping it.
+assert.equal(cardDigits("4111-1111 1111-1111"), "4111111111111111");
+assert.equal(luhnCheck("4111-1111 1111-1111"), true);
+for (const bad of ["4111x111111111111", "4111111111111111abc", "4111.1111.1111.1111", "４１１１１１１１１１１１１１１１", "4111111111111111\n"]) {
+    assert.equal(luhnCheck(bad), false);
+    assert.equal(detectCardType(bad), null);
+    assert.equal(cardDigits(bad), null);
+}
+assert.throws(() => appendLuhnCheckDigit("12x3"));
+assert.throws(() => appendLuhnCheckDigit(""));
 
 // Every brand, every supported length: generated numbers are Luhn-valid,
 // exactly the requested length, and detect back to the same brand.

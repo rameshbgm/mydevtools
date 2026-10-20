@@ -46,11 +46,13 @@ useEffect(() => { setMounted(true); }, []);
 {mounted && <Select ... />}
 ```
 
-## Tool counts (v1.4, branch `v1.4`)
+## Current tool counts and release
 
-**113 tools across 15 categories.** Generators: 10 — includes credit-card-generator, whose brand table and Luhn helpers live in shared `src/lib/credit-card.ts` (imported by credit-card-validator too, so don't reintroduce a local copy). Fun & Games: 7 (coin-toss, dice-roll, timer, stopwatch, spin-wheel, magic-8ball, typing-test). Artificial Intelligence: 6 — mcp-inspector, a2a-inspector, plus follow-up additions token-counter, jsonl-validator, agent-manifest-generator, and rag-search (rebuilt with real embeddings via `@huggingface/transformers`, not the earlier keyword-matching demo). Reference: 6, including model-pricing-reference. Text & Utilities: 12 (includes sticky-notes, rich-text-editor). Image & Media: added in v1.4 (image-compressor, svg-optimizer, favicon-generator, color-palette-extractor, exif-viewer).
+**147 registered tools across 15 categories.** `npm run build` checks registry, route and SEO parity. Six compatibility stubs are excluded from the registered-tool total.
 
-`APP_VERSION` in `src/lib/release-notes.ts` is `"1.4"`. The former separate v1.5 changelog entry (pipelines, shareable URLs, PWA, extension, AI category) was **merged into the single v1.4 entry** — there is no v1.5 release. Everything on this branch ships as v1.4.
+`APP_VERSION` is **2.0.0** in `src/lib/app-version.ts`, re-exported by `src/lib/release-notes.ts`. The package and PWA cache version match. Keep historical release entries intact. The user requested a final comprehensive release-notes/documentation pass after all implementation; the remaining scope is tracked in `docs/capability-expansion-status.json`.
+
+Project deletion is recoverable: `deleteProject` marks project metadata deleted in one storage write, retains its original data namespace/vault contexts and removes it from active lists. `readDeletedProjects`/`restoreProject` power recovery. Create/rename must preserve deleted metadata. Never allow deletion of Personal or erase other project namespaces.
 
 When adding a tool: extend **`tools-registry.ts`** → **`tool-url-table.ts`** → **`seo-content.ts`** → create **`src/app/tools/[id]/page.tsx`** + **`layout.tsx`**. **`scripts/check-parity.js`** runs on `prebuild` and fails the build if any of these four fall out of sync, or if a tool page advertises itself in `BRIDGE_TARGETS` without actually reading the bridge.
 

@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Button, Card, Space, Slider, Switch, InputNumber, Typography, Row, Col, App } from "antd";
+import BulkSecretGenerator from "@/components/BulkSecretGenerator";
+import { generateSecrets } from "@/lib/random-secrets";
 import SimpleList from "@/components/SimpleList";
 import { LockOutlined, CopyOutlined, ReloadOutlined, DeleteOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
 const { Text, Title } = Typography;
@@ -28,9 +31,7 @@ function generatePassword(
 
     if (!chars) return "";
 
-    const array = new Uint32Array(length);
-    crypto.getRandomValues(array);
-    return Array.from(array, (x) => chars[x % chars.length]).join("");
+    return generateSecrets(chars, length, 1)[0];
 }
 
 function calculateStrength(password: string): { score: number; label: string; color: string } {
@@ -50,6 +51,7 @@ function calculateStrength(password: string): { score: number; label: string; co
 }
 
 export default function PasswordGeneratorPage() {
+    const { t } = useLanguage();
     const { message } = App.useApp();
     const [length, setLength] = useState(16);
     const [options, setOptions] = useState({
@@ -58,7 +60,8 @@ export default function PasswordGeneratorPage() {
         numbers: true,
         symbols: true,
     });
-    const [password, setPassword] = useState(() => generatePassword(16, { lowercase: true, uppercase: true, numbers: true, symbols: true }));
+    const [password, setPassword] = useState("");
+    useEffect(() => { setPassword(generatePassword(16, { lowercase: true, uppercase: true, numbers: true, symbols: true })); }, []);
     const [history, setHistory] = useState<string[]>([]);
 
     const generate = useCallback(() => {
@@ -67,21 +70,21 @@ export default function PasswordGeneratorPage() {
             setPassword(newPassword);
             setHistory((prev) => [newPassword, ...prev].slice(0, 10));
         } else {
-            message.warning("Select at least one character set");
+            message.warning(t("Select at least one character set"));
         }
-    }, [length, options, message]);
+    }, [length, options, message, t]);
 
     const strength = calculateStrength(password);
 
     return (
         <ToolPageLayout
-            title="Password Generator"
-            description="Generate secure random passwords"
+            title={t("Password Generator")}
+            description={t("Generate secure random passwords")}
             icon={<LockOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
             color="#52c41a"
             learnMore={{
                 whatIs: "A cryptographically secure password generator creates random passwords using strong entropy sources. It ensures passwords are unpredictable and resistant to brute force attacks.",
-                whyUse: "Weak passwords are the #1 cause of security breaches. This tool creates strong, random passwords that meet complexity requirements and are impossible to guess or crack efficiently.",
+                whyUse: "Generate random passwords and API secrets with explicit length and character choices. Use an appropriate length, store them safely and avoid password reuse.",
                 howToUse: [
                     "Set desired password length (longer = more secure)",
                     "Toggle character types: uppercase, lowercase, numbers, symbols",
@@ -116,6 +119,7 @@ export default function PasswordGeneratorPage() {
                             }}
                         >
                             <Text
+                                dir={password ? "ltr" : undefined}
                                 style={{
                                     fontSize: 24,
                                     fontFamily: "var(--font-geist-mono)",
@@ -123,15 +127,15 @@ export default function PasswordGeneratorPage() {
                                     letterSpacing: 1,
                                 }}
                             >
-                                {password || "Configure options below"}
+                                {password || t("Configure options below")}
                             </Text>
                         </div>
 
                         {/* Strength Indicator */}
                         <div style={{ marginBottom: 24 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                                <Text>Password Strength</Text>
-                                <Text style={{ color: strength.color, fontWeight: 600 }}>{strength.label}</Text>
+                                <Text>{t("Password Strength")}</Text>
+                                <Text style={{ color: strength.color, fontWeight: 600 }}>{t(strength.label)}</Text>
                             </div>
                             <div style={{ height: 8, background: "#f0f0f0", borderRadius: 4, overflow: "hidden" }}>
                                 <div
@@ -148,18 +152,18 @@ export default function PasswordGeneratorPage() {
                         {/* Actions */}
                         <Space wrap style={{ marginBottom: 24 }}>
                             <Button type="primary" icon={<ReloadOutlined />} onClick={generate} size="large">
-                                Generate New
-                            </Button>
+                                {t("Generate New")}</Button>
                             <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(password)} size="large">
-                                Copy Password
-                            </Button>
+                                {t("Copy Password")}</Button>
                         </Space>
 
                         {/* Length Slider */}
                         <div style={{ marginBottom: 24 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                                <Text>Password Length</Text>
+                                <Text>{t("Password Length")}</Text>
                                 <InputNumber
+                                    dir="ltr"
+                                    aria-label={t("Password Length")}
                                     min={4}
                                     max={64}
                                     value={length}
@@ -168,6 +172,7 @@ export default function PasswordGeneratorPage() {
                                 />
                             </div>
                             <Slider
+                                aria-label={t("Password Length")}
                                 min={4}
                                 max={64}
                                 value={length}
@@ -177,23 +182,23 @@ export default function PasswordGeneratorPage() {
                         </div>
 
                         {/* Character Options */}
-                        <Title level={5}>Character Sets</Title>
+                        <Title level={5}>{t("Character Sets")}</Title>
                         <div className="tool-split-pane" style={{ gap: 16 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <Text>Lowercase (a-z)</Text>
-                                <Switch checked={options.lowercase} onChange={(v) => setOptions({ ...options, lowercase: v })} />
+                                <Text>{t("Lowercase (a-z)")}</Text>
+                                <Switch aria-label={t("Lowercase (a-z)")} checked={options.lowercase} onChange={(v) => setOptions({ ...options, lowercase: v })} />
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <Text>Uppercase (A-Z)</Text>
-                                <Switch checked={options.uppercase} onChange={(v) => setOptions({ ...options, uppercase: v })} />
+                                <Text>{t("Uppercase (A-Z)")}</Text>
+                                <Switch aria-label={t("Uppercase (A-Z)")} checked={options.uppercase} onChange={(v) => setOptions({ ...options, uppercase: v })} />
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <Text>Numbers (0-9)</Text>
-                                <Switch checked={options.numbers} onChange={(v) => setOptions({ ...options, numbers: v })} />
+                                <Text>{t("Numbers (0-9)")}</Text>
+                                <Switch aria-label={t("Numbers (0-9)")} checked={options.numbers} onChange={(v) => setOptions({ ...options, numbers: v })} />
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <Text>Symbols (!@#$...)</Text>
-                                <Switch checked={options.symbols} onChange={(v) => setOptions({ ...options, symbols: v })} />
+                                <Text>{t("Symbols (!@#$...)")}</Text>
+                                <Switch aria-label={t("Symbols (!@#$...)")} checked={options.symbols} onChange={(v) => setOptions({ ...options, symbols: v })} />
                             </div>
                         </div>
                     </Card>
@@ -201,21 +206,21 @@ export default function PasswordGeneratorPage() {
 
                 <Col xs={24} lg={10}>
                     <Card
-                        title="Password History"
+                        title={t("Password History")}
                         extra={
                             <Button size="small" icon={<DeleteOutlined />} onClick={() => setHistory([])}>
-                                Clear
-                            </Button>
+                                {t("Clear")}</Button>
                         }
                     >
                         {history.length === 0 ? (
-                            <Text type="secondary">Generated passwords will appear here</Text>
+                            <Text type="secondary">{t("Generated passwords will appear here")}</Text>
                         ) : (
                             <SimpleList
                                 size="small"
                                 dataSource={history}
                                 renderItem={(item, index) => (
                                     <Text
+                                        dir="ltr"
                                         style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
                                         ellipsis={{ tooltip: item }}
                                     >
@@ -224,7 +229,7 @@ export default function PasswordGeneratorPage() {
                                 )}
                                 renderExtra={(item) => (
                                     <Button
-                                        aria-label="Copy"
+                                        aria-label={t("Copy")}
                                         size="small"
                                         type="text"
                                         icon={<CopyOutlined />}
@@ -236,6 +241,7 @@ export default function PasswordGeneratorPage() {
                     </Card>
                 </Col>
             </Row>
+            <BulkSecretGenerator />
         </ToolPageLayout>
     );
 }

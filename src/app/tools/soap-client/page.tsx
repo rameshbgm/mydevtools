@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import {
     Card,
     Input,
@@ -125,30 +126,6 @@ const SOAP_TEMPLATES = {
 
 // ─── Utils ───────────────────────────────────────────────────────────
 
-function formatXml(xml: string): string {
-    try {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(xml, "text/xml");
-        const serializer = new XMLSerializer();
-        const formatted = serializer.serializeToString(doc);
-
-        // Simple formatting
-        let indent = 0;
-        const lines: string[] = [];
-        const tokens = formatted.replace(/>\s*</g, ">\n<").split("\n");
-
-        for (const token of tokens) {
-            if (token.match(/^<\//)) indent--;
-            lines.push("  ".repeat(Math.max(0, indent)) + token.trim());
-            if (token.match(/^<[^/!?]/) && !token.match(/\/>$/)) indent++;
-        }
-
-        return lines.join("\n");
-    } catch {
-        return xml;
-    }
-}
-
 function generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
@@ -156,6 +133,9 @@ function generateId(): string {
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function SoapClientPage() {
+    const { t } = useLanguage();
+    const tCurrent = useRef(t);
+    useEffect(() => { tCurrent.current = t; }, [t]);
     const [endpoint, setEndpoint] = useState(SAMPLE_ENDPOINT);
     const [soapAction, setSoapAction] = useState(SAMPLE_SOAP_ACTION);
     const [soapVersion, setSoapVersion] = useState<"1.1" | "1.2">("1.1");
@@ -166,14 +146,12 @@ export default function SoapClientPage() {
     const [timeout, setTimeout] = useState(30);
     const [status, setStatus] = useState<number | null>(null);
     const [duration, setDuration] = useState<number | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<{ kind: "timeout" | "external"; message: string; seconds?: number } | null>(null);
     const [history, setHistory] = useState<SoapRequest[]>([]);
     const [activeTab, setActiveTab] = useState("request");
 
     // Custom headers
-    const [headers, setHeaders] = useState<SoapHeader[]>([
-        { key: "Content-Type", value: "text/xml; charset=utf-8", enabled: true },
-    ]);
+    const [headers, setHeaders] = useState<SoapHeader[]>([]);
     const [headerMode, setHeaderMode] = useState<"form" | "json">("form");
     const [headerJson, setHeaderJson] = useState("{}");
 
@@ -209,15 +187,16 @@ export default function SoapClientPage() {
     // Send SOAP request
     const handleSend = async () => {
         if (!endpoint.trim()) {
-            message.warning("Please enter an endpoint URL");
+            message.warning(tCurrent.current("Please enter an endpoint URL"));
             return;
         }
 
         if (!requestBody.trim()) {
-            message.warning("Please enter a SOAP request body");
+            message.warning(tCurrent.current("Please enter a SOAP request body"));
             return;
         }
 
+        if (headerMode === "json" && !jsonToSoapHeaders(headerJson)) { message.error(tCurrent.current("Headers must be a valid JSON object")); return; }
         setLoading(true);
         setError(null);
         setResponseBody("");
@@ -236,9 +215,9 @@ export default function SoapClientPage() {
             });
 
             // Set Content-Type based on SOAP version
-            if (!requestHeaders["Content-Type"]) {
+            if (!Object.keys(requestHeaders).some(key => key.toLowerCase() === "content-type")) {
                 requestHeaders["Content-Type"] = soapVersion === "1.2"
-                    ? "application/soap+xml; charset=utf-8"
+                    ? `application/soap+xml; charset=utf-8${soapAction ? `; action="${soapAction.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"` : ""}`
                     : "text/xml; charset=utf-8";
             }
 
@@ -249,7 +228,7 @@ export default function SoapClientPage() {
 
             // Auto-route through the server proxy when the user has any SSL config set
             // (verify toggle, custom CA, or mTLS certs) — those only apply server-side.
-            const sslConfigured = sslConfig.sslVerify || !!sslConfig.sslCaCert.trim() ||
+            const sslConfigured = !sslConfig.sslVerify || !!sslConfig.sslCaCert.trim() ||
                 !!sslConfig.sslClientCert.trim() || !!sslConfig.sslClientKey.trim();
             const shouldProxy = useProxy || sslConfigured;
 
@@ -276,7 +255,7 @@ export default function SoapClientPage() {
                 const data = await parseJsonResponse<ProxyResponsePayload>(proxyRes, "Proxy service");
                 respStatus = data.status ?? 0;
                 respText = data.bodyIsBase64
-                    ? atob(data.body)
+                    ? new TextDecoder().decode(Uint8Array.from(atob(data.body), char => char.charCodeAt(0)))
                     : (data.body ?? "");
                 Object.assign(respHeaders, data.headers ?? {});
             } else {
@@ -310,7 +289,7 @@ export default function SoapClientPage() {
                     });
                     const data = await parseJsonResponse<ProxyResponsePayload>(proxyRes, "Proxy service");
                     respStatus = data.status ?? 0;
-                    respText = data.bodyIsBase64 ? atob(data.body) : (data.body ?? "");
+                    respText = data.bodyIsBase64 ? new TextDecoder().decode(Uint8Array.from(atob(data.body), char => char.charCodeAt(0))) : (data.body ?? "");
                     Object.assign(respHeaders, data.headers ?? {});
                 }
             }
@@ -318,7 +297,7 @@ export default function SoapClientPage() {
             clearTimeout(timeoutId);
             const elapsed = Date.now() - startTime;
 
-            const formattedResponse = formatXml(respText);
+            const formattedResponse = respText; // Preserve XML text nodes, whitespace and malformed error responses exactly.
 
             setStatus(respStatus);
             setDuration(elapsed);
@@ -339,9 +318,9 @@ export default function SoapClientPage() {
             setHistory(prev => [historyEntry, ...prev.slice(0, 49)]);
 
             if (respStatus >= 200 && respStatus < 300) {
-                message.success(`Request completed in ${elapsed}ms${shouldProxy ? " (via proxy)" : ""}`);
+                message.success(tCurrent.current("Request completed in {count} ms", { count: elapsed }));
             } else {
-                message.warning(`Request returned status ${respStatus}`);
+                message.warning(tCurrent.current("Request returned status {status}", { status: respStatus }));
             }
 
             setActiveTab("response");
@@ -350,9 +329,9 @@ export default function SoapClientPage() {
             const elapsed = Date.now() - startTime;
 
             if (err.name === "AbortError") {
-                setError(`Request timed out after ${timeout} seconds`);
+                setError({ kind: "timeout", message: err.message || "", seconds: timeout });
             } else {
-                setError(err.message || "Request failed");
+                setError({ kind: "external", message: err.message || "" });
             }
 
             setDuration(elapsed);
@@ -369,7 +348,7 @@ export default function SoapClientPage() {
             };
             setHistory(prev => [historyEntry, ...prev.slice(0, 49)]);
 
-            message.error("Request failed: " + (err.message || "Unknown error"));
+            message.error(tCurrent.current("Request failed: {error}", { error: err.message || tCurrent.current("Unknown error") }));
         } finally {
             setLoading(false);
         }
@@ -397,6 +376,7 @@ export default function SoapClientPage() {
     // Load template
     const loadTemplate = (template: keyof typeof SOAP_TEMPLATES) => {
         setRequestBody(SOAP_TEMPLATES[template]);
+        setSoapVersion(template === "soap12" ? "1.2" : "1.1");
     };
 
     // Load from history
@@ -407,60 +387,37 @@ export default function SoapClientPage() {
         if (entry.response) {
             setResponseBody(entry.response);
         }
-        message.success("Loaded from history");
+        message.success(tCurrent.current("Loaded from history"));
     };
 
     // Copy to clipboard
-    const copyToClipboard = (text: string, label: string) => sharedCopy(text, `${label} copied!`);
+    const copyToClipboard = (text: string) => sharedCopy(text);
 
     // Generate cURL command
     const generateCurl = useMemo(() => {
-        const headerArgs = headers
-            .filter(h => h.enabled && h.key)
-            .map(h => `-H '${h.key}: ${h.value}'`)
-            .join(" \\\n  ");
-
-        const soapActionHeader = soapVersion === "1.1" && soapAction
-            ? `-H 'SOAPAction: "${soapAction}"' \\\n  `
-            : "";
-
-        return `curl -X POST '${endpoint}' \\
-  -H 'Content-Type: ${soapVersion === "1.2" ? "application/soap+xml" : "text/xml"}; charset=utf-8' \\
-  ${soapActionHeader}${headerArgs ? headerArgs + " \\\n  " : ""}-d '${requestBody.replace(/'/g, "'\\''")}'`;
+        const quote = (value: string) => "'" + value.replace(/'/g, "'\\''") + "'";
+        const effectiveHeaders: Record<string, string> = {};
+        headers.filter(h => h.enabled && h.key).forEach(h => { effectiveHeaders[h.key] = h.value; });
+        if (!Object.keys(effectiveHeaders).some(key => key.toLowerCase() === "content-type")) {
+            effectiveHeaders["Content-Type"] = soapVersion === "1.2"
+                ? `application/soap+xml; charset=utf-8${soapAction ? `; action="${soapAction.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"` : ""}`
+                : "text/xml; charset=utf-8";
+        }
+        if (soapVersion === "1.1" && soapAction) effectiveHeaders["SOAPAction"] = `"${soapAction}"`;
+        return ["curl", "-X", "POST", "--url", quote(endpoint), ...Object.entries(effectiveHeaders).flatMap(([key, value]) => ["-H", quote(`${key}: ${value}`)]), "--data-raw", quote(requestBody)].join(" ");
     }, [endpoint, soapAction, soapVersion, requestBody, headers]);
 
     return (
         <ToolPageLayout
-            title="SOAP Client"
-            description="Test SOAP web services by sending requests and viewing responses"
+            title={t("SOAP Client")}
+            description={t("Test SOAP web services by sending requests and viewing responses")}
             icon={<BlockOutlined style={{ fontSize: 24, color: "#fa541c" }} />}
             color="#fa541c"
             learnMore={{
-                whatIs: "SOAP (Simple Object Access Protocol) Client is a powerful testing tool for interacting with SOAP-based web services. SOAP is an XML-based protocol used for exchanging structured information between applications over a network. This tool allows you to construct SOAP envelopes, send requests to SOAP endpoints, and analyze the responses - all without writing any code.",
-                whyUse: "When integrating with enterprise systems, legacy applications, or government services, you'll often encounter SOAP web services. This tool helps you debug integration issues, test WSDL operations before implementation, verify service responses, and understand the XML message structure. It's essential for developers working with banking APIs, ERP systems, healthcare integrations (HL7), and other enterprise services that still rely on SOAP.",
-                howToUse: [
-                    "Enter the SOAP endpoint URL (usually ends with ?wsdl or .asmx for .NET services)",
-                    "Select the SOAP version (1.1 or 1.2) - check your WSDL for the correct version",
-                    "For SOAP 1.1, provide the SOAPAction header value (found in your WSDL operation binding)",
-                    "Use a template or write your SOAP envelope in the request editor",
-                    "Add any custom headers if required (authentication tokens, API keys, etc.)",
-                    "Click Send to execute the request and view the response",
-                    "Use the History tab to replay or compare previous requests"
-                ],
-                tips: [
-                    "Use the WS-Security template for services requiring username/password authentication",
-                    "SOAP 1.2 doesn't require a SOAPAction header - it's embedded in the Content-Type",
-                    "Check response headers for debugging info like server version and error details",
-                    "Copy the cURL command to share requests with team members or use in scripts",
-                    "The timeout setting is crucial for slow services - increase it for complex operations"
-                ],
-                useCases: [
-                    "Testing enterprise integrations (SAP, Oracle, Salesforce SOAP APIs)",
-                    "Debugging SOAP service connectivity issues in development",
-                    "Validating WSDL operations before implementing client code",
-                    "Comparing responses between different SOAP service versions",
-                    "Learning SOAP protocol structure for new developers"
-                ]
+                whatIs: t("Compose SOAP envelopes and inspect HTTP responses, headers and session history."),
+                whyUse: t("Choose SOAP 1.1 or 1.2, enter the service endpoint and edit the matching XML envelope."),
+                howToUse: [t("Send directly or enable the server proxy. TLS settings require the proxy; browser network failures may retry through it.")],
+                tips: [t("Templates contain example credentials only. Replace them before sending and review all destinations."), t("Copy cURL for a POSIX shell. Custom headers are preserved; history lasts only while this page stays open.")],
             }}
         >
             <Row gutter={[16, 16]}>
@@ -471,10 +428,10 @@ export default function SoapClientPage() {
                             <Col flex="1">
                                 <Input
                                     size="large"
-                                    placeholder="Enter SOAP endpoint URL..."
+                                    placeholder={t("Enter SOAP endpoint URL...")}
                                     value={endpoint}
                                     onChange={(e) => setEndpoint(e.target.value)}
-                                    prefix={<LinkOutlined />}
+                                    prefix={<LinkOutlined />} dir="ltr" aria-label={t("SOAP endpoint")}
                                 />
                             </Col>
                             <Col>
@@ -488,14 +445,14 @@ export default function SoapClientPage() {
                                 </Select>
                             </Col>
                             <Col>
-                                <Tooltip title={`Timeout: ${timeout}s`}>
+                                <Tooltip title={t("Timeout: {count} s", { count: timeout })}>
                                     <Space.Compact>
                                         <InputNumber
                                             min={5}
                                             max={120}
                                             value={timeout}
                                             onChange={(v) => setTimeout(v || 30)}
-                                            style={{ width: 80 }}
+                                            style={{ width: 80 }} dir="ltr" aria-label={t("Timeout")}
                                         />
                                         <Button disabled style={{ pointerEvents: "none" }}>s</Button>
                                     </Space.Compact>
@@ -510,19 +467,19 @@ export default function SoapClientPage() {
                                     loading={loading}
                                     style={{ backgroundColor: "#fa541c", borderColor: "#fa541c" }}
                                 >
-                                    Send
+                                    {t("Send")}
                                 </Button>
                             </Col>
                         </Row>
 
-                        {soapVersion === "1.1" && (
+                        {(
                             <div style={{ marginTop: 12 }}>
                                 <Space.Compact style={{ width: "100%" }}>
                                     <Button disabled style={{ pointerEvents: "none" }}>SOAPAction</Button>
                                     <Input
-                                        placeholder="SOAPAction header (for SOAP 1.1)"
+                                        placeholder={t("Action URI (SOAPAction in 1.1; Content-Type action in 1.2)")}
                                         value={soapAction}
-                                        onChange={(e) => setSoapAction(e.target.value)}
+                                        onChange={(e) => setSoapAction(e.target.value)} dir="ltr" aria-label={t("Action URI")}
                                     />
                                 </Space.Compact>
                             </div>
@@ -533,26 +490,26 @@ export default function SoapClientPage() {
                 {/* Request Panel */}
                 <Col xs={24} lg={12}>
                     <Card
-                        title="Request"
+                        title={t("Request")}
                         extra={
                             <Space>
                                 <Select
-                                    placeholder="Load template"
+                                    placeholder={t("Load template")}
                                     size="small"
                                     style={{ width: 140 }}
                                     onChange={loadTemplate}
                                     value={undefined}
                                 >
-                                    <Option value="basic">SOAP 1.1 Basic</Option>
+                                    <Option value="basic">{t("SOAP 1.1 Basic")}</Option>
                                     <Option value="soap12">SOAP 1.2</Option>
                                     <Option value="withSecurity">WS-Security</Option>
                                 </Select>
                                 <Button
                                     size="small"
                                     icon={<CopyOutlined />}
-                                    onClick={() => copyToClipboard(requestBody, "Request")}
+                                    onClick={() => copyToClipboard(requestBody)}
                                 >
-                                    Copy
+                                    {t("Copy")}
                                 </Button>
                             </Space>
                         }
@@ -562,7 +519,7 @@ export default function SoapClientPage() {
                             items={[
                                 {
                                     key: "body",
-                                    label: "Body",
+                                    label: t("Body"),
                                     children: (
                                         <CodeEditor
                                             value={requestBody}
@@ -574,7 +531,7 @@ export default function SoapClientPage() {
                                 },
                                 {
                                     key: "headers",
-                                    label: `Headers (${headers.filter(h => h.enabled).length})`,
+                                    label: t("Headers ({count})", { count: headers.filter(h => h.enabled).length }),
                                     children: (
                                         <div>
                                             <div style={{ marginBottom: 12 }}>
@@ -583,7 +540,7 @@ export default function SoapClientPage() {
                                                     value={headerMode}
                                                     onChange={(v) => switchHeaderMode(v as "form" | "json")}
                                                     options={[
-                                                        { label: "Form", value: "form" },
+                                                        { label: t("Form"), value: "form" },
                                                         { label: "JSON", value: "json" },
                                                     ]}
                                                 />
@@ -593,18 +550,18 @@ export default function SoapClientPage() {
                                                     {headers.map((header, index) => (
                                                         <Space key={index} style={{ display: "flex", marginBottom: 8 }}>
                                                             <Input
-                                                                placeholder="Header name"
+                                                                placeholder={t("Header name")}
                                                                 value={header.key}
                                                                 onChange={(e) => updateHeader(index, "key", e.target.value)}
-                                                                style={{ width: 200 }}
+                                                                style={{ width: 200 }} dir="ltr" aria-label={t("Header name")}
                                                             />
                                                             <Input
-                                                                placeholder="Value"
+                                                                placeholder={t("Value")}
                                                                 value={header.value}
                                                                 onChange={(e) => updateHeader(index, "value", e.target.value)}
-                                                                style={{ width: 250 }}
+                                                                style={{ width: 250 }} dir="ltr" aria-label={t("Value")}
                                                             />
-                                                            <Button aria-label="Delete"
+                                                            <Button aria-label={t("Delete")}
                                                                 type="text"
                                                                 danger
                                                                 icon={<DeleteOutlined />}
@@ -613,7 +570,7 @@ export default function SoapClientPage() {
                                                         </Space>
                                                     ))}
                                                     <Button type="dashed" icon={<PlusOutlined />} onClick={addHeader} block>
-                                                        Add Header
+                                                        {t("Add Header")}
                                                     </Button>
                                                 </>
                                             ) : (
@@ -630,7 +587,7 @@ export default function SoapClientPage() {
                                                         placeholder={'{\n  "Authorization": "Bearer xxx"\n}'}
                                                     />
                                                     <Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: "block" }}>
-                                                        JSON object — auto-syncs to form when valid
+                                                        {t("JSON object — auto-syncs to form when valid")}
                                                     </Text>
                                                 </div>
                                             )}
@@ -645,8 +602,8 @@ export default function SoapClientPage() {
                                             <Alert
                                                 type="info"
                                                 showIcon
-                                                title="SSL options apply when the request goes through the server proxy"
-                                                description="Enable 'Force server proxy' below to route every request through the proxy, or leave it off and the proxy will be used automatically when you configure any SSL option."
+                                                title={t("SSL options apply when the request goes through the server proxy")}
+                                                description={t("Enable 'Force server proxy' below to route every request through the proxy, or leave it off and the proxy will be used automatically when you configure any SSL option.")}
                                                 style={{ fontSize: 12 }}
                                             />
                                             <div style={{
@@ -654,10 +611,10 @@ export default function SoapClientPage() {
                                                 gap: 12, padding: "4px 0",
                                             }}>
                                                 <div>
-                                                    <Text strong style={{ fontSize: 13 }}>Force server proxy</Text>
+                                                    <Text strong style={{ fontSize: 13 }}>{t("Force server proxy")}</Text>
                                                     <div>
                                                         <Text type="secondary" style={{ fontSize: 11 }}>
-                                                            Always route through /api/proxy (avoids browser CORS for any host).
+                                                            {t("Always route through /api/proxy (avoids browser CORS for any host).")}
                                                         </Text>
                                                     </div>
                                                 </div>
@@ -678,10 +635,10 @@ export default function SoapClientPage() {
                                             <Button
                                                 size="small"
                                                 icon={<CopyOutlined />}
-                                                onClick={() => copyToClipboard(generateCurl, "cURL command")}
+                                                onClick={() => copyToClipboard(generateCurl)}
                                                 style={{ marginBottom: 8 }}
                                             >
-                                                Copy cURL
+                                                {t("Copy cURL")}
                                             </Button>
                                             <CodeEditor
                                                 value={generateCurl}
@@ -702,7 +659,7 @@ export default function SoapClientPage() {
                     <Card
                         title={
                             <Space>
-                                Response
+                                {t("Response")}
                                 {status !== null && (
                                     <Tag color={status >= 200 && status < 300 ? "success" : "error"}>
                                         {status}
@@ -718,9 +675,9 @@ export default function SoapClientPage() {
                                 <Button
                                     size="small"
                                     icon={<CopyOutlined />}
-                                    onClick={() => copyToClipboard(responseBody, "Response")}
+                                    onClick={() => copyToClipboard(responseBody)}
                                 >
-                                    Copy
+                                    {t("Copy")}
                                 </Button>
                             )
                         }
@@ -728,15 +685,15 @@ export default function SoapClientPage() {
                         {loading && (
                             <div style={{ textAlign: "center", padding: 40 }}>
                                 <Spin size="large" />
-                                <div style={{ marginTop: 16 }}>Sending request...</div>
+                                <div style={{ marginTop: 16 }}>{t("Sending request...")}</div>
                             </div>
                         )}
 
                         {error && !loading && (
                             <Alert
                                 type="error"
-                                title="Request Failed"
-                                description={error}
+                                title={t("Request Failed")}
+                                description={error.kind === "timeout" ? t("Request timed out after {count} seconds", { count: error.seconds ?? timeout }) : error.message || t("Request failed")}
                                 showIcon
                             />
                         )}
@@ -747,7 +704,7 @@ export default function SoapClientPage() {
                                 items={[
                                     {
                                         key: "body",
-                                        label: "Body",
+                                        label: t("Body"),
                                         children: (
                                             <CodeEditor
                                                 value={responseBody}
@@ -759,7 +716,7 @@ export default function SoapClientPage() {
                                     },
                                     {
                                         key: "headers",
-                                        label: `Headers (${Object.keys(responseHeaders).length})`,
+                                        label: t("Headers ({count})", { count: Object.keys(responseHeaders).length }),
                                         children: (
                                             <Descriptions column={1} size="small" bordered>
                                                 {Object.entries(responseHeaders).map(([key, value]) => (
@@ -775,7 +732,7 @@ export default function SoapClientPage() {
                         )}
 
                         {!responseBody && !loading && !error && (
-                            <Empty description="Send a request to see the response" />
+                            <Empty description={t("Send a request to see the response")} />
                         )}
                     </Card>
                 </Col>
@@ -789,7 +746,7 @@ export default function SoapClientPage() {
                                 label: (
                                     <Space>
                                         <HistoryOutlined />
-                                        Request History
+                                        {t("Request History")}
                                         <Badge count={history.length} />
                                     </Space>
                                 ),
@@ -799,23 +756,23 @@ export default function SoapClientPage() {
                                         dataSource={history.map((h, i) => ({ ...h, key: i }))}
                                         columns={[
                                             {
-                                                title: "Time",
+                                                title: t("Time"),
                                                 dataIndex: "timestamp",
                                                 width: 180,
                                                 render: (ts) => new Date(ts).toLocaleString(),
                                             },
                                             {
-                                                title: "Endpoint",
+                                                title: t("Endpoint"),
                                                 dataIndex: "endpoint",
                                                 ellipsis: true,
                                             },
                                             {
-                                                title: "Status",
+                                                title: t("Status"),
                                                 dataIndex: "status",
                                                 width: 80,
                                                 render: (status, record) =>
                                                     record.error ? (
-                                                        <Tag color="error">Error</Tag>
+                                                        <Tag color="error">{t("Error")}</Tag>
                                                     ) : (
                                                         <Tag color={status >= 200 && status < 300 ? "success" : "warning"}>
                                                             {status}
@@ -823,13 +780,13 @@ export default function SoapClientPage() {
                                                     ),
                                             },
                                             {
-                                                title: "Duration",
+                                                title: t("Duration"),
                                                 dataIndex: "duration",
                                                 width: 100,
                                                 render: (d) => d && `${d}ms`,
                                             },
                                             {
-                                                title: "Actions",
+                                                title: t("Actions"),
                                                 width: 100,
                                                 render: (_, record) => (
                                                     <Button
@@ -837,7 +794,7 @@ export default function SoapClientPage() {
                                                         type="link"
                                                         onClick={() => loadFromHistory(record)}
                                                     >
-                                                        Load
+                                                        {t("Load")}
                                                     </Button>
                                                 ),
                                             },
@@ -845,7 +802,7 @@ export default function SoapClientPage() {
                                         pagination={{ pageSize: 5, size: "small" }}
                                     />
                                 ) : (
-                                    <Empty description="No request history" />
+                                    <Empty description={t("No request history")} />
                                 ),
                             },
                         ]}
@@ -858,22 +815,22 @@ export default function SoapClientPage() {
                 <Row gutter={[16, 8]}>
                     <Col span={24}>
                         <Title level={5} style={{ margin: 0 }}>
-                            <FileTextOutlined /> Quick Tips
+                            <FileTextOutlined /> {t("Quick Tips")}
                         </Title>
                     </Col>
                     <Col xs={24} md={8}>
                         <Text type="secondary">
-                            <strong>SOAP 1.1:</strong> Uses text/xml content type and SOAPAction header
+                            <strong>{t("SOAP 1.1:")}</strong> {t("Uses text/xml content type and SOAPAction header")}
                         </Text>
                     </Col>
                     <Col xs={24} md={8}>
                         <Text type="secondary">
-                            <strong>SOAP 1.2:</strong> Uses application/soap+xml content type
+                            <strong>{t("SOAP 1.2:")}</strong> {t("Uses application/soap+xml content type")}
                         </Text>
                     </Col>
                     <Col xs={24} md={8}>
                         <Text type="secondary">
-                            <strong>WS-Security:</strong> Load the security template and add credentials
+                            <strong>{t("WS-Security:")}</strong> {t("Load the security template and add credentials")}
                         </Text>
                     </Col>
                 </Row>

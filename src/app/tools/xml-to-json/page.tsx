@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
+
 import React, { useState, useMemo } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, Alert, Switch, Select } from "antd";
 import { SwapOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
@@ -105,6 +107,7 @@ interface ShareState { input: string; attributePrefix: string; textKey: string; 
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "xml-to-json", version: 1 };
 
 export default function XmlToJsonPage() {
+    const { t } = useLanguage();
     const [input, setInput] = useState(SAMPLE_XML);
     const [attributePrefix, setAttributePrefix] = useState("@");
     const [textKey, setTextKey] = useState("#text");
@@ -123,7 +126,7 @@ export default function XmlToJsonPage() {
         }
     }, [input, attributePrefix, textKey, compact]);
 
-    const copyOutput = () => copyToClipboard(output, "JSON copied!");
+    const copyOutput = () => copyToClipboard(output, t("JSON copied!"));
 
     useShareableState(SHARE_SCHEMA, (s) => {
         setInput(s.input);
@@ -134,8 +137,8 @@ export default function XmlToJsonPage() {
 
     return (
         <ToolPageLayout
-            title="XML to JSON Converter"
-            description="Convert XML documents to JSON format"
+            title={t("XML to JSON Converter")}
+            description={t("Convert XML documents to JSON format")}
             icon={<SwapOutlined style={{ fontSize: 24, color: "#faad14" }} />}
             color="#faad14"
             learnMore={{
@@ -171,10 +174,10 @@ export default function XmlToJsonPage() {
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card
-                        title="XML Input"
+                        title={t("XML Input")}
                         extra={
                             <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
-                                Clear
+                                {t("Clear")}
                             </Button>
                         }
                     >
@@ -189,17 +192,17 @@ export default function XmlToJsonPage() {
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title="JSON Output"
+                        title={t("JSON Output")}
                         extra={
                             output && (
                                 <Button size="small" icon={<CopyOutlined />} onClick={copyOutput}>
-                                    Copy
+                                    {t("Copy")}
                                 </Button>
                             )
                         }
                     >
                         {error ? (
-                            <Alert type="error" title={error} showIcon style={{ marginBottom: 16 }} />
+                            <Alert type="error" title={t("Conversion failed. Check the input and options, then try again.")} description={<bdi dir="ltr">{error}</bdi>} showIcon style={{ marginBottom: 16 }} />
                         ) : null}
                         <CodeEditor
                             value={output}
@@ -211,28 +214,34 @@ export default function XmlToJsonPage() {
                 </Col>
 
                 <Col xs={24}>
-                    <Card title="Conversion Options">
+                    <Card title={t("Conversion Options")}>
                         <Space wrap size="large">
                             <div>
-                                <Text style={{ display: "block", marginBottom: 4 }}>Attribute Prefix</Text>
+                                <Text style={{ display: "block", marginBottom: 4 }}>{t("Attribute Prefix")}</Text>
                                 <Select
+                                    direction="ltr"
+                                    styles={{ input: { direction: "ltr", textAlign: "left" }, itemContent: { direction: "ltr", textAlign: "left" } }}
+                                    aria-label={t("Attribute Prefix")}
                                     value={attributePrefix}
                                     onChange={setAttributePrefix}
-                                    style={{ width: 120 }}
+                                    style={{ minWidth: 120 }}
                                     options={[
-                                        { value: "@", label: "@ (default)" },
-                                        { value: "_", label: "_ (underscore)" },
-                                        { value: "$", label: "$ (dollar)" },
-                                        { value: "", label: "None" },
+                                        { value: "@", label: t("@ (default)") },
+                                        { value: "_", label: t("_ (underscore)") },
+                                        { value: "$", label: t("$ (dollar)") },
+                                        { value: "", label: t("None") },
                                     ]}
                                 />
                             </div>
                             <div>
-                                <Text style={{ display: "block", marginBottom: 4 }}>Text Content Key</Text>
+                                <Text style={{ display: "block", marginBottom: 4 }}>{t("Text Content Key")}</Text>
                                 <Select
+                                    direction="ltr"
+                                    styles={{ input: { direction: "ltr", textAlign: "left" }, itemContent: { direction: "ltr", textAlign: "left" } }}
+                                    aria-label={t("Text Content Key")}
                                     value={textKey}
                                     onChange={setTextKey}
-                                    style={{ width: 120 }}
+                                    style={{ minWidth: 120 }}
                                     options={[
                                         { value: "#text", label: "#text" },
                                         { value: "_text", label: "_text" },
@@ -243,8 +252,8 @@ export default function XmlToJsonPage() {
                             </div>
                             <div style={{ paddingTop: 22 }}>
                                 <Space>
-                                    <Switch checked={compact} onChange={setCompact} />
-                                    <Text>Compact Output</Text>
+                                    <Switch aria-label={t("Compact Output")} checked={compact} onChange={setCompact} />
+                                    <Text>{t("Compact Output")}</Text>
                                 </Space>
                             </div>
                         </Space>

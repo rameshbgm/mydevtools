@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, Alert, Select, Segmented } from "antd";
-import { CodeOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
+import { Card, Input, Typography, Row, Col, Button, Space, Select, Segmented } from "antd";
+import { CodeOutlined, CopyOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
-import { CodeEditor } from "@/components/CodeEditor";
 import { copyToClipboard } from "@/lib/clipboard";
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 const { TextArea } = Input;
 
 type EscapeType = "json" | "xml" | "html" | "javascript" | "sql" | "csv" | "java";
@@ -111,6 +111,7 @@ function unescapeString(input: string, type: EscapeType): string {
 }
 
 export default function StringEscapePage() {
+    const { t } = useLanguage();
     const [input, setInput] = useState('Hello "World"!\nThis is a <test> with special & characters.');
     const [escapeType, setEscapeType] = useState<EscapeType>("json");
     const [mode, setMode] = useState<"escape" | "unescape">("escape");
@@ -129,8 +130,8 @@ export default function StringEscapePage() {
 
     return (
         <ToolPageLayout
-            title="String Escape/Unescape"
-            description="Escape and unescape strings for various formats"
+            title={t("String Escape/Unescape")}
+            description={t("Escape and unescape strings for various formats")}
             icon={<CodeOutlined style={{ fontSize: 24, color: "#eb2f96" }} />}
             color="#eb2f96"
             learnMore={{
@@ -164,40 +165,44 @@ export default function StringEscapePage() {
                                 value={mode}
                                 onChange={(v) => setMode(v as "escape" | "unescape")}
                                 options={[
-                                    { value: "escape", label: "Escape" },
-                                    { value: "unescape", label: "Unescape" },
+                                    { value: "escape", label: t("Escape") },
+                                    { value: "unescape", label: t("Unescape") },
                                 ]}
                             />
                             <Select
                                 value={escapeType}
                                 onChange={setEscapeType}
-                                style={{ width: 150 }}
+                                style={{ minWidth: 150, maxWidth: "100%" }}
                                 options={Object.entries(ESCAPE_INFO).map(([key, info]) => ({
                                     value: key,
                                     label: info.name,
                                 }))}
                             />
-                            <Button onClick={swapContent}>Swap & Toggle</Button>
+                            <Button onClick={swapContent}>{t("Swap & Toggle")}</Button>
                         </Space>
 
                         <Row gutter={16}>
                             <Col xs={24} lg={12}>
-                                <Text strong style={{ display: "block", marginBottom: 8 }}>Input</Text>
+                                <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Input")}</Text>
                                 <TextArea
+                                    dir={mode === "escape" ? "auto" : "ltr"}
+                                    aria-label={t("Input")}
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     rows={10}
-                                    placeholder="Enter text to escape/unescape..."
+                                    placeholder={t("Enter text to escape/unescape...")}
                                 />
                             </Col>
                             <Col xs={24} lg={12}>
                                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                                    <Text strong>Output ({ESCAPE_INFO[escapeType].name})</Text>
+                                    <Text strong>{t("Output ({format})", { format: ESCAPE_INFO[escapeType].name })}</Text>
                                     <Button size="small" icon={<CopyOutlined />} onClick={copyOutput}>
-                                        Copy
-                                    </Button>
+                                        {t("Copy")}
+                                        </Button>
                                 </div>
                                 <TextArea
+                                    dir={mode === "escape" ? "ltr" : "auto"}
+                                    aria-label={t("Output")}
                                     value={output}
                                     readOnly
                                     rows={10}
@@ -209,7 +214,7 @@ export default function StringEscapePage() {
                 </Col>
 
                 <Col xs={24} lg={12}>
-                    <Card title="Escape Types">
+                    <Card title={t("Escape Types")}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                             {Object.entries(ESCAPE_INFO).map(([key, info]) => (
                                 <div
@@ -225,7 +230,7 @@ export default function StringEscapePage() {
                                 >
                                     <Text strong style={{ color: info.color }}>{info.name}</Text>
                                     <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
-                                        {info.description}
+                                        {t(info.description)}
                                     </Text>
                                 </div>
                             ))}
@@ -234,13 +239,13 @@ export default function StringEscapePage() {
                 </Col>
 
                 <Col xs={24} lg={12}>
-                    <Card title="Common Escape Sequences">
+                    <Card title={t("Common Escape Sequences")}>
                         <table style={{ width: "100%", fontSize: 13 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ textAlign: "left", padding: "4px 8px" }}>Char</th>
-                                    <th style={{ textAlign: "left", padding: "4px 8px" }}>Escaped</th>
-                                    <th style={{ textAlign: "left", padding: "4px 8px" }}>Description</th>
+                                    <th style={{ textAlign: "start", padding: "4px 8px" }}>{t("Char")}</th>
+                                    <th style={{ textAlign: "left", padding: "4px 8px" }}>{t("Escaped")}</th>
+                                    <th style={{ textAlign: "left", padding: "4px 8px" }}>{t("Description")}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -256,9 +261,9 @@ export default function StringEscapePage() {
                                     { char: "&", escaped: "&amp;", desc: "Ampersand (HTML/XML)" },
                                 ].map((row, i) => (
                                     <tr key={i}>
-                                        <td style={{ padding: "4px 8px" }}><Text code>{row.char}</Text></td>
-                                        <td style={{ padding: "4px 8px" }}><Text code>{row.escaped}</Text></td>
-                                        <td style={{ padding: "4px 8px" }}><Text type="secondary">{row.desc}</Text></td>
+                                        <td style={{ padding: "4px 8px" }}><Text code dir="ltr">{row.char}</Text></td>
+                                        <td style={{ padding: "4px 8px" }}><Text code dir="ltr">{row.escaped}</Text></td>
+                                        <td style={{ padding: "4px 8px" }}><Text type="secondary">{t(row.desc)}</Text></td>
                                     </tr>
                                 ))}
                             </tbody>

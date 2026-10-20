@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Card, Segmented, Space, Button, App, Tag, Typography } from "antd";
 import { copyToClipboard } from "@/lib/clipboard";
 import { CopyOutlined, ClearOutlined, FileTextOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SendToButton from "@/components/SendToButton";
@@ -49,6 +50,7 @@ interface ShareState { input: string; mode: Mode; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "xml-formatter", version: 1 };
 
 export default function XmlFormatterPage() {
+    const { t } = useLanguage();
     const { message } = App.useApp();
     const [input, setInput] = useState(SAMPLE);
     const [output, setOutput] = useState("");
@@ -59,15 +61,15 @@ export default function XmlFormatterPage() {
         setValidState(null);
         if (m === "Prettify") {
             try { setOutput(formatXml(src)); }
-            catch { message.error("Error formatting XML"); setOutput(""); }
+            catch { message.error(t("Error formatting XML")); setOutput(""); }
         } else if (m === "Minify") {
             try { setOutput(minifyXml(src)); }
-            catch { message.error("Error minifying XML"); setOutput(""); }
+            catch { message.error(t("Error minifying XML")); setOutput(""); }
         } else {
             const result = validateXml(src);
             setValidState(result);
-            if (result.valid) message.success("✅ Valid XML!");
-            else message.error("❌ Invalid XML");
+            if (result.valid) message.success(t("Valid XML"));
+            else message.error(t("Invalid XML"));
             setOutput("");
         }
     };
@@ -82,8 +84,8 @@ export default function XmlFormatterPage() {
 
     return (
         <ToolPageLayout
-            title="XML Formatter"
-            description="Format, prettify, minify and validate XML documents"
+            title={t("XML Formatter")}
+            description={t("Format, prettify, minify and validate XML documents")}
             icon={<FileTextOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
             color="#52c41a"
             learnMore={{
@@ -116,24 +118,25 @@ export default function XmlFormatterPage() {
 
             <Space style={{ marginBottom: 16 }} wrap>
                 <Segmented<Mode>
-                    options={["Prettify", "Minify", "Validate"]}
+                    aria-label={t("Formatting mode")}
+                    options={[{ value: "Prettify", label: t("Prettify") }, { value: "Minify", label: t("Minify") }, { value: "Validate", label: t("Validate") }]}
                     value={mode}
                     onChange={(v) => setMode(v)}
                     size="large"
                 />
-                {validState?.valid === true && <Tag icon={<CheckCircleOutlined />} color="success">Valid XML</Tag>}
-                {validState?.valid === false && <Tag icon={<CloseCircleOutlined />} color="error">Invalid XML</Tag>}
-                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output || input)}>Copy</Button>
-                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setValidState(null); }}>Clear</Button>
+                {validState?.valid === true && <Tag icon={<CheckCircleOutlined />} color="success">{t("Valid XML")}</Tag>}
+                {validState?.valid === false && <Tag icon={<CloseCircleOutlined />} color="error">{t("Invalid XML")}</Tag>}
+                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output || input, t("Copied!"))}>{t("Copy")}</Button>
+                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setValidState(null); }}>{t("Clear")}</Button>
                 <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, mode })} size="middle" />
                 <SendToButton data={output || input} kind="xml" sourceToolId="xml-formatter" size="middle" />
             </Space>
 
             <div className="tool-split-pane" style={{ gap: 16 }}>
-                <Card size="small" title="Input" styles={{ body: { padding: 0 } }}>
-                    <CodeEditor value={input} onChange={(v) => { setInput(v); run(mode, v); }} language="xml" height="500px" />
+                <Card size="small" title={t("Input")} styles={{ body: { padding: 0 } }}>
+                    <CodeEditor value={input} onChange={(v) => { setInput(v); run(mode, v); }} ariaLabel={t("XML source")} language="xml" height="500px" />
                 </Card>
-                <Card size="small" title={mode === "Validate" ? "Validation" : "Output"} styles={{ body: mode === "Validate" ? { padding: 24 } : { padding: 0 } }}>
+                <Card size="small" title={t(mode === "Validate" ? "Validation" : "Output")} styles={{ body: mode === "Validate" ? { padding: 24 } : { padding: 0 } }}>
                     {mode === "Validate" ? (
                         validState ? (
                             <div style={{ textAlign: "center", paddingTop: 60 }}>
@@ -143,20 +146,20 @@ export default function XmlFormatterPage() {
                                 }
                                 <div style={{ marginTop: 16, fontSize: 18 }}>
                                     <Text type={validState.valid ? "success" : "danger"}>
-                                        {validState.valid ? "XML is valid!" : "XML is invalid"}
+                                        {t(validState.valid ? "XML is valid!" : "XML is invalid")}
                                     </Text>
                                 </div>
                                 {!validState.valid && (
-                                    <pre style={{ marginTop: 16, fontSize: 12, textAlign: "left", background: "#1a1a1a", padding: 16, borderRadius: 8, whiteSpace: "pre-wrap", color: "#f5222d" }}>
+                                    <><Text type="danger" role="alert">{t("Invalid XML. Check matching tags and syntax, then try again.")}</Text><pre dir="ltr" style={{ marginTop: 16, fontSize: 12, textAlign: "left", background: "#1a1a1a", padding: 16, borderRadius: 8, whiteSpace: "pre-wrap", color: "#f5222d" }}>
                                         {validState.error}
-                                    </pre>
+                                    </pre></>
                                 )}
                             </div>
                         ) : (
-                            <Text type="secondary" style={{ display: "block", padding: "80px 0", textAlign: "center" }}>Paste XML and it will be validated automatically</Text>
+                            <Text type="secondary" style={{ display: "block", padding: "80px 0", textAlign: "center" }}>{t("Paste XML and it will be validated automatically")}</Text>
                         )
                     ) : (
-                        <CodeEditor value={output} language="xml" height="500px" readOnly />
+                        <CodeEditor value={output} ariaLabel={t("XML output")} language="xml" height="500px" readOnly />
                     )}
                 </Card>
             </div>

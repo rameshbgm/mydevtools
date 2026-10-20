@@ -28,6 +28,7 @@ import {
     FileTextOutlined,
     BulbOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 
@@ -39,6 +40,8 @@ interface ValidationError {
     line: number;
     column: number;
     message: string;
+    translationKey?: string;
+    translationValues?: Record<string, string>;
     severity: "error" | "warning" | "info";
 }
 
@@ -308,6 +311,8 @@ function validateAgainstXSD(xmlString: string, xsdString: string, parsedXSD: Par
                 line: 1,
                 column: 1,
                 message: `Namespace mismatch. Expected: ${parsedXSD.targetNamespace}, Found: ${xmlNs || "none"}`,
+                translationKey: "Namespace mismatch. Expected: {expected}, Found: {found}",
+                translationValues: { expected: parsedXSD.targetNamespace, found: xmlNs || "" },
                 severity: "warning",
             });
         }
@@ -323,6 +328,8 @@ function validateAgainstXSD(xmlString: string, xsdString: string, parsedXSD: Par
             line: 1,
             column: 1,
             message: `Unknown root element: "${root.localName}". Expected one of: ${parsedXSD.elements.map(e => e.name).join(", ")}`,
+            translationKey: 'Unknown root element: "{name}". Expected one of: {expected}',
+            translationValues: { name: root.localName, expected: parsedXSD.elements.map(e => e.name).join(", ") },
             severity: "error",
         });
     }
@@ -336,6 +343,7 @@ function validateAgainstXSD(xmlString: string, xsdString: string, parsedXSD: Par
             line: 0,
             column: 0,
             message: "Note: This is structural validation only. For complete XSD validation including type checking and constraints, use a dedicated XML validator.",
+            translationKey: "Note: This is structural validation only. For complete XSD validation including type checking and constraints, use a dedicated XML validator.",
             severity: "info",
         });
     }
@@ -346,6 +354,7 @@ function validateAgainstXSD(xmlString: string, xsdString: string, parsedXSD: Par
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function XsdValidatorPage() {
+    const { t, direction } = useLanguage();
     const [xsdInput, setXsdInput] = useState(SAMPLE_XSD);
     const [xmlInput, setXmlInput] = useState(SAMPLE_XML);
     const [parsedXsd, setParsedXsd] = useState<ParsedXSD | null>(null);
@@ -359,7 +368,7 @@ export default function XsdValidatorPage() {
         try {
             const parsed = parseXSD(xsdInput);
             setParsedXsd(parsed);
-            message.success("XSD parsed successfully!");
+            message.success(t("XSD parsed successfully!"));
         } catch (err: any) {
             setXsdParseError(err.message);
             setParsedXsd(null);
@@ -369,7 +378,7 @@ export default function XsdValidatorPage() {
     // Validate XML against XSD
     const handleValidate = () => {
         if (!parsedXsd) {
-            message.warning("Please parse the XSD first");
+            message.warning(t("Please parse the XSD first"));
             return;
         }
 
@@ -379,9 +388,9 @@ export default function XsdValidatorPage() {
 
         const errorCount = errors.filter(e => e.severity === "error").length;
         if (errorCount === 0) {
-            message.success("Validation passed!");
+            message.success(t("Supported checks found no errors; full XSD conformance was not tested."));
         } else {
-            message.error(`Validation failed with ${errorCount} error(s)`);
+            message.error(t("Basic checks found {count} error(s)", { count: errorCount }));
         }
     };
 
@@ -409,18 +418,18 @@ export default function XsdValidatorPage() {
 
     return (
         <ToolPageLayout
-            title="XSD Validator"
-            description="Validate XML documents against XSD schemas"
+            title={t("XSD Validator")}
+            description={t("Inspect XSD declarations and run limited XML well-formedness, root-name and namespace checks")}
             icon={<ApartmentOutlined style={{ fontSize: 24, color: "#13c2c2" }} />}
             color="#13c2c2"
             learnMore={{
-                whatIs: "XSD (XML Schema Definition) validation verifies that an XML document conforms to a specific schema. It checks element names, types, cardinality, and structure against the schema definition.",
-                whyUse: "XSD validation ensures XML data meets expected format requirements. It's essential for SOAP web services, enterprise integrations, and any system that requires strict data contracts.",
+                whatIs: "This browser tool inspects XSD declarations and checks XML well-formedness, the declared root element name and the root namespace. It does not validate child content, datatypes, cardinality or required attributes.",
+                whyUse: "Inspect declared types and elements and catch basic XML/root mismatches before using a full XSD validator such as Xerces or libxml2.",
                 howToUse: [
                     "Paste your XSD schema in the left editor",
                     "Paste the XML document to validate in the right editor",
-                    "Click 'Validate' to check conformance",
-                    "Review any schema violations or errors"
+                    "Run the limited XML and root checks; use a full XSD validator to establish schema conformance.",
+                    "Review basic-check results; child content, datatypes, cardinality and required attributes are not validated."
                 ],
                 tips: [
                     "Ensure namespaces match between XSD and XML",
@@ -429,29 +438,28 @@ export default function XsdValidatorPage() {
                     "Check targetNamespace and xmlns declarations"
                 ],
                 useCases: [
-                    "Validating SOAP messages against WSDL types",
-                    "Ensuring B2B data exchange compliance",
-                    "Testing XML exports against specifications",
-                    "Debugging schema validation errors"
+                    "Inspecting declarations from SOAP and enterprise schemas",
+                    "Checking XML well-formedness and root declarations before full validation",
+                    "Reviewing target namespaces and declared schema types",
+                    "Investigating root-name or namespace mismatches"
                 ]
             }}
         >
-            <Row gutter={[16, 16]}>
+            <Row dir={direction} gutter={[16, 16]}>
                 {/* Left Panel - XSD */}
                 <Col xs={24} lg={12}>
                     <Card
-                        title="XSD Schema"
+                        title={t("XSD Schema")}
                         extra={
                             <Button
                                 type="primary"
                                 onClick={handleParseXsd}
                                 icon={<FileTextOutlined />}
-                            >
-                                Parse XSD
-                            </Button>
+                            >{t("Parse XSD")}</Button>
                         }
                     >
                         <CodeEditor
+                            ariaLabel={t("XSD schema editor")}
                             value={xsdInput}
                             onChange={(v) => {
                                 setXsdInput(v || "");
@@ -464,8 +472,8 @@ export default function XsdValidatorPage() {
                         {xsdParseError && (
                             <Alert
                                 type="error"
-                                title="XSD Parse Error"
-                                description={xsdParseError}
+                                title={t("XSD Parse Error")}
+                                description={<pre dir="ltr" style={{ whiteSpace: "pre-wrap", margin: 0 }}>{xsdParseError}</pre>}
                                 showIcon
                                 style={{ marginTop: 12 }}
                             />
@@ -473,17 +481,17 @@ export default function XsdValidatorPage() {
 
                         {parsedXsd && (
                             <div style={{ marginTop: 16 }}>
-                                <Divider>Schema Overview</Divider>
+                                <Divider>{t("Schema Overview")}</Divider>
                                 <Descriptions size="small" column={2}>
                                     {parsedXsd.targetNamespace && (
-                                        <Descriptions.Item label="Namespace" span={2}>
-                                            <Text code style={{ fontSize: 11 }}>{parsedXsd.targetNamespace}</Text>
+                                        <Descriptions.Item label={t("Namespace")} span={2}>
+                                            <Text code dir="ltr" style={{ fontSize: 11 }}>{parsedXsd.targetNamespace}</Text>
                                         </Descriptions.Item>
                                     )}
-                                    <Descriptions.Item label="Elements">
+                                    <Descriptions.Item label={t("Elements")}>
                                         <Badge count={parsedXsd.elements.length} showZero color="#1890ff" />
                                     </Descriptions.Item>
-                                    <Descriptions.Item label="Types">
+                                    <Descriptions.Item label={t("Types")}>
                                         <Badge count={parsedXsd.types.length} showZero color="#722ed1" />
                                     </Descriptions.Item>
                                 </Descriptions>
@@ -494,23 +502,23 @@ export default function XsdValidatorPage() {
                                     items={[
                                         {
                                             key: "types",
-                                            label: `Types (${parsedXsd.types.length})`,
+                                            label: t("Types ({count})", { count: parsedXsd.types.length }),
                                             children: (
                                                 <Table
                                                     size="small"
                                                     dataSource={parsedXsd.types.map((t, i) => ({ ...t, key: i }))}
                                                     columns={[
-                                                        { title: "Name", dataIndex: "name" },
+                                                        { title: t("Name"), dataIndex: "name" },
                                                         {
-                                                            title: "Kind",
+                                                            title: t("Kind"),
                                                             dataIndex: "kind",
                                                             render: (k) => (
                                                                 <Tag color={k === "complex" ? "purple" : "green"}>
-                                                                    {k}
+                                                                    {t(k === "complex" ? "Complex" : "Simple")}
                                                                 </Tag>
                                                             ),
                                                         },
-                                                        { title: "Base", dataIndex: "base", render: (b) => b && <Text code>{b}</Text> },
+                                                        { title: t("Base"), dataIndex: "base", render: (b) => b && <Text code>{b}</Text> },
                                                     ]}
                                                     pagination={false}
                                                     scroll={{ y: 150 }}
@@ -519,15 +527,15 @@ export default function XsdValidatorPage() {
                                         },
                                         {
                                             key: "elements",
-                                            label: `Global Elements (${parsedXsd.elements.length})`,
+                                            label: t("Global Elements ({count})", { count: parsedXsd.elements.length }),
                                             children: (
                                                 <List
                                                     size="small"
                                                     dataSource={parsedXsd.elements}
                                                     renderItem={(el) => (
                                                         <List.Item>
-                                                            <Text strong>{el.name}</Text>
-                                                            {el.type && <Text type="secondary"> : {el.type}</Text>}
+                                                            <Text strong dir="ltr">{el.name}</Text>
+                                                            {el.type && <Text type="secondary" dir="ltr"> : {el.type}</Text>}
                                                         </List.Item>
                                                     )}
                                                 />
@@ -544,37 +552,34 @@ export default function XsdValidatorPage() {
                 <Col xs={24} lg={12}>
                     <Card
                         title={
-                            <Space>
-                                XML Document
-                                {validated && (
+                            <Space>{t("XML Document")}{validated && (
                                     isValid ? (
-                                        <Tag color="success" icon={<CheckCircleOutlined />}>Valid</Tag>
+                                        <Tag color="success" icon={<CheckCircleOutlined />}>{t("No root/XML errors")}</Tag>
                                     ) : (
-                                        <Tag color="error" icon={<CloseCircleOutlined />}>Invalid</Tag>
+                                        <Tag color="error" icon={<CloseCircleOutlined />}>{t("Root/XML errors")}</Tag>
                                     )
                                 )}
                             </Space>
                         }
                         extra={
                             <Space>
-                                <Tooltip title="Load valid sample">
-                                    <Button size="small" onClick={loadValidSample}>Valid</Button>
+                                <Tooltip title={t("Load baseline XML example")}>
+                                    <Button size="small" onClick={loadValidSample}>{t("Baseline sample")}</Button>
                                 </Tooltip>
-                                <Tooltip title="Load invalid sample">
-                                    <Button size="small" onClick={loadInvalidSample}>Invalid</Button>
+                                <Tooltip title={t("Load datatype-error XML example")}>
+                                    <Button size="small" onClick={loadInvalidSample}>{t("Datatype-error sample")}</Button>
                                 </Tooltip>
                                 <Button
                                     type="primary"
                                     onClick={handleValidate}
                                     disabled={!parsedXsd}
                                     icon={<CheckCircleOutlined />}
-                                >
-                                    Validate
-                                </Button>
+                                >{t("Run basic checks")}</Button>
                             </Space>
                         }
                     >
                         <CodeEditor
+                            ariaLabel={t("XML input editor")}
                             value={xmlInput}
                             onChange={(v) => {
                                 setXmlInput(v || "");
@@ -584,20 +589,18 @@ export default function XsdValidatorPage() {
                             height={300}
                         />
 
-                        {/* Validation Results */}
+                        {/* Limited check results */}
                         {validated && (
                             <div style={{ marginTop: 16 }}>
-                                <Divider>
-                                    Validation Results
-                                    <Space style={{ marginLeft: 12 }}>
+                                <Divider>{t("Limited check results")}<Space style={{ marginLeft: 12 }}>
                                         {errorCounts.error > 0 && (
-                                            <Tag color="error">{errorCounts.error} errors</Tag>
+                                            <Tag color="error">{t("Errors: {count}", { count: errorCounts.error })}</Tag>
                                         )}
                                         {errorCounts.warning > 0 && (
-                                            <Tag color="warning">{errorCounts.warning} warnings</Tag>
+                                            <Tag color="warning">{t("Warnings: {count}", { count: errorCounts.warning })}</Tag>
                                         )}
                                         {errorCounts.info > 0 && (
-                                            <Tag color="blue">{errorCounts.info} info</Tag>
+                                            <Tag color="blue">{t("Info: {count}", { count: errorCounts.info })}</Tag>
                                         )}
                                     </Space>
                                 </Divider>
@@ -605,8 +608,8 @@ export default function XsdValidatorPage() {
                                 {validationErrors.length === 0 ? (
                                     <Alert
                                         type="success"
-                                        title="Validation Successful"
-                                        description="The XML document is valid according to the XSD schema."
+                                        title={t("No errors in supported checks")}
+                                        description={t("This result does not establish XSD conformance.")}
                                         showIcon
                                     />
                                 ) : (
@@ -627,11 +630,10 @@ export default function XsdValidatorPage() {
                                                     )}
                                                     <div>
                                                         {err.line > 0 && (
-                                                            <Text type="secondary" style={{ marginRight: 8 }}>
-                                                                Line {err.line}
+                                                            <Text type="secondary" style={{ marginRight: 8 }}>{t("Line {line}", { line: err.line })}
                                                             </Text>
                                                         )}
-                                                        <Text>{err.message}</Text>
+                                                        <Text dir={err.translationKey ? direction : "ltr"} style={{ unicodeBidi: "isolate" }}>{err.translationKey ? t(err.translationKey, err.translationKey === "Namespace mismatch. Expected: {expected}, Found: {found}" ? { ...err.translationValues, found: err.translationValues?.found || t("none") } : err.translationValues) : err.message}</Text>
                                                     </div>
                                                 </Space>
                                             </List.Item>
@@ -644,8 +646,8 @@ export default function XsdValidatorPage() {
                         {!parsedXsd && !validated && (
                             <Alert
                                 type="info"
-                                title="Parse XSD First"
-                                description="Please parse the XSD schema before validating XML documents."
+                                title={t("Parse XSD First")}
+                                description={t("Please parse the XSD schema before validating XML documents.")}
                                 showIcon
                                 style={{ marginTop: 16 }}
                             />
@@ -656,10 +658,7 @@ export default function XsdValidatorPage() {
                     <Card size="small" style={{ marginTop: 16 }}>
                         <Space>
                             <BulbOutlined style={{ color: "#faad14" }} />
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                                Browser-based validation performs structural checks only.
-                                For complete type and constraint validation, use a dedicated XML validator like Xerces or libxml2.
-                            </Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>{t("Only XML well-formedness, declared root name and root namespace are checked. Child content, datatypes, cardinality and required attributes require a full XSD validator such as Xerces or libxml2.")}</Text>
                         </Space>
                     </Card>
                 </Col>

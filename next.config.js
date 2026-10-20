@@ -2,6 +2,7 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
   experimental: {
     useTypeScriptCli: true,
   },
@@ -15,7 +16,7 @@ const nextConfig = {
       // the proxy and creating a redirect loop.
       beforeFiles: [
         {
-          source: "/:categorySlug((?!api(?:/|$)|tools(?:/|$)|_next(?:/|$)|memory(?:/|$)|release-notes(?:/|$))[^/]+)/:toolId",
+          source: "/:categorySlug(artificial-intelligence|diff-and-compare|api-and-web-services|encoding-and-decoding|certificates-and-keys|cryptography|data-converters|formatters|fun-and-games|generators|image-and-media|network|text-and-utilities|validators|reference)/:toolId",
           destination: "/tools/:toolId",
         },
       ],
@@ -23,14 +24,15 @@ const nextConfig = {
   },
   async headers() {
     return [
+      { source: "/api/:path*", headers: [{ key: "Cache-Control", value: "no-store, private" }] },
       {
         source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
-          { key: "Content-Security-Policy", value: "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'" },
+          { key: "Content-Security-Policy", value: "base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'" },
         ],
       },
     ];

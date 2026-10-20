@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useLanguage } from "./LanguageProvider";
 import { Dropdown, Button, App } from "antd";
 import { ShareAltOutlined, DownOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
@@ -37,26 +38,27 @@ export default function SendToButton({
     size = "small",
     hideIfEmpty = true,
 }: Props) {
+    const { t } = useLanguage();
     const { message } = App.useApp();
     const router = useRouter();
     const targets = targetsForKind(kind).filter((t) => t.toolId !== sourceToolId);
     if (targets.length === 0 && hideIfEmpty) return null;
 
     const handlePick = (toolId: string) => {
-        if (!data) { message.warning("Nothing to send yet"); return; }
+        if (!data) { message.warning(t("Nothing to send yet")); return; }
         pushToBridge({ kind, data, sourceToolId, label });
         const path = toolPathFromId(toolId);
-        if (!path) { message.error("Unknown target tool"); return; }
+        if (!path) { message.error(t("Unknown target tool")); return; }
         router.push(path);
     };
 
     return (
         <Dropdown
             menu={{
-                items: targets.map((t) => ({
-                    key: t.toolId,
-                    label: t.label,
-                    onClick: () => handlePick(t.toolId),
+                items: targets.map((target) => ({
+                    key: target.toolId,
+                    label: t(target.label),
+                    onClick: () => handlePick(target.toolId),
                 })),
             }}
             trigger={["click"]}
@@ -64,7 +66,7 @@ export default function SendToButton({
             disabled={!data || targets.length === 0}
         >
             <Button size={size} icon={<ShareAltOutlined />}>
-                Send to <DownOutlined style={{ fontSize: 10 }} />
+                {t("Send to")} <DownOutlined style={{ fontSize: 10 }} />
             </Button>
         </Dropdown>
     );

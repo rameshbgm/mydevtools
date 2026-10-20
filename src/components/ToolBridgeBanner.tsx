@@ -1,8 +1,10 @@
 "use client";
 
+import { useLanguage } from "./LanguageProvider";
 import React, { useEffect, useState } from "react";
 import { Alert, Button, Space, Tag } from "antd";
-import { consumeFromBridge, type ToolPayload, type ToolPayloadKind } from "@/lib/tool-bridge";
+import { clearBridge, consumeFromBridge, type ToolPayload, type ToolPayloadKind } from "@/lib/tool-bridge";
+import { guideExamplePayload } from "@/lib/guide-examples";
 
 interface Props {
     /** Which kinds this tool can usefully consume. */
@@ -19,24 +21,38 @@ interface Props {
  * Import button if `autoApply` is false), and shows a transient confirmation.
  */
 export default function ToolBridgeBanner({ accepts, onAccept, autoApply = true }: Props) {
+    const { t } = useLanguage();
     const [imported, setImported] = useState<ToolPayload | null>(null);
+    const [error, setError] = useState("");
 
     useEffect(() => {
-        const payload = consumeFromBridge();
-        if (!payload) return;
-        if (!accepts.includes(payload.kind)) return; // not for us — payload is already consumed; nothing else takes it
-        if (autoApply) {
-            onAccept(payload);
-            setImported(payload);
-            // confirmation lives for ~5s; user can dismiss earlier
-            const t = setTimeout(() => setImported(null), 5000);
-            return () => clearTimeout(t);
-        } else {
-            setImported(payload);
-        }
+        let cancelled = false;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        // Child effects run before their parent's mount effects. Apply after
+        // defaults and saved settings have initialized, so they cannot replace
+        // the imported example or its decoded result. StrictMode cleanup also
+        // cancels the first attempt before its one-shot payload is consumed.
+        queueMicrotask(() => {
+            if (cancelled) return;
+            try {
+                const guide = guideExamplePayload(window.location.pathname, window.location.search);
+                const payload = guide ?? consumeFromBridge();
+                if (!payload) return;
+                if (!accepts.includes(payload.kind)) {
+                    if (guide) throw new Error("This tool cannot load this example format. Choose its example from the Debugging guides.");
+                    return;
+                }
+                if (guide) clearBridge();
+                if (autoApply) onAccept(payload);
+                setImported(payload);
+                if (autoApply) timer = setTimeout(() => setImported(null), 5000);
+            } catch (cause) { setError(cause instanceof Error ? cause.message : "The example could not be loaded. Open its guide and try again."); }
+        });
+        return () => { cancelled = true; if (timer) clearTimeout(timer); };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    if (error) return <Alert type="error" showIcon title={t("Example could not be loaded")} description={t(error)} style={{ marginBottom: 12 }} />;
     if (!imported) return null;
 
     return (
@@ -48,16 +64,16 @@ export default function ToolBridgeBanner({ accepts, onAccept, autoApply = true }
             style={{ marginBottom: 12 }}
             title={
                 <Space>
-                    Imported from another tool
-                    {imported.sourceToolId && <Tag color="blue">{imported.sourceToolId}</Tag>}
-                    <Tag>{imported.kind}</Tag>
+                    {t(imported.sourceToolId === "guides" ? "Loaded guide example" : "Imported from another tool")}
+                    {imported.sourceToolId && <Tag color="blue"><bdi dir="ltr">{imported.sourceToolId}</bdi></Tag>}
+                    <Tag><bdi dir="ltr">{imported.kind}</bdi></Tag>
                 </Space>
             }
-            description={imported.label}
+            description={imported.sourceToolId === "guides" ? t(imported.label ?? "") : imported.label}
             action={
                 !autoApply && (
                     <Button size="small" type="primary" onClick={() => { onAccept(imported); setImported(null); }}>
-                        Import
+                        {t("Import")}
                     </Button>
                 )
             }
