@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/jmespath/jmespath.js",
+  "commit": "f5f85697449b517f3f41969192a1d9367c4a0465",
+  "source": "jmespath.js",
+  "upstream_sha256": "a88012bb68aa9e52a316d3be81598573d686cdad226a4c5d3177d720e187fe53",
+  "license": "Apache-2.0",
+  "vendored_engine": "src/lib/vendor/jmespath.mjs",
+  "fixtures": "scripts/fixtures/jmespath",
+  "fixture_cases": 851,
+  "independent_compliance_repository": "https://github.com/jmespath/jmespath.test",
+  "independent_compliance_commit": "53abcc37901891cf4308fcd910eab287416c4609",
+  "independent_compliance_cases": 892
+}

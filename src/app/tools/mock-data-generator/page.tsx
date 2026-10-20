@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import {
     Card, Typography, Input, InputNumber, Row, Col, Select, Button,
-    Space, Tag, App, Radio,
+    Space, Tag, App, Radio, Alert,
 } from "antd";
 import { BuildOutlined, CopyOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
 
@@ -48,7 +49,7 @@ const GENERATORS: Record<FieldType, (rng: Rng) => string | number | boolean> = {
     "float": (r) => Math.round(r() * 100000) / 100,
     "boolean": (r) => r() < 0.5,
     "date-iso": (r) => {
-        const ms = Date.now() - Math.floor(r() * 365 * 24 * 3600 * 1000);
+        const ms = Date.UTC(2026, 0, 1) - Math.floor(r() * 365 * 24 * 3600 * 1000);
         return new Date(ms).toISOString();
     },
     "lorem-words": (r) => Array.from({ length: 3 + Math.floor(r() * 5) }, () => pick(LOREM, r)).join(" "),
@@ -121,7 +122,8 @@ function toCsv(fields: Field[], rows: Record<string, unknown>[]): string {
 
 function toSql(fields: Field[], rows: Record<string, unknown>[], table: string): string {
     if (rows.length === 0) return "";
-    const cols = fields.map((f) => `"${f.name}"`).join(", ");
+    const quoteIdentifier = (name: string) => `"${name.replace(/"/g, '""')}"`;
+    const cols = fields.map((f) => quoteIdentifier(f.name)).join(", ");
     const literal = (v: unknown): string => {
         if (v === null || v === undefined) return "NULL";
         if (typeof v === "number") return String(v);
@@ -129,10 +131,13 @@ function toSql(fields: Field[], rows: Record<string, unknown>[], table: string):
         return `'${String(v).replace(/'/g, "''")}'`;
     };
     const values = rows.map((r) => `(${fields.map((f) => literal(r[f.name])).join(", ")})`);
-    return `INSERT INTO "${table}" (${cols}) VALUES\n  ${values.join(",\n  ")};`;
+    return `INSERT INTO ${quoteIdentifier(table)} (${cols}) VALUES\n  ${values.join(",\n  ")};`;
 }
 
 export default function MockDataGeneratorPage() {
+    const { t } = useLanguage();
+    const translation = useRef(t);
+    useEffect(() => { translation.current = t; }, [t]);
     const { message } = App.useApp();
     const [fields, setFields] = useState<Field[]>([
         { name: "id", type: "uuid" },
@@ -145,20 +150,25 @@ export default function MockDataGeneratorPage() {
     const [format, setFormat] = useState<OutputFormat>("json");
     const [tableName, setTableName] = useState("users");
 
-    const rows = useMemo(() => {
+    const generated = useMemo(() => {
+        const names = fields.map((field) => field.name);
+        if (new Set(names).size !== names.length) return { rows: [], error: true };
         const rng = makeRng(seed);
-        return Array.from({ length: rowCount }, () => {
-            const row: Record<string, unknown> = {};
+        const rows = Array.from({ length: rowCount }, () => {
+            const row: Record<string, unknown> = Object.create(null);
             fields.forEach((f) => { row[f.name] = GENERATORS[f.type](rng); });
             return row;
         });
+        return { rows, error: false };
     }, [fields, rowCount, seed]);
+    const rows = generated.rows;
 
     const output = useMemo(() => {
+        if (generated.error) return "";
         if (format === "json") return toJson(rows);
         if (format === "csv") return toCsv(fields, rows);
         return toSql(fields, rows, tableName);
-    }, [rows, fields, format, tableName]);
+    }, [rows, fields, format, tableName, generated.error]);
 
     const addField = () => setFields((f) => [...f, { name: `field_${f.length + 1}`, type: "lorem-words" }]);
     const removeField = (i: number) => setFields((f) => f.filter((_, idx) => idx !== i));
@@ -166,59 +176,46 @@ export default function MockDataGeneratorPage() {
         setFields((f) => f.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
 
     const copyOutput = async () => {
+        if (!output) return;
         await copyToClipboard(output);
-        message.success(`Copied ${rows.length} rows as ${format.toUpperCase()}`);
+        message.success(translation.current("Copied {count} rows as {format}", { count: rows.length, format: format.toUpperCase() }));
     };
 
     return (
         <ToolPageLayout
-            title="Mock Data Generator"
-            description="Generate realistic fake data as JSON, CSV or SQL — seedable for reproducible fixtures"
+            title={t("Mock Data Generator")}
+            description={t("Generate realistic fake data as JSON, CSV or SQL — seedable for reproducible fixtures")}
             icon={<BuildOutlined style={{ fontSize: 24, color: "#f59e0b" }} />}
             color="#f59e0b"
             learnMore={{
-                whatIs: "Mock Data Generator produces realistic but fake data (names, emails, dates, lorem text) according to a schema you define. Useful for seeding development databases, building demos, and writing tests.",
-                whyUse: "Hand-crafting test data is tedious; copying production data is a compliance risk. A schema-driven generator gives you the volume and shape you need without either problem.",
-                howToUse: [
-                    "Define your schema as a list of named fields",
-                    "Pick a row count and (optional) seed for reproducibility",
-                    "Choose an output format: JSON, CSV, or SQL inserts",
-                    "Copy the result into your fixture file",
-                ],
-                tips: [
-                    "Use the seed to make CI test fixtures byte-identical run to run",
-                    "Field name `id` + type UUID is a sensible default primary key",
-                    "All generation is local — no PII risk",
-                ],
-                useCases: [
-                    "Seeding dev / staging databases",
-                    "Demo data for screenshots and recordings",
-                    "Load-test payload generation",
-                    "Storybook fixtures",
-                ],
+                whatIs: "Generate fictional fields as JSON, CSV or SQL with a seeded random sequence.",
+                whyUse: "Create local demo and test fixtures without copying production records.",
+                howToUse: ["Define fields, row count and seed, then choose a format and copy the result."],
+                tips: ["Seeded dates are relative to 2026-01-01T00:00:00Z. The same schema, count and seed reproduce identical output."],
             }}
         >
+            {generated.error && <Alert type="error" showIcon role="alert" message={t("Field names must be unique. Rename duplicate fields to generate data.")} style={{ marginBottom: 16 }} />}
             <Row gutter={[16, 16]}>
                 <Col xs={24} lg={10}>
-                    <Card title="Schema" size="small" extra={
-                        <Button size="small" icon={<PlusOutlined />} onClick={addField}>Add field</Button>
+                    <Card title={t("Schema")} size="small" extra={
+                        <Button size="small" icon={<PlusOutlined />} onClick={addField}>{t("Add field")}</Button>
                     }>
                         <Space orientation="vertical" style={{ width: "100%" }}>
                             {fields.map((f, i) => (
                                 <Space.Compact key={i} style={{ width: "100%" }}>
-                                    <Input
+                                    <Input dir="ltr" aria-label={t("Field name {index}", { index: i + 1 })} styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                         value={f.name}
                                         onChange={(e) => updateField(i, { name: e.target.value })}
                                         style={{ width: "40%" }}
-                                        placeholder="field name"
+                                        placeholder={t("field name")}
                                     />
-                                    <Select
+                                    <Select aria-label={t("Field type {index}", { index: i + 1 })}
                                         value={f.type}
                                         onChange={(v) => updateField(i, { type: v as FieldType })}
-                                        options={FIELD_TYPES}
+                                        options={FIELD_TYPES.map((field) => ({ ...field, label: t(field.label) }))}
                                         style={{ width: "50%" }}
                                     />
-                                    <Button aria-label="Delete"
+                                    <Button aria-label={t("Delete field {index}", { index: i + 1 })}
                                         icon={<DeleteOutlined />}
                                         onClick={() => removeField(i)}
                                         disabled={fields.length <= 1}
@@ -228,11 +225,11 @@ export default function MockDataGeneratorPage() {
                         </Space>
                     </Card>
 
-                    <Card title="Generation" size="small" style={{ marginTop: 16 }}>
+                    <Card title={t("Generation")} size="small" style={{ marginTop: 16 }}>
                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                             <div>
-                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Rows</Text>
-                                <InputNumber
+                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>{t("Rows")}</Text>
+                                <InputNumber dir="ltr" aria-label={t("Rows")} styles={{ input: { direction: "ltr", fontSize: 16 } }}
                                     min={1}
                                     max={10000}
                                     value={rowCount}
@@ -241,20 +238,18 @@ export default function MockDataGeneratorPage() {
                                 />
                             </div>
                             <div>
-                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Seed</Text>
+                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>{t("Seed")}</Text>
                                 <Space.Compact style={{ width: "100%" }}>
-                                    <InputNumber
+                                    <InputNumber dir="ltr" aria-label={t("Seed")} styles={{ input: { direction: "ltr", fontSize: 16 } }}
                                         value={seed}
                                         onChange={(v) => setSeed(v ?? 0)}
                                         style={{ flex: 1 }}
                                     />
-                                    <Button icon={<ReloadOutlined />} onClick={() => setSeed(Math.floor(Math.random() * 1e9))}>
-                                        Random
-                                    </Button>
+                                    <Button icon={<ReloadOutlined />} onClick={() => setSeed(Math.floor(Math.random() * 1e9))}>{t("Random")}</Button>
                                 </Space.Compact>
                             </div>
                             <div>
-                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Format</Text>
+                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>{t("Format")}</Text>
                                 <Radio.Group
                                     value={format}
                                     onChange={(e) => setFormat(e.target.value)}
@@ -269,11 +264,11 @@ export default function MockDataGeneratorPage() {
                             </div>
                             {format === "sql" && (
                                 <div>
-                                    <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Table</Text>
-                                    <Input
+                                    <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>{t("Table")}</Text>
+                                    <Input dir="ltr" aria-label={t("Table")} styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                         value={tableName}
                                         onChange={(e) => setTableName(e.target.value)}
-                                        placeholder="users"
+                                        placeholder={"users"}
                                     />
                                 </div>
                             )}
@@ -284,10 +279,10 @@ export default function MockDataGeneratorPage() {
                 <Col xs={24} lg={14}>
                     <Card
                         size="small"
-                        title={<Space><Text strong>Output</Text><Tag>{rows.length} rows</Tag><Tag color="blue">{format.toUpperCase()}</Tag></Space>}
-                        extra={<a onClick={copyOutput}><CopyOutlined /> Copy</a>}
+                        title={<Space><Text strong>{t("Output")}</Text><Tag>{rows.length} {t("rows")}</Tag><Tag color="blue">{format.toUpperCase()}</Tag></Space>}
+                        extra={<Button icon={<CopyOutlined />} onClick={copyOutput} disabled={!output}>{t("Copy")}</Button>}
                     >
-                        <TextArea
+                        <TextArea dir="ltr" aria-label={t("Output")} styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                             value={output}
                             readOnly
                             autoSize={{ minRows: 20, maxRows: 30 }}

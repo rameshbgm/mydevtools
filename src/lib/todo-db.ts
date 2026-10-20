@@ -1,4 +1,5 @@
 "use client";
+import { activeSessionProjectId, assertProjectWritable, projectDatabaseName } from "./project-storage";
 
 // ─── IndexedDB Todo Database Module ──────────────────────────────────
 // Production-grade IndexedDB wrapper for Personal Todo List
@@ -163,12 +164,13 @@ let dbInstance: IDBDatabase | null = null;
 
 export function getDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
+        assertProjectWritable(activeSessionProjectId());
         if (dbInstance) {
             resolve(dbInstance);
             return;
         }
 
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        const request = indexedDB.open(projectDatabaseName(DB_NAME), DB_VERSION);
 
         request.onerror = () => {
             reject(new Error("Failed to open database: " + request.error?.message));
@@ -213,6 +215,13 @@ export function getDB(): Promise<IDBDatabase> {
             }
         };
     });
+}
+
+/** Recheck after async work; a retained database handle can outlive deletion. */
+function writableTransaction(db: IDBDatabase, stores: string | string[]): IDBTransaction {
+    const projectId = /^mydevtools:project:([^:]+):/.exec(db.name)?.[1] ?? "personal";
+    assertProjectWritable(projectId);
+    return db.transaction(stores, "readwrite");
 }
 
 // ─── Helper Functions ────────────────────────────────────────────────
@@ -292,7 +301,7 @@ export async function addTodo(todo: Omit<TodoItem, "id" | "createdAt" | "updated
     };
 
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, "readwrite");
+        const tx = writableTransaction(db, STORE_NAME);
         const store = tx.objectStore(STORE_NAME);
         const request = store.add(newTodo);
 
@@ -314,7 +323,7 @@ export async function updateTodo(id: string, updates: Partial<TodoItem>): Promis
     };
 
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, "readwrite");
+        const tx = writableTransaction(db, STORE_NAME);
         const store = tx.objectStore(STORE_NAME);
         const request = store.put(updated);
 
@@ -340,7 +349,7 @@ export async function restoreTodo(id: string): Promise<TodoItem> {
 export async function hardDeleteTodo(id: string): Promise<void> {
     const db = await getDB();
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, "readwrite");
+        const tx = writableTransaction(db, STORE_NAME);
         const store = tx.objectStore(STORE_NAME);
         const request = store.delete(id);
 
@@ -365,7 +374,7 @@ export async function unarchiveTodo(id: string): Promise<TodoItem> {
 
 export async function bulkUpdateTodos(ids: string[], updates: Partial<TodoItem>): Promise<void> {
     const db = await getDB();
-    const tx = db.transaction(STORE_NAME, "readwrite");
+    const tx = writableTransaction(db, STORE_NAME);
     const store = tx.objectStore(STORE_NAME);
 
     return new Promise((resolve, reject) => {
@@ -396,7 +405,7 @@ export async function emptyTrash(): Promise<number> {
     const deletedTodos = allTodos.filter(t => t.isDeleted);
 
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, "readwrite");
+        const tx = writableTransaction(db, STORE_NAME);
         const store = tx.objectStore(STORE_NAME);
         let deleted = 0;
 
@@ -444,7 +453,7 @@ export async function addCategory(category: Omit<Category, "id" | "createdAt">):
     };
 
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(CATEGORIES_STORE, "readwrite");
+        const tx = writableTransaction(db, CATEGORIES_STORE);
         const store = tx.objectStore(CATEGORIES_STORE);
         const request = store.add(newCategory);
 
@@ -457,7 +466,7 @@ export async function updateCategory(id: string, updates: Partial<Category>): Pr
     const db = await getDB();
 
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(CATEGORIES_STORE, "readwrite");
+        const tx = writableTransaction(db, CATEGORIES_STORE);
         const store = tx.objectStore(CATEGORIES_STORE);
         const getReq = store.get(id);
 
@@ -479,7 +488,7 @@ export async function updateCategory(id: string, updates: Partial<Category>): Pr
 export async function deleteCategory(id: string): Promise<void> {
     const db = await getDB();
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(CATEGORIES_STORE, "readwrite");
+        const tx = writableTransaction(db, CATEGORIES_STORE);
         const store = tx.objectStore(CATEGORIES_STORE);
         const request = store.delete(id);
 
@@ -492,7 +501,7 @@ export async function initializeDefaultCategories(): Promise<void> {
     const categories = await getAllCategories();
     if (categories.length === 0) {
         const db = await getDB();
-        const tx = db.transaction(CATEGORIES_STORE, "readwrite");
+        const tx = writableTransaction(db, CATEGORIES_STORE);
         const store = tx.objectStore(CATEGORIES_STORE);
         const now = new Date().toISOString();
 
@@ -535,7 +544,7 @@ export async function updateSettings(updates: Partial<TodoSettings>): Promise<To
     const updated = { ...current, ...updates, id: "settings" };
 
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(SETTINGS_STORE, "readwrite");
+        const tx = writableTransaction(db, SETTINGS_STORE);
         const store = tx.objectStore(SETTINGS_STORE);
         const request = store.put(updated);
 
@@ -572,7 +581,7 @@ export async function importData(data: ExportData, mode: "merge" | "replace"): P
 
     if (mode === "replace") {
         // Clear existing data
-        const clearTx = db.transaction([STORE_NAME, CATEGORIES_STORE], "readwrite");
+        const clearTx = writableTransaction(db, [STORE_NAME, CATEGORIES_STORE]);
         clearTx.objectStore(STORE_NAME).clear();
         clearTx.objectStore(CATEGORIES_STORE).clear();
         await new Promise<void>((resolve, reject) => {
@@ -584,7 +593,7 @@ export async function importData(data: ExportData, mode: "merge" | "replace"): P
     // Import categories first
     let categoriesImported = 0;
     if (data.categories && data.categories.length > 0) {
-        const catTx = db.transaction(CATEGORIES_STORE, "readwrite");
+        const catTx = writableTransaction(db, CATEGORIES_STORE);
         const catStore = catTx.objectStore(CATEGORIES_STORE);
 
         for (const cat of data.categories) {
@@ -601,7 +610,7 @@ export async function importData(data: ExportData, mode: "merge" | "replace"): P
     // Import todos
     let todosImported = 0;
     if (data.todos && data.todos.length > 0) {
-        const todoTx = db.transaction(STORE_NAME, "readwrite");
+        const todoTx = writableTransaction(db, STORE_NAME);
         const todoStore = todoTx.objectStore(STORE_NAME);
 
         for (const todo of data.todos) {
@@ -749,7 +758,7 @@ export async function closeDB(): Promise<void> {
 export async function deleteDatabase(): Promise<void> {
     await closeDB();
     return new Promise((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(DB_NAME);
+        const request = indexedDB.deleteDatabase(projectDatabaseName(DB_NAME));
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
     });

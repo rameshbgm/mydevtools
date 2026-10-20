@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
+import React, { useEffect, useState } from "react";
 import {
     Card, Typography, Input, Select, Button, Row, Col, Space, Tag, Alert, Spin,
 } from "antd";
@@ -27,18 +28,14 @@ interface CorsResult {
 // with no detail (this is intentional in the spec — you can't read response headers
 // of a blocked request). We compare the TypeError against the request shape to
 // produce a useful explanation.
-function explainFailure(method: Method, hasCustomHeaders: boolean, bodyType: string): string {
-    const simpleMethod = ["GET", "POST", "HEAD"].includes(method);
-    const simpleContentType = ["application/x-www-form-urlencoded", "multipart/form-data", "text/plain"].includes(bodyType);
-    const triggersPreflight = !simpleMethod || hasCustomHeaders || (method === "POST" && !simpleContentType);
-    if (triggersPreflight) {
-        return "Browser sent a preflight OPTIONS request. The upstream server must respond with Access-Control-Allow-Origin, Access-Control-Allow-Methods (covering " +
-            method + "), and Access-Control-Allow-Headers (covering any custom headers) before the browser will issue the actual request. The most common cause is the upstream not handling OPTIONS at all.";
-    }
-    return "Request was simple (no preflight), but the upstream did not return Access-Control-Allow-Origin matching this page's origin. Add the header server-side, or use a server-side proxy if you don't control the upstream.";
+function explainFailure(): string {
+    return "The browser could not expose a response. Possible causes include CORS, DNS, TLS, connectivity and browser policy. Check developer tools and server logs; this tool cannot identify a missing header from a failed fetch.";
 }
 
 export default function CorsTesterPage() {
+    const { t } = useLanguage();
+    const [origin, setOrigin] = useState("");
+    useEffect(() => { setOrigin(window.location.origin); }, []);
     const [url, setUrl] = useState("https://httpbin.org/anything");
     const [method, setMethod] = useState<Method>("GET");
     const [headers, setHeaders] = useState("X-Custom-Header: hello");
@@ -65,7 +62,7 @@ export default function CorsTesterPage() {
         const customHeaders = parseHeaders(headers);
         const init: RequestInit = {
             method,
-            headers: { ...customHeaders, ...(body && !customHeaders["Content-Type"] ? { "Content-Type": contentType } : {}) },
+            headers: { ...customHeaders, ...(body && !["GET", "HEAD"].includes(method) && !Object.keys(customHeaders).some(key => key.toLowerCase() === "content-type") ? { "Content-Type": contentType } : {}) },
             body: body && !["GET", "HEAD"].includes(method) ? body : undefined,
             mode: "cors",
         };
@@ -83,7 +80,7 @@ export default function CorsTesterPage() {
                 responseHeaders: resHeaders,
                 body: text.slice(0, 2000),
                 explanation: res.ok
-                    ? "Request succeeded. The browser saw an Access-Control-Allow-Origin header that allows this page's origin."
+                    ? "The response is readable by this browser. Same-origin requests do not require CORS response headers."
                     : `Upstream returned HTTP ${res.status} — CORS did not block this, the server returned an error response.`,
             });
         } catch (err) {
@@ -93,7 +90,7 @@ export default function CorsTesterPage() {
                 ok: false,
                 durationMs: dur,
                 networkError: msg,
-                explanation: explainFailure(method, Object.keys(customHeaders).length > 0, contentType),
+                explanation: explainFailure(),
             });
         } finally {
             setLoading(false);
@@ -106,34 +103,20 @@ export default function CorsTesterPage() {
 
     return (
         <ToolPageLayout
-            title="CORS Tester"
-            description="Send requests from your browser and see exactly how CORS responds"
+            title={t("CORS Tester")}
+            description={t("Send requests from your browser and see exactly how CORS responds")}
             icon={<BugOutlined style={{ fontSize: 24, color: "#22d3ee" }} />}
             color="#22d3ee"
             learnMore={{
-                whatIs: "CORS Tester sends a real fetch from your browser to a chosen URL and shows whether the browser allowed the response, what CORS headers the upstream returned, and a plain-English explanation when things fail.",
-                whyUse: "CORS errors in the browser console are notoriously cryptic — 'TypeError: Failed to fetch' tells you nothing about preflight vs simple requests, missing headers, or origin mismatches. This tool decodes the failure mode.",
-                howToUse: [
-                    "Enter the URL, method and any custom headers",
-                    "Click Send — the request goes from your browser (this origin) to the upstream",
-                    "Inspect the Access-Control-* headers and the verdict",
-                    "If blocked, read the explanation — it tells you exactly which header is missing",
-                ],
-                tips: [
-                    "Custom headers or non-simple content types trigger a preflight OPTIONS",
-                    "If a request fails with no response headers, the browser blocked it before reading the body",
-                    "Use httpbin.org/anything as a quick echo server to confirm your client is set up right",
-                ],
-                useCases: [
-                    "Debugging 'Failed to fetch' errors in your own app",
-                    "Verifying CORS config on an API before shipping",
-                    "Teaching CORS to new team members with live examples",
-                ],
+                whatIs: t("Send a real browser request and inspect the response permitted by browser CORS rules."),
+                whyUse: t("Enter the URL, method, headers and body, then send from this origin."),
+                howToUse: [t("A failed fetch can mean CORS, DNS, TLS, connectivity or browser policy; this page cannot distinguish them reliably.")],
+                tips: [t("The browser may hide CORS response headers. Use browser developer tools and server logs for the exact failure."), t("A readable HTTP error response passed browser access checks even when its status is not successful.")],
             }}
         >
             <Row gutter={[16, 16]}>
                 <Col xs={24} lg={10}>
-                    <Card size="small" title="Request">
+                    <Card size="small" title={t("Request")}>
                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                             <Space.Compact style={{ width: "100%" }}>
                                 <Select
@@ -145,18 +128,18 @@ export default function CorsTesterPage() {
                                 <Input
                                     value={url}
                                     onChange={(e) => setUrl(e.target.value)}
-                                    placeholder="https://api.example.com/endpoint"
+                                    placeholder="https://api.example.com/endpoint" dir="ltr" aria-label={t("Request URL")}
                                 />
                             </Space.Compact>
 
                             <div>
-                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Custom headers (one per line, key: value)</Text>
+                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>{t("Custom headers (one per line, key: value)")}</Text>
                                 <TextArea
                                     value={headers}
                                     onChange={(e) => setHeaders(e.target.value)}
                                     autoSize={{ minRows: 3, maxRows: 6 }}
                                     placeholder="Authorization: Bearer …"
-                                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
+                                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }} dir="ltr" aria-label={t("Request headers")}
                                 />
                             </div>
 
@@ -178,44 +161,44 @@ export default function CorsTesterPage() {
                                         />
                                     </div>
                                     <div>
-                                        <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Body</Text>
+                                        <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>{t("Body")}</Text>
                                         <TextArea
                                             value={body}
                                             onChange={(e) => setBody(e.target.value)}
                                             autoSize={{ minRows: 3, maxRows: 8 }}
                                             placeholder='{"hello":"world"}'
-                                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
+                                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }} dir="ltr" aria-label={t("Request body")}
                                         />
                                     </div>
                                 </>
                             )}
 
                             <Button type="primary" icon={<SendOutlined />} onClick={send} loading={loading} block>
-                                Send from this origin
+                                {t("Send from this origin")}
                             </Button>
                             <Paragraph type="secondary" style={{ fontSize: 11, margin: 0 }}>
-                                Request runs from <code>{typeof window !== "undefined" ? window.location.origin : "this origin"}</code> — the upstream sees that as <code>Origin:</code>.
+                                {t("Request origin:")} <code>{origin || t("this origin")}</code>
                             </Paragraph>
                         </Space>
                     </Card>
                 </Col>
 
                 <Col xs={24} lg={14}>
-                    {loading && <Card><Spin /> Sending…</Card>}
+                    {loading && <Card><Spin /> {t("Sending…")}</Card>}
                     {!loading && !result && (
                         <Card>
-                            <Text type="secondary">Send a request to see the CORS verdict.</Text>
+                            <Text type="secondary">{t("Send a request to see the CORS verdict.")}</Text>
                         </Card>
                     )}
                     {result && (
                         <>
                             <Card size="small" title={
                                 <Space>
-                                    <Text strong>Verdict</Text>
+                                    <Text strong>{t("Verdict")}</Text>
                                     {result.ok ? (
-                                        <Tag color="green">Allowed by browser</Tag>
+                                        <Tag color="green">{t("Allowed by browser")}</Tag>
                                     ) : result.networkError ? (
-                                        <Tag color="red">Blocked by CORS</Tag>
+                                        <Tag color="red">{t("No readable response")}</Tag>
                                     ) : (
                                         <Tag color="orange">HTTP {result.status}</Tag>
                                     )}
@@ -224,7 +207,7 @@ export default function CorsTesterPage() {
                             }>
                                 <Alert
                                     type={result.ok ? "success" : "warning"}
-                                    title={result.explanation}
+                                    title={result.status && !result.ok && !result.networkError ? t("Upstream returned HTTP {status}; the browser allowed this response.", { status: result.status }) : t(result.explanation)}
                                     showIcon
                                 />
                                 {result.networkError && (
@@ -235,7 +218,7 @@ export default function CorsTesterPage() {
                             </Card>
 
                             {corsHeaders.length > 0 && (
-                                <Card size="small" title="Access-Control-* headers" style={{ marginTop: 16 }}>
+                                <Card size="small" title={t("Access-Control-* headers")} style={{ marginTop: 16 }}>
                                     <Space orientation="vertical" style={{ width: "100%" }}>
                                         {corsHeaders.map(([k, v]) => (
                                             <div key={k} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}>
@@ -248,7 +231,7 @@ export default function CorsTesterPage() {
                             )}
 
                             {result.body && (
-                                <Card size="small" title="Response body (first 2 KB)" style={{ marginTop: 16 }}>
+                                <Card size="small" title={t("Response body (first 2,000 characters)")} style={{ marginTop: 16 }}>
                                     <pre style={{ margin: 0, fontFamily: "var(--font-geist-mono)", fontSize: 11, whiteSpace: "pre-wrap" }}>
                                         {result.body}
                                     </pre>

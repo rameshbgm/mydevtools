@@ -1,35 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Geist, Geist_Mono, Sora } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import "./workspace.css";
 import AppShell from "@/components/AppShell";
+import LanguageProvider from "@/components/LanguageProvider";
 import PwaRegister from "@/components/PwaRegister";
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/seo-content";
-import { SEO_CONTENT } from "@/lib/seo-content";
-import { toolPathFromId } from "@/lib/category-routes";
+import toolsRegistry from "@/lib/public-tool-catalog.json";
+import { APP_VERSION } from "@/lib/app-version";
+import { SEEN_RELEASE_KEY } from "@/lib/release-preference";
 
-const geistSans = Geist({
-    variable: "--font-geist-sans",
-    subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-    variable: "--font-geist-mono",
-    subsets: ["latin"],
-});
-
-const fraunces = Fraunces({
-    variable: "--font-fraunces",
-    subsets: ["latin"],
-    axes: ["SOFT", "WONK", "opsz"],
-});
-
-/** Hero wordmark (“My Dev Tools”): Sora — geometric / tech-forward, distinct from Geist */
-const landingDisplay = Sora({
-    variable: "--font-landing-display",
-    subsets: ["latin"],
-    weight: ["600", "700", "800"],
-});
+const geistSans = localFont({ src: "./fonts/geist.woff2", variable: "--font-geist-sans", weight: "100 900", display: "swap" });
+const geistMono = localFont({ src: "./fonts/geist-mono.woff2", variable: "--font-geist-mono", weight: "100 900", display: "swap", preload: false });
+const landingDisplay = localFont({ src: "./fonts/sora.woff2", variable: "--font-landing-display", weight: "100 800", display: "swap" });
 
 export const viewport: Viewport = {
     themeColor: [
@@ -119,7 +102,6 @@ export const metadata: Metadata = {
         title: SITE_TITLE,
         description: SITE_DESCRIPTION,
         images: [`${SITE_URL}/og-image.png`],
-        creator: "@mydevtools",
     },
     robots: {
         index: true,
@@ -179,7 +161,8 @@ const PLATFORM_STRUCTURED_DATA = {
     "@type": "SoftwareApplication",
     name: SITE_NAME,
     url: SITE_URL,
-    description: "121 free developer tools in one place — format, validate, convert, encode, decode, generate, inspect and test. Most tools run locally; selected network tools use clearly disclosed managed routes.",
+    description: `${toolsRegistry.length} developer tools to format, validate, convert, inspect and debug. Local tools process on your device; network tools disclose their connection boundary.`,
+    softwareVersion: APP_VERSION,
     applicationCategory: "DeveloperApplication",
     applicationSubCategory: "Developer Productivity",
     operatingSystem: "Any (Web Browser)",
@@ -212,81 +195,16 @@ const PLATFORM_STRUCTURED_DATA = {
     inLanguage: "en",
 };
 
-const SITE_FAQ_STRUCTURED_DATA = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: [
-        {
-            "@type": "Question",
-            name: "Is mydevtools really free?",
-            acceptedAnswer: {
-                "@type": "Answer",
-                text: "Yes, 100% free. No signup, no credit card, no premium tier. All 121 tools are permanently free.",
-            },
-        },
-        {
-            "@type": "Question",
-            name: "Does my data leave my browser?",
-            acceptedAnswer: {
-                "@type": "Answer",
-                text: "Most tools run entirely in your browser. Network features such as server proxying, certificate fetching, and webhook capture clearly disclose when data is sent to a managed server route.",
-            },
-        },
-        {
-            "@type": "Question",
-            name: "Can I use mydevtools offline?",
-            acceptedAnswer: {
-                "@type": "Answer",
-                text: "Yes. mydevtools is a Progressive Web App (PWA) and can be installed on any device. Once installed, a service worker caches the app so it works without an internet connection.",
-            },
-        },
-        {
-            "@type": "Question",
-            name: "How many tools does mydevtools have?",
-            acceptedAnswer: {
-                "@type": "Answer",
-                text: "mydevtools has 121 tools across 15 categories: Formatters, Validators, Diff & Compare, Data Converters, Encoding & Decoding, Cryptography, Certificates & Keys, API & Web Services, Artificial Intelligence, Network, Generators, Image & Media, Fun & Games, Text & Utilities, and Reference.",
-            },
-        },
-        {
-            "@type": "Question",
-            name: "Does mydevtools work on mobile?",
-            acceptedAnswer: {
-                "@type": "Answer",
-                text: "Yes. Every tool is designed to be mobile-responsive and adapts to phone, tablet and desktop screen sizes. You can also install it as a PWA on iOS and Android.",
-            },
-        },
-    ],
-};
-
 const ORG_STRUCTURED_DATA = {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE_NAME,
     url: SITE_URL,
-    logo: `${SITE_URL}/og-image.png`,
+    logo: `${SITE_URL}/icons/icon-512.png`,
     description: SITE_DESCRIPTION,
     sameAs: [
         "https://github.com/rameshbgm/mydevtools",
     ],
-};
-
-const COLLECTION_STRUCTURED_DATA = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: `${SITE_NAME}: All Developer Tools`,
-    url: SITE_URL,
-    description: SITE_DESCRIPTION,
-    hasPart: Object.entries(SEO_CONTENT).flatMap(([toolId, seo]) => {
-        const path = toolPathFromId(toolId);
-        if (!path) return [];
-        return [{
-            "@type": "SoftwareApplication",
-            name: seo.h1 ?? seo.title.split(" — ")[0],
-            url: `${SITE_URL}${path}`,
-            applicationCategory: "DeveloperApplication",
-        }];
-    }),
 };
 
 export default function RootLayout({
@@ -297,10 +215,16 @@ export default function RootLayout({
     return (
         <html
             lang="en"
-            className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${landingDisplay.variable} h-full antialiased`}
+            className={`${geistSans.variable} ${geistMono.variable} ${landingDisplay.variable} h-full antialiased`}
             suppressHydrationWarning
         >
             <head>
+                <link rel="describedby" href="/llms.txt" type="text/plain" />
+                <link rel="describedby" href="/tool-catalog.md" type="text/markdown" title="Developer tool catalog" />
+                <link rel="describedby" href="/agents.json" type="application/json" title="Machine-readable tool catalog" />
+                <script dangerouslySetInnerHTML={{ __html: "try{var l=localStorage.getItem('mydevtools-language');l=['en','hi','es','fr','de','ja','zh','ar'].includes(l)?l:'en';document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr'}catch{}" }} />
+                <script dangerouslySetInnerHTML={{ __html: `try{document.documentElement.dataset.releaseSeen=localStorage.getItem(${JSON.stringify(SEEN_RELEASE_KEY)})===${JSON.stringify(APP_VERSION)}?'true':'false'}catch{}` }} />
+                <script dangerouslySetInnerHTML={{ __html: "try{document.documentElement.dataset.workspaceMode=localStorage.getItem('mydevtools-workspace-mode')==='focused'?'focused':'full';var p=JSON.parse(localStorage.getItem('devtools-hub-storage')||'{}');var d=p.state?.darkMode===true;document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light'}catch{}" }} />
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{ __html: JSON.stringify(SITE_STRUCTURED_DATA) }}
@@ -313,18 +237,9 @@ export default function RootLayout({
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{ __html: JSON.stringify(PLATFORM_STRUCTURED_DATA) }}
                 />
-                <script
-                    type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(SITE_FAQ_STRUCTURED_DATA) }}
-                />
-                <script
-                    type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(COLLECTION_STRUCTURED_DATA) }}
-                />
             </head>
             <body className="min-h-full flex flex-col">
-                <PwaRegister />
-                <AppShell>{children}</AppShell>
+                <LanguageProvider><PwaRegister /><AppShell>{children}</AppShell></LanguageProvider>
             </body>
         </html>
     );

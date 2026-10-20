@@ -1,0 +1,87 @@
+{
+  "date": "2026-10-19",
+  "release": "1.6.0",
+  "build": "Clean .next production build passed; 143 prerendered pages",
+  "install": "npm ci passed from synchronized lockfile; dependency graph also built successfully in Node 24 Docker",
+  "tests": "All 11 suites passed",
+  "typecheck": "Passed",
+  "lint": {
+    "errors": 0,
+    "warnings": 207
+  },
+  "publicPathsChecked": 139,
+  "publicPathFailures": 0,
+  "docker": {
+    "build": "Passed",
+    "user": "app (uid 1001)",
+    "health": "healthy",
+    "homepage": 200,
+    "manifest": 200,
+    "icon": 200,
+    "managedRoutesDisabled": 503
+  },
+  "offline": "Visited trace tool reloaded and computed results with the localhost origin stopped; API/auth/RSC exclusion fixtures passed",
+  "before": {
+    "htmlBytes": 387241,
+    "initialJsBytes": 1532271,
+    "gzipJsBytes": 493207
+  },
+  "after": {
+    "htmlBytes": 207391,
+    "initialJsBytes": 1450396,
+    "gzipJsBytes": 466601
+  },
+  "lighthouse": {
+    "desktop": {
+      "capturedAt": "2026-10-18T16:49:12.983Z",
+      "version": "13.5.0",
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "first-contentful-paint": 290.04595,
+        "largest-contentful-paint": 930.0459500000004,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0,
+        "speed-index": 333.9131853379418
+      }
+    },
+    "mobile": {
+      "capturedAt": "2026-10-18T16:49:23.520Z",
+      "version": "13.5.0",
+      "scores": {
+        "performance": 82,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "first-contentful-paint": 1058.03415,
+        "largest-contentful-paint": 4923.034150000001,
+        "total-blocking-time": 57,
+        "cumulative-layout-shift": 0,
+        "speed-index": 1584.467405621935
+      }
+    }
+  },
+  "audit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 4,
+    "high": 6,
+    "critical": 0,
+    "total": 10
+  },
+  "limits": [
+    "Local Lighthouse scores are not directly comparable to the supplied hosted mydevtools.in screenshots.",
+    "Mobile simulated LCP remains approximately 4.9 seconds.",
+    "Provider token endpoints verified with request/response fixtures; live authenticated provider calls were not made.",
+    "Protocol and contract inspectors have explicit coverage limits and are not full conformance suites.",
+    "Historical model rows are labeled unverified; selected current records have individual review dates.",
+    "Upstream dependency advisories remain; the affected node-forge RSA verifier is bypassed in favor of Web Crypto."
+  ],
+  "git": "No commit or push performed"
+}

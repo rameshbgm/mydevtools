@@ -1,0 +1,60 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { CameraOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
+import { localizeVisualUtilityError } from "@/lib/i18n/visual-utilities";
+import ToolPageLayout from "@/components/ToolPageLayout";
+import { CODE_THEMES,layoutCodeLines,validateScreenshotCode,type CodeLine } from "@/lib/code-screenshot";
+import { downloadBlob } from "@/lib/download";
+const SAMPLE='// Public example — no code is executed\ninterface Greeting {\n  name: string;\n  languages: string[];\n}\n\nconst greet = ({ name, languages }: Greeting) => {\n  return `Hello, ${name}! ${languages.join(", ")}`;\n};\n\nconsole.log(greet({ name: "Asha", languages: ["Hindi", "English"] }));';
+const LANGUAGES=[['plaintext','Plain text'],['typescript','TypeScript / TSX'],['javascript','JavaScript'],['python','Python'],['java','Java'],['csharp','C#'],['go','Go'],['rust','Rust'],['kotlin','Kotlin'],['swift','Swift'],['ruby','Ruby'],['php','PHP'],['bash','Shell'],['sql','SQL'],['json','JSON'],['yaml','YAML'],['xml','HTML / XML'],['css','CSS'],['markdown','Markdown']] as const;
+export default function CodeScreenshotPage(){
+    const { t } = useLanguage();
+    const [source,setSource]=useState(SAMPLE),[language,setLanguage]=useState("typescript"),[theme,setTheme]=useState("midnight"),[background,setBackground]=useState("#dbeafe"),[transparent,setTransparent]=useState(false),[title,setTitle]=useState("greeting.ts");
+    const [width,setWidth]=useState(960),[fontSize,setFontSize]=useState(18),[padding,setPadding]=useState(48),[scale,setScale]=useState(2),[numbers,setNumbers]=useState(true),[windowChrome,setWindowChrome]=useState(true),[shadow,setShadow]=useState(true),[wrap,setWrap]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState("");
+    const [prepared,setPrepared]=useState<{url:string;blob:Blob;width:number;height:number;signature:string}|null>(null);
+    const alive=useRef(true),pending=useRef<{worker:Worker;timer:ReturnType<typeof setTimeout>;reject:(cause:Error)=>void}|null>(null);
+    useEffect(()=>{alive.current=true;return()=>{alive.current=false;if(pending.current){clearTimeout(pending.current.timer);pending.current.worker.terminate();pending.current.reject(new Error("Renderer closed."));pending.current=null;}};},[]);
+    useEffect(()=>()=>{if(prepared)URL.revokeObjectURL(prepared.url);},[prepared]);
+    const signature=JSON.stringify({source,language,theme,background,transparent,title,width,fontSize,padding,scale,numbers,windowChrome,shadow,wrap});
+    const render=async()=>{
+        setBusy(true);setError("");
+        try{
+            const code=validateScreenshotCode(source);
+            if(![[width,360,1600],[fontSize,12,32],[padding,0,96],[scale,1,3]].every(([value,min,max])=>Number.isInteger(value)&&value>=min&&value<=max)||!/^#[0-9a-f]{6}$/i.test(background))throw new Error("Choose a width of 360–1600 px, font size 12–32 px, padding 0–96 px and scale 1–3.");
+            const lines=await new Promise<CodeLine[]>((resolve,reject)=>{
+                const worker=new Worker(new URL("../../../workers/code-screenshot.worker.ts",import.meta.url));
+                const finish=()=>{clearTimeout(timer);worker.terminate();pending.current=null;};
+                const timer=setTimeout(()=>{finish();reject(new Error("Highlighting exceeded 8 seconds. Try plain text or a smaller sample."));},8000);
+                pending.current={worker,timer,reject};
+                worker.onmessage=(event:MessageEvent<{lines?:CodeLine[];error?:string}>)=>{finish();if(event.data.error)reject(new Error(event.data.error));else if(event.data.lines)resolve(event.data.lines);else reject(new Error("The highlighter returned no lines."));};
+                worker.onerror=()=>{finish();reject(new Error("The syntax worker could not load. Reload the app and retry."));};worker.postMessage({source:code,language});
+            });
+            if(!alive.current)return;
+            const family=getComputedStyle(document.documentElement).getPropertyValue("--font-geist-mono").trim()||"monospace",font=`${fontSize}px ${family}`;
+            await new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error("Font loading timed out. Reload and retry.")),8000);document.fonts.load(font,"M").then(()=>{clearTimeout(timer);resolve();},()=>{clearTimeout(timer);reject(new Error("The local code font could not load."));});});
+            if(!alive.current)return;
+            const canvas=document.createElement("canvas"),context=canvas.getContext("2d");if(!context)throw new Error("Canvas rendering is unavailable in this browser.");context.font=font;context.fontKerning="none";
+            const inner=24,gutter=numbers?Math.ceil(context.measureText(String(lines.length)).width)+18:0,available=width-inner*2-gutter;
+            const rows=layoutCodeLines(lines,(text)=>context.measureText(text).width,available,wrap),lineHeight=Math.ceil(fontSize*1.55),header=windowChrome?46:0,windowHeight=inner*2+header+rows.length*lineHeight,totalWidth=width+padding*2,totalHeight=windowHeight+padding*2;
+            if(totalWidth*scale>8192||totalHeight*scale>8192||totalWidth*totalHeight*scale*scale>20_000_000)throw new Error("The image exceeds 8192 px per side or 20 megapixels. Shorten the code, lower scale/font size or increase width.");
+            canvas.width=totalWidth*scale;canvas.height=totalHeight*scale;context.scale(scale,scale);context.fontKerning="none";
+            if(!transparent){context.fillStyle=background;context.fillRect(0,0,totalWidth,totalHeight);}
+            const colors=CODE_THEMES[theme];
+            context.save();if(shadow){context.shadowColor="#00000040";context.shadowBlur=24;context.shadowOffsetY=8;}context.fillStyle=colors.surface;context.beginPath();context.roundRect(padding,padding,width,windowHeight,12);context.fill();context.restore();
+            context.strokeStyle=colors.border;context.lineWidth=1;context.beginPath();context.roundRect(padding+.5,padding+.5,width-1,windowHeight-1,12);context.stroke();
+            if(windowChrome){["#ff605c","#ffbd44","#00ca4e"].forEach((color,index)=>{context.fillStyle=color;context.beginPath();context.arc(padding+22+index*18,padding+23,5,0,Math.PI*2);context.fill();});context.save();context.beginPath();context.rect(padding+88,padding+8,width-112,30);context.clip();context.fillStyle=colors.muted;context.font=`13px ${family}`;context.textAlign="center";context.textBaseline="middle";context.fillText(title.slice(0,120),padding+width/2,padding+23);context.restore();}
+            context.font=font;context.textBaseline="top";context.textAlign="left";context.direction="ltr";
+            rows.forEach((row,index)=>{const y=padding+inner+header+index*lineHeight;if(numbers&&!row.continuation){context.fillStyle=colors.muted;context.textAlign="right";context.fillText(String(row.sourceLine),padding+inner+gutter-14,y);context.textAlign="left";}let x=padding+inner+gutter;for(const token of row.tokens){context.fillStyle=colors.tones[token.tone];context.fillText(token.text,x,y);x+=context.measureText(token.text).width;}});
+            const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob((blob)=>blob?resolve(blob):reject(new Error("PNG encoding failed. Try a smaller image.")),"image/png"));
+            if(alive.current)setPrepared({url:URL.createObjectURL(blob),blob,width:canvas.width,height:canvas.height,signature});
+        }catch(cause){if(alive.current)setError(String(cause));}finally{if(alive.current)setBusy(false);}
+    };
+    return <ToolPageLayout title={t("Code Screenshot")} description={t("Create a syntax-highlighted PNG with local fonts, themes, window controls and background settings")} icon={<CameraOutlined />} color="#08979c" learnMore={{whatIs:t("A local image renderer for code snippets. Syntax tokens are painted onto a canvas; code is never executed and no screenshot service receives it."),howToUse:[t("Paste code and choose a language."),t("Adjust the theme, width, font, padding and optional line numbers or window bar."),t("Choose Prepare image, inspect the PNG preview and download it.")],tips:[t("Limits: 20,000 characters, 500 source lines, 700 wrapped lines, 20 megapixels and 8192 px per side."),t("The bundled mono font is loaded locally. Other scripts may use browser font fallback; inspect the image before sharing."),t("The screenshot contains the code you enter. Remove credentials or private data before sharing the image.")]}}><div className="wb-workbench" dir="auto">
+        <label>{t("Source code")}<textarea rows={16} value={source} maxLength={20000} onChange={(event)=>setSource(event.target.value)} spellCheck={false} dir="ltr" disabled={busy}/></label>
+        <div className="wb-form-grid"><label>{t("Language")}<select value={language} onChange={(event)=>setLanguage(event.target.value)} disabled={busy}>{LANGUAGES.map(([id,name])=><option value={id} key={id}>{t(name)}</option>)}</select></label><label>{t("Code theme")}<select value={theme} onChange={(event)=>setTheme(event.target.value)} disabled={busy}>{Object.entries(CODE_THEMES).map(([id,value])=><option value={id} key={id}>{t(value.name)}</option>)}</select></label><label>{t("Window title")}<input dir="auto" value={title} maxLength={120} onChange={(event)=>setTitle(event.target.value)} disabled={busy}/></label><label>{t("Background color")}<input dir="ltr" type="color" value={background} onChange={(event)=>setBackground(event.target.value)} disabled={busy||transparent}/></label><label>{t("Code window width (px)")}<input dir="ltr" type="number" min={360} max={1600} step={20} value={width} onChange={(event)=>setWidth(Number(event.target.value))} disabled={busy}/></label><label>{t("Font size (px)")}<input dir="ltr" type="number" min={12} max={32} value={fontSize} onChange={(event)=>setFontSize(Number(event.target.value))} disabled={busy}/></label><label>{t("Outer padding (px)")}<input dir="ltr" type="number" min={0} max={96} value={padding} onChange={(event)=>setPadding(Number(event.target.value))} disabled={busy}/></label><label>{t("Export scale")}<select value={scale} onChange={(event)=>setScale(Number(event.target.value))} disabled={busy}><option value={1}>1×</option><option value={2}>2×</option><option value={3}>3×</option></select></label></div>
+        <div className="wb-workbench-actions">{([[numbers,setNumbers,"Line numbers"],[windowChrome,setWindowChrome,"Window title bar"],[shadow,setShadow,"Window shadow"],[wrap,setWrap,"Wrap long lines"],[transparent,setTransparent,"Transparent outer background"]] as const).map(([value,setValue,label])=><label className="wb-checkbox" key={label}><input dir="ltr" type="checkbox" checked={value} onChange={(event)=>setValue(event.target.checked)} disabled={busy}/>{t(label)}</label>)}</div>
+        <div className="wb-workbench-actions"><button disabled={busy} onClick={()=>void render()}>{t(busy?"Rendering image…":"Prepare image")}</button><button disabled={busy} onClick={()=>{setSource("");setPrepared(null);setError("");}}>{t("Clear code and image")}</button><button disabled={busy} onClick={()=>{setSource(SAMPLE);setLanguage("typescript");}}>{t("Load public example")}</button></div>
+        {error&&<p role="alert">{localizeVisualUtilityError(t,error)}</p>}{prepared?<section className="wb-workbench" aria-label={t("Screenshot preview")}><h2>{t("PNG preview")}</h2>{prepared.signature!==signature&&<p role="status">{t("Settings changed. Prepare the image again to update this preview.")}</p>}<p dir="ltr">{prepared.width} × {prepared.height} px · {Math.ceil(prepared.blob.size/1024)} KiB</p><img src={prepared.url} alt={t("Generated code screenshot")} className="wb-code-shot-preview"/><button disabled={prepared.signature!==signature||busy} onClick={()=>downloadBlob(prepared.blob,`${title.replace(/\.[^.]+$/,"")||"code"}.png`,"image/png")}>{t("Download PNG")}</button></section>:<p>{t("Prepare the image to preview the exact PNG before downloading.")}</p>}
+    </div></ToolPageLayout>;
+}

@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, Alert, Tag, Collapse } from "antd";
+import { Card, Typography, Row, Col, Button, Space, Alert, Tag } from "antd";
 import SimpleList from "@/components/SimpleList";
 import { CheckCircleOutlined, CloseCircleOutlined, WarningOutlined, ClearOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 
@@ -42,6 +43,7 @@ const SAMPLE_HTML = `<!DOCTYPE html>
 interface ValidationIssue {
     type: "error" | "warning" | "info";
     message: string;
+    values?: Record<string, string>;
     line?: number;
 }
 
@@ -99,9 +101,9 @@ function validateHTML(input: string): ValidationResult {
             const tag = match[1].toLowerCase();
             const lastOpen = tagStack.findLastIndex((t) => t.tag === tag);
             if (lastOpen === -1) {
-                issues.push({ type: "error", message: `Unexpected closing tag </${tag}>`, line: lineIndex + 1 });
+                issues.push({ type: "error", message: "Unexpected closing tag {tag}", values: { tag: `</${tag}>` }, line: lineIndex + 1 });
             } else if (lastOpen !== tagStack.length - 1) {
-                issues.push({ type: "error", message: `Mismatched closing tag </${tag}>, expected </${tagStack[tagStack.length - 1].tag}>`, line: lineIndex + 1 });
+                issues.push({ type: "error", message: "Mismatched closing tag {tag}, expected {expected}", values: { tag: `</${tag}>`, expected: `</${tagStack[tagStack.length - 1].tag}>` }, line: lineIndex + 1 });
             } else {
                 tagStack.pop();
             }
@@ -116,14 +118,14 @@ function validateHTML(input: string): ValidationResult {
         const deprecatedTags = ["center", "font", "marquee", "blink", "frame", "frameset"];
         deprecatedTags.forEach((tag) => {
             if (new RegExp(`<${tag}[\\s>]`, "i").test(line)) {
-                issues.push({ type: "warning", message: `Deprecated tag <${tag}> found`, line: lineIndex + 1 });
+                issues.push({ type: "warning", message: "Deprecated tag {tag} found", values: { tag: `<${tag}>` }, line: lineIndex + 1 });
             }
         });
     });
 
     // Report unclosed tags
     tagStack.forEach(({ tag, line }) => {
-        issues.push({ type: "error", message: `Unclosed tag <${tag}>`, line });
+        issues.push({ type: "error", message: "Unclosed tag {tag}", values: { tag: `<${tag}>` }, line });
     });
 
     // Count elements
@@ -144,6 +146,7 @@ function validateHTML(input: string): ValidationResult {
 }
 
 export default function HtmlValidatorPage() {
+    const { t, direction } = useLanguage();
     const [input, setInput] = useState(SAMPLE_HTML);
 
     const result = useMemo(() => validateHTML(input), [input]);
@@ -153,8 +156,8 @@ export default function HtmlValidatorPage() {
 
     return (
         <ToolPageLayout
-            title="HTML Validator"
-            description="Validate HTML markup for errors and best practices"
+            title={t("HTML Validator")}
+            description={t("Validate HTML markup for errors and best practices")}
             icon={<CheckCircleOutlined style={{ fontSize: 24, color: "#fa541c" }} />}
             color="#fa541c"
             learnMore={{
@@ -180,17 +183,16 @@ export default function HtmlValidatorPage() {
                 ]
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row dir={direction} gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card
-                        title="HTML Input"
+                        title={t("HTML Input")}
                         extra={
-                            <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
-                                Clear
-                            </Button>
+                            <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>{t("Clear")}</Button>
                         }
                     >
                         <CodeEditor
+                            ariaLabel={t("HTML input editor")}
                             value={input}
                             onChange={(val) => setInput(val || "")}
                             language="html"
@@ -198,18 +200,18 @@ export default function HtmlValidatorPage() {
                         />
                     </Card>
 
-                    <Card title="Validation Result" style={{ marginTop: 16 }}>
+                    <Card title={t("Validation Result")} style={{ marginTop: 16 }}>
                         {result.valid && warnings.length === 0 ? (
                             <Alert
                                 type="success"
                                 showIcon
                                 icon={<CheckCircleOutlined />}
-                                title="Valid HTML"
+                                title={t("Valid HTML")}
                                 description={
                                     <Space wrap>
-                                        <Tag color="green">{result.stats.elements} elements</Tag>
-                                        {result.stats.hasDoctype && <Tag color="blue">DOCTYPE ✓</Tag>}
-                                        {result.stats.hasTitle && <Tag color="blue">Title ✓</Tag>}
+                                        <Tag color="green">{t("Elements: {count}", { count: result.stats.elements })}</Tag>
+                                        {result.stats.hasDoctype && <Tag color="blue">{t("DOCTYPE ✓")}</Tag>}
+                                        {result.stats.hasTitle && <Tag color="blue">{t("Title ✓")}</Tag>}
                                     </Space>
                                 }
                             />
@@ -219,14 +221,14 @@ export default function HtmlValidatorPage() {
                                     <Alert
                                         type="error"
                                         showIcon
-                                        title={`${errors.length} Error${errors.length > 1 ? "s" : ""}`}
+                                        title={t("Errors: {count}", { count: errors.length })}
                                     />
                                 )}
                                 {warnings.length > 0 && (
                                     <Alert
                                         type="warning"
                                         showIcon
-                                        title={`${warnings.length} Warning${warnings.length > 1 ? "s" : ""}`}
+                                        title={t("Warnings: {count}", { count: warnings.length })}
                                     />
                                 )}
                                 <SimpleList
@@ -239,8 +241,8 @@ export default function HtmlValidatorPage() {
                                             ) : (
                                                 <WarningOutlined style={{ color: "#faad14" }} />
                                             )}
-                                            <Text>{item.message}</Text>
-                                            {item.line && <Tag>Line {item.line}</Tag>}
+                                            <Text dir="auto" style={{ unicodeBidi: "isolate" }}>{t(item.message, item.values)}</Text>
+                                            {item.line && <Tag>{t("Line {line}", { line: item.line })}</Tag>}
                                         </Space>
                                     )}
                                 />
@@ -250,39 +252,39 @@ export default function HtmlValidatorPage() {
                 </Col>
 
                 <Col xs={24} lg={8}>
-                    <Card title="Document Structure">
+                    <Card title={t("Document Structure")}>
                         <Space orientation="vertical" style={{ width: "100%" }}>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
                                 <Text>DOCTYPE</Text>
                                 {result.stats.hasDoctype ? <CheckCircleOutlined style={{ color: "#52c41a" }} /> : <CloseCircleOutlined style={{ color: "#f5222d" }} />}
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <Text>&lt;html&gt;</Text>
+                                <Text>{"<html>"}</Text>
                                 {result.stats.hasHtmlTag ? <CheckCircleOutlined style={{ color: "#52c41a" }} /> : <CloseCircleOutlined style={{ color: "#f5222d" }} />}
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <Text>&lt;head&gt;</Text>
+                                <Text>{"<head>"}</Text>
                                 {result.stats.hasHead ? <CheckCircleOutlined style={{ color: "#52c41a" }} /> : <CloseCircleOutlined style={{ color: "#f5222d" }} />}
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <Text>&lt;title&gt;</Text>
+                                <Text>{"<title>"}</Text>
                                 {result.stats.hasTitle ? <CheckCircleOutlined style={{ color: "#52c41a" }} /> : <CloseCircleOutlined style={{ color: "#f5222d" }} />}
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <Text>&lt;body&gt;</Text>
+                                <Text>{"<body>"}</Text>
                                 {result.stats.hasBody ? <CheckCircleOutlined style={{ color: "#52c41a" }} /> : <CloseCircleOutlined style={{ color: "#f5222d" }} />}
                             </div>
                         </Space>
                     </Card>
 
-                    <Card title="Best Practices" style={{ marginTop: 16 }}>
-                        <ul style={{ paddingLeft: 20, margin: 0, fontSize: 13 }}>
-                            <li>Always include DOCTYPE</li>
-                            <li>Add lang attribute to html</li>
-                            <li>Use semantic HTML5 elements</li>
-                            <li>Include alt for images</li>
-                            <li>Use proper heading hierarchy</li>
-                            <li>Close all non-void tags</li>
+                    <Card title={t("Best Practices")} style={{ marginTop: 16 }}>
+                        <ul style={{ paddingInlineStart: 20, margin: 0, fontSize: 13 }}>
+                            <li>{t("Always include DOCTYPE")}</li>
+                            <li>{t("Add lang attribute to html")}</li>
+                            <li>{t("Use semantic HTML5 elements")}</li>
+                            <li>{t("Include alt for images")}</li>
+                            <li>{t("Use proper heading hierarchy")}</li>
+                            <li>{t("Close all non-void tags")}</li>
                         </ul>
                     </Card>
                 </Col>

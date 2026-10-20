@@ -1,6 +1,7 @@
 "use client";
+import { useLanguage } from "@/components/LanguageProvider";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Alert, App, Button, Card, Descriptions, Input, Space, Tag, Typography } from "antd";
 import { KeyOutlined, ReloadOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
@@ -23,11 +24,11 @@ function base64Url(bytes: Uint8Array): string {
     return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
-async function createPkcePair(): Promise<{ verifier: string; challenge: string }> {
+async function createPkcePair(): Promise<{ verifier: string; challenge: string; state: string; nonce: string }> {
     const random = crypto.getRandomValues(new Uint8Array(48));
     const verifier = base64Url(random);
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
-    return { verifier, challenge: base64Url(new Uint8Array(digest)) };
+    return { verifier, challenge: base64Url(new Uint8Array(digest)), state: base64Url(crypto.getRandomValues(new Uint8Array(32))), nonce: base64Url(crypto.getRandomValues(new Uint8Array(32))) };
 }
 
 type DiscoveryResult = { issuer?: string; issues: string[]; supportsS256: boolean; endpoints: Record<string, string> };
@@ -51,28 +52,41 @@ function inspectDiscovery(input: string): DiscoveryResult {
 }
 
 export default function OAuthOidcPlaygroundPage() {
+    const { t } = useLanguage();
+    const translateRef = useRef(t);
+    useEffect(() => { translateRef.current = t; }, [t]);
+    const notice = (source: string, values?: Record<string, string | number>) => translateRef.current(source, values);
+
     const { message } = App.useApp();
     const [discovery, setDiscovery] = useState(SAMPLE_DISCOVERY);
     const [redirectUri, setRedirectUri] = useState("http://localhost:3000/callback");
     const [clientId, setClientId] = useState("my-client-id");
     const [scope, setScope] = useState("openid profile email");
     const [result, setResult] = useState<DiscoveryResult | null>(null);
-    const [pkce, setPkce] = useState<{ verifier: string; challenge: string } | null>(null);
+    const [pkce, setPkce] = useState<{ verifier: string; challenge: string; state: string; nonce: string } | null>(null);
 
     const inspect = () => {
         try { setResult(inspectDiscovery(discovery)); }
-        catch (error) { message.error(error instanceof Error ? error.message : "Invalid discovery metadata."); }
+        catch (error) { message.error(error instanceof Error ? error.message : notice("Invalid discovery metadata.")); }
     };
     const generatePkce = async () => {
-        try { setPkce(await createPkcePair()); message.success("PKCE S256 pair generated locally"); }
-        catch { message.error("This browser cannot generate a PKCE pair."); }
+        try { setPkce(await createPkcePair()); message.success(notice("PKCE S256 pair generated locally")); }
+        catch { message.error(notice("This browser cannot generate a PKCE pair.")); }
     };
-    const authorizationUrl = result?.endpoints.authorization_endpoint && pkce ? `${result.endpoints.authorization_endpoint}?${new URLSearchParams({ response_type: "code", client_id: clientId, redirect_uri: redirectUri, scope, code_challenge: pkce.challenge, code_challenge_method: "S256" }).toString()}` : null;
+    let authorizationUrl: string | null = null;
+    if (result?.endpoints.authorization_endpoint && pkce) {
+        try {
+            const url = new URL(result.endpoints.authorization_endpoint);
+            if (url.protocol !== "https:") throw new Error("HTTPS required");
+            for (const [key, value] of Object.entries({ response_type: "code", client_id: clientId, redirect_uri: redirectUri, scope, state: pkce.state, nonce: pkce.nonce, code_challenge: pkce.challenge, code_challenge_method: "S256" })) url.searchParams.set(key, value);
+            authorizationUrl = url.toString();
+        } catch { /* Unsafe metadata must not produce a runnable authorization URL. */ }
+    }
 
     return (
         <ToolPageLayout
-            title="OAuth / OIDC & PKCE Playground"
-            description="Inspect discovery metadata, generate PKCE S256 values, and assemble a safe authorization request"
+            title={t("OAuth / OIDC & PKCE Playground")}
+            description={t("Inspect discovery metadata, generate PKCE S256 values, and assemble a safe authorization request")}
             icon={<KeyOutlined style={{ fontSize: 24, color: "#1d39c4" }} />}
             color="#1d39c4"
             learnMore={{
@@ -83,14 +97,15 @@ export default function OAuthOidcPlaygroundPage() {
                 useCases: ["OIDC provider integration", "PKCE test fixtures", "Authorization-code flow troubleshooting"],
             }}
         >
-            <Card title="Provider discovery metadata">
-                <TextArea aria-label="OIDC discovery metadata" value={discovery} onChange={(event) => setDiscovery(event.target.value)} autoSize={{ minRows: 13, maxRows: 28 }} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }} />
-                <Space wrap style={{ marginTop: 12 }}><Button type="primary" onClick={inspect}>Inspect metadata</Button><Button onClick={generatePkce}>Generate PKCE S256</Button><Button icon={<ReloadOutlined />} onClick={() => { setDiscovery(SAMPLE_DISCOVERY); setResult(null); setPkce(null); }}>Reset example</Button></Space>
+            <Alert type="info" showIcon title={t("RFC 9700 · OAuth Security BCP")} description={t("Prefer Authorization Code + PKCE S256. Register exact redirects; avoid implicit grants and never use the password grant. Bind and validate state and OIDC nonce in your application; this preview does not complete a login or validate tokens.")} style={{ marginBottom: 16 }} />
+            <Card title={t("Provider discovery metadata")}>
+                <TextArea dir="ltr" aria-label={t("OIDC discovery metadata")} value={discovery} onChange={(event) => setDiscovery(event.target.value)} autoSize={{ minRows: 13, maxRows: 28 }} style={{ direction: "ltr", textAlign: "left",  fontFamily: "var(--font-geist-mono)", fontSize: 16 }} />
+                <Space wrap style={{ marginTop: 12 }}><Button type="primary" onClick={inspect}>{t("Inspect metadata")}</Button><Button onClick={generatePkce}>{t("Generate PKCE S256")}</Button><Button icon={<ReloadOutlined />} onClick={() => { setDiscovery(SAMPLE_DISCOVERY); setResult(null); setPkce(null); }}>{t("Reset example")}</Button></Space>
             </Card>
-            <Card title="Authorization request" style={{ marginTop: 16 }}>
-                <Space orientation="vertical" size="middle" style={{ width: "100%" }}><div><Text strong>Client ID</Text><Input aria-label="OAuth client ID" value={clientId} onChange={(event) => setClientId(event.target.value)} /></div><div><Text strong>Redirect URI</Text><Input aria-label="OAuth redirect URI" value={redirectUri} onChange={(event) => setRedirectUri(event.target.value)} /></div><div><Text strong>Scopes</Text><Input aria-label="OAuth scopes" value={scope} onChange={(event) => setScope(event.target.value)} /></div>{pkce && <Descriptions bordered size="small" column={1} styles={{ label: { width: 130 } }}><Descriptions.Item label="Verifier"><Text code copyable>{pkce.verifier}</Text></Descriptions.Item><Descriptions.Item label="S256 challenge"><Text code copyable>{pkce.challenge}</Text></Descriptions.Item></Descriptions>}{authorizationUrl && <Alert type="info" showIcon title="Authorization URL preview" description={<Text code copyable style={{ wordBreak: "break-all" }}>{authorizationUrl}</Text>} />}</Space>
+            <Card title={t("Authorization request")} style={{ marginTop: 16 }}>
+                <Space orientation="vertical" size="middle" style={{ width: "100%" }}><div><Text strong>{t("Client ID")}</Text><Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }} aria-label={t("OAuth client ID")} value={clientId} onChange={(event) => setClientId(event.target.value)} /></div><div><Text strong>{t("Redirect URI")}</Text><Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }} aria-label={t("OAuth redirect URI")} value={redirectUri} onChange={(event) => setRedirectUri(event.target.value)} /></div><div><Text strong>{t("Scopes")}</Text><Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }} aria-label={t("OAuth scopes")} value={scope} onChange={(event) => setScope(event.target.value)} /></div>{pkce && <Descriptions bordered size="small" column={1} styles={{ label: { width: 130 } }}><Descriptions.Item label={t("Verifier")}><Text dir="ltr" code copyable>{pkce.verifier}</Text></Descriptions.Item><Descriptions.Item label={t("S256 challenge")}><Text dir="ltr" code copyable>{pkce.challenge}</Text></Descriptions.Item><Descriptions.Item label={t("State")}><Text dir="ltr" code copyable>{pkce.state}</Text></Descriptions.Item><Descriptions.Item label={t("OIDC nonce")}><Text dir="ltr" code copyable>{pkce.nonce}</Text></Descriptions.Item></Descriptions>}{authorizationUrl && <Alert type="info" showIcon title={t("Authorization URL preview")} description={<Text dir="ltr" code copyable style={{ wordBreak: "break-all" }}>{authorizationUrl}</Text>} />}</Space>
             </Card>
-            {result && <Card title="Discovery review" style={{ marginTop: 16 }}><Space orientation="vertical" size="middle" style={{ width: "100%" }}><Descriptions bordered size="small" column={1} styles={{ label: { width: 180 } }}><Descriptions.Item label="Issuer">{result.issuer ?? "—"}</Descriptions.Item><Descriptions.Item label="S256 PKCE"><Tag color={result.supportsS256 ? "success" : "warning"}>{result.supportsS256 ? "Advertised" : "Not advertised"}</Tag></Descriptions.Item>{Object.entries(result.endpoints).map(([name, value]) => <Descriptions.Item key={name} label={name}><Text code>{value}</Text></Descriptions.Item>)}</Descriptions>{result.issues.length ? result.issues.map((issue) => <Alert key={issue} type="warning" showIcon title={issue} />) : <Alert type="success" showIcon title="Core discovery fields look complete" />}</Space></Card>}
+            {result && <Card title={t("Discovery review")} style={{ marginTop: 16 }}><Space orientation="vertical" size="middle" style={{ width: "100%" }}><Descriptions bordered size="small" column={1} styles={{ label: { width: 180 } }}><Descriptions.Item label={t("Issuer")}>{result.issuer ?? "—"}</Descriptions.Item><Descriptions.Item label="S256 PKCE"><Tag color={result.supportsS256 ? "success" : "warning"}>{result.supportsS256 ? t("Advertised") : t("Not advertised")}</Tag></Descriptions.Item>{Object.entries(result.endpoints).map(([name, value]) => <Descriptions.Item key={name} label={name}><Text dir="ltr" code>{value}</Text></Descriptions.Item>)}</Descriptions>{result.issues.length ? result.issues.map((issue) => <Alert key={issue} type="warning" showIcon title={t(issue)} />) : <Alert type="success" showIcon title={t("Core discovery fields look complete")} />}</Space></Card>}
         </ToolPageLayout>
     );
 }

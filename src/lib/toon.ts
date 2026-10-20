@@ -1,303 +1,202 @@
-// TOON (Token-Oriented Object Notation) codec — a compact text format that
-// drops JSON's structural tokens (quotes, braces, brackets, commas) wherever
-// they can be inferred from layout:
-//
-//   key: value             — scalar
-//   key:                   — nested object (children indented 2 sp)
-//   key[N]:                — list of N items, each on a `- ` line
-//   key[N]{f1,f2,f3}:      — tabular: N rows of CSV-like records
-//
-// Pure functions, no DOM/React dependency — importable from Node (tests) and
-// the browser tool page alike.
+import { numberSourceRoundTrips } from "./json-number-source";
 
+// Supported TOON subset: two-space indentation, comma-delimited primitive/list/
+// flat tabular arrays, objects and root primitives. See TOON 4.4 working draft:
+// https://github.com/toon-format/spec/blob/main/SPEC.md (reviewed 2026-10-21).
+// Not a complete conformance implementation: keyed tables, nested table field
+// groups, alternate delimiters and non-strict recovery are deliberately rejected.
+// Numeric decoding rejects decimal values that would change on JavaScript's
+// number/string round trip, including negative zero; quote such values explicitly.
 const INDENT = "  ";
-
+const NUMBER = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
+function validUnicode(value: string) {
+    for (let i = 0; i < value.length; i++) {
+        const c = value.charCodeAt(i);
+        if (c >= 0xd800 && c <= 0xdbff) { const next = value.charCodeAt(++i); if (!(next >= 0xdc00 && next <= 0xdfff)) throw new Error("Unpaired Unicode surrogate"); }
+        else if (c >= 0xdc00 && c <= 0xdfff) throw new Error("Unpaired Unicode surrogate");
+    }
+}
+function quote(value: string): string {
+    return '"' + value.replace(/[\x00-\x1f"\\]/g, (character) => {
+        const escapes: Record<string, string> = { '"': '\\"', "\\": "\\\\", "\n": "\\n", "\r": "\\r", "\t": "\\t" };
+        return escapes[character] ?? `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`;
+    }) + '"';
+}
+function string(value: string): string {
+    validUnicode(value);
+    return !value || /^\s|\s$/.test(value) || /^[#-]/.test(value) || /[:,\[\]{}"\\\x00-\x1f]/.test(value) || ["true", "false", "null"].includes(value) || /^[+-]?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(value) ? quote(value) : value;
+}
+function key(value: string): string { validUnicode(value); return /^[A-Za-z_][A-Za-z0-9_.]*$/.test(value) ? value : quote(value); }
+function primitive(value: unknown): string {
+    if (typeof value === "string") return string(value);
+    if (typeof value === "number") return Number.isFinite(value) ? String(value) : "null";
+    if (typeof value === "boolean") return String(value);
+    return "null";
+}
+function tableFields(values: unknown[]): string[] | null {
+    if (!values.length || !values[0] || typeof values[0] !== "object" || Array.isArray(values[0])) return null;
+    const fields = Object.keys(values[0]);
+    if (!fields.length) return null;
+    return values.every((v) => v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === fields.length && fields.every((field) => Object.hasOwn(v, field) && ((v as Record<string, unknown>)[field] === null || typeof (v as Record<string, unknown>)[field] !== "object"))) ? fields : null;
+}
 export function encodeToon(value: unknown): string {
-    if (value === null || value === undefined) return "null";
-    if (typeof value !== "object") return formatScalar(value);
-    const lines: string[] = [];
-    if (Array.isArray(value)) {
-        encodeArrayInline("data", value, lines, 0);
-    } else {
-        encodeObject(value as Record<string, unknown>, lines, 0);
+    const out: string[] = [], seen = new Set<object>();
+    function emit(value: unknown, depth: number, prefix: string) {
+        const pad = INDENT.repeat(depth);
+        if (value === null || typeof value !== "object") { out.push(`${pad}${prefix}${primitive(value)}`); return; }
+        if (seen.has(value)) throw new Error("Circular input is not supported");
+        seen.add(value);
+        if (Array.isArray(value)) {
+            if (!value.length) out.push(prefix === "- " ? `${pad}- [0]:` : `${pad}${prefix}[]`);
+            else {
+                // A keyed array uses key[N]: rather than key: [N]:.
+                const header = prefix.endsWith(": ") ? prefix.slice(0, -2) : prefix;
+                const fields = prefix === "- " ? null : tableFields(value);
+                if (value.every((item) => item === null || typeof item !== "object")) out.push(`${pad}${header}[${value.length}]: ${value.map(primitive).join(",")}`);
+                else if (fields) {
+                    out.push(`${pad}${header}[${value.length}]{${fields.map(key).join(",")}}:`);
+                    value.forEach((item) => out.push(`${pad}${INDENT}${fields.map((field) => primitive((item as Record<string, unknown>)[field])).join(",")}`));
+                } else {
+                    out.push(`${pad}${header}[${value.length}]:`);
+                    value.forEach((item) => emit(item, depth + 1, "- "));
+                }
+            }
+        } else {
+            const entries = Object.entries(value);
+            if (!entries.length) { if (prefix) out.push(`${pad}${prefix.trimEnd()}`); }
+            else {
+                if (prefix) { out.push(`${pad}${prefix.trimEnd()}`); depth++; }
+                const start = out.length;
+                for (const [name, child] of entries) emit(child, depth, `${key(name)}: `);
+                if (prefix === "- ") { out.splice(start - 1, 1); out[start - 1] = `${pad}- ${out[start - 1].slice(INDENT.repeat(depth).length)}`; }
+            }
+        }
+        seen.delete(value);
     }
-    return lines.join("\n");
+    emit(value, 0, "");
+    return out.join("\n");
 }
-
-function encodeObject(obj: Record<string, unknown>, out: string[], depth: number) {
-    const pad = INDENT.repeat(depth);
-    for (const [rawKey, val] of Object.entries(obj)) {
-        const key = formatKey(rawKey);
-        if (Array.isArray(val)) {
-            encodeArrayInline(key, val, out, depth);
-        } else if (typeof val === "object" && val !== null) {
-            const keys = Object.keys(val);
-            if (keys.length === 0) {
-                out.push(`${pad}${key}: {}`);
+interface Line { text: string; depth: number; line: number; }
+function fail(line: Line | undefined, reason: string): never { throw new Error(`Line ${line?.line ?? "EOF"}: ${reason}`); }
+function split(text: string, delimiter: string): string[] {
+    const values: string[] = []; let quoted = false, start = 0;
+    for (let i = 0; i < text.length; i++) {
+        if (quoted && text[i] === "\\") { i++; continue; }
+        if (text[i] === '"') quoted = !quoted;
+        else if (!quoted && text[i] === delimiter) { values.push(text.slice(start, i)); start = i + 1; }
+    }
+    if (quoted) throw new Error("Unterminated quoted string");
+    values.push(text.slice(start)); return values;
+}
+function scalar(raw: string, emptyStructures = true): unknown {
+    const text = raw.trim();
+    if (!text) throw new Error("A value is required");
+    if (text.startsWith('"')) { const parsed: unknown = JSON.parse(text.replace(/[\x00-\x1f]/g, (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`)); if (typeof parsed !== "string") throw new Error("Invalid quoted string"); validUnicode(parsed); return parsed; }
+    if (text.includes('"')) throw new Error("Unexpected quote in bare value");
+    if (text === "null") return null;
+    if (text === "true") return true;
+    if (text === "false") return false;
+    if (emptyStructures && text === "[]") return [];
+    if (emptyStructures && text === "{}") return {};
+    if (NUMBER.test(text)) { const value = Number(text); if (!numberSourceRoundTrips(text)) throw new Error("A numeric value would lose precision or negative zero. Quote that value as text before converting."); return value === 0 ? 0 : value; }
+    validUnicode(text); return text;
+}
+function fieldName(raw: string): string {
+    if (!raw || raw !== raw.trim()) throw new Error("Invalid object key");
+    if (raw.startsWith('"')) { const parsed: unknown = JSON.parse(raw); if (typeof parsed !== "string") throw new Error("Invalid object key"); validUnicode(parsed); return parsed; }
+    if (/[\[\]{}:,"\t]/.test(raw)) throw new Error("Unsupported or malformed key/header");
+    validUnicode(raw); return raw;
+}
+function header(text: string): { name: string; count: number; fields: string[] | null; inline: string } | null {
+    if (text === "[]") return null;
+    // Locate the first structural bracket outside quoted keys.
+    let quoted = false, bracket = -1;
+    for (let i = 0; i < text.length; i++) {
+        if (quoted && text[i] === "\\") { i++; continue; }
+        if (text[i] === '"') quoted = !quoted;
+        else if (!quoted && text[i] === ":") break;
+        else if (!quoted && text[i] === "[") { bracket = i; break; }
+    }
+    if (bracket < 0) return null;
+    const match = text.slice(bracket).match(/^\[(0|[1-9]\d*)\](?:\{(.*)\})?:(?: (.*))?$/);
+    if (!match) throw new Error("Unsupported or malformed array header");
+    const count = Number(match[1]); if (!Number.isSafeInteger(count)) throw new Error("Array count exceeds the supported range");
+    const fields = match[2] === undefined ? null : split(match[2], ",").map(fieldName);
+    if (fields && (!fields.length || new Set(fields).size !== fields.length)) throw new Error("Duplicate or empty table fields");
+    return { name: text.slice(0, bracket), count, fields, inline: match[3] ?? "" };
+}
+function assign(object: Record<string, unknown>, name: string, value: unknown) {
+    if (Object.hasOwn(object, name)) throw new Error("Duplicate object key");
+    Object.defineProperty(object, name, { value, writable: true, enumerable: true, configurable: true });
+}
+export function decodeToon(source: string, options: { legacyDataRootArray?: boolean } = {}): unknown {
+    const lines: Line[] = [];
+    source.replace(/^\uFEFF/, "").split(/\r?\n/).forEach((raw, index) => {
+        if (!raw.trim() || /^ *#/.test(raw)) return;
+        const leading = raw.match(/^[ \t]*/)?.[0] ?? "";
+        if (leading.includes("\t") || leading.length % 2) throw new Error(`Line ${index + 1}: indentation must use multiples of two spaces`);
+        lines.push({ text: raw.slice(leading.length).trimEnd(), depth: leading.length / 2, line: index + 1 });
+    });
+    if (!lines.length) return {};
+    if (lines[0].depth !== 0) fail(lines[0], "root must not be indented");
+    let position = 0;
+    function array(h: NonNullable<ReturnType<typeof header>>, depth: number): unknown[] {
+        if (h.inline) {
+            if (h.fields) fail(lines[position - 1], "tabular arrays cannot have inline values");
+            const values = split(h.inline, ",").map((cell) => scalar(cell, false));
+            if (values.length !== h.count) fail(lines[position - 1], "array length mismatch");
+            return values;
+        }
+        const values: unknown[] = [];
+        for (let i = 0; i < h.count; i++) {
+            const row = lines[position];
+            if (!row || row.depth !== depth + 1) fail(row, "array row count or indentation mismatch");
+            position++;
+            if (h.fields) {
+                const cells = split(row.text, ",");
+                if (cells.length !== h.fields.length) fail(row, "table column count mismatch");
+                const value: Record<string, unknown> = {};
+                h.fields.forEach((name, index) => assign(value, name, cells[index] === "" ? null : scalar(cells[index], false)));
+                values.push(value);
             } else {
-                out.push(`${pad}${key}:`);
-                encodeObject(val as Record<string, unknown>, out, depth + 1);
+                if (!/^-($| )/.test(row.text)) fail(row, "expected a list item");
+                const rest = row.text.slice(1).trimStart(), nested = header(rest);
+                if (nested && !nested.name) values.push(array(nested, row.depth));
+                else if (nested?.name) { lines.splice(position, 0, { ...row, text: rest, depth: row.depth + 1 }); values.push(object(row.depth + 1)); }
+                else if (!rest) {
+                    // Compatibility with older emitted bare-marker nested lists.
+                    if (lines[position]?.depth === row.depth + 1 && /^-($| )/.test(lines[position].text)) {
+                        let count = 0; for (let n = position; n < lines.length && lines[n].depth > row.depth; n++) if (lines[n].depth === row.depth + 1) count++;
+                        values.push(array({ name: "", count, fields: null, inline: "" }, row.depth));
+                    } else values.push(lines[position]?.depth === row.depth + 1 ? object(row.depth + 1) : {});
+                } else if (split(rest, ":").length > 1) {
+                    // Standard first field carried on a list marker.
+                    lines.splice(position, 0, { ...row, text: rest, depth: row.depth + 1 }); values.push(object(row.depth + 1));
+                } else values.push(scalar(rest));
             }
-        } else {
-            out.push(`${pad}${key}: ${formatScalar(val)}`);
         }
+        return values;
     }
-}
-
-function encodeArrayInline(key: string, arr: unknown[], out: string[], depth: number) {
-    const pad = INDENT.repeat(depth);
-    if (arr.length === 0) {
-        out.push(`${pad}${key}[0]:`);
-        return;
-    }
-    // tabular form: array of objects with same scalar fields → key[N]{f1,f2}:
-    const table = detectUniformTable(arr);
-    if (table) {
-        out.push(`${pad}${key}[${arr.length}]{${table.fields.join(",")}}:`);
-        const rowPad = INDENT.repeat(depth + 1);
-        for (const row of arr) {
-            const r = row as Record<string, unknown>;
-            out.push(`${rowPad}${table.fields.map((f) => formatCell(r[f])).join(",")}`);
+    function object(depth: number): Record<string, unknown> {
+        const value: Record<string, unknown> = {};
+        while (position < lines.length && lines[position].depth >= depth) {
+            const row = lines[position]; if (row.depth !== depth) fail(row, "unexpected indentation");
+            const h = header(row.text); position++;
+            if (h) { if (!h.name) fail(row, "keyless array inside object"); assign(value, fieldName(h.name), array(h, depth)); continue; }
+            const parts = split(row.text, ":"); if (parts.length < 2) fail(row, "expected object field");
+            const name = fieldName(parts.shift()!), rest = parts.join(":").trimStart();
+            assign(value, name, rest ? scalar(rest) : lines[position]?.depth === depth + 1 ? object(depth + 1) : {});
         }
-        return;
+        return value;
     }
-    out.push(`${pad}${key}[${arr.length}]:`);
-    for (const item of arr) {
-        encodeListItem(item, out, depth + 1);
-    }
-}
-
-function encodeListItem(value: unknown, out: string[], depth: number) {
-    const pad = INDENT.repeat(depth);
-    if (value === null || value === undefined) { out.push(`${pad}- null`); return; }
-    if (typeof value !== "object") { out.push(`${pad}- ${formatScalar(value)}`); return; }
-    if (Array.isArray(value)) {
-        out.push(`${pad}-`);
-        // emit each nested item one deeper, also using `- ` prefix
-        for (const item of value) encodeListItem(item, out, depth + 1);
-        return;
-    }
-    const entries = Object.entries(value);
-    if (entries.length === 0) { out.push(`${pad}- {}`); return; }
-    out.push(`${pad}-`);
-    encodeObject(value as Record<string, unknown>, out, depth + 1);
-}
-
-function detectUniformTable(arr: unknown[]): { fields: string[] } | null {
-    if (arr.length === 0) return null;
-    const first = arr[0];
-    if (typeof first !== "object" || first === null || Array.isArray(first)) return null;
-    const fields = Object.keys(first);
-    if (fields.length === 0) return null;
-    for (const item of arr) {
-        if (typeof item !== "object" || item === null || Array.isArray(item)) return null;
-        const keys = Object.keys(item);
-        if (keys.length !== fields.length) return null;
-        for (let i = 0; i < fields.length; i++) {
-            if (keys[i] !== fields[i]) return null;
-            const v = (item as Record<string, unknown>)[fields[i]];
-            if (v !== null && typeof v === "object") return null; // table cells must be scalar
-        }
-    }
-    return { fields };
-}
-
-function formatScalar(v: unknown): string {
-    if (v === null) return "null";
-    if (typeof v === "boolean") return v ? "true" : "false";
-    if (typeof v === "number") return Number.isFinite(v) ? String(v) : JSON.stringify(String(v));
-    if (typeof v === "string") return formatString(v);
-    return JSON.stringify(v);
-}
-
-// A string can be written bare in TOON when it's free of structural characters,
-// doesn't visually collide with reserved literals (true/false/null/numbers),
-// and has no leading/trailing whitespace.
-function formatString(s: string): string {
-    if (s === "") return '""';
-    if (/^\s|\s$/.test(s)) return JSON.stringify(s);
-    if (/[\n\r\t]/.test(s)) return JSON.stringify(s);
-    if (/[:,\[\]{}#"]/.test(s)) return JSON.stringify(s);
-    if (s === "true" || s === "false" || s === "null") return JSON.stringify(s);
-    if (/^-?\d+(\.\d+)?(e-?\d+)?$/i.test(s)) return JSON.stringify(s);
-    return s;
-}
-
-// In a tabular row the separator is `,` and newlines break the row, so the
-// quoting rules are stricter than for a regular scalar.
-function formatCell(v: unknown): string {
-    if (v === null || v === undefined) return "";
-    if (typeof v === "boolean") return v ? "true" : "false";
-    if (typeof v === "number") return Number.isFinite(v) ? String(v) : JSON.stringify(String(v));
-    const s = String(v);
-    if (s === "") return '""';
-    if (/[,"\n\r]/.test(s)) return JSON.stringify(s);
-    return s;
-}
-
-function formatKey(k: string): string {
-    if (k === "") return '""';
-    if (/^[A-Za-z_@#][A-Za-z0-9_\-.@#]*$/.test(k)) return k;
-    return JSON.stringify(k);
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Decoder — the inverse of encodeToon above.
-// ──────────────────────────────────────────────────────────────────────────────
-
-interface ToonLine { indent: number; text: string; }
-
-function tokenizeToon(toon: string): ToonLine[] {
-    return toon
-        .split("\n")
-        .filter((l) => l.trim().length > 0)
-        .map((l) => {
-            const match = l.match(/^( *)(.*)$/);
-            const spaces = match ? match[1].length : 0;
-            return { indent: Math.floor(spaces / INDENT.length), text: (match ? match[2] : l).trimEnd() };
-        });
-}
-
-// Splits a CSV-like row respecting JSON-quoted cells (which may contain commas).
-function splitCsvRow(row: string): string[] {
-    const cells: string[] = [];
-    let cur = "";
-    let inQuotes = false;
-    for (let i = 0; i < row.length; i++) {
-        const c = row[i];
-        if (inQuotes) {
-            cur += c;
-            if (c === "\\" && i + 1 < row.length) { cur += row[++i]; continue; }
-            if (c === '"') inQuotes = false;
-        } else if (c === '"') {
-            inQuotes = true;
-            cur += c;
-        } else if (c === ",") {
-            cells.push(cur);
-            cur = "";
-        } else {
-            cur += c;
-        }
-    }
-    cells.push(cur);
-    return cells;
-}
-
-function parseScalar(raw: string): unknown {
-    const s = raw.trim();
-    if (s === "") return "";
-    if (s === "null") return null;
-    if (s === "true") return true;
-    if (s === "false") return false;
-    if (s.startsWith('"')) {
-        try { return JSON.parse(s); } catch { /* fall through to bare string */ }
-    }
-    if (/^-?\d+(\.\d+)?(e-?\d+)?$/i.test(s)) return Number(s);
-    return s;
-}
-
-// Table cells distinguish bare-empty (formatCell(null) → "") from quoted-empty
-// (formatCell("") → '""'), unlike regular scalar lines where parseScalar's
-// bare-empty case never occurs (formatString always quotes "").
-function parseTableCell(raw: string): unknown {
-    if (raw === "") return null;
-    return parseScalar(raw);
-}
-
-function unquoteKey(k: string): string {
-    if (k.startsWith('"')) {
-        try { return JSON.parse(k); } catch { /* fall through */ }
-    }
-    return k;
-}
-
-// Parses the body of a block (all lines strictly deeper than `parentIndent`,
-// stopping at the first line back at parentIndent or shallower) into an object.
-function parseObjectBody(lines: ToonLine[], pos: { i: number }, parentIndent: number): Record<string, unknown> {
-    const obj: Record<string, unknown> = {};
-    const childIndent = pos.i < lines.length ? lines[pos.i].indent : parentIndent + 1;
-    while (pos.i < lines.length && lines[pos.i].indent >= childIndent) {
-        const line = lines[pos.i];
-        if (line.indent > childIndent) { pos.i++; continue; } // defensive: skip stray over-indented lines
-        const tableMatch = line.text.match(/^(.+?)\[(\d+)\]\{(.+)\}:$/);
-        const listMatch = !tableMatch && line.text.match(/^(.+?)\[(\d+)\]:$/);
-        const objMatch = !tableMatch && !listMatch && line.text.match(/^(.+?):$/);
-        const scalarMatch = !tableMatch && !listMatch && !objMatch && line.text.match(/^(.+?): (.*)$/);
-
-        if (tableMatch) {
-            const key = unquoteKey(tableMatch[1]);
-            const n = parseInt(tableMatch[2], 10);
-            const fields = tableMatch[3].split(",");
-            pos.i++;
-            const rows: Record<string, unknown>[] = [];
-            for (let r = 0; r < n && pos.i < lines.length; r++, pos.i++) {
-                const cells = splitCsvRow(lines[pos.i].text);
-                const row: Record<string, unknown> = {};
-                fields.forEach((f, idx) => { row[f] = parseTableCell(cells[idx] ?? ""); });
-                rows.push(row);
-            }
-            obj[key] = rows;
-        } else if (listMatch) {
-            const key = unquoteKey(listMatch[1]);
-            const n = parseInt(listMatch[2], 10);
-            pos.i++;
-            obj[key] = parseListBody(lines, pos, n, childIndent);
-        } else if (objMatch && !line.text.includes(": ")) {
-            const key = unquoteKey(objMatch[1]);
-            pos.i++;
-            if (pos.i < lines.length && lines[pos.i].indent > childIndent) {
-                obj[key] = parseObjectBody(lines, pos, childIndent);
-            } else {
-                obj[key] = {};
-            }
-        } else if (scalarMatch) {
-            const key = unquoteKey(scalarMatch[1]);
-            obj[key] = scalarMatch[2] === "{}" ? {} : parseScalar(scalarMatch[2]);
-            pos.i++;
-        } else {
-            pos.i++; // unrecognized line shape — skip rather than throw
-        }
-    }
-    return obj;
-}
-
-function parseListBody(lines: ToonLine[], pos: { i: number }, n: number, parentIndent: number): unknown[] {
-    const items: unknown[] = [];
-    const itemIndent = pos.i < lines.length ? lines[pos.i].indent : parentIndent + 1;
-    for (let count = 0; count < n && pos.i < lines.length && lines[pos.i].indent === itemIndent; count++) {
-        const line = lines[pos.i];
-        if (line.text === "-") {
-            pos.i++;
-            const next = pos.i < lines.length ? lines[pos.i] : null;
-            if (next && next.indent > itemIndent && (next.text === "-" || next.text.startsWith("- "))) {
-                // encodeListItem's array branch: bare "-" followed by "- "-prefixed
-                // items one level deeper is a nested list, not a nested object.
-                items.push(parseListBody(lines, pos, Infinity, itemIndent));
-            } else if (next && next.indent > itemIndent) {
-                items.push(parseObjectBody(lines, pos, itemIndent));
-            } else {
-                items.push({});
-            }
-        } else if (line.text.startsWith("- ")) {
-            items.push(parseScalar(line.text.slice(2)));
-            pos.i++;
-        } else {
-            pos.i++; // defensive
-        }
-    }
-    return items;
-}
-
-export function decodeToon(toon: string): unknown {
-    if (!toon.trim()) return null;
-    const lines = tokenizeToon(toon);
-    if (lines.length === 0) return null;
-    const pos = { i: 0 };
-    // Top-level array (encodeToon's `encodeArrayInline("data", ...)` path).
-    const first = lines[0];
-    if (/^data\[\d+\]/.test(first.text)) {
-        const obj = parseObjectBody(lines, pos, -1);
-        return obj.data;
-    }
-    return parseObjectBody(lines, pos, -1);
+    const rootHeader = header(lines[0].text);
+    let result: unknown;
+    if (rootHeader && rootHeader.name === "") { position++; result = array(rootHeader, 0); }
+    else if (lines.length === 1 && split(lines[0].text, ":").length === 1) { result = scalar(lines[0].text); position++; }
+    else result = object(0);
+    if (position !== lines.length) fail(lines[position], "trailing content after root value");
+    // Older builds encoded a root array as a named data field. It is
+    // fundamentally ambiguous, so recover it only by explicit caller choice.
+    if (options.legacyDataRootArray && result && typeof result === "object" && !Array.isArray(result) && Object.keys(result).length === 1 && Object.hasOwn(result, "data") && Array.isArray((result as Record<string, unknown>).data)) return (result as Record<string, unknown>).data;
+    return result;
 }

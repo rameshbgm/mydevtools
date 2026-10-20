@@ -3,13 +3,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Card, Typography, Input, Button, Row, Col, Space, Tag, App, Empty } from "antd";
 import { DisconnectOutlined, SendOutlined, DeleteOutlined, ApiOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
 type Direction = "sent" | "received" | "system";
-interface Frame { id: number; direction: Direction; data: string; at: number; }
+interface Frame { id: number; direction: Direction; data: string; at: number; notice?: { source: string; values?: Record<string, string | number> }; }
 
 const DIRECTION_COLOR: Record<Direction, string> = {
     sent: "#1890ff",
@@ -18,6 +19,9 @@ const DIRECTION_COLOR: Record<Direction, string> = {
 };
 
 export default function WebsocketTesterPage() {
+    const { t, language } = useLanguage();
+    const tRef = useRef(t);
+    useEffect(() => { tRef.current = t; }, [t]);
     const { message } = App.useApp();
     const [url, setUrl] = useState("wss://echo.websocket.org");
     const [outgoing, setOutgoing] = useState('{"hello":"world"}');
@@ -26,8 +30,8 @@ export default function WebsocketTesterPage() {
     const wsRef = useRef<WebSocket | null>(null);
     const idRef = useRef(0);
 
-    const append = (direction: Direction, data: string) => {
-        setFrames((f) => [...f, { id: ++idRef.current, direction, data, at: Date.now() }]);
+    const append = (direction: Direction, data: string, notice?: Frame["notice"]) => {
+        setFrames((f) => [...f, { id: ++idRef.current, direction, data, notice, at: Date.now() }]);
     };
 
     useEffect(() => () => { wsRef.current?.close(); }, []);
@@ -38,20 +42,20 @@ export default function WebsocketTesterPage() {
             const ws = new WebSocket(url);
             wsRef.current = ws;
             setStatus("connecting");
-            append("system", `Connecting to ${url}…`);
-            ws.onopen = () => { setStatus("open"); append("system", "Connection opened"); };
+            append("system", `Connecting to ${url}…`, { source: "Connecting to {url}…", values: { url } });
+            ws.onopen = () => { setStatus("open"); append("system", "Connection opened", { source: "Connection opened" }); };
             ws.onmessage = (ev) => {
                 const data: string = typeof ev.data === "string"
                     ? ev.data
                     : ev.data instanceof Blob
                         ? `[binary blob, ${ev.data.size} bytes]`
                         : `[binary, ${(ev.data as ArrayBuffer).byteLength} bytes]`;
-                append("received", data);
+                append("received", data, typeof ev.data === "string" ? undefined : { source: ev.data instanceof Blob ? "[binary blob, {count} bytes]" : "[binary, {count} bytes]", values: { count: ev.data instanceof Blob ? ev.data.size : (ev.data as ArrayBuffer).byteLength } });
             };
-            ws.onerror = () => { append("system", "Socket error"); };
+            ws.onerror = () => { append("system", "Socket error", { source: "Socket error" }); };
             ws.onclose = (ev) => {
                 setStatus("closed");
-                append("system", `Closed (code ${ev.code}${ev.reason ? `, reason: ${ev.reason}` : ""})`);
+                append("system", `Closed (code ${ev.code}${ev.reason ? `, reason: ${ev.reason}` : ""})`, { source: ev.reason ? "Closed (code {code}, reason: {reason})" : "Closed (code {code})", values: ev.reason ? { code: ev.code, reason: ev.reason } : { code: ev.code } });
             };
         } catch (err) {
             message.error(err instanceof Error ? err.message : String(err));
@@ -67,7 +71,7 @@ export default function WebsocketTesterPage() {
 
     const send = () => {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-            message.warning("Socket not open");
+            message.warning(tRef.current("Socket not open"));
             return;
         }
         try {
@@ -86,37 +90,24 @@ export default function WebsocketTesterPage() {
 
     return (
         <ToolPageLayout
-            title="WebSocket Tester"
-            description="Connect to ws:// and wss:// endpoints, send messages, watch frames stream in"
+            title={t("WebSocket Tester")}
+            description={t("Connect to ws:// and wss:// endpoints, send messages, watch frames stream in")}
             icon={<DisconnectOutlined style={{ fontSize: 24, color: "#06b6d4" }} />}
             color="#06b6d4"
             learnMore={{
-                whatIs: "WebSocket Tester is a minimal browser-based WebSocket client. It opens a real connection to any ws:// or wss:// endpoint, sends text frames you craft, and prints each received frame with a timestamp.",
-                whyUse: "Browser DevTools shows WebSocket frames but only when an app is using a socket. To exercise a socket endpoint on its own — sanity check, send custom payloads, watch keepalives — you need a dedicated client.",
-                howToUse: [
-                    "Enter the WebSocket URL (use wss:// for TLS)",
-                    "Click Connect — connection status appears below the URL",
-                    "Type a message and click Send",
-                    "Received frames stream into the history; click Clear to reset",
-                ],
-                tips: [
-                    "Mixed-content: an https:// page cannot open a ws:// (unencrypted) socket — use wss://",
-                    "Binary frames are reported as [binary, N bytes] — text frames show inline",
-                    "WebSockets bypass CORS, but server-side origin checks may still reject your origin",
-                ],
-                useCases: [
-                    "Smoke-testing a new socket endpoint",
-                    "Reproducing a bug seen in production by sending the suspect frame manually",
-                    "Inspecting heartbeat / ping-pong intervals",
-                ],
+                whatIs: t("Open a browser WebSocket connection, send text frames and inspect received messages with timestamps."),
+                whyUse: t("Exercise a WebSocket endpoint independently of an application and inspect connection events."),
+                howToUse: [t("Enter a ws:// or wss:// endpoint and select Connect."), t("When connected, enter a message and select Send frame."), t("Disconnect to close the socket. Clear removes displayed frames.")],
+                tips: [t("HTTPS pages normally require wss://. Server origin checks and network policy can reject connections."), t("Binary messages show their byte length; their contents are not decoded.")],
+                useCases: [t("Reproduce a failing message or inspect application heartbeat traffic. Browser clients cannot send protocol-level ping frames.")],
             }}
         >
             <Row gutter={[16, 16]}>
                 <Col xs={24} lg={10}>
-                    <Card size="small" title="Connection">
+                    <Card size="small" title={t("Connection")}>
                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
-                            <Input
-                                placeholder="wss://echo.websocket.org"
+                            <Input dir="ltr" styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                                aria-label={t("WebSocket URL")} placeholder="wss://echo.websocket.org"
                                 value={url}
                                 onChange={(e) => setUrl(e.target.value)}
                                 disabled={status !== "closed"}
@@ -129,21 +120,19 @@ export default function WebsocketTesterPage() {
                                     disabled={status !== "closed"}
                                     loading={status === "connecting"}
                                 >
-                                    Connect
-                                </Button>
+                                    {t("Connect")}</Button>
                                 <Button onClick={disconnect} disabled={status !== "open"}>
-                                    Disconnect
-                                </Button>
-                                <Tag color={statusColor[status]}>{status}</Tag>
+                                    {t("Disconnect")}</Button>
+                                <Tag color={statusColor[status]}>{t(status)}</Tag>
                             </Space>
                             <div>
-                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Send</Text>
-                                <TextArea
-                                    value={outgoing}
+                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>{t("Send")}</Text>
+                                <TextArea dir="ltr"
+                                    aria-label={t("Message to send")} value={outgoing}
                                     onChange={(e) => setOutgoing(e.target.value)}
                                     autoSize={{ minRows: 4, maxRows: 8 }}
                                     placeholder='{"action":"subscribe","channel":"…"}'
-                                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
+                                    style={{ direction: "ltr", textAlign: "left", fontFamily: "var(--font-geist-mono)", fontSize: 16 }}
                                 />
                             </div>
                             <Button
@@ -153,8 +142,7 @@ export default function WebsocketTesterPage() {
                                 disabled={status !== "open"}
                                 block
                             >
-                                Send frame
-                            </Button>
+                                {t("Send frame")}</Button>
                         </Space>
                     </Card>
                 </Col>
@@ -162,15 +150,14 @@ export default function WebsocketTesterPage() {
                 <Col xs={24} lg={14}>
                     <Card
                         size="small"
-                        title={<Space><Text strong>Frames</Text><Tag>{frames.length}</Tag></Space>}
+                        title={<Space><Text strong>{t("Frames")}</Text><Tag>{frames.length}</Tag></Space>}
                         extra={
                             <Button size="small" icon={<DeleteOutlined />} onClick={clear} disabled={!frames.length}>
-                                Clear
-                            </Button>
+                                {t("Clear")}</Button>
                         }
                     >
                         {frames.length === 0 ? (
-                            <Empty description="Connect and send a frame" />
+                            <Empty description={t("Connect and send a frame")} />
                         ) : (
                             <div style={{ maxHeight: 520, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
                                 {frames.map((f) => (
@@ -181,27 +168,26 @@ export default function WebsocketTesterPage() {
                                             gap: 8,
                                             padding: "6px 10px",
                                             background: f.direction === "system" ? "rgba(0,0,0,0.02)" : "rgba(0,0,0,0.03)",
-                                            borderLeft: `3px solid ${DIRECTION_COLOR[f.direction]}`,
+                                            borderInlineStart: `1px solid ${DIRECTION_COLOR[f.direction]}`,
                                             borderRadius: 4,
                                         }}
                                     >
-                                        <Tag color={DIRECTION_COLOR[f.direction]} style={{ minWidth: 70, textAlign: "center", margin: 0 }}>
-                                            {f.direction === "sent" ? "▲ sent" : f.direction === "received" ? "▼ recv" : "•"}
+                                        <Tag color={DIRECTION_COLOR[f.direction]} style={{ minWidth: 0, textAlign: "center", margin: 0 }}>
+                                            {f.direction === "sent" ? t("Sent") : f.direction === "received" ? t("Received") : t("System")}
                                         </Tag>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <Paragraph
-                                                style={{
+                                            <Paragraph dir={f.notice ? "auto" : "ltr"} style={{
                                                     margin: 0,
                                                     fontFamily: "var(--font-geist-mono)",
-                                                    fontSize: 12,
+                                                    fontSize: 16,
                                                     whiteSpace: "pre-wrap",
                                                     wordBreak: "break-all",
                                                 }}
                                             >
-                                                {f.data}
+                                                {f.notice ? t(f.notice.source, f.notice.values) : f.data}
                                             </Paragraph>
                                             <Text type="secondary" style={{ fontSize: 10 }}>
-                                                {new Date(f.at).toLocaleTimeString()}
+                                                {new Date(f.at).toLocaleTimeString(language)}
                                             </Text>
                                         </div>
                                     </div>

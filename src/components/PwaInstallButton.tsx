@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Button, Tooltip } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
+import { useLanguage } from "./LanguageProvider";
 import {
     triggerPwaInstallPrompt,
     useHasDeferredPwaInstallPrompt,
@@ -17,6 +18,7 @@ import {
  * even if a stale prompt is still hanging around.
  */
 export default function PwaInstallButton({ compact = false }: { compact?: boolean }) {
+    const { t } = useLanguage();
     const hasPrompt = useHasDeferredPwaInstallPrompt();
     const [isStandalone, setIsStandalone] = useState(false);
 
@@ -35,14 +37,14 @@ export default function PwaInstallButton({ compact = false }: { compact?: boolea
 
     if (compact) {
         return (
-            <Tooltip title="Install mydevtools as an app">
+            <Tooltip title={t("Install mydevtools as an app")}>
                 <Button size="small" icon={<DownloadOutlined />} onClick={onClick} />
             </Tooltip>
         );
     }
     return (
         <Button size="small" icon={<DownloadOutlined />} onClick={onClick}>
-            Install app
+            {t("Install app")}
         </Button>
     );
 }

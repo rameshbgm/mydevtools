@@ -4,6 +4,7 @@ import { Button, Card, Space, Typography, Table, Tag, Statistic, Row, Col, Toolt
 import { PlayCircleOutlined, PauseCircleOutlined, ReloadOutlined, FlagOutlined, TrophyOutlined, ClockCircleOutlined, ClearOutlined } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import type { ColumnsType } from "antd/es/table/interface";
 
@@ -52,6 +53,7 @@ function RingTicks({ size, color }: { size: number; color: string }) {
 
 export default function StopwatchPage() {
     const { darkMode } = useAppStore();
+    const { t } = useLanguage();
     const [running, setRunning] = useState(false);
     const [elapsed, setElapsed] = useState(0);
     const [laps, setLaps] = useState<LapRecord[]>([]);
@@ -85,9 +87,12 @@ export default function StopwatchPage() {
 
     const handleStartPause = useCallback(() => {
         if (running) {
+            if (intervalRef.current !== null) clearInterval(intervalRef.current);
+            intervalRef.current = null;
             const now = Date.now();
             elapsedRef.current = elapsedRef.current + (now - startTimeRef.current);
             setElapsed(elapsedRef.current);
+            setDisplay(elapsedRef.current);
             setRunning(false);
         } else {
             setRunning(true);
@@ -140,12 +145,12 @@ export default function StopwatchPage() {
             render: (num: number) => <Text strong style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 13 }}>{num}</Text>,
         },
         {
-            title: "Lap Time",
+            title: t("Lap Time"),
             dataIndex: "lapTime",
             render: (ms: number) => <Text style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 13 }}>{formatTime(ms)}</Text>,
         },
         {
-            title: "Split",
+            title: t("Split"),
             dataIndex: "splitTime",
             render: (ms: number) => <Text type="secondary" style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 13 }}>{formatTime(ms)}</Text>,
         },
@@ -155,8 +160,8 @@ export default function StopwatchPage() {
             width: 70,
             render: (_: unknown, record: LapRecord) => {
                 if (laps.length < 2) return null;
-                if (fastestLap && record.number === fastestLap.number) return <Tag color="success">Best</Tag>;
-                if (slowestLap && record.number === slowestLap.number) return <Tag color="error">Worst</Tag>;
+                if (fastestLap && record.number === fastestLap.number) return <Tag color="success">{t("Best")}</Tag>;
+                if (slowestLap && record.number === slowestLap.number) return <Tag color="error">{t("Worst")}</Tag>;
                 return null;
             },
         },
@@ -171,16 +176,14 @@ export default function StopwatchPage() {
 
     return (
         <ToolPageLayout
-            title="Stopwatch"
-            description="High-precision stopwatch with lap splits"
+            title={t("Stopwatch")}
+            description={t("High-precision stopwatch with lap splits")}
             icon={<ClockCircleOutlined style={{ fontSize: 24, color: "#6366f1" }} />}
             color="#6366f1"
             learnMore={{
-                whatIs: "A high-precision stopwatch that records lap splits — runs entirely in your browser with millisecond accuracy.",
-                whyUse: "Track multiple split times in one session, compare lap performance visually, and export or screenshot results.",
-                howToUse: ["Press Start to begin counting", "Press Lap to record a split without stopping", "Press Pause to freeze, Resume to continue", "Press Reset to clear everything"],
-                tips: ["Lap button only works while running", "Best and worst laps are highlighted automatically", "Ring cycles every 60 seconds as a visual pace indicator"],
-                useCases: ["Race timing", "Workout intervals", "Presentation rehearsal", "Load test manual benchmarking"],
+                whatIs: t("A browser stopwatch with lap and cumulative split times, displayed to hundredths of a second. Browser scheduling affects display updates."),
+                howToUse: [t("Start, record laps, pause and resume. Pause before resetting; clearing laps keeps the stopwatch running.")],
+                tips: [t("Best, worst and average lap times are shown. Results stay in this tab; there is no file export.")],
             }}
         >
             <style>{`
@@ -201,19 +204,17 @@ export default function StopwatchPage() {
                                 onClick={handleStartPause}
                                 style={{ background: running ? "#f59e0b" : "#6366f1", borderColor: running ? "#f59e0b" : "#6366f1", minWidth: 130, fontWeight: 600 }}
                             >
-                                {running ? "Pause" : elapsed > 0 ? "Resume" : "Start"}
+                                {running ? t("Pause") : elapsed > 0 ? t("Resume") : t("Start")}
                             </Button>
 
-                            <Tooltip title={!running ? "Start the stopwatch first" : "Record lap split"}>
+                            <Tooltip title={!running ? t("Start the stopwatch first") : t("Record lap split")}>
                                 <Button size="large" icon={<FlagOutlined />} onClick={handleLap} disabled={!running} style={{ minWidth: 90 }}>
-                                    Lap
-                                </Button>
+                                    {t("Lap")}</Button>
                             </Tooltip>
 
-                            <Tooltip title={running ? "Pause before resetting" : "Reset timer and clear laps"}>
+                            <Tooltip title={running ? t("Pause before resetting") : t("Reset timer and clear laps")}>
                                 <Button size="large" icon={<ReloadOutlined />} onClick={handleReset} disabled={running} danger={!running && (elapsed > 0 || laps.length > 0)}>
-                                    Reset
-                                </Button>
+                                    {t("Reset")}</Button>
                             </Tooltip>
                         </Space>
 
@@ -254,7 +255,7 @@ export default function StopwatchPage() {
                                 )}
                                 {laps.length > 0 && (
                                     <Text style={{ color: darkMode ? "#737373" : "#9a9a9a", fontSize: 12, display: "block", marginTop: 4 }}>
-                                        Lap {laps.length + 1}
+                                        {t("Lap {number}", { number: laps.length + 1 })}
                                     </Text>
                                 )}
                             </div>
@@ -267,13 +268,13 @@ export default function StopwatchPage() {
                     <Row gutter={[12, 12]}>
                         <Col span={12}>
                             <Card size="small" style={{ textAlign: "center", background: "var(--wb-card-solid-bg)" }}>
-                                <Statistic title="Total Laps" value={laps.length} prefix={<TrophyOutlined />} styles={{ content: { fontSize: 22 } }} />
+                                <Statistic title={t("Total Laps")} value={laps.length} prefix={<TrophyOutlined />} styles={{ content: { fontSize: 22 } }} />
                             </Card>
                         </Col>
                         <Col span={12}>
                             <Card size="small" style={{ textAlign: "center", background: "var(--wb-card-solid-bg)" }}>
                                 <Statistic
-                                    title="Best Lap"
+                                    title={t("Best Lap")}
                                     value={fastestLap ? formatTime(fastestLap.lapTime) : "—"}
                                     styles={{ content: { fontSize: 16, color: "#22c55e", fontFamily: "var(--font-geist-mono), monospace" } }}
                                 />
@@ -282,7 +283,7 @@ export default function StopwatchPage() {
                         <Col span={12}>
                             <Card size="small" style={{ textAlign: "center", background: "var(--wb-card-solid-bg)" }}>
                                 <Statistic
-                                    title="Worst Lap"
+                                    title={t("Worst Lap")}
                                     value={slowestLap ? formatTime(slowestLap.lapTime) : "—"}
                                     styles={{ content: { fontSize: 16, color: "#ef4444", fontFamily: "var(--font-geist-mono), monospace" } }}
                                 />
@@ -291,7 +292,7 @@ export default function StopwatchPage() {
                         <Col span={12}>
                             <Card size="small" style={{ textAlign: "center", background: "var(--wb-card-solid-bg)" }}>
                                 <Statistic
-                                    title="Avg Lap"
+                                    title={t("Avg Lap")}
                                     value={laps.length > 0 ? formatTime(avgLapMs) : "—"}
                                     styles={{ content: { fontSize: 16, fontFamily: "var(--font-geist-mono), monospace" } }}
                                 />
@@ -310,14 +311,13 @@ export default function StopwatchPage() {
                             title={
                                 <Space>
                                     <FlagOutlined style={{ color: "#6366f1" }} />
-                                    <span>Lap Records</span>
+                                    <span>{t("Lap Records")}</span>
                                     <Tag>{laps.length}</Tag>
                                 </Space>
                             }
                             extra={
                                 <Button size="small" icon={<ClearOutlined />} onClick={handleClearLaps} danger>
-                                    Clear Laps
-                                </Button>
+                                    {t("Clear Laps")}</Button>
                             }
                             style={{ background: "var(--wb-card-solid-bg)" }}
                         >

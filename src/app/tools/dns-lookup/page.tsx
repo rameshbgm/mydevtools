@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Card, Typography, Input, Button, Row, Col, Space, Tag, Select, App, Spin, Empty } from "antd";
 import { GlobalOutlined, SearchOutlined, CopyOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { parseJsonResponse } from "@/lib/certificate-fetch-response";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -28,6 +29,9 @@ const RESOLVERS = [
 ];
 
 export default function DnsLookupPage() {
+    const { t } = useLanguage();
+    const tRef = useRef(t);
+    useEffect(() => { tRef.current = t; }, [t]);
     const { message } = App.useApp();
     const [hostname, setHostname] = useState("example.com");
     const [types, setTypes] = useState<RecordType[]>(["A", "AAAA", "MX", "NS", "TXT"]);
@@ -39,7 +43,7 @@ export default function DnsLookupPage() {
 
     const lookup = async () => {
         const host = hostname.trim();
-        if (!host) { message.warning("Enter a hostname"); return; }
+        if (!host) { message.warning(t("Enter a hostname")); return; }
         setLoading(true);
         setResults(null);
         const out: Record<string, DohResponse | { error: string }> = {};
@@ -72,86 +76,72 @@ export default function DnsLookupPage() {
             if (!r.Answer?.length) lines.push("; (no records)");
             lines.push("");
         });
-        await copyToClipboard(lines.join("\n"));
-        message.success("Copied as zone-file lines");
+        const copied = await copyToClipboard(lines.join("\n"));
+        if (copied) message.success(tRef.current("Copied as zone-file lines"));
     };
 
     return (
         <ToolPageLayout
-            title="DNS Lookup"
-            description="Resolve A, AAAA, CNAME, MX, TXT, NS, SOA records via DNS-over-HTTPS"
+            title={t("DNS Lookup")}
+            description={t("Resolve A, AAAA, CNAME, MX, TXT, NS, SOA records via DNS-over-HTTPS")}
             icon={<GlobalOutlined style={{ fontSize: 24, color: "#1890ff" }} />}
             color="#1890ff"
             learnMore={{
-                whatIs: "DNS Lookup queries public DNS-over-HTTPS (DoH) resolvers from your browser. DoH wraps DNS in standard HTTPS, so the lookup works from any network and bypasses CORS restrictions on raw DNS.",
-                whyUse: "Native nslookup/dig need a terminal. DoH lookups in the browser are quick, network-agnostic, and let you compare what different resolvers return.",
-                howToUse: [
-                    "Enter a hostname (no protocol, no path)",
-                    "Pick the record types you want",
-                    "Lookups fan out in parallel and return as soon as the resolver answers",
-                    "Copy the result as standard zone-file lines",
-                ],
-                tips: [
-                    "TXT records often hold SPF, DKIM verifiers and domain ownership proofs",
-                    "MX preference is the first number in the data field — lower = more preferred",
-                    "If A and AAAA both return, the host is dual-stack",
-                ],
-                useCases: [
-                    "Verifying DNS propagation after a record change",
-                    "Inspecting third-party domains (CDN, email, auth provider)",
-                    "Debugging email delivery (SPF/DKIM/DMARC TXT records)",
-                ],
+                whatIs: t("Query public DNS-over-HTTPS resolvers directly from your browser. The selected resolver receives the hostname and record types."),
+                whyUse: t("Compare DNS answers while diagnosing domain, email or resolver configuration."),
+                howToUse: [t("Enter a hostname without a protocol or path."), t("Choose record types and a resolver, then select Lookup."), t("Copy returned answers as zone-file lines.")],
+                tips: [t("TXT records can contain SPF, DKIM and ownership checks. MX preference uses smaller numbers first."), t("Resolver access depends on network policy, CORS support and connectivity.")],
+                useCases: [t("Check DNS changes and investigate email delivery.")],
             }}
         >
             <Card>
                 <Space.Compact style={{ width: "100%" }}>
-                    <Input
-                        placeholder="example.com"
+                    <Input dir="ltr" styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                        aria-label={t("Hostname")} placeholder="example.com"
                         value={hostname}
                         onChange={(e) => setHostname(e.target.value)}
                         onPressEnter={lookup}
                         size="large"
                     />
                     <Button type="primary" icon={<SearchOutlined />} onClick={lookup} loading={loading} size="large">
-                        Lookup
-                    </Button>
+                        {t("Lookup")}</Button>
                 </Space.Compact>
                 <Space wrap style={{ marginTop: 12, width: "100%" }}>
-                    <Text type="secondary">Types:</Text>
+                    <Text type="secondary">{t("Types:")}</Text>
                     <Select
                         mode="multiple"
                         value={types}
                         onChange={(v) => setTypes(v as RecordType[])}
                         options={RECORD_TYPES.map((t) => ({ value: t, label: t }))}
-                        style={{ minWidth: 280 }}
+                        style={{ width: "min(100%, 360px)", minWidth: 0 }} aria-label={t("Record types")}
                         maxTagCount="responsive"
                     />
-                    <Text type="secondary">Resolver:</Text>
-                    <Select value={resolver} onChange={setResolver} options={RESOLVERS} style={{ minWidth: 220 }} />
+                    <Text type="secondary">{t("Resolver:")}</Text>
+                    <Select value={resolver} onChange={setResolver} options={RESOLVERS} style={{ width: "min(100%, 280px)", minWidth: 0 }} aria-label={t("DNS resolver")} />
                 </Space>
             </Card>
 
-            {loading && <Card style={{ marginTop: 16 }}><Spin /> Querying resolver…</Card>}
+            {loading && <Card style={{ marginTop: 16 }}><Spin /> {t("Querying resolver…")}</Card>}
 
             {results && (
                 <Card
                     style={{ marginTop: 16 }}
-                    title="Results"
-                    extra={<a onClick={copyAll}><CopyOutlined /> Copy all</a>}
+                    title={t("Results")}
+                    extra={<Button type="text" icon={<CopyOutlined />} onClick={copyAll}>{t("Copy all")}</Button>}
                 >
                     <Row gutter={[16, 16]}>
-                        {Object.entries(results).map(([t, r]) => (
-                            <Col xs={24} md={12} key={t}>
-                                <Card size="small" title={<Space><Tag color="blue">{t}</Tag></Space>}>
+                        {Object.entries(results).map(([recordType, r]) => (
+                            <Col xs={24} md={12} key={recordType}>
+                                <Card size="small" title={<Space><Tag color="blue">{recordType}</Tag></Space>}>
                                     {"error" in r ? (
                                         <Text type="danger">{r.error}</Text>
                                     ) : !(r.Answer && r.Answer.length) ? (
-                                        <Empty description="No records" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                                        <Empty description={t("No records")} image={Empty.PRESENTED_IMAGE_SIMPLE} />
                                     ) : (
-                                        <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}>
+                                        <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16 }}>
                                             {r.Answer.map((a, i) => (
                                                 <div key={i} style={{ padding: "4px 0", borderBottom: i < r.Answer!.length - 1 ? "1px solid rgba(0,0,0,0.06)" : undefined }}>
-                                                    <div style={{ wordBreak: "break-all" }}>{a.data}</div>
+                                                    <div dir="ltr" style={{ direction: "ltr", textAlign: "left", wordBreak: "break-all" }}>{a.data}</div>
                                                     <Text type="secondary" style={{ fontSize: 11 }}>TTL {a.TTL}s</Text>
                                                 </div>
                                             ))}
@@ -162,8 +152,7 @@ export default function DnsLookupPage() {
                         ))}
                     </Row>
                     <Paragraph type="secondary" style={{ marginTop: 16, fontSize: 11, marginBottom: 0 }}>
-                        Lookups go directly from your browser to the chosen DoH resolver — no proxy, no logging by mydevtools.
-                    </Paragraph>
+                        {t("Lookups go directly from your browser to the chosen DoH resolver — no proxy, no logging by mydevtools.")}</Paragraph>
                 </Card>
             )}
         </ToolPageLayout>

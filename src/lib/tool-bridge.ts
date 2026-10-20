@@ -85,6 +85,9 @@ export interface BridgeTarget {
 }
 
 export const BRIDGE_TARGETS: BridgeTarget[] = [
+    { toolId: "json-schema-generator", label: "JSON Schema & Models", accepts: ["json", "text"] },
+    { toolId: "certificate-inspector", label: "Certificate Inspector", accepts: ["text"] },
+    { toolId: "saved-workflows", label: "Saved Workflows", accepts: ["text", "json", "xml", "csv", "base64", "url"] },
     { toolId: "json-formatter",  label: "JSON Formatter",     accepts: ["text", "json"] },
     { toolId: "json-validator",  label: "JSON Validator",     accepts: ["text", "json"] },
     { toolId: "json-to-csv",     label: "JSON → CSV",         accepts: ["json"] },

@@ -1,4 +1,6 @@
 "use client";
+import { useLanguage } from "@/components/LanguageProvider";
+import { projectStorage } from "@/lib/project-storage";
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
@@ -18,11 +20,15 @@ import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SslConfigSection, { DEFAULT_SSL_CONFIG, buildSslProxyFields, type SslConfig } from "@/components/SslConfigSection";
 import { substitute, buildVariableMap, type Environment } from "@/lib/api-builder/variables";
+import { generateExtraClientCode, type ExtraCodeTarget } from "@/lib/api-builder/client-codegen";
 import { parseCurl } from "@/lib/api-builder/curl-import";
 import { parsePostmanCollection, exportPostmanCollection } from "@/lib/api-builder/postman-collection";
 import { downloadText, downloadBytes } from "@/lib/download";
 import { copyToClipboard } from "@/lib/clipboard";
 import { parseJsonResponse, type ProxyResponsePayload } from "@/lib/certificate-fetch-response";
+import { legacyFormFields, type ApiSavedRequest } from "@/lib/api-builder/request-model";
+import ApiClientExtensions from "@/components/ApiClientExtensions";
+import { connectorRequest } from "@/lib/local-connector-client";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -52,19 +58,7 @@ interface RequestSettings {
     maxResponsePreviewBytes: number;
 }
 
-interface SavedRequest {
-    id: string;
-    name: string;
-    method: string;
-    url: string;
-    headers: KeyValuePair[];
-    queryParams: KeyValuePair[];
-    body: string;
-    bodyType: BodyType;
-    auth: AuthConfig;
-    settings: RequestSettings;
-    createdAt: string;
-}
+type SavedRequest = ApiSavedRequest;
 
 interface HistoryItem {
     id: string;
@@ -224,9 +218,21 @@ const STORAGE_KEYS = {
     ACTIVE_ENV: "api-builder-active-env",
 };
 
+// Authored errors retain their source key; provider diagnostics stay verbatim.
+interface HttpClientNotice { source: string; values?: Record<string, string | number>; detail?: string; }
+class HttpClientValidationError extends Error {
+    constructor(readonly source: string, readonly values?: Record<string, string | number>) {
+        super(source.replace(/\{([a-zA-Z][a-zA-Z0-9]*)\}/g, (match, key) => values && Object.hasOwn(values, key) ? String(values[key]) : match));
+    }
+}
+
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function ApiRequestBuilderPage() {
+    const { t } = useLanguage();
+    const translateRef = useRef(t);
+    useEffect(() => { translateRef.current = t; }, [t]);
+    const notify = (kind: "success" | "warning" | "error", source: string, values?: Record<string, string | number>) => message[kind](translateRef.current(source, values));
     // Request state
     const [method, setMethod] = useState("GET");
     const [url, setUrl] = useState("https://jsonplaceholder.typicode.com/posts/1");
@@ -264,7 +270,7 @@ export default function ApiRequestBuilderPage() {
     const [loading, setLoading] = useState(false);
     const [responseTime, setResponseTime] = useState<number | null>(null);
     const [responseSize, setResponseSize] = useState<number | null>(null);
-    const [responseError, setResponseError] = useState<string | null>(null);
+    const [responseError, setResponseError] = useState<HttpClientNotice | null>(null);
     const [responseCookies, setResponseCookies] = useState<ResponseCookie[]>([]);
     const [responseTruncated, setResponseTruncated] = useState(false);
 
@@ -274,6 +280,7 @@ export default function ApiRequestBuilderPage() {
 
     // SSL/TLS configuration
     const [sslConfig, setSslConfig] = useState<SslConfig>(DEFAULT_SSL_CONFIG);
+    const [transport, setTransport] = useState("managed");
 
     // UI state
     const [activeRequestTab, setActiveRequestTab] = useState("body");
@@ -300,6 +307,16 @@ export default function ApiRequestBuilderPage() {
 
     // AbortController for in-flight request
     const abortRef = useRef<AbortController | null>(null);
+    const confirmationRef = useRef<{ modal: ReturnType<typeof Modal.confirm>; names: string } | null>(null);
+    // Refresh only the open confirmation's copy when the language changes.
+    useEffect(() => {
+        const confirmation = confirmationRef.current;
+        confirmation?.modal.update({
+            title: t("Unresolved variables"),
+            content: t("These {{vars}} have no value in the active environment: {names}. Send anyway?", { names: confirmation.names }),
+            okText: t("Send"), cancelText: t("Cancel"),
+        });
+    }, [t]);
 
     // SSR guard — antd Input/Select/Segmented internals get mutated by
     // browser extensions (Shark injects `data-sharkid`), so the safe pattern
@@ -310,13 +327,13 @@ export default function ApiRequestBuilderPage() {
     // ── Load persisted data ──────────────────────────────────────────
     useEffect(() => {
         try {
-            const saved = localStorage.getItem(STORAGE_KEYS.SAVED_REQUESTS);
+            const saved = projectStorage.getItem(STORAGE_KEYS.SAVED_REQUESTS);
             if (saved) setSavedRequests(JSON.parse(saved));
-            const hist = localStorage.getItem(STORAGE_KEYS.HISTORY);
+            const hist = projectStorage.getItem(STORAGE_KEYS.HISTORY);
             if (hist) setHistory(JSON.parse(hist));
-            const envs = localStorage.getItem(STORAGE_KEYS.ENVIRONMENTS);
+            const envs = projectStorage.getItem(STORAGE_KEYS.ENVIRONMENTS);
             if (envs) setEnvironments(JSON.parse(envs));
-            const activeEnv = localStorage.getItem(STORAGE_KEYS.ACTIVE_ENV);
+            const activeEnv = projectStorage.getItem(STORAGE_KEYS.ACTIVE_ENV);
             if (activeEnv) setActiveEnvId(activeEnv);
         } catch (e) {
             console.error("Failed to load saved data:", e);
@@ -324,18 +341,18 @@ export default function ApiRequestBuilderPage() {
     }, []);
 
     const persistSavedRequests = useCallback((requests: SavedRequest[]) => {
-        localStorage.setItem(STORAGE_KEYS.SAVED_REQUESTS, JSON.stringify(requests));
+        projectStorage.setItem(STORAGE_KEYS.SAVED_REQUESTS, JSON.stringify(requests));
         setSavedRequests(requests);
     }, []);
 
     const persistHistory = useCallback((items: HistoryItem[]) => {
         const trimmed = items.slice(0, HISTORY_LIMIT);
-        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(trimmed));
+        projectStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(trimmed));
         setHistory(trimmed);
     }, []);
 
     const persistEnvironments = useCallback((envs: Environment[]) => {
-        localStorage.setItem(STORAGE_KEYS.ENVIRONMENTS, JSON.stringify(envs));
+        projectStorage.setItem(STORAGE_KEYS.ENVIRONMENTS, JSON.stringify(envs));
         setEnvironments(envs);
     }, []);
 
@@ -438,10 +455,8 @@ export default function ApiRequestBuilderPage() {
                 try {
                     const varStr = substitute(graphqlVariables, varMap).resolved;
                     const vars = varStr.trim() ? JSON.parse(varStr) : {};
-                    return JSON.stringify({
-                        query: substitute(graphqlQuery, varMap).resolved,
-                        variables: vars,
-                    });
+                    if (!vars || typeof vars !== "object" || Array.isArray(vars)) throw new Error("GraphQL variables must be an object.");
+                    return `{"query":${JSON.stringify(substitute(graphqlQuery, varMap).resolved)},"variables":${varStr.trim() || "{}"}}`;
                 } catch {
                     return JSON.stringify({ query: substitute(graphqlQuery, varMap).resolved });
                 }
@@ -521,17 +536,18 @@ export default function ApiRequestBuilderPage() {
     const sendRequest = async () => {
         // Edge: bail loudly on obviously broken input rather than going to the proxy.
         const trimmedUrl = url.trim();
-        if (!trimmedUrl) { message.warning("Enter a URL first"); return; }
+        if (!trimmedUrl) { notify("warning", "Enter a URL first"); return; }
         if (unresolvedVars.length > 0) {
             const ok = await new Promise<boolean>((resolve) => {
-                Modal.confirm({
-                    title: "Unresolved variables",
-                    content: `These {{vars}} have no value in the active environment: ${unresolvedVars.join(", ")}. Send anyway?`,
-                    okText: "Send",
-                    cancelText: "Cancel",
-                    onOk: () => resolve(true),
-                    onCancel: () => resolve(false),
+                const modal = Modal.confirm({
+                    title: translateRef.current("Unresolved variables"),
+                    content: translateRef.current("These {{vars}} have no value in the active environment: {names}. Send anyway?", { names: unresolvedVars.join(", ") }),
+                    okText: translateRef.current("Send"),
+                    cancelText: translateRef.current("Cancel"),
+                    onOk: () => { confirmationRef.current = null; resolve(true); },
+                    onCancel: () => { confirmationRef.current = null; resolve(false); },
                 });
+                confirmationRef.current = { modal, names: unresolvedVars.join(", ") };
             });
             if (!ok) return;
         }
@@ -554,9 +570,13 @@ export default function ApiRequestBuilderPage() {
         try {
             const finalUrl = buildUrl();
             try { new URL(finalUrl); }
-            catch { throw new Error(`Invalid URL after variable substitution: ${finalUrl}`); }
+            catch { throw new HttpClientValidationError("Invalid URL after variable substitution: {url}", { url: finalUrl }); }
 
             const headerObj = buildHeaders();
+            if (bodyType === "graphql") {
+                const values = JSON.parse(substitute(graphqlVariables, varMap).resolved || "{}");
+                if (!values || typeof values !== "object" || Array.isArray(values)) throw new HttpClientValidationError("GraphQL variables must be a JSON object.");
+            }
             const requestBody = buildBody();
 
             let proxyBody: string | null = null;
@@ -569,7 +589,7 @@ export default function ApiRequestBuilderPage() {
                     if (contentType) headerObj["Content-Type"] = contentType;
                     const buf = await serialized.arrayBuffer();
                     if (buf.byteLength > MAX_REQUEST_BODY_BYTES) {
-                        throw new Error(`Request body too large (${formatBytes(buf.byteLength)} > ${formatBytes(MAX_REQUEST_BODY_BYTES)})`);
+                        throw new HttpClientValidationError("Request body too large ({size} > {limit})", { size: formatBytes(buf.byteLength), limit: formatBytes(MAX_REQUEST_BODY_BYTES) });
                     }
                     // chunked btoa: avoid the call-stack overflow that String.fromCharCode(...big) hits
                     const u8 = new Uint8Array(buf);
@@ -583,7 +603,7 @@ export default function ApiRequestBuilderPage() {
                 } else {
                     const s = requestBody as string;
                     if (new Blob([s]).size > MAX_REQUEST_BODY_BYTES) {
-                        throw new Error(`Request body too large (> ${formatBytes(MAX_REQUEST_BODY_BYTES)})`);
+                        throw new HttpClientValidationError("Request body too large (> {limit})", { limit: formatBytes(MAX_REQUEST_BODY_BYTES) });
                     }
                     proxyBody = s;
                 }
@@ -599,10 +619,15 @@ export default function ApiRequestBuilderPage() {
                 followRedirects: settings.followRedirects,
                 ...buildSslProxyFields({
                     ...sslConfig,
-                    sslVerify: sslConfig.sslVerify || settings.validateSSL,
+                    sslVerify: sslConfig.sslVerify,
                 }),
             };
 
+            let data: ProxyResponsePayload;
+            if (transport === "native") {
+                if (!sslConfig.sslVerify) throw new HttpClientValidationError("The native HTTP connector requires certificate verification. Enable it in SSL / TLS settings.");
+                data = await connectorRequest<ProxyResponsePayload>({ service: "request", url: finalUrl, method, headers: headerObj, body: proxyBody, bodyIsBase64, timeout: Math.max(100, Math.min(15000, settings.timeout)), followRedirects: settings.followRedirects, tls: { ca: sslConfig.sslCaCert, certificate: sslConfig.sslClientCert, privateKey: sslConfig.sslClientKey } }, controller.signal);
+            } else {
             const proxyRes = await fetch("/api/proxy", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -610,7 +635,8 @@ export default function ApiRequestBuilderPage() {
                 signal: controller.signal,
             });
 
-            const data = await parseJsonResponse<ProxyResponsePayload>(proxyRes, "Proxy service");
+            data = await parseJsonResponse<ProxyResponsePayload>(proxyRes, "Proxy service");
+            }
 
             setResponseTime(data.timing ?? 0);
             setStatus(data.status ?? 0);
@@ -638,10 +664,10 @@ export default function ApiRequestBuilderPage() {
         } catch (err: unknown) {
             const aborted = err instanceof DOMException && err.name === "AbortError";
             if (aborted) {
-                setResponseError("Cancelled");
+                setResponseError({ source: "Cancelled" });
             } else {
                 const msg = err instanceof Error ? err.message : String(err);
-                setResponseError(msg);
+                setResponseError(err instanceof HttpClientValidationError ? { source: err.source, values: err.values } : { source: "Request failed.", detail: msg });
                 setResponse(`Error: ${msg}`);
                 setStatus(0);
             }
@@ -693,33 +719,36 @@ export default function ApiRequestBuilderPage() {
 
     // ── Save / load requests ─────────────────────────────────────────
     const handleSaveRequest = () => {
-        if (!requestName.trim()) { message.warning("Please enter a request name"); return; }
+        if (!requestName.trim()) { notify("warning", "Please enter a request name"); return; }
         const newRequest: SavedRequest = {
             id: generateId(), name: requestName, method, url,
-            headers, queryParams, body, bodyType, auth, settings,
+            headers, queryParams, body, bodyType, auth, settings, formData, graphqlQuery, graphqlVariables,
             createdAt: new Date().toISOString(),
         };
         persistSavedRequests([newRequest, ...savedRequests]);
         setSaveModalOpen(false);
         setRequestName("");
-        message.success("Request saved!");
+        notify("success", "Request saved!");
     };
     const loadRequest = (req: SavedRequest) => {
         setMethod(req.method); setUrl(req.url);
         setHeaders(req.headers); setQueryParams(req.queryParams);
         setBody(req.body); setBodyType(req.bodyType);
+        setFormData(legacyFormFields(req));
+        setGraphqlQuery(req.graphqlQuery ?? SAMPLE_GRAPHQL); setGraphqlVariables(req.graphqlVariables ?? "{}");
+        setHeaderMode("form"); setCookies([]);
         setAuth(req.auth); setSettings(req.settings);
-        message.success(`Loaded: ${req.name}`);
+        notify("success", "Loaded: {name}", { name: req.name });
     };
     const deleteRequest = (id: string) => {
         persistSavedRequests(savedRequests.filter((r) => r.id !== id));
-        message.success("Request deleted");
+        notify("success", "Request deleted");
     };
     const loadFromHistory = (item: HistoryItem) => { setMethod(item.method); setUrl(item.url); };
 
     // ── Environment management ────────────────────────────────────────
     const openNewEnv = () => {
-        setEditingEnv({ id: generateId(), name: "New Environment", variables: [] });
+        setEditingEnv({ id: generateId(), name: translateRef.current("New Environment"), variables: [] });
         setEnvModalOpen(true);
     };
     const openEditEnv = (env: Environment) => {
@@ -733,25 +762,25 @@ export default function ApiRequestBuilderPage() {
         persistEnvironments(next);
         setEnvModalOpen(false);
         setEditingEnv(null);
-        message.success("Environment saved");
+        notify("success", "Environment saved");
     };
     const deleteEnv = (id: string) => {
         persistEnvironments(environments.filter((e) => e.id !== id));
         if (activeEnvId === id) {
             setActiveEnvId(null);
-            localStorage.removeItem(STORAGE_KEYS.ACTIVE_ENV);
+            projectStorage.removeItem(STORAGE_KEYS.ACTIVE_ENV);
         }
-        message.success("Environment deleted");
+        notify("success", "Environment deleted");
     };
     const selectEnv = (id: string | null) => {
         setActiveEnvId(id);
-        if (id) localStorage.setItem(STORAGE_KEYS.ACTIVE_ENV, id);
-        else localStorage.removeItem(STORAGE_KEYS.ACTIVE_ENV);
+        if (id) projectStorage.setItem(STORAGE_KEYS.ACTIVE_ENV, id);
+        else projectStorage.removeItem(STORAGE_KEYS.ACTIVE_ENV);
     };
 
     // ── cURL import ───────────────────────────────────────────────────
     const handleCurlImport = () => {
-        if (!curlText.trim()) { message.warning("Paste a curl command"); return; }
+        if (!curlText.trim()) { notify("warning", "Paste a curl command"); return; }
         try {
             const parsed = parseCurl(curlText);
             setMethod(parsed.method);
@@ -761,6 +790,7 @@ export default function ApiRequestBuilderPage() {
             if (parsed.body !== null) {
                 setBody(parsed.body);
                 setBodyType(parsed.bodyType === "x-www-form-urlencoded" ? "x-www-form-urlencoded" : parsed.bodyType || "text");
+                setFormData(parsed.bodyType === "x-www-form-urlencoded" ? [...new URLSearchParams(parsed.body)].map(([key, value]) => ({ id: generateId(), key, value, enabled: true })) : []);
             } else {
                 setBody(""); setBodyType("none");
             }
@@ -776,15 +806,15 @@ export default function ApiRequestBuilderPage() {
             }
             setCurlModalOpen(false);
             setCurlText("");
-            message.success("cURL imported");
+            notify("success", "cURL imported");
         } catch (e) {
-            message.error(e instanceof Error ? e.message : String(e));
+            notify("error", "Import failed: {detail}", { detail: e instanceof Error ? e.message : String(e) });
         }
     };
 
     // ── Postman Collection import / export ────────────────────────────
     const handlePostmanImport = () => {
-        if (!importText.trim()) { message.warning("Paste a Postman Collection JSON"); return; }
+        if (!importText.trim()) { notify("warning", "Paste a Postman Collection JSON"); return; }
         try {
             const reqs = parsePostmanCollection(importText);
             const mapped: SavedRequest[] = reqs.map((r) => ({
@@ -795,10 +825,13 @@ export default function ApiRequestBuilderPage() {
                 headers: r.headers.map((h) => ({ id: generateId(), key: h.key, value: h.value, enabled: true })),
                 queryParams: r.queryParams.map((q) => ({ id: generateId(), key: q.key, value: q.value, enabled: true })),
                 body: r.body,
+                formData: r.formData?.map((field) => ({ ...field, id: generateId(), enabled: true })),
+                graphqlQuery: r.graphqlQuery,
+                graphqlVariables: r.graphqlVariables,
                 bodyType: r.bodyMode === "raw"
                     ? (r.rawLanguage === "json" ? "json" : r.rawLanguage === "xml" ? "xml" : "text")
                     : r.bodyMode === "urlencoded" ? "x-www-form-urlencoded"
-                        : r.bodyMode === "formdata" ? "form-data" : "none",
+                        : r.bodyMode === "formdata" ? "form-data" : r.bodyMode === "graphql" ? "graphql" : "none",
                 auth: { type: "none", basic: { username: "", password: "" }, bearer: { token: "", prefix: "Bearer" },
                     apiKey: { key: "X-Api-Key", value: "", addTo: "header" }, oauth2: { accessToken: "", tokenType: "Bearer" } },
                 settings: { timeout: 30000, followRedirects: true, validateSSL: true, maxResponsePreviewBytes: PREVIEW_MAX_DEFAULT },
@@ -807,14 +840,14 @@ export default function ApiRequestBuilderPage() {
             persistSavedRequests([...mapped, ...savedRequests]);
             setImportModalOpen(false);
             setImportText("");
-            message.success(`Imported ${mapped.length} request${mapped.length === 1 ? "" : "s"}`);
+            notify("success", "Requests imported: {count}", { count: mapped.length });
         } catch (e) {
-            message.error(e instanceof Error ? e.message : String(e));
+            notify("error", "Import failed: {detail}", { detail: e instanceof Error ? e.message : String(e) });
         }
     };
 
     const handlePostmanExport = () => {
-        if (savedRequests.length === 0) { message.warning("No saved requests to export"); return; }
+        if (savedRequests.length === 0) { notify("warning", "No saved requests to export"); return; }
         const json = exportPostmanCollection({
             name: "mydevtools API Request Builder export",
             requests: savedRequests.map((r) => ({
@@ -825,10 +858,11 @@ export default function ApiRequestBuilderPage() {
                 queryParams: r.queryParams.map((q) => ({ key: q.key, value: q.value, enabled: q.enabled })),
                 body: r.body,
                 bodyType: r.bodyType,
+                formData: legacyFormFields(r), graphqlQuery: r.graphqlQuery, graphqlVariables: r.graphqlVariables,
             })),
         });
         downloadText(json, "mydevtools-collection.json", "application/json");
-        message.success("Collection downloaded");
+        notify("success", "Collection downloaded");
     };
 
     // ── Response actions ──────────────────────────────────────────────
@@ -849,7 +883,7 @@ export default function ApiRequestBuilderPage() {
 
     const copyResponse = () => {
         if (response === null) return;
-        copyToClipboard(response, "Response copied");
+        copyToClipboard(response, translateRef.current("Response copied"));
     };
 
     // ── cURL + code snippets ──────────────────────────────────────────
@@ -869,6 +903,12 @@ export default function ApiRequestBuilderPage() {
         const finalUrl = buildUrl();
         const headerObj = buildHeaders();
         const requestBody = buildBody();
+        if (["php", "ruby", "csharp"].includes(language)) {
+            try {
+                const payload = requestBody instanceof FormData ? Array.from(requestBody.entries()).map(([key, value]): [string, string] => { if (typeof value !== "string") throw new Error("Code samples currently support textual multipart fields."); return [key, value]; }) : requestBody;
+                return generateExtraClientCode(language as ExtraCodeTarget, { url: finalUrl, method, headers: headerObj, body: payload });
+            } catch (cause) { return `${language === "ruby" ? "#" : "//"} ${cause instanceof Error ? cause.message : String(cause)}`; }
+        }
         switch (language) {
             case "javascript-fetch":
                 return `fetch('${finalUrl}', {
@@ -970,45 +1010,47 @@ System.out.println(response.body());`;
 
     return (
         <ToolPageLayout
-            title="API Request Builder"
-            description="Postman-style HTTP client: environments & variables, cURL/Postman import, tests, code gen — no logs on the server"
+            title={t("API Request Builder")}
+            description={t("HTTP and gRPC clients, collection runner, local mock server, environments, imports and code generation")}
             icon={<SendOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
             color="#52c41a"
             learnMore={{
-                whatIs: "A complete HTTP client modelled on Postman. Supports every standard method, eight body types, five auth schemes, environments with {{variable}} substitution, request cancellation, response previews, automated tests, and code generation for six languages. Saved requests and history persist in your browser; nothing leaves your machine except the request you choose to send.",
-                whyUse: "Testing APIs is core to every backend, mobile and SPA project. Cloud-hosted Postman ships your collections, environments and history to a vendor — this tool keeps everything local. The server side does nothing except forward your one request and return the response.",
+                whatIs: t("An HTTP client with environment variables, saved requests, cURL/Postman import, response previews, tests and client code generation. A collection runner adds ordered requests, assertions and response captures. The localhost connector supports native HTTP, four gRPC call styles and temporary local HTTP mocks."),
+                whyUse: t("Keep saved requests and environments in this browser while choosing how each network action runs. Managed HTTP passes through this deployment's server to a public endpoint. Native HTTP, gRPC and mocks run through your authenticated localhost runtime."),
                 howToUse: [
-                    "Enter the URL and pick a method (cURL Import accepts pasted curl commands)",
-                    "Set up an environment (gear icon) so {{baseUrl}}, {{token}}, etc. resolve at send time",
-                    "Add headers, query params, body, auth — they all participate in variable substitution",
-                    "Hit Send; Cancel is available while in-flight",
-                    "Inspect the response: pretty/raw/preview/cookies/headers/tests",
+                    t("Enter the URL and pick a method (cURL Import accepts pasted curl commands)"),
+                    t("Set up an environment (gear icon) so {{baseUrl}}, {{token}}, etc. resolve at send time"),
+                    t("Add headers, query params, body, auth — they all participate in variable substitution"),
+                    t("Hit Send; Cancel is available while in-flight"),
+                    t("Inspect the response: pretty/raw/preview/cookies/headers/tests"),
                 ],
                 tips: [
-                    "Variables: `{{var}}` works in URL, headers, query, body, auth — anywhere a value lives",
-                    "Built-ins: `{{$timestamp}}`, `{{$isoTimestamp}}`, `{{$randomUUID}}`, `{{$randomInt}}` always work without setup",
-                    "Unresolved variables produce a confirmation prompt before sending — they never silently become empty",
-                    "Cancel mid-flight to abort long requests cleanly (AbortController under the hood)",
-                    "Response bigger than 25MB is truncated with a visible warning; binary responses get a download button",
-                    "Import any Postman v2.x collection or paste a curl command to populate the form",
+                    t("Variables: `{{var}}` works in URL, headers, query, body, auth — anywhere a value lives"),
+                    t("Built-ins: `{{$timestamp}}`, `{{$isoTimestamp}}`, `{{$randomUUID}}`, `{{$randomInt}}` always work without setup"),
+                    t("Unresolved variables produce a confirmation prompt before sending — they never silently become empty"),
+                    t("Cancel mid-flight to abort long requests cleanly (AbortController under the hood)"),
+                    t("Response bigger than 25MB is truncated with a visible warning; binary responses get a download button"),
+                    t("Postman imports flatten folders and support raw text, JSON, XML, text form fields and GraphQL. Attach file references manually; collection scripts and auth inheritance are not imported."),
+                    t("Use the section below for collection captures/assertions, proto-based gRPC calls and bounded local mock servers."),
                 ],
                 useCases: [
-                    "Testing REST/GraphQL APIs during development",
-                    "Reproducing browser network requests by pasting their curl form",
-                    "Sharing prepared requests with teammates via Postman Collection export",
-                    "Quickly generating client code in 6 languages",
+                    t("Testing REST/GraphQL APIs during development"),
+                    t("Reproducing browser network requests by pasting their curl form"),
+                    t("Sharing prepared requests with teammates via Postman Collection export"),
+                    t("Generating client code in JavaScript, Python, Go, Java, PHP, Ruby and C#"),
                 ],
                 serverNotice: {
                     route: "proxy",
-                    purpose: "The browser cannot directly hit arbitrary APIs (CORS) or accept self-signed TLS certs. Every request is forwarded once through a small Node.js proxy that adds no logic except the network call itself.",
+                    purpose: t("Managed HTTP requests pass through this deployment's proxy. Native HTTP and gRPC require an authenticated localhost runtime. Mock configurations create a temporary loopback server on your device."),
                     sentFields: [
-                        "Target URL after {{variable}} substitution",
-                        "Method, headers (Authorization included), query string and body — exactly as composed",
-                        "SSL/TLS options if you configured them (CA bundle, mTLS cert/key)",
+                        t("Target URL after {{variable}} substitution"),
+                        t("Method, headers (Authorization included), query string and body — exactly as composed"),
+                        t("SSL/TLS options if you configured them (CA bundle, mTLS cert/key)"),
+                        t("For gRPC: proto files, selected method, metadata and request messages; for mocks: response configuration and allowed browser origins"),
                     ],
                     extra: (
                         <Text style={{ fontSize: 12 }}>
-                            <b>No logging.</b> The proxy route (<code>src/app/api/proxy/route.ts</code>) is explicitly prohibited from logging URLs, headers, bodies, or response data — only generated error messages flow back to the browser. Everything else (history, tests, code-gen, response parsing, environments) is 100% in-browser.
+                            {t("Request credentials and payloads are not written to application logs. Saved HTTP requests, history, environments and collection plans use browser storage. RPC inputs/results remain in page memory. Mock configuration and recent requests remain in the localhost runtime's memory until stopped, expired or restarted.")}
                         </Text>
                     ),
                 },
@@ -1020,6 +1062,8 @@ System.out.println(response.body());`;
                 </div>
             ) : (
             <>
+            <p><a href="#api-client-extensions">{t("Collection runner, gRPC and local mocks")}</a></p>
+            <div className="wb-workbench" style={{ marginBlockEnd: 16 }}><label>{t("HTTP transport")}<Select aria-label={t("HTTP transport")} value={transport} onChange={setTransport} options={[{ value: "managed", label: t("Managed proxy · public endpoints") }, { value: "native", label: t("Local connector · private / localhost") }]} style={{ maxWidth: "100%", width: 360 }} /></label>{transport === "native" && <p>{t("Enable connector access below. Native requests verify TLS, support custom CA / client certificates, and are limited to 1 MiB request, 2 MiB response and 15 seconds.")}</p>}</div>
             <Row gutter={[16, 16]}>
                 {/* ── Left: Request ── */}
                 <Col xs={24} xl={14}>
@@ -1027,67 +1071,69 @@ System.out.println(response.body());`;
                         {/* Environment + Import bar */}
                         <Space wrap style={{ marginBottom: 12, width: "100%", justifyContent: "space-between" }}>
                             <Space wrap>
-                                <Text type="secondary" style={{ fontSize: 12 }}>Environment:</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>{t("Environment:")}</Text>
                                 <Select
                                     size="small"
                                     value={activeEnvId || "__none__"}
                                     onChange={(v) => selectEnv(v === "__none__" ? null : v)}
                                     style={{ minWidth: 180 }}
                                     options={[
-                                        { value: "__none__", label: "No environment" },
+                                        { value: "__none__", label: t("No environment") },
                                         ...environments.map((e) => ({ value: e.id, label: e.name })),
                                     ]}
                                 />
-                                <Tooltip title="Manage environments">
-                                    <Button aria-label="Settings" size="small" icon={<SettingOutlined />} onClick={openNewEnv} />
+                                <Tooltip title={t("Manage environments")}>
+                                    <Button aria-label={t("Settings")} size="small" icon={<SettingOutlined />} onClick={openNewEnv} />
                                 </Tooltip>
                                 {activeEnv && (
-                                    <Tag color="blue">{activeEnv.variables.filter((v) => v.enabled).length} vars</Tag>
+                                    <Tag color="blue">{t("Variables: {count}", { count: activeEnv.variables.filter((v) => v.enabled).length })}</Tag>
                                 )}
                                 {unresolvedVars.length > 0 && (
-                                    <Tooltip title={`Unresolved: ${unresolvedVars.join(", ")}`}>
-                                        <Tag color="red">{unresolvedVars.length} unresolved</Tag>
+                                    <Tooltip title={t("Unresolved: {names}", { names: unresolvedVars.join(", ") })}>
+                                        <Tag color="red">{t("Unresolved: {count}", { count: unresolvedVars.length })}</Tag>
                                     </Tooltip>
                                 )}
                             </Space>
                             <Space wrap>
-                                <Tooltip title="Import from cURL">
+                                <Tooltip title={t("Import from cURL")}>
                                     <Button size="small" icon={<ImportOutlined />} onClick={() => setCurlModalOpen(true)}>cURL</Button>
                                 </Tooltip>
-                                <Tooltip title="Import Postman Collection">
+                                <Tooltip title={t("Import Postman Collection")}>
                                     <Button size="small" icon={<ImportOutlined />} onClick={() => setImportModalOpen(true)}>Postman</Button>
                                 </Tooltip>
-                                <Tooltip title="Export saved requests as Postman v2.1 Collection">
-                                    <Button size="small" icon={<ExportOutlined />} onClick={handlePostmanExport}>Export</Button>
+                                <Tooltip title={t("Export saved requests as Postman v2.1 Collection")}>
+                                    <Button size="small" icon={<ExportOutlined />} onClick={handlePostmanExport}>{t("Export")}</Button>
                                 </Tooltip>
                             </Space>
                         </Space>
 
                         {/* URL Bar */}
                         <Space.Compact style={{ width: "100%", marginBottom: 16 }}>
-                            <Select value={method} onChange={setMethod} style={{ width: 120 }} size="large">
+                            <Select value={method} onChange={setMethod} aria-label={t("HTTP method")} style={{ minWidth: 120 }} size="large">
                                 {HTTP_METHODS.map((m) => (
                                     <Select.Option key={m.value} value={m.value}>
-                                        <span style={{ color: m.color, fontWeight: 600 }}>{m.value}</span>
+                                        <span dir="ltr" style={{ color: m.color, fontWeight: 600 }}>{m.value}</span>
                                     </Select.Option>
                                 ))}
                             </Select>
-                            <Input
+                            <Input dir="ltr"
+                                styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                 size="large"
                                 value={url}
                                 onChange={(e) => setUrl(e.target.value)}
-                                placeholder="Enter request URL — supports {{variables}}"
+                                aria-label={t("Request URL")}
+                                placeholder={t("Enter request URL — supports {{variables}}") }
                                 style={{ flex: 1 }}
                                 onPressEnter={sendRequest}
                             />
                             {loading ? (
-                                <Button size="large" danger icon={<StopOutlined />} onClick={cancelRequest}>Cancel</Button>
+                                <Button size="large" danger icon={<StopOutlined />} onClick={cancelRequest}>{t("Cancel")}</Button>
                             ) : (
                                 <Button
                                     type="primary" size="large" icon={<PlayCircleOutlined />}
                                     onClick={sendRequest} style={{ background: methodColor }}
                                 >
-                                    Send
+                                    {t("Send")}
                                 </Button>
                             )}
                         </Space.Compact>
@@ -1096,7 +1142,7 @@ System.out.println(response.body());`;
                         {url && (
                             <div style={{ marginBottom: 12, padding: "6px 10px", background: "rgba(0,0,0,0.03)", borderRadius: 4, fontSize: 11, fontFamily: "var(--font-geist-mono)", wordBreak: "break-all" }}>
                                 <Text type="secondary" style={{ fontSize: 11 }}>→ </Text>
-                                <Text style={{ fontSize: 11 }}>{buildUrl()}</Text>
+                                <Text dir="ltr" style={{ fontSize: 11 }}>{buildUrl()}</Text>
                             </div>
                         )}
 
@@ -1106,14 +1152,14 @@ System.out.println(response.body());`;
                             onChange={setActiveRequestTab}
                             size="small"
                             tabBarExtraContent={
-                                <Tooltip title="Save Request">
-                                    <Button aria-label="Save" size="small" icon={<SaveOutlined />} onClick={() => setSaveModalOpen(true)} />
+                                <Tooltip title={t("Save Request")}>
+                                    <Button aria-label={t("Save")} size="small" icon={<SaveOutlined />} onClick={() => setSaveModalOpen(true)} />
                                 </Tooltip>
                             }
                             items={[
                                 {
                                     key: "body",
-                                    label: <><FileTextOutlined /> Body</>,
+                                    label: <><FileTextOutlined /> {t("Body")}</>,
                                     children: (
                                         <div>
                                             <Segmented
@@ -1134,18 +1180,18 @@ System.out.println(response.body());`;
                                                     }
                                                 }}
                                                 options={[
-                                                    { label: "none", value: "none" },
+                                                    { label: t("none"), value: "none" },
                                                     { label: "JSON", value: "json" },
                                                     { label: "XML", value: "xml" },
-                                                    { label: "Text", value: "text" },
-                                                    { label: "Form URL", value: "x-www-form-urlencoded" },
-                                                    { label: "Form Data", value: "form-data" },
+                                                    { label: t("Text"), value: "text" },
+                                                    { label: t("Form URL"), value: "x-www-form-urlencoded" },
+                                                    { label: t("Form Data"), value: "form-data" },
                                                     { label: "GraphQL", value: "graphql" },
                                                 ]}
                                                 style={{ marginBottom: 12 }}
                                             />
                                             {bodyType === "none" && (
-                                                <Alert title="This request does not have a body" type="info" showIcon />
+                                                <Alert title={t("This request does not have a body")} type="info" showIcon />
                                             )}
                                             {(bodyType === "json" || bodyType === "xml" || bodyType === "text") && (
                                                 <CodeEditor
@@ -1158,11 +1204,11 @@ System.out.println(response.body());`;
                                             {bodyType === "graphql" && (
                                                 <Row gutter={8}>
                                                     <Col span={14}>
-                                                        <Text type="secondary" style={{ fontSize: 11 }}>Query</Text>
+                                                        <Text type="secondary" style={{ fontSize: 11 }}>{t("Query")}</Text>
                                                         <CodeEditor value={graphqlQuery} onChange={(val) => setGraphqlQuery(val || "")} language="graphql" height={150} />
                                                     </Col>
                                                     <Col span={10}>
-                                                        <Text type="secondary" style={{ fontSize: 11 }}>Variables</Text>
+                                                        <Text type="secondary" style={{ fontSize: 11 }}>{t("Variables")}</Text>
                                                         <CodeEditor value={graphqlVariables} onChange={(val) => setGraphqlVariables(val || "")} language="json" height={150} />
                                                     </Col>
                                                 </Row>
@@ -1171,13 +1217,13 @@ System.out.println(response.body());`;
                                                 <div>
                                                     {formData.map((f) => (
                                                         <Space key={f.id} style={{ width: "100%", marginBottom: 8 }}>
-                                                            <Switch checked={f.enabled} onChange={(v) => updateItem(setFormData, f.id, "enabled", v)} size="small" />
-                                                            <Input value={f.key} onChange={(e) => updateItem(setFormData, f.id, "key", e.target.value)} placeholder="Key" style={{ width: 150 }} />
-                                                            <Input value={f.value} onChange={(e) => updateItem(setFormData, f.id, "value", e.target.value)} placeholder="Value" style={{ flex: 1 }} />
-                                                            <Button aria-label="Delete" icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setFormData, f.id)} />
+                                                            <Switch aria-label={t("Enable form field")} checked={f.enabled} onChange={(v) => updateItem(setFormData, f.id, "enabled", v)} size="small" />
+                                                            <Input dir="ltr" value={f.key} onChange={(e) => updateItem(setFormData, f.id, "key", e.target.value)} placeholder={t("Key")} style={{ width: 150 }} />
+                                                            <Input dir="ltr" value={f.value} onChange={(e) => updateItem(setFormData, f.id, "value", e.target.value)} placeholder={t("Value")} style={{ flex: 1 }} />
+                                                            <Button aria-label={t("Delete")} icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setFormData, f.id)} />
                                                         </Space>
                                                     ))}
-                                                    <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setFormData)}>Add Field</Button>
+                                                    <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setFormData)}>{t("Add Field")}</Button>
                                                 </div>
                                             )}
                                         </div>
@@ -1185,7 +1231,7 @@ System.out.println(response.body());`;
                                 },
                                 {
                                     key: "headers",
-                                    label: <><FormOutlined /> Headers ({headers.filter((h) => h.enabled).length})</>,
+                                    label: <><FormOutlined /> {t("Headers")} ({headers.filter((h) => h.enabled).length})</>,
                                     children: (
                                         <div>
                                             <div style={{ marginBottom: 12 }}>
@@ -1194,7 +1240,7 @@ System.out.println(response.body());`;
                                                     value={headerMode}
                                                     onChange={(v) => switchHeaderMode(v as "form" | "json")}
                                                     options={[
-                                                        { label: "Form", value: "form" },
+                                                        { label: t("Form"), value: "form" },
                                                         { label: "JSON", value: "json" },
                                                     ]}
                                                 />
@@ -1203,26 +1249,26 @@ System.out.println(response.body());`;
                                                 <>
                                                     {headers.map((h) => (
                                                         <Space key={h.id} style={{ width: "100%", marginBottom: 8 }} wrap>
-                                                            <Switch checked={h.enabled} onChange={(v) => updateItem(setHeaders, h.id, "enabled", v)} size="small" />
+                                                            <Switch aria-label={t("Enable header")} checked={h.enabled} onChange={(v) => updateItem(setHeaders, h.id, "enabled", v)} size="small" />
                                                             <Select
                                                                 value={h.key || undefined}
                                                                 onChange={(v) => updateItem(setHeaders, h.id, "key", v)}
                                                                 style={{ width: 180 }}
-                                                                showSearch allowClear placeholder="Header name"
+                                                                showSearch allowClear placeholder={t("Header name")}
                                                             >
                                                                 {COMMON_HEADERS.map((name) => (
                                                                     <Select.Option key={name} value={name}>{name}</Select.Option>
                                                                 ))}
                                                             </Select>
-                                                            <Input value={h.value} onChange={(e) => updateItem(setHeaders, h.id, "value", e.target.value)} placeholder="Value" style={{ flex: 1, minWidth: 180 }} />
-                                                            <Button aria-label="Delete" icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setHeaders, h.id)} />
+                                                            <Input dir="ltr" value={h.value} onChange={(e) => updateItem(setHeaders, h.id, "value", e.target.value)} placeholder={t("Value")} style={{ flex: 1, minWidth: 180 }} />
+                                                            <Button aria-label={t("Delete")} icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setHeaders, h.id)} />
                                                         </Space>
                                                     ))}
-                                                    <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setHeaders)}>Add Header</Button>
+                                                    <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setHeaders)}>{t("Add Header")}</Button>
                                                 </>
                                             ) : (
                                                 <div>
-                                                    <TextArea
+                                                    <TextArea dir="ltr"
                                                         value={headerJson}
                                                         onChange={(e) => {
                                                             setHeaderJson(e.target.value);
@@ -1234,7 +1280,7 @@ System.out.println(response.body());`;
                                                         placeholder={'{\n  "Authorization": "Bearer xxx",\n  "Accept": "application/json"\n}'}
                                                     />
                                                     <Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: "block" }}>
-                                                        JSON object — auto-syncs to form when valid
+                                                        {t("JSON object — auto-syncs to form when valid")}
                                                     </Text>
                                                 </div>
                                             )}
@@ -1243,65 +1289,66 @@ System.out.println(response.body());`;
                                 },
                                 {
                                     key: "params",
-                                    label: <>Query ({queryParams.filter((p) => p.enabled).length})</>,
+                                    label: <>{t("Query")} ({queryParams.filter((p) => p.enabled).length})</>,
                                     children: (
                                         <div>
                                             {queryParams.map((p) => (
                                                 <Space key={p.id} style={{ width: "100%", marginBottom: 8 }}>
-                                                    <Switch checked={p.enabled} onChange={(v) => updateItem(setQueryParams, p.id, "enabled", v)} size="small" />
-                                                    <Input value={p.key} onChange={(e) => updateItem(setQueryParams, p.id, "key", e.target.value)} placeholder="Key" style={{ width: 150 }} />
-                                                    <Input value={p.value} onChange={(e) => updateItem(setQueryParams, p.id, "value", e.target.value)} placeholder="Value" style={{ flex: 1 }} />
-                                                    <Button aria-label="Delete" icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setQueryParams, p.id)} />
+                                                    <Switch aria-label={t("Enable query parameter")} checked={p.enabled} onChange={(v) => updateItem(setQueryParams, p.id, "enabled", v)} size="small" />
+                                                    <Input dir="ltr" value={p.key} onChange={(e) => updateItem(setQueryParams, p.id, "key", e.target.value)} placeholder={t("Key")} style={{ width: 150 }} />
+                                                    <Input dir="ltr" value={p.value} onChange={(e) => updateItem(setQueryParams, p.id, "value", e.target.value)} placeholder={t("Value")} style={{ flex: 1 }} />
+                                                    <Button aria-label={t("Delete")} icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setQueryParams, p.id)} />
                                                 </Space>
                                             ))}
-                                            <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setQueryParams)}>Add Param</Button>
+                                            <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setQueryParams)}>{t("Add Param")}</Button>
                                         </div>
                                     ),
                                 },
                                 {
                                     key: "auth",
-                                    label: <><LockOutlined /> Auth</>,
+                                    label: <><LockOutlined /> {t("Auth")}</>,
                                     children: (
                                         <div>
                                             <Select
                                                 value={auth.type}
                                                 onChange={(type) => setAuth({ ...auth, type })}
-                                                style={{ width: 200, marginBottom: 16 }}
+                                                aria-label={t("Authentication type")}
+                                                style={{ minWidth: 200, maxWidth: "100%", marginBottom: 16 }}
                                             >
-                                                <Select.Option value="none">No Auth</Select.Option>
-                                                <Select.Option value="basic"><KeyOutlined /> Basic Auth</Select.Option>
-                                                <Select.Option value="bearer"><SafetyCertificateOutlined /> Bearer Token</Select.Option>
-                                                <Select.Option value="api-key"><KeyOutlined /> API Key</Select.Option>
+                                                <Select.Option value="none">{t("No Auth")}</Select.Option>
+                                                <Select.Option value="basic"><KeyOutlined /> {t("Basic Auth")}</Select.Option>
+                                                <Select.Option value="bearer"><SafetyCertificateOutlined /> {t("Bearer Token")}</Select.Option>
+                                                <Select.Option value="api-key"><KeyOutlined /> {t("API Key")}</Select.Option>
                                                 <Select.Option value="oauth2"><LockOutlined /> OAuth 2.0</Select.Option>
                                             </Select>
                                             {auth.type === "basic" && (
                                                 <Space orientation="vertical" style={{ width: "100%" }}>
-                                                    <Input prefix={<Text type="secondary">Username:</Text>} value={auth.basic?.username} onChange={(e) => setAuth({ ...auth, basic: { ...auth.basic!, username: e.target.value } })} />
-                                                    <Input.Password prefix={<Text type="secondary">Password:</Text>} value={auth.basic?.password} onChange={(e) => setAuth({ ...auth, basic: { ...auth.basic!, password: e.target.value } })} />
+                                                    <Input dir="ltr" prefix={<Text type="secondary">{t("Username:")}</Text>} value={auth.basic?.username} onChange={(e) => setAuth({ ...auth, basic: { ...auth.basic!, username: e.target.value } })} />
+                                                    <Input.Password dir="ltr" prefix={<Text type="secondary">{t("Password:")}</Text>} value={auth.basic?.password} onChange={(e) => setAuth({ ...auth, basic: { ...auth.basic!, password: e.target.value } })} />
                                                 </Space>
                                             )}
                                             {auth.type === "bearer" && (
                                                 <Space orientation="vertical" style={{ width: "100%" }}>
-                                                    <Input prefix={<Text type="secondary">Prefix:</Text>} value={auth.bearer?.prefix} onChange={(e) => setAuth({ ...auth, bearer: { ...auth.bearer!, prefix: e.target.value } })} style={{ width: 200 }} />
-                                                    <TextArea placeholder="Token (supports {{var}})" value={auth.bearer?.token} onChange={(e) => setAuth({ ...auth, bearer: { ...auth.bearer!, token: e.target.value } })} rows={3} />
+                                                    <Input dir="ltr" prefix={<Text type="secondary">{t("Prefix:")}</Text>} value={auth.bearer?.prefix} onChange={(e) => setAuth({ ...auth, bearer: { ...auth.bearer!, prefix: e.target.value } })} style={{ width: 200 }} />
+                                                    <TextArea dir="ltr" placeholder={t("Token (supports {{var}})")} value={auth.bearer?.token} onChange={(e) => setAuth({ ...auth, bearer: { ...auth.bearer!, token: e.target.value } })} rows={3} />
                                                 </Space>
                                             )}
                                             {auth.type === "api-key" && (
                                                 <Space orientation="vertical" style={{ width: "100%" }}>
                                                     <Space>
-                                                        <Input prefix={<Text type="secondary">Key:</Text>} value={auth.apiKey?.key} onChange={(e) => setAuth({ ...auth, apiKey: { ...auth.apiKey!, key: e.target.value } })} style={{ width: 200 }} />
+                                                        <Input dir="ltr" prefix={<Text type="secondary">{t("Key:")}</Text>} value={auth.apiKey?.key} onChange={(e) => setAuth({ ...auth, apiKey: { ...auth.apiKey!, key: e.target.value } })} style={{ width: 200 }} />
                                                         <Select value={auth.apiKey?.addTo} onChange={(v) => setAuth({ ...auth, apiKey: { ...auth.apiKey!, addTo: v } })} style={{ width: 120 }}>
-                                                            <Select.Option value="header">Header</Select.Option>
-                                                            <Select.Option value="query">Query Param</Select.Option>
+                                                            <Select.Option value="header">{t("Header")}</Select.Option>
+                                                            <Select.Option value="query">{t("Query Param")}</Select.Option>
                                                         </Select>
                                                     </Space>
-                                                    <Input prefix={<Text type="secondary">Value:</Text>} value={auth.apiKey?.value} onChange={(e) => setAuth({ ...auth, apiKey: { ...auth.apiKey!, value: e.target.value } })} />
+                                                    <Input dir="ltr" prefix={<Text type="secondary">{t("Value:")}</Text>} value={auth.apiKey?.value} onChange={(e) => setAuth({ ...auth, apiKey: { ...auth.apiKey!, value: e.target.value } })} />
                                                 </Space>
                                             )}
                                             {auth.type === "oauth2" && (
                                                 <Space orientation="vertical" style={{ width: "100%" }}>
-                                                    <Input prefix={<Text type="secondary">Token Type:</Text>} value={auth.oauth2?.tokenType} onChange={(e) => setAuth({ ...auth, oauth2: { ...auth.oauth2!, tokenType: e.target.value } })} style={{ width: 200 }} />
-                                                    <TextArea placeholder="Access Token (supports {{var}})" value={auth.oauth2?.accessToken} onChange={(e) => setAuth({ ...auth, oauth2: { ...auth.oauth2!, accessToken: e.target.value } })} rows={3} />
+                                                    <Input dir="ltr" prefix={<Text type="secondary">{t("Token Type:")}</Text>} value={auth.oauth2?.tokenType} onChange={(e) => setAuth({ ...auth, oauth2: { ...auth.oauth2!, tokenType: e.target.value } })} style={{ width: 200 }} />
+                                                    <TextArea dir="ltr" placeholder={t("Access Token (supports {{var}})")} value={auth.oauth2?.accessToken} onChange={(e) => setAuth({ ...auth, oauth2: { ...auth.oauth2!, accessToken: e.target.value } })} rows={3} />
                                                 </Space>
                                             )}
                                         </div>
@@ -1309,56 +1356,58 @@ System.out.println(response.body());`;
                                 },
                                 {
                                     key: "cookies",
-                                    label: <>Cookies ({cookies.filter((c) => c.enabled).length})</>,
+                                    label: <>{t("Cookies")} ({cookies.filter((c) => c.enabled).length})</>,
                                     children: (
                                         <div>
                                             {cookies.map((c) => (
                                                 <Space key={c.id} style={{ width: "100%", marginBottom: 8 }}>
-                                                    <Switch checked={c.enabled} onChange={(v) => updateItem(setCookies, c.id, "enabled", v)} size="small" />
-                                                    <Input value={c.key} onChange={(e) => updateItem(setCookies, c.id, "key", e.target.value)} placeholder="Name" style={{ width: 150 }} />
-                                                    <Input value={c.value} onChange={(e) => updateItem(setCookies, c.id, "value", e.target.value)} placeholder="Value" style={{ flex: 1 }} />
-                                                    <Button aria-label="Delete" icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setCookies, c.id)} />
+                                                    <Switch aria-label={t("Enable cookie")} checked={c.enabled} onChange={(v) => updateItem(setCookies, c.id, "enabled", v)} size="small" />
+                                                    <Input dir="ltr" value={c.key} onChange={(e) => updateItem(setCookies, c.id, "key", e.target.value)} placeholder={t("Name")} style={{ width: 150 }} />
+                                                    <Input dir="ltr" value={c.value} onChange={(e) => updateItem(setCookies, c.id, "value", e.target.value)} placeholder={t("Value")} style={{ flex: 1 }} />
+                                                    <Button aria-label={t("Delete")} icon={<DeleteOutlined />} danger size="small" onClick={() => removeItem(setCookies, c.id)} />
                                                 </Space>
                                             ))}
-                                            <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setCookies)}>Add Cookie</Button>
+                                            <Button icon={<PlusOutlined />} size="small" onClick={() => addItem(setCookies)}>{t("Add Cookie")}</Button>
                                         </div>
                                     ),
                                 },
                                 {
                                     key: "settings",
-                                    label: <><SettingOutlined /> Settings</>,
+                                    label: <><SettingOutlined /> {t("Settings")}</>,
                                     children: (
                                         <Space orientation="vertical" style={{ width: "100%" }}>
                                             <div>
-                                                <Text>Timeout (ms):</Text>
-                                                <InputNumber
+                                                <Text>{t("Timeout (ms):")}</Text>
+                                                <InputNumber dir="ltr"
+                                                    aria-label={t("Timeout (ms)")}
                                                     value={settings.timeout}
                                                     onChange={(v) => setSettings({ ...settings, timeout: v || 30000 })}
                                                     min={1000} max={300000} step={1000}
-                                                    style={{ marginLeft: 8, width: 120 }}
+                                                    style={{ marginInlineStart: 8, width: 120 }}
                                                 />
                                             </div>
                                             <Checkbox
                                                 checked={settings.followRedirects}
                                                 onChange={(e) => setSettings({ ...settings, followRedirects: e.target.checked })}
                                             >
-                                                Follow Redirects (max 10 hops)
+                                                {t("Follow Redirects (max 10 hops)")}
                                             </Checkbox>
                                             <Checkbox
-                                                checked={settings.validateSSL}
-                                                onChange={(e) => setSettings({ ...settings, validateSSL: e.target.checked })}
+                                                checked={sslConfig.sslVerify}
+                                                onChange={(e) => { setSettings({ ...settings, validateSSL: e.target.checked }); setSslConfig({ ...sslConfig, sslVerify: e.target.checked }); }}
                                             >
-                                                Validate SSL certificate (also see SSL tab)
+                                                {t("Validate SSL certificate (also see SSL tab)")}
                                             </Checkbox>
                                             <div>
-                                                <Text>Inline response preview cap:</Text>
-                                                <InputNumber
+                                                <Text>{t("Inline response preview cap:")}</Text>
+                                                <InputNumber dir="ltr"
+                                                    aria-label={t("Inline response preview cap (bytes)")}
                                                     value={settings.maxResponsePreviewBytes}
                                                     onChange={(v) => setSettings({ ...settings, maxResponsePreviewBytes: v || PREVIEW_MAX_DEFAULT })}
                                                     min={4096} max={10 * 1024 * 1024} step={4096}
-                                                    style={{ marginLeft: 8, width: 160 }}
+                                                    style={{ marginInlineStart: 8, width: 160 }}
                                                 />
-                                                <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>bytes</Text>
+                                                <Text type="secondary" style={{ fontSize: 11, marginInlineStart: 8 }}>{t("bytes")}</Text>
                                             </div>
                                         </Space>
                                     ),
@@ -1372,10 +1421,10 @@ System.out.println(response.body());`;
                                     key: "tests",
                                     label: (
                                         <Space>
-                                            <ThunderboltOutlined /> Tests
+                                            <ThunderboltOutlined /> {t("Tests")}
                                             {testSummary.total > 0 && (
                                                 <Badge count={testSummary.failed} showZero={false} size="small" offset={[0, 0]}>
-                                                    <Tag color={testSummary.failed > 0 ? "error" : "success"} style={{ marginLeft: 4 }}>
+                                                    <Tag color={testSummary.failed > 0 ? "error" : "success"} style={{ marginInlineStart: 4 }}>
                                                         {testSummary.passed}/{testSummary.total}
                                                     </Tag>
                                                 </Badge>
@@ -1385,14 +1434,14 @@ System.out.println(response.body());`;
                                     children: (
                                         <div>
                                             <Alert
-                                                title="Write tests using pm.test() and pm.expect() syntax"
+                                                title={t("Write tests using pm.test() and pm.expect() syntax")}
                                                 type="info"
                                                 showIcon
                                                 style={{ marginBottom: 8 }}
                                             />
                                             <CodeEditor value={testScript} onChange={(v) => setTestScript(v || "")} language="javascript" height={150} />
                                             <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 4 }}>
-                                                Example: pm.test(&quot;Status is 200&quot;, () =&gt; pm.expect(pm.response.code).to.equal(200));
+                                                {t("Example:")} <code dir="ltr">{'pm.test("Status is 200", () => pm.expect(pm.response.code).to.equal(200));'}</code>
                                             </Text>
                                         </div>
                                     ),
@@ -1406,16 +1455,17 @@ System.out.println(response.body());`;
                         style={{ marginTop: 16 }}
                         items={[{
                             key: "code",
-                            label: <><CodeOutlined /> Code Snippets</>,
+                            label: <><CodeOutlined /> {t("Code Snippets")}</>,
                             children: (
                                 <Tabs size="small" items={[
-                                    { key: "curl", label: "cURL", children: <pre style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCurl()}</pre> },
-                                    { key: "javascript-fetch", label: "JS Fetch", children: <pre style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCodeSnippet("javascript-fetch")}</pre> },
-                                    { key: "javascript-axios", label: "JS Axios", children: <pre style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCodeSnippet("javascript-axios")}</pre> },
-                                    { key: "node-http", label: "Node http", children: <pre style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCodeSnippet("node-http")}</pre> },
-                                    { key: "python", label: "Python", children: <pre style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCodeSnippet("python")}</pre> },
-                                    { key: "go", label: "Go", children: <pre style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCodeSnippet("go")}</pre> },
-                                    { key: "java", label: "Java", children: <pre style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCodeSnippet("java")}</pre> },
+                                    { key: "curl", label: "cURL", children: <pre dir="ltr" style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCurl()}</pre> },
+                                    { key: "javascript-fetch", label: "JS Fetch", children: <pre dir="ltr" style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCodeSnippet("javascript-fetch")}</pre> },
+                                    { key: "javascript-axios", label: "JS Axios", children: <pre dir="ltr" style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCodeSnippet("javascript-axios")}</pre> },
+                                    { key: "node-http", label: "Node http", children: <pre dir="ltr" style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCodeSnippet("node-http")}</pre> },
+                                    { key: "python", label: "Python", children: <pre dir="ltr" style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCodeSnippet("python")}</pre> },
+                                    { key: "go", label: "Go", children: <pre dir="ltr" style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCodeSnippet("go")}</pre> },
+                                    ...([['php', 'PHP'], ['ruby', 'Ruby'], ['csharp', 'C#']] as const).map(([key, label]) => ({ key, label, children: <div className="wb-workbench"><div className="wb-workbench-actions"><button onClick={() => void copyToClipboard(generateCodeSnippet(key))}>{t("Copy {language}", { language: label })}</button><button onClick={() => downloadText(generateCodeSnippet(key), `request.${key === "csharp" ? "cs" : key === "ruby" ? "rb" : "php"}`)}>{t("Download {language}", { language: label })}</button></div><p>{t("Includes resolved values from this request. These samples use 15-second timeouts and do not follow redirects.")}</p><pre dir="ltr" style={{ fontSize: 12, whiteSpace: "pre-wrap" }}>{generateCodeSnippet(key)}</pre></div> })),
+                                    { key: "java", label: "Java", children: <pre dir="ltr" style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{generateCodeSnippet("java")}</pre> },
                                 ]} />
                             ),
                         }]}
@@ -1428,23 +1478,23 @@ System.out.println(response.body());`;
                         size="small"
                         title={
                             <Space wrap>
-                                <Text>Response</Text>
+                                <Text>{t("Response")}</Text>
                                 {status !== null && status > 0 && (
                                     <Tag color={getStatusColor(status)}>{status} {getStatusText(status)}</Tag>
                                 )}
                                 {responseTime !== null && <Tag icon={<ClockCircleOutlined />}>{responseTime}ms</Tag>}
                                 {responseSize !== null && <Tag>{formatBytes(responseSize)}</Tag>}
-                                {responseTruncated && <Tag color="warning">truncated</Tag>}
+                                {responseTruncated && <Tag color="warning">{t("truncated")}</Tag>}
                             </Space>
                         }
                         extra={
                             response && !responseError && (
                                 <Space>
-                                    <Tooltip title="Copy">
-                                        <Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={copyResponse} />
+                                    <Tooltip title={t("Copy")}>
+                                        <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={copyResponse} />
                                     </Tooltip>
-                                    <Tooltip title="Download">
-                                        <Button aria-label="Download" size="small" icon={<DownloadOutlined />} onClick={downloadResponse} />
+                                    <Tooltip title={t("Download")}>
+                                        <Button aria-label={t("Download")} size="small" icon={<DownloadOutlined />} onClick={downloadResponse} />
                                     </Tooltip>
                                 </Space>
                             )
@@ -1454,11 +1504,11 @@ System.out.println(response.body());`;
                             <div style={{ textAlign: "center", padding: 40 }}>
                                 <Spin />
                                 <div style={{ marginTop: 8 }}>
-                                    <Text type="secondary">Sending request… (Cancel above)</Text>
+                                    <Text type="secondary">{t("Sending request… (Cancel above)")}</Text>
                                 </div>
                             </div>
                         ) : responseError ? (
-                            <Alert type="error" title="Request failed" description={responseError} showIcon />
+                            <Alert type="error" title={t("Request failed")} description={<><span>{t(responseError.source, responseError.values)}</span>{responseError.detail && <pre dir="ltr" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", margin: 0 }}>{responseError.detail}</pre>}</>} showIcon />
                         ) : response ? (
                             <Tabs
                                 activeKey={activeResponseTab}
@@ -1467,27 +1517,27 @@ System.out.println(response.body());`;
                                 items={[
                                     {
                                         key: "body",
-                                        label: "Body",
+                                        label: t("Body"),
                                         children: responseTooBigForInline ? (
                                             <Alert
                                                 type="warning"
                                                 showIcon
-                                                title={`Body is ${formatBytes(response.length)} — preview disabled`}
+                                                title={t("Body is {size} — preview disabled", { size: formatBytes(response.length) })}
                                                 description={
                                                     <Space>
-                                                        <Text type="secondary">Raise the preview cap in Settings, or download the body.</Text>
-                                                        <Button size="small" icon={<DownloadOutlined />} onClick={downloadResponse}>Download</Button>
+                                                        <Text type="secondary">{t("Raise the preview cap in Settings, or download the body.")}</Text>
+                                                        <Button size="small" icon={<DownloadOutlined />} onClick={downloadResponse}>{t("Download")}</Button>
                                                     </Space>
                                                 }
                                             />
                                         ) : responseIsBase64 ? (
                                             <Alert
                                                 type="info" showIcon
-                                                title="Binary response"
+                                                title={t("Binary response")}
                                                 description={
                                                     <Space>
-                                                        <Text type="secondary">Content-Type: {responseHeaders["content-type"] || "unknown"}</Text>
-                                                        <Button size="small" icon={<DownloadOutlined />} onClick={downloadResponse}>Download</Button>
+                                                        <Text type="secondary">Content-Type: {responseHeaders["content-type"] || t("unknown")}</Text>
+                                                        <Button size="small" icon={<DownloadOutlined />} onClick={downloadResponse}>{t("Download")}</Button>
                                                     </Space>
                                                 }
                                             />
@@ -1502,7 +1552,7 @@ System.out.println(response.body());`;
                                     },
                                     {
                                         key: "preview",
-                                        label: <><EyeOutlined /> Preview</>,
+                                        label: <><EyeOutlined /> {t("Preview")}</>,
                                         children: (
                                             <div>
                                                 {responseKind === "html" && !responseIsBase64 ? (
@@ -1510,28 +1560,28 @@ System.out.println(response.body());`;
                                                         srcDoc={response}
                                                         sandbox=""
                                                         style={{ width: "100%", height: 320, border: "1px solid rgba(0,0,0,0.1)", borderRadius: 4, background: "#fff" }}
-                                                        title="HTML preview"
+                                                        title={t("HTML preview")}
                                                     />
                                                 ) : responseKind === "image" && responseDataUrl ? (
                                                     // eslint-disable-next-line @next/next/no-img-element
-                                                    <img src={responseDataUrl} alt="response" style={{ maxWidth: "100%", maxHeight: 320, display: "block", margin: "0 auto", background: "rgba(0,0,0,0.04)", borderRadius: 4 }} />
+                                                    <img src={responseDataUrl} alt={t("response")} style={{ maxWidth: "100%", maxHeight: 320, display: "block", margin: "0 auto", background: "rgba(0,0,0,0.04)", borderRadius: 4 }} />
                                                 ) : (
-                                                    <Empty description={`No special preview for ${responseHeaders["content-type"] || "this content type"}`} />
+                                                    <Empty description={t("No special preview for {type}", { type: responseHeaders["content-type"] || t("this content type") })} />
                                                 )}
                                             </div>
                                         ),
                                     },
                                     {
                                         key: "headers",
-                                        label: `Headers (${Object.keys(responseHeaders).length})`,
+                                        label: t("Headers ({count})", { count: Object.keys(responseHeaders).length }),
                                         children: (
                                             <Table
                                                 size="small"
                                                 pagination={false}
                                                 dataSource={Object.entries(responseHeaders).map(([key, value]) => ({ key, value }))}
                                                 columns={[
-                                                    { title: "Header", dataIndex: "key", width: 200, render: (k) => <Text code>{k}</Text> },
-                                                    { title: "Value", dataIndex: "value", render: (v) => <Text style={{ wordBreak: "break-all" }}>{v}</Text> },
+                                                    { title: t("Header"), dataIndex: "key", width: 200, render: (k) => <Text code>{k}</Text> },
+                                                    { title: t("Value"), dataIndex: "value", render: (v) => <Text style={{ wordBreak: "break-all" }}>{v}</Text> },
                                                 ]}
                                                 scroll={{ y: 250 }}
                                             />
@@ -1539,9 +1589,9 @@ System.out.println(response.body());`;
                                     },
                                     {
                                         key: "cookies",
-                                        label: `Cookies (${responseCookies.length})`,
+                                        label: t("Cookies ({count})", { count: responseCookies.length }),
                                         children: responseCookies.length === 0 ? (
-                                            <Empty description="No Set-Cookie headers in response" />
+                                            <Empty description={t("No Set-Cookie headers in response")} />
                                         ) : (
                                             <Table
                                                 size="small"
@@ -1549,11 +1599,11 @@ System.out.println(response.body());`;
                                                 dataSource={responseCookies.map((c, i) => ({ ...c, _k: i }))}
                                                 rowKey="_k"
                                                 columns={[
-                                                    { title: "Name", dataIndex: "name", width: 160 },
-                                                    { title: "Value", dataIndex: "value", render: (v) => <Text style={{ wordBreak: "break-all", fontSize: 11 }}>{v}</Text> },
-                                                    { title: "Domain", dataIndex: "domain", width: 140 },
-                                                    { title: "Path", dataIndex: "path", width: 100 },
-                                                    { title: "Flags", render: (_, r) => (
+                                                    { title: t("Name"), dataIndex: "name", width: 160 },
+                                                    { title: t("Value"), dataIndex: "value", render: (v) => <Text style={{ wordBreak: "break-all", fontSize: 11 }}>{v}</Text> },
+                                                    { title: t("Domain"), dataIndex: "domain", width: 140 },
+                                                    { title: t("Path"), dataIndex: "path", width: 100 },
+                                                    { title: t("Flags"), render: (_, r) => (
                                                         <Space size={4}>
                                                             {r.secure && <Tag color="green">Secure</Tag>}
                                                             {r.httpOnly && <Tag color="blue">HttpOnly</Tag>}
@@ -1568,7 +1618,7 @@ System.out.println(response.body());`;
                                         key: "tests",
                                         label: (
                                             <Space>
-                                                Tests
+                                                {t("Tests")}
                                                 {testSummary.total > 0 && (
                                                     <Tag color={testSummary.failed > 0 ? "error" : "success"}>{testSummary.passed}/{testSummary.total}</Tag>
                                                 )}
@@ -1577,12 +1627,12 @@ System.out.println(response.body());`;
                                         children: (
                                             <div>
                                                 {testResults.length === 0 ? (
-                                                    <Text type="secondary">No tests to run</Text>
-                                                ) : testResults.map((t, i) => (
+                                                    <Text type="secondary">{t("No tests to run")}</Text>
+                                                ) : testResults.map((result, i) => (
                                                     <div key={i} style={{ marginBottom: 8 }}>
-                                                        <Tag color={t.passed ? "success" : "error"}>{t.passed ? "PASS" : "FAIL"}</Tag>
-                                                        <Text>{t.name}</Text>
-                                                        {t.message && <Text type="danger" style={{ display: "block", marginLeft: 50 }}>{t.message}</Text>}
+                                                        <Tag color={result.passed ? "success" : "error"}>{t(result.passed ? "PASS" : "FAIL")}</Tag>
+                                                        <Text>{result.name}</Text>
+                                                        {result.message && <Text type="danger" style={{ display: "block", marginInlineStart: 50 }}>{result.message}</Text>}
                                                     </div>
                                                 ))}
                                             </div>
@@ -1593,7 +1643,7 @@ System.out.println(response.body());`;
                         ) : (
                             <div style={{ textAlign: "center", padding: 40, color: "#8c8c8c" }}>
                                 <CloudOutlined style={{ fontSize: 48, opacity: 0.3 }} />
-                                <div style={{ marginTop: 8 }}>Send a request to see the response</div>
+                                <div style={{ marginTop: 8 }}>{t("Send a request to see the response")}</div>
                             </div>
                         )}
                     </Card>
@@ -1605,17 +1655,17 @@ System.out.println(response.body());`;
                         items={[
                             {
                                 key: "saved",
-                                label: <><FolderOpenOutlined /> Saved Requests ({savedRequests.length})</>,
+                                label: <><FolderOpenOutlined /> {t("Saved Requests")} ({savedRequests.length})</>,
                                 children: savedRequests.length === 0 ? (
-                                    <Text type="secondary">No saved requests</Text>
+                                    <Text type="secondary">{t("No saved requests")}</Text>
                                 ) : (
                                     <div style={{ maxHeight: 220, overflow: "auto" }}>
                                         {savedRequests.map((req) => (
                                             <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                                                 <Tag color={HTTP_METHODS.find((m) => m.value === req.method)?.color}>{req.method}</Tag>
-                                                <Text style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{req.name}</Text>
-                                                <Button size="small" type="text" onClick={() => loadRequest(req)}>Load</Button>
-                                                <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => deleteRequest(req.id)} />
+                                                <Text dir="auto" style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{req.name}</Text>
+                                                <Button size="small" type="text" onClick={() => loadRequest(req)}>{t("Load")}</Button>
+                                                <Button aria-label={t("Delete")} size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => deleteRequest(req.id)} />
                                             </div>
                                         ))}
                                     </div>
@@ -1623,9 +1673,9 @@ System.out.println(response.body());`;
                             },
                             {
                                 key: "history",
-                                label: <><HistoryOutlined /> History ({history.length})</>,
+                                label: <><HistoryOutlined /> {t("History")} ({history.length})</>,
                                 children: history.length === 0 ? (
-                                    <Text type="secondary">No request history</Text>
+                                    <Text type="secondary">{t("No request history")}</Text>
                                 ) : (
                                     <div style={{ maxHeight: 220, overflow: "auto" }}>
                                         {history.slice(0, 30).map((item) => (
@@ -1636,7 +1686,7 @@ System.out.println(response.body());`;
                                             >
                                                 <Tag color={HTTP_METHODS.find((m) => m.value === item.method)?.color} style={{ fontSize: 10 }}>{item.method}</Tag>
                                                 <Tag color={getStatusColor(item.status)} style={{ fontSize: 10 }}>{item.status}</Tag>
-                                                <Text style={{ flex: 1, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.url}</Text>
+                                                <Text dir="ltr" style={{ flex: 1, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.url}</Text>
                                                 <Text type="secondary" style={{ fontSize: 10 }}>{item.time}ms</Text>
                                             </div>
                                         ))}
@@ -1645,23 +1695,23 @@ System.out.println(response.body());`;
                             },
                             {
                                 key: "environments",
-                                label: <><KeyOutlined /> Environments ({environments.length})</>,
+                                label: <><KeyOutlined /> {t("Environments")} ({environments.length})</>,
                                 children: (
                                     <div>
-                                        <Button size="small" icon={<PlusOutlined />} onClick={openNewEnv} style={{ marginBottom: 8 }}>New Environment</Button>
+                                        <Button size="small" icon={<PlusOutlined />} onClick={openNewEnv} style={{ marginBottom: 8 }}>{t("New Environment")}</Button>
                                         {environments.length === 0 ? (
-                                            <div><Text type="secondary">No environments yet</Text></div>
+                                            <div><Text type="secondary">{t("No environments yet")}</Text></div>
                                         ) : environments.map((env) => (
                                             <div key={env.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                                                 <Tag color={env.id === activeEnvId ? "blue" : "default"}>
-                                                    {env.id === activeEnvId ? "active" : env.variables.filter((v) => v.enabled).length}
+                                                    {env.id === activeEnvId ? t("active") : env.variables.filter((v) => v.enabled).length}
                                                 </Tag>
-                                                <Text style={{ flex: 1 }}>{env.name}</Text>
-                                                <Button size="small" type="text" onClick={() => openEditEnv(env)}>Edit</Button>
+                                                <Text dir="auto" style={{ flex: 1 }}>{env.name}</Text>
+                                                <Button size="small" type="text" onClick={() => openEditEnv(env)}>{t("Edit")}</Button>
                                                 {env.id !== activeEnvId && (
-                                                    <Button size="small" type="text" onClick={() => selectEnv(env.id)}>Use</Button>
+                                                    <Button size="small" type="text" onClick={() => selectEnv(env.id)}>{t("Use")}</Button>
                                                 )}
-                                                <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => deleteEnv(env.id)} />
+                                                <Button aria-label={t("Delete")} size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => deleteEnv(env.id)} />
                                             </div>
                                         ))}
                                     </div>
@@ -1672,16 +1722,19 @@ System.out.println(response.body());`;
                 </Col>
             </Row>
 
+            <ApiClientExtensions requests={savedRequests} variables={varMap} environmentName={activeEnv?.name ?? t("No environment")} />
+
             {/* Save Request Modal */}
             <Modal
-                title="Save Request"
+                title={t("Save Request")}
                 open={saveModalOpen}
                 onOk={handleSaveRequest}
                 onCancel={() => setSaveModalOpen(false)}
-                okText="Save"
+                okText={t("Save")}
+                cancelText={t("Cancel")}
             >
-                <Input
-                    placeholder="Request name"
+                <Input dir="auto"
+                    placeholder={t("Request name")}
                     value={requestName}
                     onChange={(e) => setRequestName(e.target.value)}
                     onPressEnter={handleSaveRequest}
@@ -1690,17 +1743,18 @@ System.out.println(response.body());`;
 
             {/* cURL Import Modal */}
             <Modal
-                title="Import from cURL"
+                title={t("Import from cURL")}
                 open={curlModalOpen}
                 onOk={handleCurlImport}
                 onCancel={() => setCurlModalOpen(false)}
-                okText="Import"
+                okText={t("Import")}
+                cancelText={t("Cancel")}
                 width={720}
             >
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                    Paste a curl command. Multi-line continuations (backslash, ^) and Chrome / Firefox / Postman &quot;Copy as cURL&quot; output are supported.
+                    {t("Paste a curl command. Multi-line continuations (backslash, ^) and Chrome / Firefox / Postman \"Copy as cURL\" output are supported.")}
                 </Text>
-                <TextArea
+                <TextArea dir="ltr"
                     value={curlText}
                     onChange={(e) => setCurlText(e.target.value)}
                     rows={10}
@@ -1711,17 +1765,18 @@ System.out.println(response.body());`;
 
             {/* Postman Import Modal */}
             <Modal
-                title="Import Postman Collection (v2.1)"
+                title={t("Import Postman Collection (v2.1)")}
                 open={importModalOpen}
                 onOk={handlePostmanImport}
                 onCancel={() => setImportModalOpen(false)}
-                okText="Import"
+                okText={t("Import")}
+                cancelText={t("Cancel")}
                 width={720}
             >
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                    Paste the full JSON export. Nested folders are flattened with their path prepended (e.g. <code>Auth / Login</code>).
+                    {t("Paste the full JSON export. Nested folders are flattened with their path prepended (e.g. Auth / Login).") }
                 </Text>
-                <TextArea
+                <TextArea dir="ltr"
                     value={importText}
                     onChange={(e) => setImportText(e.target.value)}
                     rows={12}
@@ -1732,49 +1787,50 @@ System.out.println(response.body());`;
 
             {/* Environment Editor Modal */}
             <Modal
-                title={editingEnv?.id && environments.find((e) => e.id === editingEnv.id) ? "Edit Environment" : "New Environment"}
+                title={editingEnv?.id && environments.find((e) => e.id === editingEnv.id) ? t("Edit Environment") : t("New Environment")}
                 open={envModalOpen}
                 onOk={saveEnv}
                 onCancel={() => { setEnvModalOpen(false); setEditingEnv(null); }}
-                okText="Save"
+                okText={t("Save")}
+                cancelText={t("Cancel")}
                 width={640}
                 destroyOnHidden
             >
                 {editingEnv && (
                     <Form layout="vertical">
-                        <Form.Item label="Name">
-                            <Input
+                        <Form.Item label={t("Name")}>
+                            <Input dir="auto"
                                 value={editingEnv.name}
                                 onChange={(e) => setEditingEnv({ ...editingEnv, name: e.target.value })}
-                                placeholder="e.g. Local, Staging, Production"
+                                placeholder={t("e.g. Local, Staging, Production")}
                             />
                         </Form.Item>
-                        <Form.Item label="Variables">
+                        <Form.Item label={t("Variables")}>
                             <div style={{ maxHeight: 320, overflowY: "auto" }}>
                                 {editingEnv.variables.map((v, idx) => (
                                     <Space key={idx} style={{ width: "100%", marginBottom: 6 }}>
-                                        <Switch
+                                        <Switch aria-label={t("Enable variable")}
                                             checked={v.enabled} size="small"
                                             onChange={(checked) => setEditingEnv({
                                                 ...editingEnv,
                                                 variables: editingEnv.variables.map((x, i) => i === idx ? { ...x, enabled: checked } : x),
                                             })}
                                         />
-                                        <Input
-                                            value={v.key} placeholder="key" style={{ width: 180 }}
+                                        <Input dir="ltr"
+                                            value={v.key} placeholder={t("key")} style={{ width: 180 }}
                                             onChange={(e) => setEditingEnv({
                                                 ...editingEnv,
                                                 variables: editingEnv.variables.map((x, i) => i === idx ? { ...x, key: e.target.value } : x),
                                             })}
                                         />
-                                        <Input
-                                            value={v.value} placeholder="value" style={{ flex: 1, minWidth: 220 }}
+                                        <Input dir="ltr"
+                                            value={v.value} placeholder={t("value")} style={{ flex: 1, minWidth: 220 }}
                                             onChange={(e) => setEditingEnv({
                                                 ...editingEnv,
                                                 variables: editingEnv.variables.map((x, i) => i === idx ? { ...x, value: e.target.value } : x),
                                             })}
                                         />
-                                        <Button aria-label="Delete"
+                                        <Button aria-label={t("Delete")}
                                             icon={<DeleteOutlined />} danger size="small"
                                             onClick={() => setEditingEnv({
                                                 ...editingEnv,
@@ -1791,12 +1847,12 @@ System.out.println(response.body());`;
                                     variables: [...editingEnv.variables, { key: "", value: "", enabled: true }],
                                 })}
                             >
-                                Add Variable
+                                {t("Add Variable")}
                             </Button>
                         </Form.Item>
                         <Alert
                             type="info" showIcon
-                            title="Built-ins always available"
+                            title={t("Built-ins always available")}
                             description={
                                 <Text style={{ fontSize: 11, fontFamily: "monospace" }}>
                                     {"{{$timestamp}} · {{$isoTimestamp}} · {{$randomUUID}} · {{$randomInt}}"}

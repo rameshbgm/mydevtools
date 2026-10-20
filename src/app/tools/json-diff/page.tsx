@@ -1,7 +1,9 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
+
 import React, { useState } from "react";
-import { Button, Space, message, Card } from "antd";
+import { Button, Space, Card } from "antd";
 import { DiffOutlined, ClearOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor, CodeDiff } from "@/components/CodeEditor";
@@ -13,6 +15,7 @@ interface ShareState { left: string; right: string; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "json-diff", version: 1 };
 
 export default function JsonDiffPage() {
+    const { t } = useLanguage();
     const [left, setLeft] = useState(`{\n  "name": "John",\n  "age": 30,\n  "city": "New York"\n}`);
     const [right, setRight] = useState(`{\n  "name": "Jane",\n  "age": 25,\n  "city": "New York",\n  "country": "US"\n}`);
     const [showDiff, setShowDiff] = useState(false);
@@ -24,8 +27,8 @@ export default function JsonDiffPage() {
 
     return (
         <ToolPageLayout
-            title="JSON Diff"
-            description="Compare two JSON documents side by side"
+            title={t("JSON Diff")}
+            description={t("Compare two JSON documents side by side")}
             icon={<DiffOutlined style={{ fontSize: 24, color: "#fa541c" }} />}
             color="#fa541c"
             learnMore={{
@@ -53,27 +56,23 @@ export default function JsonDiffPage() {
         >
             <ToolBridgeBanner accepts={["json", "text"]} onAccept={(p) => setLeft(p.data)} />
 
-            <Space style={{ marginBottom: 16 }}>
-                <Button type="primary" icon={<DiffOutlined />} onClick={() => setShowDiff(true)}>
-                    Compare
-                </Button>
-                <Button icon={<ClearOutlined />} onClick={() => { setLeft(""); setRight(""); setShowDiff(false); }}>
-                    Clear
-                </Button>
+            <Space wrap style={{ marginBottom: 16 }}>
+                <Button type="primary" icon={<DiffOutlined />} onClick={() => setShowDiff(true)}>{t("Compare")}</Button>
+                <Button icon={<ClearOutlined />} onClick={() => { setLeft(""); setRight(""); setShowDiff(false); }}>{t("Clear")}</Button>
                 <ShareButton schema={SHARE_SCHEMA} getState={() => ({ left, right })} size="middle" />
             </Space>
 
             {!showDiff ? (
                 <div className="tool-split-pane" style={{ gap: 16 }}>
-                    <Card size="small" title="Original" styles={{ body: { padding: 0 } }}>
-                        <CodeEditor value={left} onChange={setLeft} language="json" height="500px" />
+                    <Card size="small" title={t("Original")} styles={{ body: { padding: 0 } }}>
+                        <CodeEditor ariaLabel={t("Original")} value={left} onChange={setLeft} language="json" height="500px" />
                     </Card>
-                    <Card size="small" title="Modified" styles={{ body: { padding: 0 } }}>
-                        <CodeEditor value={right} onChange={setRight} language="json" height="500px" />
+                    <Card size="small" title={t("Modified")} styles={{ body: { padding: 0 } }}>
+                        <CodeEditor ariaLabel={t("Modified")} value={right} onChange={setRight} language="json" height="500px" />
                     </Card>
                 </div>
             ) : (
-                <Card size="small" title="Diff View" styles={{ body: { padding: 0 } }} extra={<Button size="small" onClick={() => setShowDiff(false)}>Edit</Button>}>
+                <Card size="small" title={t("Diff View")} styles={{ body: { padding: 0 } }} extra={<Button size="small" onClick={() => setShowDiff(false)}>{t("Edit")}</Button>}>
                     <CodeDiff original={left} modified={right} language="json" height="550px" />
                 </Card>
             )}

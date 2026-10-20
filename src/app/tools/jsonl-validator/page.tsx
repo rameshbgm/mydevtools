@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Card, Input, Typography, Space, Select, Segmented, Table, Tag, Upload, Alert, Statistic, Row, Col } from "antd";
 import { FileTextOutlined, InboxOutlined, EditOutlined } from "@ant-design/icons";
 import type { UploadProps } from "antd";
+import { formatAiDiagnostic } from "@/lib/i18n/remaining-ai";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import SendToButton from "@/components/SendToButton";
 import ToolBridgeBanner from "@/components/ToolBridgeBanner";
@@ -63,7 +65,7 @@ const SCHEMA_OPTIONS: { value: SchemaKey; label: string }[] = [
     { value: "anthropic", label: "Anthropic (system + messages)" },
     { value: "gemini", label: "Google Gemini (contents + parts)" },
     { value: "mistral", label: "Mistral (messages)" },
-    { value: "llama", label: "Llama / open models (messages | text | prompt+completion)" },
+    { value: "llama", label: "Llama / open models (messages ∣ text ∣ prompt+completion)" },
     { value: "raw", label: "Raw JSONL (syntax only)" },
 ];
 
@@ -74,6 +76,7 @@ function validateOpenAI(obj: Record<string, unknown>): string[] {
         return errors;
     }
     const messages = obj.messages as ChatMessage[];
+    if (messages.some((m) => typeof m !== "object" || m === null || Array.isArray(m))) return ['"messages" entries must be objects'];
     if (messages.length === 0) errors.push('"messages" array is empty');
 
     let prevRole: string | null = null;
@@ -111,6 +114,7 @@ function validateAnthropic(obj: Record<string, unknown>): string[] {
         return errors;
     }
     const messages = obj.messages as ChatMessage[];
+    if (messages.some((m) => typeof m !== "object" || m === null || Array.isArray(m))) return ['"messages" entries must be objects'];
     if (messages.length < 2) errors.push('"messages" must contain at least 2 messages (a user turn and an assistant reply)');
     if (messages[0]?.role !== "user") errors.push('the first message must have role "user"');
     if (messages.length > 0 && messages[messages.length - 1]?.role !== "assistant") {
@@ -143,6 +147,7 @@ function validateGemini(obj: Record<string, unknown>): string[] {
         return errors;
     }
     const contents = obj.contents as { role?: unknown; parts?: unknown }[];
+    if (contents.some((c) => typeof c !== "object" || c === null || Array.isArray(c))) return ['"contents" entries must be objects'];
     if (contents.length < 2) errors.push('"contents" must contain at least a user turn and a model reply');
     if (contents[0]?.role !== "user") errors.push('the first entry must have role "user"');
     if (contents.length > 0 && contents[contents.length - 1]?.role !== "model") {
@@ -173,6 +178,7 @@ function validateMistral(obj: Record<string, unknown>): string[] {
         return errors;
     }
     const messages = obj.messages as ChatMessage[];
+    if (messages.some((m) => typeof m !== "object" || m === null || Array.isArray(m))) return ['"messages" entries must be objects'];
     if (messages.length === 0) errors.push('"messages" array is empty');
     messages.forEach((m, i) => {
         if (typeof m.role !== "string" || !["system", "user", "assistant", "tool"].includes(m.role)) {
@@ -224,23 +230,26 @@ const VALIDATORS: Record<SchemaKey, (obj: Record<string, unknown>) => string[]> 
 };
 
 export default function JsonlValidatorPage() {
+    const { t } = useLanguage();
     const [text, setText] = useState(SAMPLE_OPENAI);
     const [schema, setSchema] = useState<SchemaKey>("openai");
     const [inputMode, setInputMode] = useState<InputMode>("text");
     const [fileName, setFileName] = useState<string>("");
+    const [loadError, setLoadError] = useState("");
     const [results, setResults] = useState<LineResult[]>([]);
     const countTokensRef = useRef<((t: string) => number) | null>(null);
 
     useEffect(() => {
         let cancelled = false;
+        setLoadError("");
         (async () => {
             if (!countTokensRef.current) {
                 const { countTokens } = await import("gpt-tokenizer");
                 countTokensRef.current = countTokens;
             }
             const countTokens = countTokensRef.current!;
-            const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
-            const out: LineResult[] = lines.map((raw, idx) => {
+            const lines = text.split("\n").map((raw, index) => ({ raw: raw.trim(), line: index + 1 })).filter(({ raw }) => raw.length > 0);
+            const out: LineResult[] = lines.map(({ raw, line }) => {
                 let parsed: Record<string, unknown> | null = null;
                 const errors: string[] = [];
                 try {
@@ -260,10 +269,10 @@ export default function JsonlValidatorPage() {
                 if (parsed) {
                     errors.push(...VALIDATORS[schema](parsed));
                 }
-                return { line: idx + 1, valid: errors.length === 0, errors, tokenCount: countTokens(raw), raw };
+                return { line, valid: errors.length === 0, errors, tokenCount: countTokens(raw), raw };
             });
             if (!cancelled) setResults(out);
-        })();
+        })().catch((cause) => { if (!cancelled) { setResults([]); setLoadError(cause instanceof Error ? cause.message : String(cause)); } });
         return () => { cancelled = true; };
     }, [text, schema]);
 
@@ -273,15 +282,8 @@ export default function JsonlValidatorPage() {
         return { total: results.length, valid: validCount, invalid: results.length - validCount, totalTokens };
     }, [results]);
 
-    // Re-parsing can still throw for a line that only passed the syntax check in
-    // raw mode, so keep the serialisation total rather than letting it blow up.
-    const validJson = useMemo(() => {
-        const parsed = results
-            .filter((r) => r.valid)
-            .map((r) => { try { return JSON.parse(r.raw); } catch { return null; } })
-            .filter((v) => v !== null);
-        return JSON.stringify(parsed, null, 2);
-    }, [results]);
+    // Keep source JSON lexemes (including null and large numeric literals) exact.
+    const validJson = useMemo(() => `[\n${results.filter((r) => r.valid).map((r) => r.raw).join(",\n")}\n]`, [results]);
 
     const uploadProps: UploadProps = {
         accept: ".jsonl,.txt",
@@ -298,17 +300,17 @@ export default function JsonlValidatorPage() {
     };
 
     const columns = [
-        { title: "Line", dataIndex: "line", key: "line", width: 70 },
+        { title: t("Line"), dataIndex: "line", key: "line", width: 70 },
         {
-            title: "Status",
+            title: t("Status"),
             dataIndex: "valid",
             key: "valid",
             width: 90,
-            render: (valid: boolean) => (valid ? <Tag color="green">Valid</Tag> : <Tag color="red">Invalid</Tag>),
+            render: (valid: boolean) => (valid ? <Tag color="green">{t("Valid")}</Tag> : <Tag color="red">{t("Invalid")}</Tag>),
         },
-        { title: "Tokens", dataIndex: "tokenCount", key: "tokenCount", width: 80 },
+        { title: t("Tokens"), dataIndex: "tokenCount", key: "tokenCount", width: 80 },
         {
-            title: "Issues",
+            title: t("Issues"),
             dataIndex: "errors",
             key: "errors",
             render: (errors: string[]) =>
@@ -316,7 +318,7 @@ export default function JsonlValidatorPage() {
                     <Text type="secondary">—</Text>
                 ) : (
                     <ul style={{ margin: 0, paddingLeft: 18 }}>
-                        {errors.map((e, i) => <li key={i}><Text type="danger" style={{ fontSize: 12 }}>{e}</Text></li>)}
+                        {errors.map((e, i) => <li key={i}><Text type="danger" style={{ fontSize: 12 }}>{formatAiDiagnostic(e, t)}</Text></li>)}
                     </ul>
                 ),
         },
@@ -324,31 +326,27 @@ export default function JsonlValidatorPage() {
 
     return (
         <ToolPageLayout
-            title="Fine-Tuning Dataset Validator"
-            description="Validate JSONL fine-tuning datasets against OpenAI or Anthropic message schemas — entirely in your browser"
+            title={t("Fine-Tuning Dataset Validator")}
+            description={t("Validate JSONL fine-tuning datasets against selectable chat-shape checks — entirely in your browser")}
             icon={<FileTextOutlined style={{ fontSize: 24 }} />}
             color="#722ed1"
             learnMore={{
-                whatIs: "A line-by-line validator for JSONL (newline-delimited JSON) fine-tuning datasets. Checks each line for valid JSON, then checks the parsed object against the OpenAI or Anthropic chat fine-tuning schema — required fields, role ordering, and alternation rules — and counts tokens per line using the same tokenizer OpenAI uses server-side.",
-                whyUse: "A single malformed line, or one example with the wrong role order, can reject an entire fine-tuning job hours into an upload. Catching format errors locally — before uploading — saves the wasted round trip, and estimating token count per example helps budget the total cost of a fine-tuning run before committing to it. Nothing in the file is ever uploaded anywhere by this tool.",
-                howToUse: [
-                    "Paste JSONL content or drop a .jsonl file",
-                    "Pick the target schema — OpenAI or Anthropic — the two providers have different message rules",
-                    "Review the per-line table for parse errors, schema violations, and token counts",
-                    "Fix flagged lines in your source file and re-check",
+                "whatIs": "Checks JSONL syntax and simplified chat-shape presets for OpenAI, Anthropic, Gemini, Mistral and open-model examples. This is not authoritative provider-schema or fine-tuning eligibility validation.",
+                "whyUse": "Find malformed lines locally before upload. Token counts use local o200k_base on the original line, not a verified model mapping or API request count.",
+                "howToUse": [
+                                "Paste JSONL or choose a local file, then select a chat preset or Raw JSONL for syntax only.",
+                                "Review physical line numbers, issues and token counts; edit the source and check again."
                 ],
-                tips: [
-                    "OpenAI requires the last message in each example to have role \"assistant\" and system messages (if present) to come first",
-                    "Anthropic's format nests messages under a top-level object and requires the array to start with \"user\" and alternate strictly",
-                    "Token counts here use OpenAI's o200k_base encoding — treat Anthropic estimates as approximate, since Claude's tokenizer isn't public",
+                "tips": [
+                                "Provider presets cover text-oriented examples and may reject other valid provider content blocks. Confirm provider requirements before training.",
+                                "Send To exports valid source lines as a JSON array without changing numeric literals or dropping null."
                 ],
-                useCases: [
-                    "Catching malformed lines before submitting a fine-tuning job",
-                    "Estimating total token count (and rough training cost) for a dataset before uploading",
-                    "Auditing a dataset exported from another tool for role-ordering mistakes",
-                ],
-            }}
+                "useCases": [
+                                "Audit exported datasets and estimate their encoded text size before a training upload."
+                ]
+}}
         >
+            {loadError && <Alert type="error" showIcon title={t("Local tokenizer could not load")} description={loadError} />}
             <ToolBridgeBanner accepts={["text"]} onAccept={(p) => setText(p.data)} />
 
             <Space style={{ marginBottom: 16 }} wrap>
@@ -356,40 +354,38 @@ export default function JsonlValidatorPage() {
                     value={schema}
                     onChange={(v) => { setSchema(v); setText(SAMPLES[v]); setFileName(""); }}
                     style={{ width: 340 }}
-                    options={SCHEMA_OPTIONS}
+                    options={SCHEMA_OPTIONS.map((option) => ({ ...option, label: t(option.label) }))}
                 />
                 <Segmented
                     value={inputMode}
                     onChange={(v) => setInputMode(v as InputMode)}
                     options={[
-                        { label: "Paste text", value: "text", icon: <EditOutlined /> },
-                        { label: "Upload file", value: "file", icon: <InboxOutlined /> },
+                        { label: t("Paste text"), value: "text", icon: <EditOutlined /> },
+                        { label: t("Upload file"), value: "file", icon: <InboxOutlined /> },
                     ]}
                 />
                 <SendToButton data={validJson} kind="json" sourceToolId="jsonl-validator" size="middle" />
             </Space>
 
             <Row gutter={16} style={{ marginBottom: 16 }}>
-                <Col span={6}><Card size="small"><Statistic title="Lines" value={stats.total} /></Card></Col>
-                <Col span={6}><Card size="small"><Statistic title="Valid" value={stats.valid} styles={{ content: { color: "#3f8600" } }} /></Card></Col>
-                <Col span={6}><Card size="small"><Statistic title="Invalid" value={stats.invalid} styles={{ content: { color: stats.invalid > 0 ? "#cf1322" : undefined } }} /></Card></Col>
-                <Col span={6}><Card size="small"><Statistic title="Total tokens" value={stats.totalTokens} /></Card></Col>
+                <Col span={6}><Card size="small"><Statistic title={t("Lines")} value={stats.total} /></Card></Col>
+                <Col span={6}><Card size="small"><Statistic title={t("Valid")} value={stats.valid} styles={{ content: { color: "#3f8600" } }} /></Card></Col>
+                <Col span={6}><Card size="small"><Statistic title={t("Invalid")} value={stats.invalid} styles={{ content: { color: stats.invalid > 0 ? "#cf1322" : undefined } }} /></Card></Col>
+                <Col span={6}><Card size="small"><Statistic title={t("Total tokens")} value={stats.totalTokens} /></Card></Col>
             </Row>
 
-            <Card size="small" title="JSONL input" style={{ marginBottom: 16 }}>
+            <Card size="small" title={t("JSONL input")} style={{ marginBottom: 16 }}>
                 <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
                     {inputMode === "file" ? (
                         <>
                             <Dragger {...uploadProps} style={{ padding: "8px 0" }}>
                                 <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-                                <p className="ant-upload-text">Click or drag a .jsonl file here</p>
-                                <p className="ant-upload-hint" style={{ fontSize: 12 }}>The file is read locally — nothing is uploaded to a server.</p>
+                                <p className="ant-upload-text">{t("Click or drag a .jsonl file here")}</p>
+                                <p className="ant-upload-hint" style={{ fontSize: 12 }}>{t("The file is read locally — nothing is uploaded to a server.")}</p>
                             </Dragger>
                             {fileName && (
                                 <Text type="secondary" style={{ fontSize: 12 }}>
-                                    Loaded <Text code>{fileName}</Text> — {stats.total} line(s). Switch to
-                                    &ldquo;Paste text&rdquo; to edit the contents.
-                                </Text>
+                                    {t("Loaded {file}: {count} lines. Choose Paste text to edit.", { file: fileName, count: stats.total })}</Text>
                             )}
                         </>
                     ) : (
@@ -397,7 +393,7 @@ export default function JsonlValidatorPage() {
                             rows={10}
                             value={text}
                             onChange={(e) => setText(e.target.value)}
-                            placeholder='One JSON object per line, e.g. {"messages": [...]}'
+                            placeholder={t("One JSON object per line, e.g. {\"messages\": [...]}")}
                             style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
                         />
                     )}
@@ -408,7 +404,7 @@ export default function JsonlValidatorPage() {
                 <Alert
                     type="warning"
                     showIcon
-                    title={`${stats.invalid} of ${stats.total} line(s) failed validation`}
+                    title={t("{invalid} of {total} lines failed validation", { invalid: stats.invalid, total: stats.total })}
                     style={{ marginBottom: 16 }}
                 />
             )}

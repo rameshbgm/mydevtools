@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
-import { Button, Card, Space, Typography, Row, Col, InputNumber, Select, App } from "antd";
+import React, { useState } from "react";
+import { Button, Card, Space, Typography, Row, Col } from "antd";
 import { TableOutlined, CopyOutlined, PlusOutlined, DeleteOutlined, AlignLeftOutlined, AlignCenterOutlined, AlignRightOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 type Alignment = "left" | "center" | "right";
 
@@ -21,8 +22,10 @@ interface TableState {
 function generateMarkdown(state: TableState): string {
     const { headers, data, alignments } = state;
 
+    const escapeCell = (value: string) => value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\r\n?|\n/g, "<br>");
+
     // Header row
-    const headerRow = `| ${headers.join(" | ")} |`;
+    const headerRow = `| ${headers.map(escapeCell).join(" | ")} |`;
 
     // Separator row with alignment
     const separatorRow = `| ${alignments.map((a) => {
@@ -32,13 +35,13 @@ function generateMarkdown(state: TableState): string {
     }).join(" | ")} |`;
 
     // Data rows
-    const dataRows = data.map((row) => `| ${row.join(" | ")} |`);
+    const dataRows = data.map((row) => `| ${row.map(escapeCell).join(" | ")} |`);
 
     return [headerRow, separatorRow, ...dataRows].join("\n");
 }
 
 export default function MarkdownTablePage() {
-    const { message } = App.useApp();
+    const { t } = useLanguage();
     const [table, setTable] = useState<TableState>({
         rows: 3,
         cols: 3,
@@ -113,67 +116,49 @@ export default function MarkdownTablePage() {
 
     return (
         <ToolPageLayout
-            title="Markdown Table Generator"
-            description="Create markdown tables with a visual editor"
+            title={t("Markdown Table Generator")}
+            description={t("Create markdown tables with a visual editor")}
             icon={<TableOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
             color="#1677ff"
             learnMore={{
-                whatIs: "A visual editor for creating Markdown tables. Markdown table syntax can be tedious to write manually; this tool provides a spreadsheet-like interface that generates proper Markdown code.",
-                whyUse: "Markdown tables require precise pipe (|) and hyphen (-) alignment. This visual editor eliminates formatting headaches and ensures tables render correctly in any Markdown viewer.",
-                howToUse: [
-                    "Set the number of rows and columns",
-                    "Enter data in the spreadsheet-like grid",
-                    "Set column alignment (left, center, right)",
-                    "Copy the generated Markdown table code"
-                ],
-                tips: [
-                    "Use tab to move between cells quickly",
-                    "Column alignment uses colons in the separator row",
-                    "Cells can contain inline Markdown (bold, links)",
-                    "Preview shows how the table will render"
-                ],
-                useCases: [
-                    "Creating comparison tables for documentation",
-                    "Formatting data for GitHub READMEs",
-                    "Building feature matrices",
-                    "Creating structured content for wikis"
-                ]
+                whatIs: "Edit headers, cells and column alignment to generate a Markdown pipe table.",
+                whyUse: "Build documentation tables without typing every separator by hand.",
+                howToUse: ["Add or remove rows and columns, edit cells, then copy the Markdown output."],
+                tips: ["The preview displays cell text. Output escapes pipes and backslashes and turns line breaks into <br>; other inline Markdown stays editable."],
             }}
         >
             <Row gutter={[24, 24]}>
                 <Col xs={24} xl={14}>
                     <Card
-                        title="Table Editor"
-                        extra={
-                            <Space>
-                                <Button size="small" icon={<PlusOutlined />} onClick={addRow}>Row</Button>
-                                <Button size="small" icon={<DeleteOutlined />} onClick={removeRow} disabled={table.rows <= 1}>Row</Button>
-                                <Button size="small" icon={<PlusOutlined />} onClick={addColumn}>Column</Button>
-                                <Button size="small" icon={<DeleteOutlined />} onClick={removeColumn} disabled={table.cols <= 1}>Column</Button>
-                            </Space>
-                        }
+                        title={t("Table Editor")}
                     >
+                        <Space wrap style={{ marginBottom: 16 }}>
+                                <Button size="small" icon={<PlusOutlined />} onClick={addRow}>{t("Row")}</Button>
+                                <Button size="small" icon={<DeleteOutlined />} onClick={removeRow} disabled={table.rows <= 1}>{t("Row")}</Button>
+                                <Button size="small" icon={<PlusOutlined />} onClick={addColumn}>{t("Column")}</Button>
+                                <Button size="small" icon={<DeleteOutlined />} onClick={removeColumn} disabled={table.cols <= 1}>{t("Column")}</Button>
+                            </Space>
                         <div style={{ overflowX: "auto" }}>
-                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <table dir="ltr" style={{ width: "100%", borderCollapse: "collapse" }}>
                                 {/* Alignment Row */}
                                 <thead>
                                     <tr>
                                         {table.alignments.map((align, i) => (
                                             <th key={`align-${i}`} style={{ padding: "8px 4px", borderBottom: "1px solid #eee" }}>
                                                 <Space size={4}>
-                                                    <Button aria-label="Align left"
+                                                    <Button aria-label={t("Align left")}
                                                         size="small"
                                                         type={align === "left" ? "primary" : "text"}
                                                         icon={<AlignLeftOutlined />}
                                                         onClick={() => updateAlignment(i, "left")}
                                                     />
-                                                    <Button aria-label="Align center"
+                                                    <Button aria-label={t("Align center")}
                                                         size="small"
                                                         type={align === "center" ? "primary" : "text"}
                                                         icon={<AlignCenterOutlined />}
                                                         onClick={() => updateAlignment(i, "center")}
                                                     />
-                                                    <Button aria-label="Align right"
+                                                    <Button aria-label={t("Align right")}
                                                         size="small"
                                                         type={align === "right" ? "primary" : "text"}
                                                         icon={<AlignRightOutlined />}
@@ -187,8 +172,9 @@ export default function MarkdownTablePage() {
                                     <tr>
                                         {table.headers.map((header, i) => (
                                             <th key={`header-${i}`} style={{ padding: 4 }}>
-                                                <input
+                                                <input dir="ltr"
                                                     type="text"
+                                                    aria-label={t("Header for column {column}", { column: i + 1 })}
                                                     value={header}
                                                     onChange={(e) => updateHeader(i, e.target.value)}
                                                     style={{
@@ -197,7 +183,7 @@ export default function MarkdownTablePage() {
                                                         border: "2px solid #1677ff",
                                                         borderRadius: 6,
                                                         fontWeight: 600,
-                                                        fontSize: 14,
+                                                        fontSize: 16,
                                                         textAlign: table.alignments[i],
                                                         background: "rgba(22, 119, 255, 0.05)",
                                                     }}
@@ -211,8 +197,9 @@ export default function MarkdownTablePage() {
                                         <tr key={`row-${rowIndex}`}>
                                             {row.map((cell, colIndex) => (
                                                 <td key={`cell-${rowIndex}-${colIndex}`} style={{ padding: 4 }}>
-                                                    <input
+                                                    <input dir="ltr"
                                                         type="text"
+                                                        aria-label={t("Row {row}, column {column}", { row: rowIndex + 1, column: colIndex + 1 })}
                                                         value={cell}
                                                         onChange={(e) => updateCell(rowIndex, colIndex, e.target.value)}
                                                         style={{
@@ -220,7 +207,7 @@ export default function MarkdownTablePage() {
                                                             padding: "8px 12px",
                                                             border: "1px solid #d9d9d9",
                                                             borderRadius: 6,
-                                                            fontSize: 14,
+                                                            fontSize: 16,
                                                             textAlign: table.alignments[colIndex],
                                                         }}
                                                     />
@@ -236,14 +223,12 @@ export default function MarkdownTablePage() {
 
                 <Col xs={24} xl={10}>
                     <Card
-                        title="Markdown Output"
+                        title={t("Markdown Output")}
                         extra={
-                            <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(markdown)}>
-                                Copy
-                            </Button>
+                            <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(markdown)}>{t("Copy")}</Button>
                         }
                     >
-                        <pre
+                        <pre dir="ltr" aria-label={t("Markdown Output")}
                             style={{
                                 fontFamily: "var(--font-geist-mono)",
                                 fontSize: 13,
@@ -259,9 +244,9 @@ export default function MarkdownTablePage() {
                         </pre>
                     </Card>
 
-                    <Card title="Preview" style={{ marginTop: 16 }}>
+                    <Card title={t("Preview")} style={{ marginTop: 16 }}>
                         <div style={{ overflowX: "auto" }}>
-                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <table dir="ltr" style={{ width: "100%", borderCollapse: "collapse" }}>
                                 <thead>
                                     <tr>
                                         {table.headers.map((header, i) => (
@@ -291,7 +276,7 @@ export default function MarkdownTablePage() {
                                                         textAlign: table.alignments[colIndex],
                                                     }}
                                                 >
-                                                    {cell || <Text type="secondary">-</Text>}
+                                                    {cell || <Text type="secondary">{"-"}</Text>}
                                                 </td>
                                             ))}
                                         </tr>

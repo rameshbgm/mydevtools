@@ -15,12 +15,39 @@ export interface ToolSeoContent {
 }
 
 export const SITE_NAME = "mydevtools";
-export const SITE_URL = "https://mydevtools.com";
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://mydevtools.com").replace(/\/+$/, "");
 export const SITE_TAGLINE = "Free Online Developer Tools — Client-Side by Default";
 export const SITE_DESCRIPTION =
-    "Free, fast, privacy-first developer tools that run entirely in your browser. Format, validate, convert, encode, decode, generate and inspect: no signup, no tracking — your data stays in your browser unless a tool explicitly says otherwise.";
+    "Free, privacy-first developer tools. Format, validate, convert, inspect and debug locally by default. Network tools disclose what they send. No signup or tracking.";
 
 export const SEO_CONTENT: Record<string, ToolSeoContent> = {
+    "data-explorer": { title: "Document Data Explorer \u2014 My Dev Tools", description: "Browse and query MongoDB, Firestore and Elasticsearch with encrypted saved connections and type-aware exports", keywords: ["mongodb", "firestore", "elasticsearch", "nosql", "documents"] },
+    "s3-browser": { title: "S3 Storage Browser \u2014 My Dev Tools", description: "Browse S3-compatible buckets, prefixes and object metadata; transfer files with encrypted saved connections", keywords: ["s3", "storage", "bucket", "object", "aws"] },
+    "code-screenshot": { title: "Code Screenshot \u2014 My Dev Tools", description: "Create syntax-highlighted code images with themes, backgrounds, window controls and real PNG export", keywords: ["code", "screenshot", "syntax", "png", "snippet"] },
+    "docker-compose-generator": { title: "Docker Compose Generator \u2014 My Dev Tools", description: "Configure a local stack with service starters, ports, named volumes, environment variables and dependencies", keywords: ["docker", "compose", "containers", "yaml", "stack"] },
+    "json-visualizer": { title: "JSON Graph Visualizer \u2014 My Dev Tools", description: "Explore JSON with pan, zoom, branch collapse, path search, array tables and SVG/PNG export", keywords: ["json", "graph", "visualizer", "tree", "jsonpath"] },
+    "css-generators": { title: "CSS Visual Builders \u2014 My Dev Tools", description: "Design multi-layer shadows, elliptical radii, fluid typography and configurable gradients with live previews", keywords: ["css", "shadow", "radius", "fluid", "gradient"] },
+    "user-agent-parser": { title: "User-Agent & Client Hints Parser \u2014 My Dev Tools", description: "Inspect reported browser, OS, engine, device and CPU details locally", keywords: ["useragent", "browser", "device", "client hints", "cpu"] },
+    "whois-rdap": { title: "Domain & IP Registration (RDAP) \u2014 My Dev Tools", description: "Look up public domain/IP registration, registrars, events, statuses and nameservers", keywords: ["rdap", "whois", "domain", "ip", "registration"] },
+    "redis-browser": { title: "Redis Browser \u2014 My Dev Tools", description: "Scan keys, inspect typed values and run bounded Redis commands with encrypted saved connections", keywords: ["redis", "cache", "keys", "database", "commands"] },
+    "gitignore-generator": { title: ".gitignore Generator \u2014 My Dev Tools", description: "Combine stack, editor and operating-system ignore patterns with custom overrides", keywords: ["gitignore", "git", "ignore", "templates"] },
+    "keycode-inspector": { title: "Keyboard Event Inspector \u2014 My Dev Tools", description: "Inspect key, code, modifiers, locations and browser keyboard event history", keywords: ["keyboard", "key", "keycode", "events"] },
+    "sql-client": { title: "SQL Database Workspace \u2014 My Dev Tools", description: "Query SQLite files locally and connect to PostgreSQL, MySQL and MariaDB with encrypted saved connections", keywords: ["sql", "database", "postgresql", "mysql", "mariadb", "sqlite"] },
+    "json-schema-generator": { title: "JSON Schema & Model Generator \u2014 My Dev Tools", description: "Infer JSON Schema from sample data and generate typed models for nine languages", keywords: ["schema", "json", "python", "go", "rust", "csharp", "kotlin", "swift", "dart", "models"] },
+    "unit-converter": { title: "Scientific Unit Converter \u2014 My Dev Tools", description: "Convert physical, electrical, thermal and engineering quantities with explicit unit definitions", keywords: ["units", "scientific", "engineering", "temperature"] },
+    "timezone-planner": { title: "Timezone Planner \u2014 My Dev Tools", description: "Compare meeting times, UTC offsets, date shifts and working hours across IANA timezones", keywords: ["timezone", "meeting", "dst", "time"] },
+    "totp-generator": { title: "TOTP Generator \u2014 My Dev Tools", description: "Generate local RFC 6238 authenticator codes with configurable time-step and public test vectors", keywords: ["totp", "mfa", "2fa", "authenticator"] },
+    "resource-bookmarks": { title: "Resource Bookmarks \u2014 My Dev Tools", description: "Organize project documentation, repositories and external links", keywords: ["bookmark", "url", "resource"] },
+    "code-snippets": { title: "Code Snippets \u2014 My Dev Tools", description: "Save, search, format and copy project code snippets with syntax highlighting", keywords: ["snippet", "code", "library"] },
+    "secure-files": { title: "Secure Files \u2014 My Dev Tools", description: "Encrypt file contents and metadata locally with portable backups", keywords: ["file", "vault", "encrypted", "backup"] },
+    "credential-vault": { title: "Credential Vault \u2014 My Dev Tools", description: "Encrypt passwords, API keys, environment variables and saved connections locally", keywords: ["vault", "password", "secret", "encrypted"] },
+    "tool-workbench": { title: "Tool Tabs \u2014 My Dev Tools", description: "Keep multiple tools open, switch and reorder tabs without losing input", keywords: ["tabs", "workspace", "multitask"] },
+    "project-workspaces": { title: "Project Workspaces \u2014 My Dev Tools", description: "Keep project notes, snippets, workflows and connections separate", keywords: ["project", "workspace", "isolation"] },
+    "saved-workflows": { title: "Saved Developer Workflows — Local Tool Pipelines", description: "Chain decoding, JSON formatting, extraction, redaction, comparison and hashing locally. Save reusable steps and optional fixtures on your device.", keywords: ["developer workflow", "pipeline", "recipe", "local tools"] },
+    "har-log-redactor": { title: "HAR & Log Redactor — Private Developer Tools", description: "Redact credentials and custom fields from HAR, JSON, and logs locally.", keywords: ["har", "redaction", "logs", "privacy"] },
+    "trace-context-inspector": { title: "Trace Context Inspector — Private Developer Tools", description: "Inspect and generate W3C traceparent and tracestate headers.", keywords: ["trace", "w3c", "headers", "observability"] },
+    "webhook-signature-debugger": { title: "Webhook Signature Debugger — Private Developer Tools", description: "Verify GitHub, Stripe, Slack, and HMAC webhook signatures locally.", keywords: ["webhook", "signature", "hmac", "verify"] },
+
     // ===== Formatters =====
     "json-formatter": {
         title: "JSON Formatter & Validator — Beautify, Minify, Tree View Online",
@@ -160,23 +187,25 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
         ],
     },
     "xsd-validator": {
-        title: "XSD Schema Validator — Validate XML Against XSD Online",
+        title: "XSD Declaration Inspector — XML Root and Namespace Checks",
         description:
-            "Validate XML documents against XSD schemas online. Get detailed schema violation reports, type mismatches and missing element errors. Free and private.",
+            "Inspect XSD declarations locally and check XML well-formedness, the declared root name and root namespace. Full XSD conformance is not validated.",
         keywords: [
-            "xsd validator",
-            "xml schema validator",
-            "validate xsd online",
-            "xsd checker",
-            "xml against xsd",
-            "schema validation tool",
-            "xsd test",
+            "xsd declaration inspector",
+            "xml well-formedness checker",
+            "xml root name check",
+            "xsd namespace checker",
+            "inspect xml schema",
+        ],
+        faq: [
+            { q: "Does this tool perform full XSD validation?", a: "No. It inspects XSD declarations and checks XML well-formedness, the declared root name and the root namespace. Child content, datatypes, cardinality and required attributes are not validated. Use a full XSD validator such as Xerces or libxml2 to establish schema conformance." },
+            { q: "Why can the datatype-error example pass the basic checks?", a: "The example keeps the expected root name and namespace. Its invalid field values and missing child content are outside these basic checks, so a result with no root/XML errors does not mean the XML conforms to the XSD." },
         ],
     },
     "credit-card-validator": {
         title: "Credit Card Validator (Luhn) — Generate Test Card Numbers Free",
         description:
-            "Validate credit card numbers using the Luhn algorithm. Detect card brand (Visa, Mastercard, Amex, Discover) and generate valid test card numbers for development.",
+            "Check card-number length and Luhn checksums locally. View prefix-based brand hints and generate synthetic format fixtures; no account lookup or payment is performed.",
         keywords: [
             "credit card validator",
             "luhn algorithm checker",
@@ -454,16 +483,16 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
 
     // ===== Cryptography =====
     "hash-generator": {
-        title: "Hash Generator — MD5, SHA-1, SHA-256, SHA-512, SHA-3 Online",
+        title: "Hash Generator — MD5, SHA-2, Keccak & RIPEMD-160",
         description:
-            "Generate cryptographic hashes (MD5, SHA-1, SHA-224, SHA-256, SHA-384, SHA-512, SHA-3, RIPEMD-160) for text and files. Free, instant, fully client-side.",
+            "Generate text hashes with MD5, SHA-1, SHA-2, Keccak and RIPEMD-160 locally. CryptoJS Keccak outputs are distinct from standardized SHA-3.",
         keywords: [
             "hash generator",
             "md5 generator",
             "sha-256 generator",
             "sha256 hash online",
             "sha-512 hash",
-            "sha-3 hash",
+            "keccak hash",
             "ripemd-160 generator",
             "checksum calculator",
             "online hash tool",
@@ -654,15 +683,15 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
         ],
     },
     "jks-tool": {
-        title: "Java KeyStore (JKS) Tool — Create, View, Convert JKS Files",
+        title: "Java KeyStore Helper — PKCS#12 Builder & keytool Commands",
         description:
-            "Create, inspect and manage Java KeyStore (.jks) files. Import/export certificates and keys, convert JKS to PKCS#12 and back. Free keytool alternative.",
+            "Build PKCS#12 files from PEM certificates and keys locally. Prepare keytool commands for Java keystore conversion and inspection on your machine.",
         keywords: [
             "jks tool",
             "java keystore tool",
-            "jks viewer",
-            "jks creator",
-            "keytool alternative",
+            "java keytool commands",
+            "pkcs12 builder",
+            "jks command helper",
             "jks to pkcs12",
             "pkcs12 to jks",
             "java truststore tool",
@@ -686,7 +715,7 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
     "key-pair-generator": {
         title: "Key Pair Generator — RSA, ECDSA, Ed25519 Keys (PEM Output)",
         description:
-            "Generate cryptographic key pairs — RSA (2048/3072/4096), ECDSA (P-256/384/521) and Ed25519 — in PEM, JWK and OpenSSH formats. Free, in-browser.",
+            "Generate RSA, ECDSA and Ed25519 key pairs locally in PEM or JWK format. Export public and private keys; unsupported browser algorithms fail explicitly.",
         keywords: [
             "key pair generator",
             "rsa key generator",
@@ -701,7 +730,7 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
     "ssh-key-generator": {
         title: "SSH Key Generator — Generate RSA, ECDSA, Ed25519 SSH Keys",
         description:
-            "Generate SSH key pairs (RSA, ECDSA, Ed25519) with optional passphrase protection. OpenSSH format ready to paste into GitHub, GitLab or ~/.ssh. Free.",
+            "Generate RSA, ECDSA and Ed25519 SSH keys locally in OpenSSH format, with SHA-256 fingerprints. Private exports are unencrypted; add a passphrase locally with ssh-keygen.",
         keywords: [
             "ssh key generator",
             "generate ssh key",
@@ -745,9 +774,9 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
         ],
     },
     "api-request-builder": {
-        title: "API Request Builder — Test REST APIs (Postman-Style) Online",
+        title: "API Client — HTTP, gRPC, Collection Runner & Local Mocks",
         description:
-            "Build, send and test HTTP REST API requests with custom headers, query params, body and authentication. Lightweight Postman-style API client. Free.",
+            "Build HTTP requests, run collections with response captures and assertions, and use authenticated localhost gRPC and temporary HTTP mock servers.",
         keywords: [
             "api request builder",
             "rest api tester",
@@ -757,12 +786,15 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "curl builder",
             "api client online",
             "rest client",
+            "grpc client",
+            "api collection runner",
+            "local mock server",
         ],
     },
     "json-path-tester": {
-        title: "JSONPath Tester — Test and Evaluate JSONPath Expressions",
+        title: "JSONPath & JMESPath Tester — Query JSON Online",
         description:
-            "Test JSONPath expressions against JSON documents in real time. Live result preview, syntax help, recursive descent and filter expressions. Free.",
+            "Query JSON with JSONPath or JMESPath. Preview arrays, objects and scalars, try examples and preserve precision-sensitive input numbers as text.",
         keywords: [
             "jsonpath tester",
             "jsonpath evaluator",
@@ -863,16 +895,20 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
 
     // ===== Generators =====
     "uuid-generator": {
-        title: "UUID Generator — Generate UUID v4 (GUID) Online in Bulk",
+        title: "UUID & ULID Generator — v3, v4, v5 and v7 Identifiers",
         description:
-            "Generate cryptographically random UUID v4 (GUID) identifiers in bulk. Up to thousands at a time. Free, instant, RFC 4122 compliant — no signup.",
+            "Generate UUID v3/v5 namespace identifiers, random v4, time-ordered v7 and ULIDs locally. Inspect identifier versions and timestamps; copy or download up to 1,000 IDs.",
         keywords: [
             "uuid generator",
             "guid generator",
             "uuid v4 generator",
+            "uuid v3 generator",
+            "uuid v5 namespace",
+            "uuid v7 generator",
+            "ulid generator",
             "random uuid",
             "bulk uuid generator",
-            "rfc 4122 uuid",
+            "rfc 9562 uuid",
             "online uuid generator",
             "unique id generator",
         ],
@@ -894,7 +930,7 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
     "credit-card-generator": {
         title: "Credit Card Generator — Luhn-Valid Test Card Numbers, Free",
         description:
-            "Generate valid test credit card numbers for Visa, Mastercard, Amex, Discover, JCB, UnionPay, RuPay and more — with CVV, expiry and card-style preview. Runs fully in your browser.",
+            "Generate synthetic Luhn-valid card-format fixtures with placeholder CVV, expiry and holder details. Local previews and text/CSV/JSON export; no account lookup.",
         keywords: [
             "credit card generator",
             "test credit card numbers",
@@ -909,7 +945,7 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
     "lorem-ipsum": {
         title: "Lorem Ipsum Generator — Placeholder Text in Words, Sentences",
         description:
-            "Generate Lorem Ipsum placeholder text in words, sentences, paragraphs or HTML. Custom length, start with classic phrase. Free, copy with one click.",
+            "Generate Lorem Ipsum placeholder text as words, sentences or paragraphs. Choose the length and classic opening, then copy or download the plain text.",
         keywords: [
             "lorem ipsum generator",
             "placeholder text generator",
@@ -966,7 +1002,7 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
     "json-to-typescript": {
         title: "JSON to TypeScript — Generate TS Interfaces from JSON Online",
         description:
-            "Convert JSON objects to TypeScript interfaces and types automatically. Type inference, optional fields and nested types. Free JSON-to-TS tool.",
+            "Generate TypeScript interfaces and types from JSON. Infer nested objects, array unions and null values, then review and copy the generated code.",
         keywords: [
             "json to typescript",
             "json to interface",
@@ -1054,9 +1090,9 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
         ],
     },
     "number-base": {
-        title: "Number Base Converter — Decimal, Binary, Octal, Hex Online",
+        title: "Number Base Converter — Exact Integers in Bases 2–36",
         description:
-            "Convert numbers between decimal, binary, octal and hexadecimal bases. Supports negative numbers, two's complement and arbitrary precision. Free.",
+            "Convert exact signed integers between bases 2–36, detect binary/octal/hex prefixes, swap direction and copy results without JavaScript Number rounding.",
         keywords: [
             "number base converter",
             "decimal to binary",
@@ -1129,17 +1165,26 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "local semantic search",
         ],
         faq: [
-            { q: "Does this send my documents to a server?", a: "No. The only network request this tool makes is a one-time download of the embedding model's weights (~25 MB) from the Hugging Face CDN, cached by your browser afterward. Your documents and queries are embedded locally and never leave your browser." },
-            { q: "How is this different from keyword search?", a: "Keyword search only matches literal word overlap. This tool converts text into numeric embeddings that capture meaning, so a query like \"car\" can match a chunk that only says \"automobile\" — something substring matching can't do." },
-            { q: "Why does the model take a moment to load?", a: "The first time you click \"Load model\", ~25 MB of ONNX model weights download from the Hugging Face CDN. Subsequent visits reuse the browser's cache, so loading is much faster after the first use." },
-        ],
+    {
+        "q": "Does this send my documents to a server?",
+        "a": "Text stays on this device. WebGPU falls back to WASM when unavailable; clearing browser storage may require another model download."
+    },
+    {
+        "q": "How is this different from keyword search?",
+        "a": "Semantic search compares sentence embedding vectors; keyword comparison measures literal term overlap. Similar meaning can match without shared words, but relevance is not guaranteed."
+    },
+    {
+        "q": "Why does the model take a moment to load?",
+        "a": "Load the model; about 91 MB of FP32 weights and metadata download from Hugging Face and may be cached."
+    }
+],
     },
 
     // ===== Reference =====
     "http-status-codes": {
-        title: "HTTP Status Codes Reference — All 1xx–5xx Codes Explained",
+        title: "HTTP Status Reference — Selected 1xx–5xx Codes Explained",
         description:
-            "Complete HTTP status codes reference: 1xx informational, 2xx success, 3xx redirection, 4xx client error, 5xx server error. Use cases & best practices.",
+            "Browse selected HTTP status codes with explanations, examples and primary sources. Includes dated notes for temporary registrations and protocol-specific limits.",
         keywords: [
             "http status codes",
             "http status code reference",
@@ -1197,19 +1242,19 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "llm token pricing",
         ],
         faq: [
-            {
-                q: "How often is this pricing updated?",
-                a: "Prices are checked periodically and the table shows a \"last verified\" date. LLM pricing changes frequently — click a model name to open the provider's own pricing page and confirm the current rate before budgeting.",
-            },
-            {
-                q: "What does \"cached input\" pricing mean?",
-                a: "Several providers offer a discounted rate for input tokens that match a recently-sent prompt prefix (prompt caching). It can cut input costs by up to 90% for workloads that repeat the same system prompt or context across requests.",
-            },
-            {
-                q: "Why do some models show a higher price above a certain context length?",
-                a: "Some providers (e.g. Google's Gemini Pro tier) charge a higher per-token rate once a request exceeds a threshold like 200K tokens. This table shows the standard, lower tier — check the provider's page for the long-context rate.",
-            },
-        ],
+    {
+        "q": "How often is this pricing updated?",
+        "a": "The table shows review dates. Prices, processing tiers and limits can change; open the linked provider pricing before budgeting."
+    },
+    {
+        "q": "What does \"cached input\" pricing mean?",
+        "a": "A provider may discount eligible reused prompt tokens. Cache creation, retention, minimum sizes and rates vary by provider and model."
+    },
+    {
+        "q": "Why do some models show a higher price above a certain context length?",
+        "a": "Some providers apply different rates or limits to long requests. Read the model note and provider pricing; the listed input rate alone may not cover your request."
+    }
+],
     },
     "ip-ranges-reference": {
         title: "IP Ranges Reference — Private, Reserved & Special-Use IPs",
@@ -1355,15 +1400,16 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
         ],
     },
     "aes-tool": {
-        title: "AES Encrypt & Decrypt Online — AES-128/192/256 with Passphrase",
+        title: "AES-CBC Compatibility Tool — Encrypt & Decrypt Text Locally",
         description:
-            "Encrypt and decrypt text using AES-128, AES-192 or AES-256 with a passphrase. CBC mode, PBKDF2 key derivation. Free AES tool that runs in your browser.",
+            "Encrypt and decrypt CryptoJS-compatible AES-256-CBC passphrase text locally. Legacy unauthenticated format; this tool does not use PBKDF2 or accept raw keys.",
         keywords: [
             "aes encrypt",
             "aes decrypt",
             "aes online tool",
             "aes-256 encrypt",
-            "aes-128 encrypt",
+            "aes cbc compatibility",
+            "cryptojs passphrase encryption",
             "encrypt text online",
             "decrypt aes",
             "symmetric encryption tool",
@@ -1373,7 +1419,7 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
     "slug-generator": {
         title: "Slug Generator — Create SEO-Friendly URL Slugs from Text",
         description:
-            "Generate clean, SEO-friendly URL slugs from any text. Unicode transliteration, custom separators, lowercase, max length. Free permalink generator.",
+            "Generate URL slugs with Unicode normalization, diacritic removal, character filtering, custom separators, lowercase and a configurable maximum length.",
         keywords: [
             "slug generator",
             "url slug generator",
@@ -1444,15 +1490,24 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "claude mcp server",
         ],
         faq: [
-            { q: "What is Model Context Protocol (MCP)?", a: "MCP is an open standard introduced by Anthropic that lets AI models like Claude discover and call external tools, databases, and APIs through a standardized JSON-RPC 2.0 protocol over SSE or Streamable HTTP transports." },
-            { q: "What transports does the MCP Inspector support?", a: "The inspector supports Streamable HTTP (the modern 2025-03-26 spec) and legacy SSE transports, with four connection modes: direct browser fetch, direct-strict, via server proxy (for CORS bypass), and via MCP proxy tunnel." },
-            { q: "How does session tracking work?", a: "On initialize, the MCP server returns a Mcp-Session-Id header. The inspector captures this and forwards it on every subsequent request (tools/list, tools/call), ensuring the server can maintain state across the conversation." },
-        ],
+    {
+        "q": "What is Model Context Protocol (MCP)?",
+        "a": "MCP lets clients discover and invoke tools and resources through a versioned protocol. This inspector covers selected JSONRPC operations and transports, not every protocol capability."
+    },
+    {
+        "q": "What transports does the MCP Inspector support?",
+        "a": "Streamable HTTP and legacy SSE are supported. Modes include direct with proxy fallback, direct-strict without fallback, managed server proxy, and a user-run MCP proxy tunnel."
+    },
+    {
+        "q": "How does session tracking work?",
+        "a": "MCP 2026-07-28 requests carry version, client identity and capabilities independently and do not use initialization sessions. Selected older versions use initialize and echo a server-provided Mcp-Session-Id on subsequent requests."
+    }
+],
     },
     "a2a-inspector": {
         title: "A2A Protocol Inspector — Test Agent-to-Agent AI Servers Online",
         description:
-            "Debug and test Agent-to-Agent (A2A) protocol servers. Discover agent cards, validate spec compliance, send tasks, stream responses, track contextId. Free A2A debugger.",
+            "Inspect Agent-to-Agent (A2A) cards and selected fields, send messages and tasks, stream responses and track contextId. Supports documented JSONRPC modes; not a complete conformance suite.",
         keywords: [
             "a2a inspector",
             "agent to agent protocol",
@@ -1466,14 +1521,20 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "ai agent protocol debug",
         ],
         faq: [
-            { q: "What is the A2A (Agent-to-Agent) protocol?", a: "A2A is an open protocol for AI agents to communicate with each other. Agents expose an agent-card.json describing their capabilities and skills, then accept JSON-RPC 2.0 messages via message/send and message/stream endpoints." },
-            { q: "What does the compliance checker verify?", a: "The compliance checker validates that the agent card contains all required fields (name, description, version, capabilities) and checks that skills have proper ids and descriptions per the A2A spec." },
-        ],
+    {
+        "q": "What is the A2A (Agent-to-Agent) protocol?",
+        "a": "A2A describes agent discovery and communication. This inspector supports selected 1.0 and 0.3 JSONRPC operations and version-specific agent cards."
+    },
+    {
+        "q": "What does the compliance checker verify?",
+        "a": "The inspector checks selected fields and JSONRPC interfaces for the chosen version. It is a partial structural review, not a complete conformance test."
+    }
+],
     },
     "token-counter": {
         title: "LLM Token Counter — Count Tokens & Estimate Context Window Usage",
         description:
-            "Count tokens for GPT, Claude, and open models. Exact BPE counts for OpenAI models, labeled estimates for Claude/Llama. Free, runs entirely in your browser.",
+            "Local encoding counts and rough token estimates, plus optional direct provider counting for selected OpenAI, Claude and Gemini models.",
         keywords: [
             "llm token counter",
             "gpt token counter",
@@ -1485,10 +1546,19 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "ai prompt token count",
         ],
         faq: [
-            { q: "Is the token count exact or an estimate?", a: "For GPT models it's exact — this tool uses gpt-tokenizer, which implements the same byte-pair-encoding algorithm OpenAI uses server-side. For Claude and open models (Llama, Mistral) it's a labeled estimate, since those tokenizers aren't publicly available." },
-            { q: "Does my text get sent anywhere?", a: "No. Tokenization runs entirely in your browser using a local BPE table. Nothing you type is transmitted to any server." },
-            { q: "Why does the same text have a different token count for different models?", a: "Each model family uses its own vocabulary and merge rules. GPT-4o's o200k_base encoding, GPT-4's cl100k_base, and Claude's tokenizer all split text into different token boundaries, so the same sentence can cost a different number of tokens depending on the model." },
-        ],
+    {
+        "q": "Is the token count exact or an estimate?",
+        "a": "Counts plain-text tokens locally with o200k_base or cl100k_base, or a labeled character heuristic. Optional provider counting sends one user message directly to the selected provider."
+    },
+    {
+        "q": "Does my text get sent anywhere?",
+        "a": "Local counts stay on the device. Optional provider counting sends text and the in-memory key directly to the selected provider only after you choose Send."
+    },
+    {
+        "q": "Why does the same text have a different token count for different models?",
+        "a": "Encodings use different vocabularies and token boundaries. Some choices here use a character heuristic instead of the model tokenizer; local counts do not verify model mappings or API overhead."
+    }
+],
     },
     "jsonl-validator": {
         title: "Fine-Tuning Dataset Validator — Check JSONL Files for OpenAI & Anthropic",
@@ -1505,10 +1575,19 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "llm dataset checker",
         ],
         faq: [
-            { q: "Does this tool upload my dataset anywhere?", a: "No. The file is read and validated entirely in your browser using the File API. Nothing is sent to a server — this is deliberate, since fine-tuning datasets often contain sensitive or proprietary examples." },
-            { q: "What's the difference between the OpenAI and Anthropic schemas?", a: "OpenAI expects a top-level \"messages\" array where an optional system message comes first and the last message must have role \"assistant\". Anthropic nests messages under a \"messages\" array with an optional separate \"system\" field, and requires the array to start with \"user\" and strictly alternate user/assistant." },
-            { q: "Why does a line fail even though the JSON is valid?", a: "This tool checks two things: that each line parses as JSON, and that the parsed object matches the target provider's chat schema (required fields, role ordering, alternation). A line can be valid JSON but still violate the schema — e.g. ending on a user message instead of assistant." },
-        ],
+    {
+        "q": "Does this tool upload my dataset anywhere?",
+        "a": "The file is read locally — nothing is uploaded to a server."
+    },
+    {
+        "q": "Which chat checks do the presets perform?",
+        "a": "Provider presets cover text-oriented examples and may reject other valid provider content blocks. Confirm provider requirements before training."
+    },
+    {
+        "q": "Why does a line fail even though the JSON is valid?",
+        "a": "Checks JSONL syntax and simplified chat-shape presets for OpenAI, Anthropic, Gemini, Mistral and open-model examples. This is not authoritative provider-schema or fine-tuning eligibility validation."
+    }
+],
     },
     "agent-manifest-generator": {
         title: "Agent Card & MCP Manifest Generator — A2A and MCP Config Builder",
@@ -1525,10 +1604,19 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "model context protocol config",
         ],
         faq: [
-            { q: "What is an A2A agent card?", a: "An agent-card.json is a JSON document an A2A (Agent-to-Agent) server publishes, typically at /.well-known/agent-card.json, describing its name, endpoint URL, capabilities, and the skills it supports. Other agents fetch it to learn how to talk to your agent." },
-            { q: "What is the MCP server config used for?", a: "MCP (Model Context Protocol) clients like Claude Desktop and Claude Code read a JSON config with an mcpServers object to know which MCP servers to launch (stdio, via command + args) or connect to (HTTP/SSE, via URL), plus any environment variables the server needs." },
-            { q: "Can I test the generated manifest immediately?", a: "Yes — use the Send To button on the preview to forward the generated JSON straight into this site's A2A Inspector or MCP Inspector tool." },
-        ],
+    {
+        "q": "What is an A2A agent card?",
+        "a": "A2A cards are typically served at /.well-known/agent-card.json; tags describe skills. This form does not certify protocol conformance."
+    },
+    {
+        "q": "What is the MCP server config used for?",
+        "a": "A client configuration lists MCP server commands or URLs. Argument parsing and HTTP configuration vary by client; this generator uses a JSON string array to preserve argument spaces."
+    },
+    {
+        "q": "Can I test the generated manifest immediately?",
+        "a": "Copy, download, or send the JSON to the matching inspector; this page does not deploy or execute it."
+    }
+],
     },
 
     // ===== Fun & Games =====
@@ -1551,14 +1639,20 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "time management timer",
         ],
         faq: [
-            { q: "What is the Pomodoro technique?", a: "The Pomodoro technique is a time-management method where you work in focused 25-minute intervals (pomodoros) separated by 5-minute breaks. After four pomodoros you take a longer 15–30 minute break." },
-            { q: "Does the timer play a sound when it finishes?", a: "Yes. The timer plays an audio chime when the countdown reaches zero. Make sure your browser audio is not muted." },
-        ],
+    {
+        "q": "What is the Pomodoro technique?",
+        "a": "A common routine alternates 25 minutes of focused work with 5-minute breaks, then takes a longer break after several cycles. This timer provides durations; it does not automatically run that cycle."
+    },
+    {
+        "q": "Does the timer play a sound when it finishes?",
+        "a": "Background tabs and device sleep can delay the completion chime. Browser audio policies may block sound. Reloading clears the timer."
+    }
+],
     },
     "stopwatch": {
         title: "Online Stopwatch — Lap Timer with Split Times (Free)",
         description:
-            "Precise browser-based stopwatch with lap splits, best/worst lap highlighting, and millisecond accuracy. Perfect for workouts, coding sprints, and timing tasks.",
+            "Browser stopwatch with lap splits, best/worst lap highlighting and a millisecond display. Timing depends on browser scheduling and device conditions.",
         keywords: [
             "online stopwatch",
             "stopwatch with laps",
@@ -1588,8 +1682,11 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "online coin flipper",
         ],
         faq: [
-            { q: "Is the coin flip truly random?", a: "Yes. Each flip uses Math.random(), which generates a cryptographically unpredictable value in modern browsers, giving a statistically fair 50/50 chance of heads or tails." },
-        ],
+    {
+        "q": "Is the coin flip truly random?",
+        "a": "Each flip uses Math.random() with a heads threshold of 0.5. This is pseudorandom entertainment, not cryptographic randomness or a guarantee of balanced results in a short run."
+    }
+],
     },
     "dice-roll": {
         title: "Dice Roller Online — Roll D4, D6, D8, D10, D12, D20 Dice",
@@ -1609,9 +1706,15 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "random dice roll",
         ],
         faq: [
-            { q: "Which dice types are supported?", a: "The dice roller supports D4, D6, D8, D10, D12, D20, and D100 (percentile). You can roll multiple dice of the same type simultaneously and view the sum and individual results." },
-            { q: "Can I add modifiers to my dice rolls?", a: "Yes. You can add a numeric modifier (positive or negative) that is added to the total after rolling, which is standard in D&D and other tabletop RPGs." },
-        ],
+    {
+        "q": "Which dice types are supported?",
+        "a": "D4, D6, D8, D10, D12, D20 and D100 are supported, with multiple dice, individual results and a total."
+    },
+    {
+        "q": "Can I add modifiers to my dice rolls?",
+        "a": "A positive or negative integer modifier is added once to the roll total, not once per die."
+    }
+],
     },
     "spin-wheel": {
         title: "Spin the Wheel — Random Picker & Decision Wheel Online",
@@ -1631,9 +1734,15 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "wheel picker free",
         ],
         faq: [
-            { q: "How many options can I add to the wheel?", a: "You can add between 2 and 12 options. Each option gets a unique colour segment, and the wheel picks a winner with a randomised full-rotation spin." },
-            { q: "Are my wheel options saved?", a: "Yes. Your options are saved in your browser's localStorage and restored the next time you open the tool." },
-        ],
+    {
+        "q": "How many options can I add to the wheel?",
+        "a": "The wheel accepts 2–12 options. A pseudorandom selection determines the winner; the animation displays that result."
+    },
+    {
+        "q": "Are my wheel options saved?",
+        "a": "Options are stored for the active workspace on this device when browser storage is available. Clearing that storage removes them."
+    }
+],
     },
     "magic-8ball": {
         title: "Magic 8-Ball Online — Ask a Question, Get Your Answer",
@@ -1651,8 +1760,11 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "fortune teller online",
         ],
         faq: [
-            { q: "How many responses does the Magic 8-Ball have?", a: "The classic Magic 8-Ball has 20 responses: 10 positive (e.g. 'It is certain'), 5 neutral (e.g. 'Ask again later'), and 5 negative (e.g. 'Don't count on it'). This tool uses the same 20 authentic responses." },
-        ],
+    {
+        "q": "How many responses does the Magic 8-Ball have?",
+        "a": "There are 20 entertainment responses: 10 positive, 5 neutral and 5 negative. They do not predict events."
+    }
+],
     },
     "typing-test": {
         title: "Typing Speed Test — Measure WPM & Accuracy Online (Free)",
@@ -1672,9 +1784,15 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "measure typing speed",
         ],
         faq: [
-            { q: "How is WPM calculated?", a: "WPM (words per minute) = (correct characters ÷ 5) ÷ (elapsed minutes). Dividing by 5 normalises characters to standard 'words', which is the internationally accepted formula." },
-            { q: "What counts as an error?", a: "Any character that does not match the target text at the same position counts as an error. Errors are shown in red and reduce your accuracy percentage, but they do not count towards your WPM." },
-        ],
+    {
+        "q": "How is WPM calculated?",
+        "a": "WPM is rounded from (correct characters ÷ 5) ÷ elapsed minutes. The exercise uses fixed English passages."
+    },
+    {
+        "q": "What counts as an error?",
+        "a": "A typed character that differs from the target position is an error. Accuracy compares the current text, and WPM uses only correctly matched characters."
+    }
+],
     },
 
     // ===== Text & Utilities =====
@@ -1748,7 +1866,7 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
     "cors-tester": {
         title: "CORS Tester Online — Debug Access-Control Headers & Preflight",
         description:
-            "Send cross-origin requests from any origin, inspect preflight and actual response headers, and get plain-English explanations when CORS fails. Free, runs locally.",
+            "Test cross-origin requests from the current browser origin, inspect exposed response headers and review possible reasons for opaque failures. Browser CORS restrictions apply.",
         keywords: [
             "cors tester",
             "cors checker online",
@@ -1857,19 +1975,9 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
         ],
     },
     "favicon-generator": {
-        title: "Favicon Generator Online — Full Icon Set From One Image",
-        description:
-            "Generate a complete favicon pack (16, 32, 48, 192, 512, apple-touch-icon) plus manifest.json from a single source image. Free, private, no upload.",
-        keywords: [
-            "favicon generator online",
-            "favicon maker",
-            "apple touch icon generator",
-            "favicon ico generator",
-            "manifest.json generator",
-            "favicon pack",
-            "favicon converter",
-            "favicon resizer",
-        ],
+        title: "Favicon, ICO & Maskable Icon Generator — Local PNG & ZIP Pack",
+        description: "Generate common PNG sizes, a six-size ICO and an opaque maskable PWA icon locally. Download a ZIP with matching manifest and HTML head links.",
+        keywords: ["favicon generator", "ico generator", "maskable icon", "pwa icons", "apple touch icon", "favicon zip", "web app manifest"]
     },
     "color-palette-extractor": {
         title: "Color Palette Extractor — Dominant Colors From Any Image",
@@ -1886,9 +1994,9 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
         ],
     },
     "exif-viewer": {
-        title: "EXIF Viewer Online — Inspect Photo Metadata Privately",
+        title: "Image Metadata Viewer & Remover — EXIF, PNG, WebP, TIFF & AVIF",
         description:
-            "View EXIF, GPS and IPTC metadata embedded in JPEG and TIFF photos. Runs entirely on-device — your photos never leave your browser. Free, no signup.",
+            "Inspect common image metadata locally. Remove JPEG/PNG/WebP metadata while preserving compressed image data, or explicitly convert supported formats.",
         keywords: [
             "exif viewer online",
             "exif reader",
@@ -1918,9 +2026,9 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
         ],
     },
     "toml-converter": {
-        title: "TOML Converter — Convert TOML ↔ JSON ↔ YAML Online",
+        title: "Format Converter — JSON ↔ YAML ↔ TOML ↔ XML",
         description:
-            "Convert between TOML, JSON and YAML config formats. Useful for migrating projects between Cargo, pyproject.toml, package.json and GitHub Actions configs.",
+            "Convert JSON, YAML, TOML and XML in all twelve directions locally. Preserve supported values and get explicit errors for unsupported mappings.",
         keywords: [
             "toml converter",
             "toml to json",
@@ -1948,9 +2056,15 @@ export const SEO_CONTENT: Record<string, ToolSeoContent> = {
             "prompt token reducer",
         ],
         faq: [
-            { q: "What is TOON?", a: "TOON (Token-Oriented Object Notation) is a compact data format designed to reduce token counts in LLM prompts. It uses indentation instead of braces, declares array shapes upfront (e.g., users[2]{id,name}:) and drops quotes on unambiguous strings. Typical savings vs JSON are 30–50% for tabular data." },
-            { q: "Is TOON lossless from JSON?", a: "Yes for typical JSON: objects, arrays, strings, numbers, booleans, and null all round-trip. Keys are preserved exactly. Strings that look like numbers or booleans are quoted to avoid ambiguity." },
-        ],
+    {
+        "q": "What is TOON?",
+        "a": "Converts JSON or an XML object mapping to a supported TOON subset and back. Local o200k_base counts compare encoded text; savings depend on the data."
+    },
+    {
+        "q": "Is TOON lossless from JSON?",
+        "a": "Supported JSON values round-trip, but precision-sensitive numbers must be quoted explicitly. XML mapping is lossy. This implementation is a subset, not a complete TOON validator; older root-array exports have an explicit legacy decode switch."
+    }
+],
     },
     "openapi-contract-diff": {
         title: "OpenAPI Contract Diff — Find Breaking API Changes Online",

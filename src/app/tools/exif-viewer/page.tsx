@@ -1,309 +1,75 @@
 "use client";
-
-import React, { useState } from "react";
-import { Card, Typography, Upload, Button, Row, Col, Space, Tag, App, Empty } from "antd";
-import { EyeOutlined, UploadOutlined, CopyOutlined } from "@ant-design/icons";
+import { useEffect, useRef, useState } from "react";
+import { EyeOutlined } from "@ant-design/icons";
+import { AuthoredDiagnosticError, authoredDiagnosticText } from "@/lib/i18n/authored-diagnostics";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
+import { imageKind, type ImageKind, type MetadataRemoval } from "@/lib/image-metadata";
+import type { inspectImageMetadata } from "@/lib/image-inspection";
 import { copyToClipboard } from "@/lib/clipboard";
-
-const { Text } = Typography;
-const { Dragger } = Upload;
-
-// Minimal EXIF parser. Reads APP1 segment from a JPEG, walks the TIFF IFD,
-// and returns a flat map of tag-name → value. Covers the common camera tags;
-// not a full TIFF/EXIF spec implementation.
-
-const EXIF_TAGS: Record<number, string> = {
-    0x010F: "Make", 0x0110: "Model", 0x0112: "Orientation", 0x011A: "XResolution",
-    0x011B: "YResolution", 0x0128: "ResolutionUnit", 0x0131: "Software", 0x0132: "DateTime",
-    0x013B: "Artist", 0x8298: "Copyright", 0x8769: "ExifOffset", 0x8825: "GPSOffset",
-    0x829A: "ExposureTime", 0x829D: "FNumber", 0x8822: "ExposureProgram", 0x8827: "ISO",
-    0x9000: "ExifVersion", 0x9003: "DateTimeOriginal", 0x9004: "DateTimeDigitized",
-    0x9201: "ShutterSpeedValue", 0x9202: "ApertureValue", 0x9204: "ExposureBias",
-    0x9205: "MaxApertureValue", 0x9206: "SubjectDistance", 0x9207: "MeteringMode",
-    0x9208: "LightSource", 0x9209: "Flash", 0x920A: "FocalLength",
-    0xA002: "PixelXDimension", 0xA003: "PixelYDimension", 0xA20E: "FocalPlaneXResolution",
-    0xA20F: "FocalPlaneYResolution", 0xA217: "SensingMethod", 0xA300: "FileSource",
-    0xA301: "SceneType", 0xA402: "ExposureMode", 0xA403: "WhiteBalance",
-    0xA404: "DigitalZoomRatio", 0xA405: "FocalLengthIn35mmFilm", 0xA406: "SceneCaptureType",
-    0xA432: "LensSpecification", 0xA433: "LensMake", 0xA434: "LensModel",
-};
-const GPS_TAGS: Record<number, string> = {
-    0x0000: "GPSVersionID", 0x0001: "GPSLatitudeRef", 0x0002: "GPSLatitude",
-    0x0003: "GPSLongitudeRef", 0x0004: "GPSLongitude", 0x0005: "GPSAltitudeRef",
-    0x0006: "GPSAltitude", 0x0007: "GPSTimeStamp", 0x001D: "GPSDateStamp",
-};
-
-interface IfdEntry { tag: number; value: unknown; }
-
-function readExif(buf: ArrayBuffer): Record<string, unknown> | { error: string } {
-    if (buf.byteLength < 8) return { error: "File is too small to contain image metadata" };
-    const view = new DataView(buf);
-
-    // A bare TIFF has no JPEG wrapper — its TIFF header sits at byte 0, so parse
-    // it directly instead of hunting for an APP1 segment that will never exist.
-    const bom = view.getUint16(0);
-    if (bom === 0x4949 || bom === 0x4D4D) {
-        const little = bom === 0x4949;
-        if (view.getUint16(2, little) !== 42) return { error: "Not a valid TIFF file (bad magic number)" };
-        return parseTiff(view, 0, buf);
-    }
-
-    if (view.getUint16(0) !== 0xFFD8) {
-        return { error: "Unsupported file — expected a JPEG (FFD8) or TIFF (II/MM) header" };
-    }
-    let offset = 2;
-    // Every read below is bounds-checked: a truncated or corrupt JPEG must
-    // report "no EXIF" rather than throw a RangeError out of the DataView.
-    while (offset + 4 <= view.byteLength) {
-        if (view.getUint8(offset) !== 0xFF) return { error: "Malformed JPEG segments" };
-        const marker = view.getUint16(offset);
-        const len = view.getUint16(offset + 2);
-        if (len < 2) return { error: "Malformed JPEG segment length" };
-        if (marker === 0xFFE1) {
-            if (offset + 10 > view.byteLength) break;
-            // APP1 — check for "Exif\0\0"
-            const sig = String.fromCharCode(...new Uint8Array(buf, offset + 4, 4));
-            if (sig !== "Exif") { offset += 2 + len; continue; }
-            const tiffStart = offset + 10;
-            return parseTiff(view, tiffStart, buf);
-        }
-        if (marker === 0xFFDA) return { error: "No EXIF segment found before image data" };
-        offset += 2 + len;
-    }
-    return { error: "Reached end of file without finding EXIF" };
-}
-
-function parseTiff(view: DataView, start: number, buf: ArrayBuffer): Record<string, unknown> {
-    if (start + 8 > view.byteLength) return {};
-    const byteOrder = view.getUint16(start);
-    const little = byteOrder === 0x4949;
-    const ifd0Offset = view.getUint32(start + 4, little);
-    const ifd0 = readIfd(view, start, start + ifd0Offset, little, buf, EXIF_TAGS);
-
-    const out: Record<string, unknown> = {};
-    for (const e of ifd0) {
-        out[EXIF_TAGS[e.tag] || `Tag_0x${e.tag.toString(16)}`] = e.value;
-    }
-    if (typeof out.ExifOffset === "number") {
-        const sub = readIfd(view, start, start + (out.ExifOffset as number), little, buf, EXIF_TAGS);
-        for (const e of sub) {
-            out[EXIF_TAGS[e.tag] || `Tag_0x${e.tag.toString(16)}`] = e.value;
-        }
-        delete out.ExifOffset;
-    }
-    if (typeof out.GPSOffset === "number") {
-        const gps = readIfd(view, start, start + (out.GPSOffset as number), little, buf, GPS_TAGS);
-        const gpsOut: Record<string, unknown> = {};
-        for (const e of gps) gpsOut[GPS_TAGS[e.tag] || `GPSTag_0x${e.tag.toString(16)}`] = e.value;
-        if (Array.isArray(gpsOut.GPSLatitude) && Array.isArray(gpsOut.GPSLongitude)) {
-            const toDeg = (arr: number[]) => arr[0] + arr[1] / 60 + arr[2] / 3600;
-            const lat = toDeg(gpsOut.GPSLatitude as number[]) * (gpsOut.GPSLatitudeRef === "S" ? -1 : 1);
-            const lon = toDeg(gpsOut.GPSLongitude as number[]) * (gpsOut.GPSLongitudeRef === "W" ? -1 : 1);
-            gpsOut.GPSDecimal = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-        }
-        out.GPS = gpsOut;
-        delete out.GPSOffset;
-    }
-    return out;
-}
-
-function readIfd(view: DataView, base: number, ifdOffset: number, little: boolean, buf: ArrayBuffer, tagMap: Record<number, string>): IfdEntry[] {
-    if (ifdOffset + 2 > view.byteLength) return [];
-    const count = view.getUint16(ifdOffset, little);
-    const out: IfdEntry[] = [];
-    for (let i = 0; i < count; i++) {
-        const entryOffset = ifdOffset + 2 + i * 12;
-        if (entryOffset + 12 > view.byteLength) break;
-        const tag = view.getUint16(entryOffset, little);
-        const type = view.getUint16(entryOffset + 2, little);
-        const num = view.getUint32(entryOffset + 4, little);
-        const valOff = entryOffset + 8;
-        out.push({ tag, value: readValue(view, base, valOff, type, num, little, buf) });
-        void tagMap;
-    }
-    return out;
-}
-
-function readValue(view: DataView, base: number, valOff: number, type: number, num: number, little: boolean, buf: ArrayBuffer): unknown {
-    const sizes: Record<number, number> = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
-    const sz = sizes[type] || 1;
-    const totalBytes = sz * num;
-    const dataOffset = totalBytes <= 4 ? valOff : base + view.getUint32(valOff, little);
-    if (dataOffset + totalBytes > view.byteLength) return null;
-    if (type === 2) {
-        return String.fromCharCode(...new Uint8Array(buf, dataOffset, num)).replace(/\0+$/, "");
-    }
-    if (type === 3) {
-        if (num === 1) return view.getUint16(dataOffset, little);
-        return Array.from({ length: num }, (_, i) => view.getUint16(dataOffset + i * 2, little));
-    }
-    if (type === 4) {
-        if (num === 1) return view.getUint32(dataOffset, little);
-        return Array.from({ length: num }, (_, i) => view.getUint32(dataOffset + i * 4, little));
-    }
-    if (type === 5) {
-        // unsigned rational: num/den pairs
-        if (num === 1) {
-            const n = view.getUint32(dataOffset, little);
-            const d = view.getUint32(dataOffset + 4, little);
-            return d === 0 ? 0 : n / d;
-        }
-        return Array.from({ length: num }, (_, i) => {
-            const n = view.getUint32(dataOffset + i * 8, little);
-            const d = view.getUint32(dataOffset + i * 8 + 4, little);
-            return d === 0 ? 0 : n / d;
-        });
-    }
-    if (type === 10) {
-        if (num === 1) {
-            const n = view.getInt32(dataOffset, little);
-            const d = view.getInt32(dataOffset + 4, little);
-            return d === 0 ? 0 : n / d;
-        }
-    }
-    return null;
-}
-
-const GROUP_ORDER = ["Camera", "Lens", "Capture", "Image", "GPS", "Other"];
-const GROUP_RULES: Record<string, string[]> = {
-    Camera: ["Make", "Model", "Software"],
-    Lens: ["LensMake", "LensModel", "LensSpecification", "FocalLength", "FocalLengthIn35mmFilm", "MaxApertureValue", "FNumber", "ApertureValue"],
-    Capture: ["DateTime", "DateTimeOriginal", "DateTimeDigitized", "ExposureTime", "ShutterSpeedValue", "ISO", "ExposureBias", "ExposureMode", "ExposureProgram", "MeteringMode", "WhiteBalance", "Flash", "DigitalZoomRatio", "SceneCaptureType"],
-    Image: ["Orientation", "XResolution", "YResolution", "ResolutionUnit", "PixelXDimension", "PixelYDimension", "Artist", "Copyright", "ExifVersion"],
-};
-
-function groupFor(key: string): string {
-    if (key === "GPS") return "GPS";
-    for (const g of Object.keys(GROUP_RULES)) {
-        if (GROUP_RULES[g].includes(key)) return g;
-    }
-    return "Other";
-}
-
+import { downloadBlob, downloadText } from "@/lib/download";
+type Inspection = Awaited<ReturnType<typeof inspectImageMetadata>>;
+interface PreparedImage { blob: Blob; name: string; removed: Record<string, number>; warnings: string[]; method: string }
+const MIME = { jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
+const EXTENSION = { jpeg: "jpg", png: "png", webp: "webp" };
 export default function ExifViewerPage() {
-    const { message } = App.useApp();
-    const [filename, setFilename] = useState<string | null>(null);
-    const [result, setResult] = useState<Record<string, unknown> | { error: string } | null>(null);
-    const [imgSrc, setImgSrc] = useState<string | null>(null);
-
-    const upload = {
-        beforeUpload: async (file: File) => {
-            setFilename(file.name);
-            const reader = new FileReader();
-            reader.onload = () => { setImgSrc(reader.result as string); };
-            reader.readAsDataURL(file);
-            try {
-                const buf = await file.arrayBuffer();
-                setResult(readExif(buf));
-            } catch (err) {
-                setResult({ error: err instanceof Error ? err.message : String(err) });
+    const { t } = useLanguage();
+    const [file, setFile] = useState<File | null>(null), [kind, setKind] = useState<ImageKind | null>(null), [inspection, setInspection] = useState<Inspection | null>(null);
+    const [mode, setMode] = useState<"strip" | "convert">("strip"), [format, setFormat] = useState<"png" | "jpeg" | "webp">("png"), [quality, setQuality] = useState(0.9), [background, setBackground] = useState("#ffffff");
+    const [prepared, setPrepared] = useState<PreparedImage | null>(null), [previewUrl, setPreviewUrl] = useState(""), [cleanUrl, setCleanUrl] = useState(""), [previewError, setPreviewError] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState<AuthoredDiagnosticError | string>("");
+    const worker = useRef<Worker | null>(null), deadline = useRef<ReturnType<typeof setTimeout> | null>(null), pendingReject = useRef<((error: Error) => void) | null>(null), alive = useRef(true), fileInput = useRef<HTMLInputElement>(null);
+    useEffect(() => { alive.current = true; return () => { alive.current = false; worker.current?.terminate(); if (deadline.current) clearTimeout(deadline.current); pendingReject.current?.(new AuthoredDiagnosticError("Image processing cancelled.")); }; }, []);
+    useEffect(() => { if (!file) { setPreviewUrl(""); return; } const url = URL.createObjectURL(file); setPreviewUrl(url); setPreviewError(false); return () => URL.revokeObjectURL(url); }, [file]);
+    useEffect(() => { if (!prepared) { setCleanUrl(""); return; } const url = URL.createObjectURL(prepared.blob); setCleanUrl(url); return () => URL.revokeObjectURL(url); }, [prepared]);
+    const runWorker = async <T,>(operation: "inspect" | "strip", bytes: Uint8Array): Promise<T> => {
+        if (worker.current || !alive.current) throw new AuthoredDiagnosticError("Image processing is already running or this page has closed.");
+        const active = new Worker(new URL("../../../workers/image-metadata.worker.ts", import.meta.url)); worker.current = active;
+        try { return await new Promise<T>((resolve, reject) => {
+            pendingReject.current = reject; deadline.current = setTimeout(() => { active.terminate(); reject(new AuthoredDiagnosticError("Image processing exceeded fifteen seconds. Try a smaller image.")); }, 15_000);
+            active.onmessage = (event) => event.data.error ? reject(new Error(event.data.error)) : resolve(event.data.value);
+            active.onerror = () => reject(new AuthoredDiagnosticError("The local metadata worker could not start. Reload and retry.")); active.postMessage({ operation, bytes });
+        }); } finally { active.terminate(); if (worker.current === active) worker.current = null; if (deadline.current) clearTimeout(deadline.current); deadline.current = null; pendingReject.current = null; }
+    };
+    const chooseFile = async (next: File) => {
+        setError(""); setInspection(null); setPrepared(null); setBusy(true); setFile(null); setKind(null);
+        try { if (next.size > 16 * 1024 * 1024) throw new AuthoredDiagnosticError("Image file limit is 16 MiB."); const bytes = new Uint8Array(await next.arrayBuffer()), detected = imageKind(bytes); if (!alive.current) return; setFile(next); setKind(detected); setMode(["jpeg", "png", "webp"].includes(detected) ? "strip" : "convert"); const result = await runWorker<Inspection>("inspect", bytes); if (alive.current) setInspection(result); }
+        catch (cause) { if (alive.current) setError(cause instanceof AuthoredDiagnosticError ? cause : cause instanceof Error ? cause.message : String(cause)); }
+        finally { if (alive.current) setBusy(false); }
+    };
+    const prepare = async () => {
+        if (!file || busy) return; setBusy(true); setError(""); setPrepared(null);
+        try {
+            const basename = file.name.replace(/\.[^/.]+$/, "") || "image";
+            if (mode === "strip") { const clean = await runWorker<MetadataRemoval>("strip", new Uint8Array(await file.arrayBuffer())); if (alive.current) setPrepared({ blob: new Blob([new Uint8Array(clean.bytes)], { type: MIME[clean.kind] }), name: `${basename}-clean.${EXTENSION[clean.kind]}`, removed: clean.removed, warnings: clean.warnings, method: "Metadata removed without re-encoding image/frame data" }); }
+            else {
+                let bitmap: ImageBitmap; try { bitmap = await createImageBitmap(file, { imageOrientation: "from-image" }); } catch { throw new AuthoredDiagnosticError("This browser cannot decode the image for canvas conversion. Metadata inspection may still work; try a supported JPEG, PNG, WebP or AVIF input."); }
+                try {
+                    if (bitmap.width > 10_000 || bitmap.height > 10_000 || bitmap.width * bitmap.height > 40_000_000) throw new AuthoredDiagnosticError("Canvas export is limited to 10,000 pixels per side and 40 megapixels.");
+                    const canvas = document.createElement("canvas"); canvas.width = bitmap.width; canvas.height = bitmap.height; const context = canvas.getContext("2d"); if (!context) throw new AuthoredDiagnosticError("Canvas is unavailable.");
+                    if (format === "jpeg") { context.fillStyle = background; context.fillRect(0, 0, canvas.width, canvas.height); } context.drawImage(bitmap, 0, 0);
+                    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new AuthoredDiagnosticError("The browser could not encode this image.")), MIME[format], quality));
+                    if (blob.type !== MIME[format]) throw new AuthoredDiagnosticError("This browser has no {format} encoder. Choose PNG instead.", { format: format.toUpperCase() });
+                    if (blob.size > 32 * 1024 * 1024) throw new AuthoredDiagnosticError("Encoded output exceeds 32 MiB. Try JPEG/WebP or resize the source first.");
+                    if (alive.current) setPrepared({ blob, name: `${basename}-converted.${EXTENSION[format]}`, removed: {}, warnings: ["Canvas conversion does not copy source EXIF/XMP/IPTC. It bakes the browser-decoded orientation, exports only one frame and can change color space, bit depth and pixels. JPEG/WebP may add compression loss."], method: `Canvas ${format.toUpperCase()} conversion · re-encoded snapshot` });
+                } finally { bitmap.close(); }
             }
-            return false;
-        },
-        showUploadList: false,
-        accept: "image/jpeg,image/tiff,.jpg,.jpeg,.tif,.tiff",
+        } catch (cause) { if (alive.current) setError(cause instanceof AuthoredDiagnosticError ? cause : cause instanceof Error ? cause.message : String(cause)); }
+        finally { if (alive.current) setBusy(false); }
     };
-
-    const copyJson = async () => {
-        if (!result) return;
-        await copyToClipboard(JSON.stringify(result, null, 2));
-        message.success("EXIF JSON copied");
-    };
-
-    const groups: Record<string, [string, unknown][]> = {};
-    if (result && !("error" in result)) {
-        Object.entries(result).forEach(([k, v]) => {
-            const g = groupFor(k);
-            (groups[g] = groups[g] || []).push([k, v]);
-        });
-    }
-
-    return (
-        <ToolPageLayout
-            title="EXIF Viewer"
-            description="Inspect EXIF, GPS and IPTC metadata embedded in JPEG and TIFF photos"
-            icon={<EyeOutlined style={{ fontSize: 24, color: "#0c4a6e" }} />}
-            color="#0c4a6e"
-            learnMore={{
-                whatIs: "EXIF Viewer parses the EXIF metadata segment (APP1) of JPEG/TIFF photos and surfaces camera, lens, capture and GPS information. Parsing runs entirely in your browser — the file is read into an ArrayBuffer and never uploaded.",
-                whyUse: "EXIF is rich with information photographers care about (shutter, aperture, ISO, lens, GPS) — and information you may want to scrub before publishing (GPS location, camera serial).",
-                howToUse: [
-                    "Drop or select a JPEG or TIFF file",
-                    "Inspect the grouped tags",
-                    "If GPS data is present, a decimal lat/lon is computed for you",
-                    "Copy the full EXIF as JSON for scripts or reports",
-                ],
-                tips: [
-                    "PNG files almost never carry EXIF — convert to JPEG or use a tool that reads PNG tEXt chunks",
-                    "Smartphone screenshots usually strip EXIF; original camera/phone photos keep it",
-                    "If GPS data appears, the photo has the original capture location attached",
-                ],
-                useCases: [
-                    "Auditing photos before publishing (privacy/compliance)",
-                    "Reading lens/camera settings without booting Lightroom",
-                    "Recovering capture date from corrupted file timestamps",
-                ],
-            }}
-        >
-            {!result ? (
-                <Card>
-                    <Dragger {...upload} style={{ padding: 32 }}>
-                        <UploadOutlined style={{ fontSize: 36, color: "#0c4a6e" }} />
-                        <Text style={{ display: "block", marginTop: 12, fontSize: 16 }}>Drop JPEG/TIFF or click</Text>
-                        <Text type="secondary">Files stay in your browser</Text>
-                    </Dragger>
-                </Card>
-            ) : (
-                <Row gutter={[16, 16]}>
-                    <Col xs={24} md={8}>
-                        <Card size="small" title={<Tag>{filename}</Tag>}>
-                            {imgSrc && <img src={imgSrc} alt={filename || ""} style={{ width: "100%", display: "block", borderRadius: 4 }} />}
-                            <Space style={{ marginTop: 12 }}>
-                                <Button size="small" onClick={() => { setResult(null); setFilename(null); setImgSrc(null); }}>Choose another</Button>
-                            </Space>
-                        </Card>
-                    </Col>
-                    <Col xs={24} md={16}>
-                        {"error" in result ? (
-                            <Card><Text type="danger">{String(result.error)}</Text></Card>
-                        ) : (
-                            <>
-                                <Card size="small" extra={<a onClick={copyJson}><CopyOutlined /> Copy as JSON</a>}>
-                                    <Space wrap>
-                                        <Tag color="blue">{Object.keys(result).length} tags</Tag>
-                                        {result.GPS ? <Tag color="orange">GPS present</Tag> : null}
-                                    </Space>
-                                </Card>
-                                {GROUP_ORDER.filter((g) => groups[g]?.length).map((g) => (
-                                    <Card size="small" title={g} key={g} style={{ marginTop: 16 }}>
-                                        <table style={{ width: "100%", fontFamily: "var(--font-geist-mono)", fontSize: 12 }}>
-                                            <tbody>
-                                                {groups[g].map(([k, v]) => (
-                                                    <tr key={k}>
-                                                        <td style={{ padding: "4px 8px", color: "#888", verticalAlign: "top", width: "35%" }}>{k}</td>
-                                                        <td style={{ padding: "4px 8px", wordBreak: "break-all" }}>
-                                                            {typeof v === "object" && v !== null
-                                                                ? <pre style={{ margin: 0, fontFamily: "inherit", fontSize: 11 }}>{JSON.stringify(v, null, 2)}</pre>
-                                                                : String(v)}
-                                                            {k === "GPSDecimal" && typeof v === "string" && (
-                                                                <a target="_blank" rel="noopener noreferrer" href={`https://www.openstreetmap.org/?mlat=${encodeURIComponent(v.split(",")[0])}&mlon=${encodeURIComponent(v.split(",")[1].trim())}#map=15/${encodeURIComponent(v)}`} style={{ marginLeft: 8 }}>open in map ↗</a>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </Card>
-                                ))}
-                                {Object.keys(result).length === 0 && (
-                                    <Card style={{ marginTop: 16 }}><Empty description="No EXIF tags found in this file" /></Card>
-                                )}
-                            </>
-                        )}
-                    </Col>
-                </Row>
-            )}
-        </ToolPageLayout>
-    );
+    const metadataJson = inspection ? JSON.stringify(inspection, null, 2) : "";
+    return <ToolPageLayout title={t("Image Metadata Viewer & Remover")} description={t("Inspect common image metadata locally, strip JPEG/PNG/WebP metadata, or convert browser-decodable formats")} icon={<EyeOutlined />} color="#0c4a6e" learnMore={{ whatIs: "A local image metadata workbench. Common EXIF/GPS, TIFF, XMP and IPTC fields are read from JPEG, PNG, TIFF and HEIC/AVIF; WebP EXIF and container chunks are also inspected. Support depends on the file structure.", whyUse: "Review camera, author, date and GPS fields before publishing. Remove metadata without re-encoding JPEG/PNG/WebP image data, or choose an explicit canvas conversion.", howToUse: ["Choose an image up to 16 MiB", "Inspect decoded fields and container chunks", "Choose removal without re-encoding or a canvas snapshot", "Prepare, preview and download the new copy"], tips: ["PNG can contain EXIF, text and XMP metadata; WebP can contain EXIF and XMP too.", "Removing EXIF orientation can change how unchanged pixels are displayed. Canvas conversion can bake that orientation.", "ICC/color information is retained by the non-reencoding path; proprietary metadata may not be decoded.", "TIFF/HEIC previews and canvas decoding depend on the browser. Metadata inspection can work even when a preview cannot."] }}><div className="wb-workbench">
+        <label>{t("Choose image file")}<input style={{ fontSize: 16 }} ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp,image/tiff,image/avif,image/heic,image/heif,image/gif,image/bmp,.jpg,.jpeg,.png,.webp,.tif,.tiff,.avif,.heic,.heif,.gif,.bmp" disabled={busy} onChange={(event) => { const next = event.target.files?.[0]; if (next) void chooseFile(next); }} /></label>
+        <p>{t("Files and metadata stay in this browser. Parsing runs in a local worker. No remote images or metadata services are contacted.")}</p>
+        {busy && <p role="status">{t("Processing locally…")}</p>}{Boolean(error) && <div role="alert"><p>{t("Unable to process this image. Check the image format and size, then try again.")}</p><pre dir={error instanceof AuthoredDiagnosticError ? "auto" : "ltr"} style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}><bdi>{authoredDiagnosticText(t, error)}</bdi></pre></div>}
+        {file && <><h2 dir="auto" style={{ overflowWrap: "anywhere" }}>{file.name}</h2><p>{kind?.toUpperCase()} · {file.size.toLocaleString()}{t("bytes")}</p><div className="tool-split-pane" style={{ gap: 24 }}><section className="wb-workbench"><h3>{t("Original preview")}</h3>{previewUrl && !previewError ? <img src={previewUrl} alt={t("Original selected image")} onError={() => setPreviewError(true)} className="wb-image-preview" /> : <p>{t("A preview is unavailable in this browser. You can still inspect supported metadata.")}</p>}<button disabled={busy} onClick={() => { setFile(null); setKind(null); setInspection(null); setPrepared(null); setError(""); if (fileInput.current) fileInput.current.value = ""; }}>{t("Clear selected image")}</button></section>
+            <section className="wb-workbench"><h3>{t("Prepare a new copy")}</h3><label>{t("Export method")}<select style={{ fontSize: 16 }} disabled={busy} value={mode} onChange={(event) => { setMode(event.target.value as "strip" | "convert"); setPrepared(null); }}><option value="strip" disabled={!kind || !["jpeg", "png", "webp"].includes(kind)}>{t("Remove metadata · keep compressed image/frame data")}</option><option value="convert">{t("Canvas conversion · re-encoded first frame")}</option></select></label>
+                {mode === "strip" ? <p>{t("Removes EXIF/XMP, JPEG application metadata/comments/thumbnails and nonessential PNG/WebP metadata. Keeps compressed image data, animation and color information. Removing EXIF orientation may change the displayed orientation. ICC profiles remain, so this is not a guarantee of anonymity.")}</p> : <><label>{t("Output image format")}<select style={{ fontSize: 16 }} value={format} disabled={busy} onChange={(event) => { setFormat(event.target.value as typeof format); setPrepared(null); }}><option value="png">{t("PNG")}</option><option value="jpeg">{t("JPEG")}</option><option value="webp">{t("WebP")}</option></select></label><label>{t("JPEG/WebP quality:")}{Math.round(quality * 100)}%<input style={{ fontSize: 16 }} type="range" min={0.1} max={1} step={0.01} value={quality} disabled={busy || format === "png"} onChange={(event) => { setQuality(Number(event.target.value)); setPrepared(null); }} /></label>{format === "jpeg" && <label>{t("Background for transparent pixels")}<input style={{ fontSize: 16 }} type="color" value={background} disabled={busy} onChange={(event) => { setBackground(event.target.value); setPrepared(null); }} /></label>}<p>{t("Creates a new snapshot without copying source EXIF/XMP/IPTC. The browser bakes orientation. Animation becomes one frame; color space, bit depth and pixels may change. JPEG/WebP can be lossy. Canvas export supports up to 40 megapixels / 10,000 pixels per side.")}</p></>}
+                <button disabled={busy} onClick={() => void prepare()}>{busy ? t("Working…") : t("Prepare clean image")}</button>
+                {prepared && <><p role="status">{prepared.method === "Metadata removed without re-encoding image/frame data" ? t("Metadata removed without re-encoding image/frame data") : t("Canvas {format} conversion · re-encoded snapshot", { format: format.toUpperCase() })}. {prepared.blob.size.toLocaleString()}{t("output bytes.")}{Object.keys(prepared.removed).length ? t("Removed blocks: {blocks}.", { blocks: Object.entries(prepared.removed).map(([name, count]) => `${name} (${count})`).join(", ") }) : ""}</p>{cleanUrl && <img src={cleanUrl} alt={t("Prepared image preview")} className="wb-image-preview" />}<p>{prepared.warnings.map((warning) => t(warning)).join(" ")}</p><button onClick={() => downloadBlob(prepared.blob, prepared.name)}>{t("Download prepared image")}</button></>}
+            </section></div></>}
+        {inspection && <><h2>{t("Decoded metadata")}</h2><p>{t(inspection.note)}</p><div className="wb-workbench-actions"><button onClick={() => void copyToClipboard(metadataJson)}>{t("Copy metadata JSON")}</button><button onClick={() => downloadText(metadataJson, "image-metadata.json", "application/json")}>{t("Download metadata JSON")}</button></div>
+            {Object.keys(inspection.metadata).length ? Object.entries(inspection.metadata).map(([group, fields]) => <details key={group} open><summary>{group}</summary><div className="wb-table-scroll"><table dir="ltr" className="wb-data-table"><thead><tr><th>{t("Field")}</th><th>{t("Value")}</th></tr></thead><tbody>{Object.entries(fields && typeof fields === "object" && !Array.isArray(fields) ? fields : { value: fields }).map(([name, value]) => <tr key={name}><th>{name}</th><td><code dir="ltr">{typeof value === "object" && value !== null ? JSON.stringify(value) : String(value)}</code></td></tr>)}</tbody></table></div></details>) : <p>{t("No decoded metadata fields were found. Container data and proprietary fields may still exist.")}</p>}
+            {inspection.containers.length > 0 && <details><summary>{t("Container chunks ({count})", { count: inspection.containers.length })}</summary><div className="wb-table-scroll"><table dir="ltr" className="wb-data-table"><thead><tr><th>{t("Chunk type")}</th><th>{t("Payload bytes")}</th></tr></thead><tbody>{inspection.containers.map((chunk, index) => <tr key={index}><td>{chunk.type}</td><td>{chunk.bytes}</td></tr>)}</tbody></table></div></details>}
+        </>}
+    </div></ToolPageLayout>;
 }

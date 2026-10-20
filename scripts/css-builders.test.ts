@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { fluidFontCss, gradientCss, radiusCss, shadowCss } from "../src/lib/css-builders";
+const fluid = fluidFontCss({ narrowSize: 16, wideSize: 32, narrowViewport: 400, wideViewport: 2000, rootSize: 16 });
+assert.equal(fluid.css, "clamp(1rem, calc(0.75rem + 1vw), 2rem)");
+assert.equal(fluid.atViewport(200), 16); assert.equal(fluid.atViewport(1200), 24); assert.equal(fluid.atViewport(2500), 32);
+const decreasing = fluidFontCss({ narrowSize: 32, wideSize: 16, narrowViewport: 400, wideViewport: 2000, rootSize: 16 }); assert.equal(decreasing.atViewport(1200), 24); assert.match(decreasing.css, / - 1vw/);
+assert.throws(() => fluidFontCss({ narrowSize: 16, wideSize: 32, narrowViewport: 400, wideViewport: 400, rootSize: 16 }));
+assert.equal(radiusCss([10, 20, 30, 40], [50, 60, 70, 80], "%"), "10% 20% 30% 40% / 50% 60% 70% 80%");
+assert.throws(() => shadowCss([{ id: "x", x: 0, y: 0, blur: -1, spread: 0, color: "#000", inset: false }]));
+assert.equal(gradientCss([{ id: "a", color: "#f00", position: 100 }, { id: "b", color: "#00f8", position: 0 }], "conic", 90), "conic-gradient(from 90deg, #0000ff88 0deg, #ff0000 360deg)");
+assert.throws(() => gradientCss([{ id: "x", color: "url(evil)", position: 0 }, { id: "y", color: "#000", position: 100 }], "linear", 0));
+console.log("Fluid typography interpolation/clamping/decreasing scale, elliptical radii, shadow bounds and ordered/alpha gradient fixtures passed.");

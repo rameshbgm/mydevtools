@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Button, Card, Space, Typography, Row, Col, App, Input } from "antd";
+import { Button, Card, Space, Typography, Row, Col, Input } from "antd";
 import { CodeOutlined, CopyOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SendToButton from "@/components/SendToButton";
@@ -11,8 +12,7 @@ import ShareButton from "@/components/ShareButton";
 import ToolBridgeBanner from "@/components/ToolBridgeBanner";
 import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
-const { Text, Title } = Typography;
-const { TextArea } = Input;
+const { Text } = Typography;
 
 const SAMPLE_JSON = `{
   "id": 1,
@@ -32,76 +32,54 @@ const SAMPLE_JSON = `{
   }
 }`;
 
-function jsonToTypeScript(json: unknown, interfaceName: string = "Root", indent: number = 0): string {
-    const spaces = "  ".repeat(indent);
-    const lines: string[] = [];
-
-    if (Array.isArray(json)) {
-        if (json.length === 0) {
-            return "unknown[]";
-        }
-        const itemType = jsonToTypeScript(json[0], interfaceName + "Item", indent);
-        if (itemType.startsWith("interface")) {
-            return itemType + "[]";
-        }
-        return itemType + "[]";
+const TYPESCRIPT_RESERVED = new Set(["break", "case", "catch", "class", "const", "continue", "debugger", "default", "delete", "do", "else", "enum", "export", "extends", "false", "finally", "for", "function", "if", "import", "in", "instanceof", "new", "null", "return", "super", "switch", "this", "throw", "true", "try", "typeof", "var", "void", "while", "with", "implements", "interface", "let", "package", "private", "protected", "public", "static", "yield", "any", "boolean", "number", "string", "symbol", "unknown", "never", "object", "undefined", "type", "namespace", "await"]);
+function jsonToTypeScript(json: unknown, interfaceName: string = "Root"): string {
+    if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(interfaceName) || TYPESCRIPT_RESERVED.has(interfaceName)) {
+        throw new Error("Use a valid TypeScript interface name: start with an ASCII letter, _ or $, and avoid reserved words.");
     }
-
-    if (json === null) {
-        return "null";
-    }
-
-    if (typeof json === "object") {
-        lines.push(`interface ${interfaceName} {`);
-        const nestedInterfaces: string[] = [];
-
-        for (const [key, value] of Object.entries(json)) {
-            const safeKey = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key) ? key : `"${key}"`;
-            let type: string;
-
-            if (value === null) {
-                type = "null";
-            } else if (Array.isArray(value)) {
-                if (value.length === 0) {
-                    type = "unknown[]";
-                } else if (typeof value[0] === "object" && value[0] !== null) {
-                    const nestedName = capitalize(key) + "Item";
-                    nestedInterfaces.push(jsonToTypeScript(value[0], nestedName, 0));
-                    type = nestedName + "[]";
-                } else {
-                    type = typeof value[0] + "[]";
-                }
-            } else if (typeof value === "object") {
-                const nestedName = capitalize(key);
-                nestedInterfaces.push(jsonToTypeScript(value, nestedName, 0));
-                type = nestedName;
-            } else {
-                type = typeof value;
-            }
-
-            lines.push(`  ${safeKey}: ${type};`);
+    const definitions: string[] = [], names = new Set([interfaceName]);
+    const shape = (value: unknown): string => value === null ? "null" : Array.isArray(value) ? `array(${[...new Set(value.map(shape))].sort().join("|")})` : typeof value === "object" ? `object(${Object.entries(value as Record<string, unknown>).map(([key, child]) => JSON.stringify(key) + ":" + shape(child)).join(",")})` : typeof value;
+    const objects = new Map<string, string>();
+    const uniqueName = (suggested: string) => {
+        let base = suggested.replace(/[^a-zA-Z0-9_$]/g, "_");
+        if (!/^[a-zA-Z_$]/.test(base)) base = "Value_" + base;
+        if (TYPESCRIPT_RESERVED.has(base)) base = "Value_" + base;
+        let name = base || "Value", suffix = 2;
+        while (names.has(name)) name = `${base}${suffix++}`;
+        names.add(name); return name;
+    };
+    const infer = (value: unknown, suggested: string, root = false): string => {
+        if (value === null) return "null";
+        if (Array.isArray(value)) {
+            const types = [...new Set(value.map((item) => infer(item, suggested + "Item")))];
+            if (!types.length) return "unknown[]";
+            return (types.length > 1 ? `(${types.join(" | ")})` : types[0].includes(" | ") ? `(${types[0]})` : types[0]) + "[]";
         }
-
-        lines.push("}");
-
-        if (nestedInterfaces.length > 0) {
-            return nestedInterfaces.join("\n\n") + "\n\n" + lines.join("\n");
+        if (typeof value === "object") {
+            const signature = shape(value);
+            if (!root && objects.has(signature)) return objects.get(signature)!;
+            const name = root ? interfaceName : uniqueName(suggested);
+            objects.set(signature, name);
+            const lines = Object.entries(value as Record<string, unknown>).map(([key, child]) => {
+                const safeKey = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key) ? key : JSON.stringify(key);
+                const childName = key.charAt(0).toUpperCase() + key.slice(1);
+                return `  ${safeKey}: ${infer(child, childName)};`;
+            });
+            definitions.push(`interface ${name} {\n${lines.join("\n")}\n}`);
+            return name;
         }
-        return lines.join("\n");
-    }
-
-    return typeof json;
-}
-
-function capitalize(str: string): string {
-    return str.charAt(0).toUpperCase() + str.slice(1);
+        return typeof value;
+    };
+    const type = infer(json, interfaceName, !Array.isArray(json) && json !== null && typeof json === "object");
+    if (type !== interfaceName) definitions.push(`type ${interfaceName} = ${type};`);
+    return definitions.join("\n\n");
 }
 
 interface ShareState { input: string; interfaceName: string; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "json-to-typescript", version: 1 };
 
 export default function JsonToTypescriptPage() {
-    const { message } = App.useApp();
+    const { t } = useLanguage();
     const [input, setInput] = useState(SAMPLE_JSON);
     const [output, setOutput] = useState("");
     const [interfaceName, setInterfaceName] = useState("Root");
@@ -126,60 +104,43 @@ export default function JsonToTypescriptPage() {
 
     return (
         <ToolPageLayout
-            title="JSON to TypeScript"
-            description="Convert JSON to TypeScript interfaces"
+            title={t("JSON to TypeScript")}
+            description={t("Convert JSON to TypeScript interfaces")}
             icon={<CodeOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
             color="#1677ff"
             learnMore={{
-                whatIs: "A JSON to TypeScript converter analyzes JSON data structure and generates corresponding TypeScript interfaces. It infers types from values and creates nested interfaces for complex objects.",
-                whyUse: "TypeScript interfaces provide type safety and IDE autocompletion. Instead of manually writing interfaces for API responses, this tool automatically generates them from JSON samples.",
-                howToUse: [
-                    "Paste a JSON sample (like an API response) in the input",
-                    "Optionally customize the root interface name",
-                    "The TypeScript interfaces are generated automatically",
-                    "Copy and use them in your TypeScript project"
-                ],
-                tips: [
-                    "Use a representative JSON sample with all possible fields",
-                    "Review generated types - some may need manual refinement",
-                    "Arrays are typed based on first element analysis",
-                    "Null values generate optional properties with unknown type"
-                ],
-                useCases: [
-                    "Creating types for REST API responses",
-                    "Typing configuration file structures",
-                    "Generating interfaces for JSON-based data models",
-                    "Bootstrapping TypeScript projects from JSON specs"
-                ]
+                whatIs: "Infer TypeScript interfaces and array unions from a JSON sample.",
+                whyUse: "Start API response types from representative examples, then review the generated code.",
+                howToUse: ["Paste valid JSON and enter a valid root name. Generated output updates automatically."],
+                tips: ["All array items contribute to the type. Null stays null; missing fields and large numeric precision still need review."],
             }}
         >
             <ToolBridgeBanner accepts={["json"]} onAccept={(p) => setInput(p.data)} />
 
             <Space style={{ marginBottom: 16 }} wrap>
-                <Text>Root Interface Name:</Text>
-                <Input
+                <Text>{t("Root Interface Name:")}</Text>
+                <Input dir="ltr" aria-label={t("Root Interface Name:")} styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                     value={interfaceName}
                     onChange={(e) => setInterfaceName(e.target.value || "Root")}
                     style={{ width: 150 }}
-                    placeholder="Root"
+                    placeholder={"Root"}
                 />
-                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output)} disabled={!output}>
-                    Copy TypeScript
-                </Button>
+                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output)} disabled={!output}>{t("Copy TypeScript")}</Button>
                 <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, interfaceName })} size="middle" />
                 <SendToButton data={output} kind="text" sourceToolId="json-to-typescript" size="middle" />
             </Space>
 
             {error && (
                 <div style={{ marginBottom: 16, padding: "8px 12px", background: "rgba(255,77,79,0.1)", borderRadius: 8 }}>
-                    <Text type="danger">{error}</Text>
+                    <Text type="danger">{t("Check the JSON input and root interface name.")}</Text>
+                    <pre dir="ltr" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{t(error)}</pre>
                 </div>
             )}
 
             <Row gutter={16}>
                 <Col xs={24} lg={12}>
-                    <Card size="small" title="JSON Input" styles={{ body: { padding: 0 } }}>
-                        <CodeEditor
+                    <Card size="small" title={t("JSON Input")} styles={{ body: { padding: 0 } }}>
+                        <CodeEditor ariaLabel={t("JSON Input")}
                             value={input}
                             onChange={setInput}
                             language="json"
@@ -188,8 +149,8 @@ export default function JsonToTypescriptPage() {
                     </Card>
                 </Col>
                 <Col xs={24} lg={12}>
-                    <Card size="small" title="TypeScript Output" styles={{ body: { padding: 0 } }}>
-                        <CodeEditor
+                    <Card size="small" title={t("TypeScript Output")} styles={{ body: { padding: 0 } }}>
+                        <CodeEditor ariaLabel={t("TypeScript Output")}
                             value={output}
                             language="typescript"
                             height="500px"

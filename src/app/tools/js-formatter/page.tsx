@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, InputNumber, Switch, Select } from "antd";
 import { CodeOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -15,6 +16,7 @@ const { Text } = Typography;
 const SAMPLE_JS = `function fibonacci(n){if(n<=1)return n;let prev=0,curr=1;for(let i=2;i<=n;i++){const next=prev+curr;prev=curr;curr=next;}return curr;}const result=fibonacci(10);console.log("Fibonacci(10):",result);const arr=[1,2,3,4,5].map(x=>x*2).filter(x=>x>4);`;
 
 export default function JsFormatterPage() {
+    const { t } = useLanguage();
     const [input, setInput] = useState(SAMPLE_JS);
     const [indentSize, setIndentSize] = useState(2);
     const [useTabs, setUseTabs] = useState(false);
@@ -51,9 +53,9 @@ export default function JsFormatterPage() {
             .trim();
     }, [input]);
 
-    const copyFormatted = () => copyToClipboard(formatted, "Formatted JavaScript copied!");
+    const copyFormatted = () => copyToClipboard(formatted, t("Formatted JavaScript copied!"));
 
-    const copyMinified = () => copyToClipboard(minified, "Minified JavaScript copied!");
+    const copyMinified = () => copyToClipboard(minified, t("Minified JavaScript copied!"));
 
     const stats = useMemo(() => {
         const originalSize = new Blob([input]).size;
@@ -65,8 +67,8 @@ export default function JsFormatterPage() {
 
     return (
         <ToolPageLayout
-            title="JavaScript Formatter"
-            description="Beautify and minify JavaScript code"
+            title={t("JavaScript Formatter")}
+            description={t("Beautify and minify JavaScript code")}
             icon={<CodeOutlined style={{ fontSize: 24, color: "#f7df1e" }} />}
             color="#f7df1e"
             learnMore={{
@@ -95,52 +97,56 @@ export default function JsFormatterPage() {
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card
-                        title="Input JavaScript"
+                        title={t("Input JavaScript")}
                         extra={
                             <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
-                                Clear
+                                {t("Clear")}
                             </Button>
                         }
                     >
                         <CodeEditor
                             value={input}
                             onChange={(val) => setInput(val || "")}
+                            ariaLabel={t("Input JavaScript")}
                             language="javascript"
                             height={350}
                         />
                         <div style={{ marginTop: 8 }}>
-                            <Text type="secondary">{stats.originalSize} bytes</Text>
+                            <Text type="secondary">{t("{count} bytes", { count: stats.originalSize })}</Text>
                         </div>
                     </Card>
                 </Col>
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title="Beautified JavaScript"
+                        title={t("Beautified JavaScript")}
                         extra={
                             <Button size="small" icon={<CopyOutlined />} onClick={copyFormatted}>
-                                Copy
+                                {t("Copy")}
                             </Button>
                         }
                     >
                         <CodeEditor
                             value={formatted}
+                            ariaLabel={t("Beautified JavaScript")}
                             language="javascript"
                             height={350}
                             readOnly
                         />
                         <div style={{ marginTop: 8 }}>
-                            <Text type="secondary">{stats.lines} lines • {stats.formattedSize} bytes</Text>
+                            <Text type="secondary">{t("{count} lines", { count: stats.lines })} · {t("{count} bytes", { count: stats.formattedSize })}</Text>
                         </div>
+                        <Text type="secondary" style={{ display: "block", marginTop: 8 }}>{t("If formatting fails, check the source syntax and options. Parser details are shown unchanged.")}</Text>
                     </Card>
                 </Col>
 
                 <Col xs={24} lg={12}>
-                    <Card title="Formatting Options">
+                    <Card title={t("Formatting Options")}>
                         <Row gutter={[16, 16]}>
                             <Col span={12}>
-                                <Text style={{ display: "block", marginBottom: 4 }}>Indent Size</Text>
+                                <Text style={{ display: "block", marginBottom: 4 }}>{t("Indent Size")}</Text>
                                 <InputNumber
+                                    aria-label={t("Indent Size")}
                                     value={indentSize}
                                     onChange={(v) => setIndentSize(v || 2)}
                                     min={1}
@@ -149,34 +155,35 @@ export default function JsFormatterPage() {
                                 />
                             </Col>
                             <Col span={12}>
-                                <Text style={{ display: "block", marginBottom: 4 }}>Brace Style</Text>
+                                <Text style={{ display: "block", marginBottom: 4 }}>{t("Brace Style")}</Text>
                                 <Select
+                                    aria-label={t("Brace Style")}
                                     value={braceStyle}
                                     onChange={setBraceStyle}
                                     style={{ width: "100%" }}
                                     options={[
-                                        { value: "collapse", label: "Collapse" },
-                                        { value: "expand", label: "Expand" },
-                                        { value: "end-expand", label: "End Expand" },
+                                        { value: "collapse", label: t("Collapse") },
+                                        { value: "expand", label: t("Expand") },
+                                        { value: "end-expand", label: t("End Expand") },
                                     ]}
                                 />
                             </Col>
                             <Col span={8}>
                                 <Space>
-                                    <Switch checked={useTabs} onChange={setUseTabs} size="small" />
-                                    <Text>Tabs</Text>
+                                    <Switch aria-label={t("Use Tabs")} checked={useTabs} onChange={setUseTabs} size="small" />
+                                    <Text>{t("Tabs")}</Text>
                                 </Space>
                             </Col>
                             <Col span={8}>
                                 <Space>
-                                    <Switch checked={preserveNewlines} onChange={setPreserveNewlines} size="small" />
-                                    <Text>Newlines</Text>
+                                    <Switch aria-label={t("Preserve Newlines")} checked={preserveNewlines} onChange={setPreserveNewlines} size="small" />
+                                    <Text>{t("Newlines")}</Text>
                                 </Space>
                             </Col>
                             <Col span={8}>
                                 <Space>
-                                    <Switch checked={spaceInParen} onChange={setSpaceInParen} size="small" />
-                                    <Text>Space in ()</Text>
+                                    <Switch aria-label={t("Space in ()")} checked={spaceInParen} onChange={setSpaceInParen} size="small" />
+                                    <Text>{t("Space in ()")}</Text>
                                 </Space>
                             </Col>
                         </Row>
@@ -185,14 +192,16 @@ export default function JsFormatterPage() {
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title="Minified JavaScript"
+                        title={t("Minified JavaScript")}
                         extra={
                             <Button size="small" icon={<CopyOutlined />} onClick={copyMinified}>
-                                Copy
+                                {t("Copy")}
                             </Button>
                         }
                     >
                         <Input.TextArea
+                            dir="ltr"
+                            aria-label={t("Minified JavaScript")}
                             value={minified}
                             readOnly
                             rows={4}
@@ -200,7 +209,7 @@ export default function JsFormatterPage() {
                         />
                         <div style={{ marginTop: 8 }}>
                             <Text type="secondary">
-                                {stats.minSize} bytes ({Math.round((1 - stats.minSize / stats.originalSize) * 100)}% smaller)
+                                {t("{count} bytes ({percent}% smaller)", { count: stats.minSize, percent: stats.originalSize ? Math.round((1 - stats.minSize / stats.originalSize) * 100) : 0 })}
                             </Text>
                         </div>
                     </Card>

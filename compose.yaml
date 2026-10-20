@@ -1,0 +1,14 @@
+services:
+  mydevtools:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SITE_URL: ${MYDEVTOOLS_SITE_URL:-http://localhost:3000}
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      MYDEVTOOLS_DISABLE_MANAGED_ROUTES: ${MYDEVTOOLS_DISABLE_MANAGED_ROUTES:-true}
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true

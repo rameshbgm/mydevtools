@@ -1,0 +1,386 @@
+[
+  {
+    "id": "mcp",
+    "label": "MCP",
+    "version": "2026-07-28 + explicit legacy",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 7,
+    "url": "https://modelcontextprotocol.io/specification/2026-07-28/changelog",
+    "tools": [
+      "mcp-inspector"
+    ],
+    "scope": "HTTP JSON-RPC discovery, tool listing/calls; legacy initialize lifecycle. Not a full conformance suite."
+  },
+  {
+    "id": "a2a",
+    "label": "A2A",
+    "version": "1.0 / 0.3 / legacy",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 7,
+    "url": "https://a2a-protocol.org/latest/specification/",
+    "tools": [
+      "a2a-inspector",
+      "agent-manifest-generator"
+    ],
+    "scope": "JSONRPC messaging, task lookup/cancel and stream artifacts. REST, gRPC and push subscriptions are not exercised."
+  },
+  {
+    "id": "openapi",
+    "label": "OpenAPI",
+    "version": "3.2.1 reference",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 7,
+    "url": "https://spec.openapis.org/oas/latest.html",
+    "tools": [
+      "openapi-contract-diff"
+    ],
+    "scope": "Swagger 2 / OpenAPI 3.0–3.2 structural and selected request/response schema changes. Composition, callbacks, webhooks, links and new 3.2 streaming semantics require manual review."
+  },
+  {
+    "id": "schema",
+    "label": "JSON Schema",
+    "version": "2020-12 / 2019-09 / Draft-07",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 90,
+    "url": "https://json-schema.org/specification",
+    "tools": [
+      "json-schema-workbench"
+    ],
+    "scope": "Ajv validation with formats and local references. Unknown keywords, remote references and unsupported dialects fail explicitly."
+  },
+  {
+    "id": "oauth",
+    "label": "OAuth security BCP",
+    "version": "RFC 9700 · January 2025",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 90,
+    "url": "https://www.rfc-editor.org/rfc/rfc9700.html",
+    "tools": [
+      "oauth-oidc-playground",
+      "rfc-standards"
+    ],
+    "scope": "Authorization Code + PKCE S256, exact redirect matching, no password grant. Metadata checks do not validate an authorization server."
+  },
+  {
+    "id": "jwt",
+    "label": "JWT security BCP",
+    "version": "RFC 8725 · February 2020",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 90,
+    "url": "https://www.rfc-editor.org/rfc/rfc8725.html",
+    "tools": [
+      "jwt-decoder",
+      "jws-tool",
+      "rfc-standards"
+    ],
+    "scope": "Decoding does not verify authenticity. Verification must constrain algorithms, keys, issuer, audience, token purpose and time claims."
+  },
+  {
+    "id": "problem-details",
+    "label": "HTTP Problem Details",
+    "version": "RFC 9457 · July 2023",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 90,
+    "url": "https://www.rfc-editor.org/rfc/rfc9457.html",
+    "tools": [
+      "rfc-standards"
+    ],
+    "scope": "Obsoletes RFC 7807; application/problem+json reference."
+  },
+  {
+    "id": "http-status",
+    "label": "IANA HTTP status registry",
+    "version": "registry snapshot",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 30,
+    "url": "https://www.iana.org/assignments/http-status-codes",
+    "tools": [
+      "http-status-codes"
+    ],
+    "scope": "Canonical 413/418/422 names. 104 is temporary and expires 2026-11-13 unless extended; confirm the live registry."
+  },
+  {
+    "id": "ports",
+    "label": "IANA service names and ports",
+    "version": "curated reference",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 30,
+    "url": "https://www.iana.org/assignments/service-names-port-numbers",
+    "tools": [
+      "port-reference"
+    ],
+    "scope": "Common ports are a curated selection, not an authoritative full registry or proof of which service is running."
+  },
+  {
+    "id": "uuid",
+    "label": "UUID",
+    "version": "RFC 9562 · May 2024",
+    "verifiedAt": "2026-10-20",
+    "reviewDays": 90,
+    "url": "https://www.rfc-editor.org/rfc/rfc9562.html",
+    "tools": [
+      "uuid-generator"
+    ],
+    "scope": "v3/v5 namespace-based UUIDs, v4 randomness, v7 millisecond timestamp and version inspection. UUIDs are not secrets."
+  },
+  {
+    "id": "trace",
+    "label": "W3C Trace Context",
+    "version": "traceparent / tracestate",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 90,
+    "url": "https://www.w3.org/TR/trace-context/",
+    "tools": [
+      "trace-context-inspector"
+    ],
+    "scope": "Header syntax and v00 generation. Future-version extensions are only partially interpreted."
+  },
+  {
+    "id": "openai-models",
+    "label": "OpenAI models and prices",
+    "version": "selected October 2026 records",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 7,
+    "url": "https://developers.openai.com/api/docs/pricing",
+    "tools": [
+      "token-counter",
+      "model-pricing-reference",
+      "jsonl-validator"
+    ],
+    "scope": "Only rows with individual review dates have refreshed metadata. Historical rows are unverified. Local BPE/heuristics are not API billing counts."
+  },
+  {
+    "id": "claude-models",
+    "label": "Claude models and prices",
+    "version": "5.5 family + Fable 5.1",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 7,
+    "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+    "tools": [
+      "token-counter",
+      "model-pricing-reference"
+    ],
+    "scope": "First-party standard text tier; long-context, caching, residency and batch rates differ."
+  },
+  {
+    "id": "gemini-models",
+    "label": "Gemini models and prices",
+    "version": "4 Argon / 3.8 Flash",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 7,
+    "url": "https://ai.google.dev/gemini-api/docs/pricing",
+    "tools": [
+      "token-counter",
+      "model-pricing-reference"
+    ],
+    "scope": "Dated promotional rates and expiry shown per row; multimodal and storage charges differ."
+  },
+  {
+    "id": "gitignore-patterns",
+    "label": "Git ignore patterns",
+    "version": "Git 2.55+ pattern documentation",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 180,
+    "url": "https://git-scm.com/docs/gitignore",
+    "tools": [
+      "gitignore-generator"
+    ],
+    "scope": "Original stack/editor/OS starter patterns. Git precedence, negation and parent-directory exclusion rules apply; already tracked files remain tracked."
+  },
+  {
+    "id": "ulid",
+    "label": "ULID",
+    "version": "Canonical 48-bit time / 80-bit randomness specification",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 180,
+    "url": "https://github.com/ulid/spec",
+    "tools": [
+      "uuid-generator"
+    ],
+    "scope": "26-character Crockford Base32 encoding, timestamp inspection and page-session monotonic generation with overflow rejection."
+  },
+  {
+    "id": "null-mx",
+    "label": "Null MX",
+    "version": "RFC 7505 · June 2015",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 180,
+    "url": "https://www.rfc-editor.org/rfc/rfc7505.html",
+    "tools": [
+      "email-validator"
+    ],
+    "scope": "Distinguishes explicit no-mail domains, ordinary MX, implicit A/AAAA fallback, NXDOMAIN and lookup failure. DNS does not establish mailbox deliverability."
+  },
+  {
+    "id": "php-curl",
+    "label": "PHP cURL",
+    "version": "PHP 8.5+ handle cleanup",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 90,
+    "url": "https://www.php.net/manual/en/function.curl-close.php",
+    "tools": [
+      "api-request-builder"
+    ],
+    "scope": "Generated PHP uses CurlHandle lifetime cleanup rather than curl_close(), which is deprecated as of PHP 8.5. Actual local raw/multipart request fixtures pass."
+  },
+  {
+    "id": "rdap-bootstrap",
+    "label": "RDAP service discovery",
+    "version": "RFC 9224 / current IANA bootstrap directories",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 180,
+    "url": "https://www.rfc-editor.org/rfc/rfc9224.html",
+    "tools": [
+      "whois-rdap"
+    ],
+    "scope": "Longest DNS-label suffix and IP-prefix matching, HTTPS registry endpoints and explicit missing-service errors. Domain/IP lookup records are retrieved at use time; registry privacy policies apply."
+  },
+  {
+    "id": "rdap-json",
+    "label": "RDAP responses",
+    "version": "RFC 9083 · June 2021",
+    "verifiedAt": "2026-10-19",
+    "reviewDays": 180,
+    "url": "https://www.rfc-editor.org/rfc/rfc9083.html",
+    "tools": [
+      "whois-rdap"
+    ],
+    "scope": "Domain/IP-network summaries, entities, events, statuses and nameservers. Optional/redacted fields are not treated as proof of ownership or mailbox availability."
+  },
+  {
+    "id": "html-character-references",
+    "label": "WHATWG HTML",
+    "version": "Living Standard · numeric character references",
+    "verifiedAt": "2026-10-21",
+    "reviewDays": 180,
+    "url": "https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state",
+    "tools": [
+      "html-entities"
+    ],
+    "scope": "HTML numeric references use full Unicode code points, U+FFFD for invalid values and C1 control mappings. Semicolons are required; named decoding supports this tool's listed entity subset."
+  },
+  {
+    "id": "cryptojs-compatibility",
+    "label": "CryptoJS compatibility",
+    "version": "4.2.0 implementation",
+    "verifiedAt": "2026-10-21",
+    "reviewDays": 180,
+    "url": "https://cryptojs.gitbook.io/docs",
+    "tools": [
+      "aes-tool",
+      "hash-generator"
+    ],
+    "scope": "Legacy AES-256-CBC passphrase compatibility and Keccak digest labels. No authenticated encryption or FIPS SHA-3 claim."
+  },
+  {
+    "id": "jose-algorithms",
+    "label": "JSON Web Algorithms",
+    "version": "RFC 7518 · May 2015",
+    "verifiedAt": "2026-10-21",
+    "reviewDays": 180,
+    "url": "https://www.rfc-editor.org/rfc/rfc7518.html",
+    "tools": [
+      "jwe-tool",
+      "jws-tool",
+      "jwk-generator"
+    ],
+    "scope": "JWE GCM and CBC-HMAC, direct keys and AES-KW; JWS key sizes and JWK algorithm metadata. Published vectors cover supported modes."
+  },
+  {
+    "id": "jws-compact",
+    "label": "JSON Web Signature",
+    "version": "RFC 7515 · May 2015",
+    "verifiedAt": "2026-10-21",
+    "reviewDays": 180,
+    "url": "https://www.rfc-editor.org/rfc/rfc7515.html",
+    "tools": [
+      "jws-tool"
+    ],
+    "scope": "UTF-8 compact signatures with an explicitly selected algorithm. Signature checks do not validate application claims."
+  },
+  {
+    "id": "x509-generation",
+    "label": "X.509 certificates",
+    "version": "RFC 5280 · May 2008",
+    "verifiedAt": "2026-10-21",
+    "reviewDays": 180,
+    "url": "https://www.rfc-editor.org/rfc/rfc5280.html",
+    "tools": [
+      "certificate-generator"
+    ],
+    "scope": "Browser-generated self-signed X.509 DER signatures, subject alternative names and matching keys. No public trust or complete PKIX validation claim."
+  },
+  {
+    "id": "openssh-key-format",
+    "label": "OpenSSH key formats",
+    "version": "openssh-key-v1 · RSA / ECDSA / Ed25519",
+    "verifiedAt": "2026-10-21",
+    "reviewDays": 180,
+    "url": "https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.key",
+    "tools": [
+      "ssh-key-generator"
+    ],
+    "scope": "OpenSSH public wire blobs and unencrypted private-key files. Independent ssh-keygen fixtures validate supported algorithms and fingerprints."
+  },
+  {
+    "id": "wcag-contrast",
+    "label": "WCAG contrast",
+    "version": "WCAG 2.2",
+    "verifiedAt": "2026-10-21",
+    "reviewDays": 180,
+    "url": "https://www.w3.org/TR/WCAG22/#dfn-relative-luminance",
+    "tools": [
+      "color-contrast-checker"
+    ],
+    "scope": "Opaque sRGB hex pairs, unrounded WCAG 2.2 text and non-text contrast thresholds; no whole-page accessibility or legal compliance claim."
+  },
+  {
+    "id": "yaml-media-type",
+    "label": "YAML media type",
+    "version": "RFC 9512",
+    "verifiedAt": "2026-10-21",
+    "reviewDays": 180,
+    "url": "https://www.rfc-editor.org/rfc/rfc9512.html",
+    "tools": [
+      "mime-types"
+    ],
+    "scope": "Curated MIME labels and extension hints. application/yaml follows RFC 9512; extensions and registry presence do not validate file contents."
+  },
+  {
+    "id": "toon-subset",
+    "label": "TOON",
+    "version": "4.4 working draft · selected syntax",
+    "verifiedAt": "2026-10-21",
+    "reviewDays": 7,
+    "url": "https://github.com/toon-format/spec/blob/main/SPEC.md",
+    "tools": [
+      "toon-converter"
+    ],
+    "scope": "Two-space, comma-delimited TOON subset with strict counts and precision checks. Keyed tables, nested field groups and alternate delimiters are unsupported."
+  },
+  {
+    "id": "ipv6-special",
+    "label": "IANA IPv6 special-purpose registry",
+    "version": "selected prefixes · RFC 9637 / RFC 9780",
+    "verifiedAt": "2026-10-21",
+    "reviewDays": 30,
+    "url": "https://www.iana.org/assignments/iana-ipv6-special-registry/",
+    "tools": [
+      "ip-range-reference",
+      "ip-address-tools"
+    ],
+    "scope": "Selected IPv6 prefixes, including documentation and dummy ranges. Registry classification does not establish reachability; address counts are full block sizes."
+  },
+  {
+    "id": "tls13-current",
+    "label": "TLS 1.3",
+    "version": "RFC 9846 · July 2026",
+    "verifiedAt": "2026-10-21",
+    "reviewDays": 30,
+    "url": "https://www.rfc-editor.org/info/rfc9846",
+    "tools": [
+      "rfc-standards"
+    ],
+    "scope": "RFC 9846 replaces RFC 8446. The reference separates publication maturity and replacement links from deployment advice; it does not test protocol conformance."
+  }
+]

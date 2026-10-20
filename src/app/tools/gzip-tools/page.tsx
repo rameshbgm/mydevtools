@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, Segmented, Statistic, Alert } from "antd";
 import { messageService as message } from "@/lib/messageService";
 import { CompressOutlined, CopyOutlined, SwapOutlined, ExpandAltOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
 
@@ -77,6 +78,7 @@ async function decompressGzip(base64: string): Promise<string> {
 }
 
 export default function GzipToolsPage() {
+    const { t } = useLanguage();
     const [input, setInput] = useState("");
     const [output, setOutput] = useState("");
     const [mode, setMode] = useState<"compress" | "decompress">("compress");
@@ -86,7 +88,7 @@ export default function GzipToolsPage() {
 
     const handleProcess = async () => {
         if (!input.trim()) {
-            message.warning("Please enter some content");
+            message.warning(t("Please enter some content"));
             return;
         }
 
@@ -111,14 +113,14 @@ export default function GzipToolsPage() {
                     compressed: new TextEncoder().encode(decompressed).length,
                 });
             }
-        } catch (err: any) {
-            setError(err.message || "Failed to process. Make sure the input is valid.");
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "");
         } finally {
             setLoading(false);
         }
     };
 
-    const copyOutput = () => copyToClipboard(output, "Copied to clipboard!");
+    const copyOutput = () => copyToClipboard(output, t("Copied to clipboard!"));
 
     const swapContent = () => {
         setInput(output);
@@ -145,8 +147,8 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit.`);
 
     return (
         <ToolPageLayout
-            title="Gzip Compress/Decompress"
-            description="Compress and decompress text using Gzip with Base64 encoding"
+            title={t("Gzip Compress/Decompress")}
+            description={t("Compress and decompress text using Gzip with Base64 encoding")}
             icon={<CompressOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
             color="#52c41a"
             learnMore={{
@@ -184,28 +186,30 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit.`);
                                     setStats(null);
                                 }}
                                 options={[
-                                    { value: "compress", label: "Compress", icon: <CompressOutlined /> },
-                                    { value: "decompress", label: "Decompress", icon: <ExpandAltOutlined /> },
+                                    { value: "compress", label: t("Compress"), icon: <CompressOutlined /> },
+                                    { value: "decompress", label: t("Decompress"), icon: <ExpandAltOutlined /> },
                                 ]}
                             />
-                            <Button onClick={loadSample}>Load Sample</Button>
+                            <Button onClick={loadSample}>{t("Load Sample")}</Button>
                             {output && (
                                 <Button icon={<SwapOutlined />} onClick={swapContent}>
-                                    Swap
-                                </Button>
+                                    {t("Swap")}
+                                    </Button>
                             )}
                         </Space>
 
                         <div style={{ marginBottom: 16 }}>
                             <Text strong style={{ display: "block", marginBottom: 8 }}>
-                                {mode === "compress" ? "Plain Text" : "Base64 Compressed Data"}
+                                {mode === "compress" ? t("Plain Text") : t("Base64 Compressed Data")}
                             </Text>
                             <TextArea
-                                value={input}
+                                    dir={mode === "compress" ? "auto" : "ltr"}
+                                    aria-label={t("Input")}
+                                    value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 placeholder={mode === "compress"
-                                    ? "Enter text to compress..."
-                                    : "Enter Base64 gzip data to decompress..."}
+                                    ? t("Enter text to compress...")
+                                    : t("Enter Base64 gzip data to decompress...")}
                                 rows={8}
                             />
                         </div>
@@ -218,14 +222,14 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit.`);
                             loading={loading}
                             style={{ background: "#52c41a", borderColor: "#52c41a" }}
                         >
-                            {mode === "compress" ? "Compress" : "Decompress"}
+                            {mode === "compress" ? t("Compress") : t("Decompress")}
                         </Button>
 
-                        {error && (
+                        {error !== null && (
                             <Alert
                                 type="error"
-                                title="Error"
-                                description={error}
+                                title={t("Unable to process Gzip. Check the input and browser compression support, then try again.")}
+                                description={error && <pre dir="ltr" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{error}</pre>}
                                 showIcon
                                 style={{ marginTop: 16 }}
                             />
@@ -237,18 +241,20 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit.`);
                                 title={
                                     <Space>
                                         <Text strong>
-                                            {mode === "compress" ? "Compressed Output (Base64)" : "Decompressed Text"}
+                                            {mode === "compress" ? t("Compressed Output (Base64)") : t("Decompressed Text")}
                                         </Text>
                                     </Space>
                                 }
                                 extra={
                                     <Button icon={<CopyOutlined />} size="small" onClick={copyOutput}>
-                                        Copy
-                                    </Button>
+                                        {t("Copy")}
+                                        </Button>
                                 }
                                 style={{ marginTop: 16 }}
                             >
                                 <TextArea
+                                    dir={mode === "compress" ? "ltr" : "auto"}
+                                    aria-label={t("Output")}
                                     value={output}
                                     readOnly
                                     rows={6}
@@ -264,52 +270,50 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit.`);
 
                 <Col xs={24} lg={8}>
                     {stats && (
-                        <Card title="Compression Stats" style={{ marginBottom: 16 }}>
+                        <Card title={t("Compression Stats")} style={{ marginBottom: 16 }}>
                             <Row gutter={16}>
                                 <Col span={12}>
                                     <Statistic
-                                        title={mode === "compress" ? "Original" : "Compressed"}
+                                        title={mode === "compress" ? t("Original") : t("Compressed")}
                                         value={stats.original}
-                                        suffix="bytes"
+                                        suffix={t("bytes")}
                                     />
                                 </Col>
                                 <Col span={12}>
                                     <Statistic
-                                        title={mode === "compress" ? "Compressed" : "Decompressed"}
+                                        title={mode === "compress" ? t("Compressed") : t("Decompressed")}
                                         value={stats.compressed}
-                                        suffix="bytes"
+                                        suffix={t("bytes")}
                                     />
                                 </Col>
                             </Row>
                             {compressionRatio && Number(compressionRatio) > 0 && (
                                 <div style={{ marginTop: 16, textAlign: "center" }}>
-                                    <Text type="secondary">Compression Ratio</Text>
+                                    <Text type="secondary">{t("Compression Ratio")}</Text>
                                     <div style={{ fontSize: 24, fontWeight: 600, color: "#52c41a" }}>
-                                        {compressionRatio}% smaller
-                                    </div>
+                                        {t("{ratio}% smaller", { ratio: compressionRatio })}
+                                        </div>
                                 </div>
                             )}
                         </Card>
                     )}
 
-                    <Card title="About Gzip">
+                    <Card title={t("About Gzip")}>
                         <Paragraph type="secondary">
-                            Gzip is a popular compression algorithm used widely on the web.
-                            The output here is Base64-encoded for easy copying and storage.
-                        </Paragraph>
+                            {t("Gzip is a popular compression algorithm used widely on the web. The output here is Base64-encoded for easy copying and storage.")}
+                            </Paragraph>
                         <Paragraph type="secondary">
-                            Gzip works best on text with repeated patterns.
-                            Already compressed data (like images) won't compress well.
-                        </Paragraph>
+                            {t("Gzip works best on text with repeated patterns. Already compressed data (like images) won't compress well.")}
+                            </Paragraph>
                     </Card>
 
-                    <Card title="Use Cases" style={{ marginTop: 16 }}>
-                        <ul style={{ paddingLeft: 20, margin: 0 }}>
-                            <li>Reduce data size for storage</li>
-                            <li>Compress API payloads</li>
-                            <li>Share large text snippets</li>
-                            <li>Reduce bandwidth usage</li>
-                            <li>Store compressed data in databases</li>
+                    <Card title={t("Use Cases")} style={{ marginTop: 16 }}>
+                        <ul style={{ paddingInlineStart: 20, margin: 0 }}>
+                            <li>{t("Reduce data size for storage")}</li>
+                            <li>{t("Compress API payloads")}</li>
+                            <li>{t("Share large text snippets")}</li>
+                            <li>{t("Reduce bandwidth usage")}</li>
+                            <li>{t("Store compressed data in databases")}</li>
                         </ul>
                     </Card>
                 </Col>

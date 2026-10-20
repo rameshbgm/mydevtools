@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Button, Card, Space, Typography, Row, Col, Input, Checkbox, App, Tooltip } from "antd";
-import { FileProtectOutlined, CopyOutlined, SwapOutlined } from "@ant-design/icons";
+import React, { useState } from "react";
+import { Button, Card, Space, Typography, Row, Col, Input, Checkbox, Tooltip } from "antd";
+import { FileProtectOutlined, CopyOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface Permission {
     read: boolean;
@@ -82,12 +83,14 @@ function PermissionGroup({
     onChange: (perm: Permission) => void;
     descriptions: { read: string; write: string; execute: string };
 }) {
+    const { t } = useLanguage();
     return (
         <Card size="small" title={label} style={{ textAlign: "center" }}>
             <div style={{ display: "flex", justifyContent: "space-around", marginBottom: 8 }}>
-                <Tooltip title={descriptions.read}>
+                <Tooltip title={t(descriptions.read)}>
                     <div>
                         <Checkbox
+                            aria-label={t(descriptions.read)}
                             checked={permission.read}
                             onChange={(e) => onChange({ ...permission, read: e.target.checked })}
                         >
@@ -95,9 +98,10 @@ function PermissionGroup({
                         </Checkbox>
                     </div>
                 </Tooltip>
-                <Tooltip title={descriptions.write}>
+                <Tooltip title={t(descriptions.write)}>
                     <div>
                         <Checkbox
+                            aria-label={t(descriptions.write)}
                             checked={permission.write}
                             onChange={(e) => onChange({ ...permission, write: e.target.checked })}
                         >
@@ -105,9 +109,10 @@ function PermissionGroup({
                         </Checkbox>
                     </div>
                 </Tooltip>
-                <Tooltip title={descriptions.execute}>
+                <Tooltip title={t(descriptions.execute)}>
                     <div>
                         <Checkbox
+                            aria-label={t(descriptions.execute)}
                             checked={permission.execute}
                             onChange={(e) => onChange({ ...permission, execute: e.target.checked })}
                         >
@@ -116,7 +121,7 @@ function PermissionGroup({
                     </div>
                 </Tooltip>
             </div>
-            <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 18 }}>
+            <div dir="ltr" style={{ fontFamily: "var(--font-geist-mono)", fontSize: 18 }}>
                 {permissionToSymbolic(permission)} = {permissionToNumber(permission)}
             </div>
         </Card>
@@ -124,7 +129,7 @@ function PermissionGroup({
 }
 
 export default function UnixPermissionsPage() {
-    const { message } = App.useApp();
+    const { t } = useLanguage();
     const [permissions, setPermissions] = useState<Permissions>({
         owner: { read: true, write: true, execute: true },
         group: { read: true, write: false, execute: true },
@@ -153,8 +158,8 @@ export default function UnixPermissionsPage() {
 
     return (
         <ToolPageLayout
-            title="Unix Permissions Calculator"
-            description="Calculate chmod values and understand file permissions"
+            title={t("Unix Permissions Calculator")}
+            description={t("Calculate chmod values and understand file permissions")}
             icon={<FileProtectOutlined style={{ fontSize: 24, color: "#fa541c" }} />}
             color="#fa541c"
             learnMore={{
@@ -186,8 +191,9 @@ export default function UnixPermissionsPage() {
                     <Card style={{ marginBottom: 24 }}>
                         <Row gutter={24} align="middle">
                             <Col xs={12} style={{ textAlign: "center" }}>
-                                <Text type="secondary">Octal (Numeric)</Text>
+                                <Text type="secondary">{t("Octal (Numeric)")}</Text>
                                 <div
+                                    dir="ltr"
                                     style={{
                                         fontSize: 48,
                                         fontWeight: 700,
@@ -202,12 +208,12 @@ export default function UnixPermissionsPage() {
                                     onClick={() => copyToClipboard(octal)}
                                     style={{ marginTop: 8 }}
                                 >
-                                    Copy
-                                </Button>
+                                    {t("Copy")}</Button>
                             </Col>
                             <Col xs={12} style={{ textAlign: "center" }}>
-                                <Text type="secondary">Symbolic</Text>
+                                <Text type="secondary">{t("Symbolic")}</Text>
                                 <div
+                                    dir="ltr"
                                     style={{
                                         fontSize: 32,
                                         fontWeight: 600,
@@ -221,8 +227,7 @@ export default function UnixPermissionsPage() {
                                     onClick={() => copyToClipboard(`-${symbolic}`)}
                                     style={{ marginTop: 8 }}
                                 >
-                                    Copy
-                                </Button>
+                                    {t("Copy")}</Button>
                             </Col>
                         </Row>
                     </Card>
@@ -231,7 +236,7 @@ export default function UnixPermissionsPage() {
                     <Row gutter={16}>
                         <Col xs={24} md={8}>
                             <PermissionGroup
-                                label="Owner (User)"
+                                label={t("Owner (User)")}
                                 permission={permissions.owner}
                                 onChange={(p) => setPermissions({ ...permissions, owner: p })}
                                 descriptions={PERMISSION_DESCRIPTIONS.owner}
@@ -239,7 +244,7 @@ export default function UnixPermissionsPage() {
                         </Col>
                         <Col xs={24} md={8}>
                             <PermissionGroup
-                                label="Group"
+                                label={t("Group")}
                                 permission={permissions.group}
                                 onChange={(p) => setPermissions({ ...permissions, group: p })}
                                 descriptions={PERMISSION_DESCRIPTIONS.group}
@@ -247,7 +252,7 @@ export default function UnixPermissionsPage() {
                         </Col>
                         <Col xs={24} md={8}>
                             <PermissionGroup
-                                label="Others (World)"
+                                label={t("Others (World)")}
                                 permission={permissions.others}
                                 onChange={(p) => setPermissions({ ...permissions, others: p })}
                                 descriptions={PERMISSION_DESCRIPTIONS.others}
@@ -256,21 +261,23 @@ export default function UnixPermissionsPage() {
                     </Row>
 
                     {/* Octal Input */}
-                    <Card title="Enter Octal Value" style={{ marginTop: 24 }}>
-                        <Space>
+                    <Card title={t("Enter Octal Value")} style={{ marginTop: 24 }}>
+                        <Space wrap>
                             <Input
+                                dir="ltr"
+                                aria-label={t("Enter Octal Value")}
                                 value={octalInput}
                                 onChange={(e) => handleOctalChange(e.target.value)}
                                 style={{ width: 120, fontFamily: "var(--font-geist-mono)", fontSize: 18 }}
                                 maxLength={4}
                                 placeholder="755"
                             />
-                            <Text type="secondary">Enter 3 or 4 digit octal value (e.g., 755, 0644)</Text>
+                            <Text type="secondary">{t("Enter 3 or 4 digit octal value (e.g., 755, 0644)")}</Text>
                         </Space>
                     </Card>
 
                     {/* Command Preview */}
-                    <Card title="Command Preview" style={{ marginTop: 24 }}>
+                    <Card title={t("Command Preview")} style={{ marginTop: 24 }}>
                         <Space orientation="vertical" style={{ width: "100%" }}>
                             <div
                                 style={{
@@ -280,7 +287,7 @@ export default function UnixPermissionsPage() {
                                     fontFamily: "var(--font-geist-mono)",
                                 }}
                             >
-                                <Text copyable={{ text: `chmod ${octal} filename` }}>
+                                <Text dir="ltr" copyable={{ tooltips: [t("Copy"), t("Copied!")], text: `chmod ${octal} filename` }}>
                                     chmod {octal} filename
                                 </Text>
                             </div>
@@ -292,7 +299,7 @@ export default function UnixPermissionsPage() {
                                     fontFamily: "var(--font-geist-mono)",
                                 }}
                             >
-                                <Text copyable={{ text: `chmod -R ${octal} directory/` }}>
+                                <Text dir="ltr" copyable={{ tooltips: [t("Copy"), t("Copied!")], text: `chmod -R ${octal} directory/` }}>
                                     chmod -R {octal} directory/
                                 </Text>
                             </div>
@@ -302,16 +309,23 @@ export default function UnixPermissionsPage() {
 
                 <Col xs={24} lg={8}>
                     {/* Common Permissions */}
-                    <Card title="Common Permissions">
+                    <Card title={t("Common Permissions")}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             {COMMON_PERMISSIONS.map((p) => (
-                                <div
+                                <button
+                                    type="button"
                                     key={p.octal}
                                     onClick={() => applyPreset(p.octal)}
                                     style={{
                                         display: "flex",
                                         justifyContent: "space-between",
                                         alignItems: "center",
+                                        flexWrap: "wrap",
+                                        gap: 8,
+                                        width: "100%",
+                                        color: "inherit",
+                                        font: "inherit",
+                                        textAlign: "start",
                                         padding: "10px 12px",
                                         background: octal === p.octal ? "rgba(250, 84, 28, 0.1)" : "rgba(0,0,0,0.02)",
                                         borderRadius: 8,
@@ -321,36 +335,36 @@ export default function UnixPermissionsPage() {
                                     }}
                                 >
                                     <div>
-                                        <Text strong style={{ fontFamily: "var(--font-geist-mono)" }}>
+                                        <Text strong dir="ltr" style={{ fontFamily: "var(--font-geist-mono)" }}>
                                             {p.octal}
                                         </Text>
-                                        <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                                        <Text dir="ltr" type="secondary" style={{ marginInlineStart: 8, fontSize: 12 }}>
                                             {p.symbolic}
                                         </Text>
                                     </div>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>{p.desc}</Text>
-                                </div>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>{t(p.desc)}</Text>
+                                </button>
                             ))}
                         </div>
                     </Card>
 
                     {/* Legend */}
-                    <Card title="Permission Values" style={{ marginTop: 16 }}>
+                    <Card title={t("Permission Values")} style={{ marginTop: 16 }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <Text><strong style={{ color: "#52c41a" }}>r</strong> (Read)</Text>
+                                <Text><strong style={{ color: "#52c41a" }}>r</strong> {t("(Read)")}</Text>
                                 <Text code>4</Text>
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <Text><strong style={{ color: "#faad14" }}>w</strong> (Write)</Text>
+                                <Text><strong style={{ color: "#faad14" }}>w</strong> {t("(Write)")}</Text>
                                 <Text code>2</Text>
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <Text><strong style={{ color: "#f5222d" }}>x</strong> (Execute)</Text>
+                                <Text><strong style={{ color: "#f5222d" }}>x</strong> {t("(Execute)")}</Text>
                                 <Text code>1</Text>
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <Text><strong>-</strong> (None)</Text>
+                                <Text><strong>-</strong> {t("(None)")}</Text>
                                 <Text code>0</Text>
                             </div>
                         </div>

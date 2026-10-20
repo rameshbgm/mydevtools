@@ -10,9 +10,10 @@ import {
     CheckCircleOutlined,
     CloseCircleOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
-import YAML from "yaml";
+import { parseYamlForFormatting } from "@/lib/yaml-formatting";
 
 const { Text } = Typography;
 
@@ -34,6 +35,7 @@ config:
 type Mode = "Format" | "Minify" | "Validate";
 
 export default function YamlFormatterPage() {
+    const { t } = useLanguage();
     const { message } = App.useApp();
     const [input, setInput] = useState(SAMPLE);
     const [output, setOutput] = useState("");
@@ -48,23 +50,23 @@ export default function YamlFormatterPage() {
             return;
         }
         try {
-            const parsed = YAML.parse(src);
+            const parsed = parseYamlForFormatting(src);
             if (m === "Format") {
-                setOutput(YAML.stringify(parsed, { indent: ind }));
+                setOutput(parsed.toString({ indent: ind }));
             } else if (m === "Minify") {
-                setOutput(YAML.stringify(parsed, { indent: 1, lineWidth: -1, minContentWidth: 0 }).trim());
+                setOutput(parsed.toString({ indent: 1, lineWidth: -1, minContentWidth: 0 }).trim());
             } else {
                 setValidState("valid");
                 setOutput("");
-                message.success("Valid YAML");
+                message.success(t("Valid YAML"));
             }
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : "Parse error";
             if (m === "Validate") {
                 setValidState("invalid");
-                message.error("Invalid YAML: " + msg);
+                message.error(t("Invalid YAML. Check indentation and syntax, then try again.") + "\n" + msg);
             } else {
-                message.error("Invalid YAML: " + msg);
+                message.error(t("Invalid YAML. Check indentation and syntax, then try again.") + "\n" + msg);
             }
             setOutput("");
         }
@@ -77,8 +79,8 @@ export default function YamlFormatterPage() {
 
     return (
         <ToolPageLayout
-            title="YAML Formatter"
-            description="Format, validate and beautify YAML documents"
+            title={t("YAML Formatter")}
+            description={t("Format, validate and beautify YAML documents")}
             icon={<FileTextOutlined style={{ fontSize: 24, color: "#cb171e" }} />}
             color="#cb171e"
             learnMore={{
@@ -106,33 +108,34 @@ export default function YamlFormatterPage() {
         >
             <Space style={{ marginBottom: 16 }} wrap>
                 <Segmented<Mode>
-                    options={["Format", "Minify", "Validate"]}
+                    aria-label={t("Formatting mode")}
+                    options={[{ value: "Format", label: t("Format") }, { value: "Minify", label: t("Minify") }, { value: "Validate", label: t("Validate") }]}
                     value={mode}
                     onChange={(v) => setMode(v)}
                     size="large"
                 />
                 <span>
-                    <Text type="secondary" style={{ marginRight: 8 }}>Indent:</Text>
-                    <InputNumber min={1} max={8} value={indent} onChange={(v) => setIndent(v ?? 2)} />
+                    <Text type="secondary" style={{ marginRight: 8 }}>{t("Indent:")}</Text>
+                    <InputNumber aria-label={t("Indent Size")} min={1} max={8} value={indent} onChange={(v) => setIndent(v ?? 2)} />
                 </span>
-                {validState === "valid" && <Tag icon={<CheckCircleOutlined />} color="success">Valid YAML</Tag>}
-                {validState === "invalid" && <Tag icon={<CloseCircleOutlined />} color="error">Invalid YAML</Tag>}
-                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output || input)}>Copy</Button>
-                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setValidState(null); }}>Clear</Button>
+                {validState === "valid" && <Tag icon={<CheckCircleOutlined />} color="success">{t("Valid YAML")}</Tag>}
+                {validState === "invalid" && <Tag icon={<CloseCircleOutlined />} color="error">{t("Invalid YAML")}</Tag>}
+                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output || input, t("Copied!"))}>{t("Copy")}</Button>
+                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setValidState(null); }}>{t("Clear")}</Button>
             </Space>
 
             <div className="tool-split-pane" style={{ gap: 16 }}>
-                <Card size="small" title="Input" styles={{ body: { padding: 0 } }}>
+                <Card size="small" title={t("Input")} styles={{ body: { padding: 0 } }}>
                     <CodeEditor
                         value={input}
                         onChange={(v) => { setInput(v); run(mode, v, indent); }}
-                        language="yaml"
+                        ariaLabel={t("YAML source")} language="yaml"
                         height="500px"
                     />
                 </Card>
                 <Card
                     size="small"
-                    title={mode === "Validate" ? "Validation" : "Output"}
+                    title={t(mode === "Validate" ? "Validation" : "Output")}
                     styles={{ body: mode === "Validate" ? { padding: 24 } : { padding: 0 } }}
                 >
                     {mode === "Validate" ? (
@@ -142,18 +145,18 @@ export default function YamlFormatterPage() {
                             ) : validState === "invalid" ? (
                                 <CloseCircleOutlined style={{ fontSize: 64, color: "#f5222d" }} />
                             ) : (
-                                <Text type="secondary">Paste YAML and it will be validated automatically</Text>
+                                <Text type="secondary">{t("Paste YAML and it will be validated automatically")}</Text>
                             )}
                             {validState && (
                                 <div style={{ marginTop: 16, fontSize: 18 }}>
                                     <Text type={validState === "valid" ? "success" : "danger"}>
-                                        {validState === "valid" ? "YAML is valid!" : "YAML is invalid"}
+                                        {t(validState === "valid" ? "YAML is valid!" : "YAML is invalid")}
                                     </Text>
                                 </div>
                             )}
                         </div>
                     ) : (
-                        <CodeEditor value={output} language="yaml" height="500px" readOnly />
+                        <CodeEditor value={output} ariaLabel={t("YAML output")} language="yaml" height="500px" readOnly />
                     )}
                 </Card>
             </div>

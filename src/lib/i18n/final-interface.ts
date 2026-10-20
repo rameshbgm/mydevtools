@@ -1,0 +1,9 @@
+import type { TranslationColumns } from "./tool-names";
+export const FINAL_INTERFACE_TRANSLATIONS: Record<string, TranslationColumns> = {
+"LinkedIn profile": ["LinkedIn प्रोफ़ाइल", "Perfil de LinkedIn", "Profil LinkedIn", "LinkedIn-Profil", "LinkedInプロフィール", "LinkedIn 个人资料", "ملف LinkedIn الشخصي"],
+"GitHub profile": ["GitHub प्रोफ़ाइल", "Perfil de GitHub", "Profil GitHub", "GitHub-Profil", "GitHubプロフィール", "GitHub 个人资料", "ملف GitHub الشخصي"],
+"example.com or https://example.com": ["example.com या https://example.com", "example.com o https://example.com", "example.com ou https://example.com", "example.com oder https://example.com", "example.com または https://example.com", "example.com 或 https://example.com", "example.com أو https://example.com"],
+"localhost or your-domain.com": ["localhost या your-domain.com", "localhost o your-domain.com", "localhost ou your-domain.com", "localhost oder your-domain.com", "localhost または your-domain.com", "localhost 或 your-domain.com", "localhost أو your-domain.com"],
+"example.com, *.example.com, or www.example.com": ["example.com, *.example.com, या www.example.com", "example.com, *.example.com o www.example.com", "example.com, *.example.com ou www.example.com", "example.com, *.example.com oder www.example.com", "example.com、*.example.com、または www.example.com", "example.com、*.example.com 或 www.example.com", "example.com، *.example.com أو www.example.com"],
+"The server returned no certificates. Check the hostname and try again.": ["सर्वर ने कोई प्रमाणपत्र नहीं लौटाया। होस्टनाम जाँचें और फिर प्रयास करें।", "El servidor no devolvió certificados. Comprueba el nombre de host e inténtalo de nuevo.", "Le serveur n’a renvoyé aucun certificat. Vérifiez le nom d’hôte et réessayez.", "Der Server hat keine Zertifikate zurückgegeben. Hostnamen prüfen und erneut versuchen.", "サーバーから証明書が返されませんでした。ホスト名を確認して再試行してください。", "服务器未返回证书。请检查主机名后重试。", "لم يُرجع الخادم أي شهادات. تحقق من اسم المضيف وحاول مجددًا."],
+};

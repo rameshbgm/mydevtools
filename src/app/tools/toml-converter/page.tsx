@@ -1,40 +1,22 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
 import React, { useMemo, useState } from "react";
-import { Card, Typography, Input, Row, Col, Space, Tag, Select, App } from "antd";
+import { Card, Typography, Input, Row, Col, Space, Tag, Select, Button } from "antd";
 import { SwapOutlined, CopyOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
-import YAML from "yaml";
-import { parseToml, serializeToml, type TomlValue } from "./toml";
+import { convertStructuredFormat, type StructuredFormat } from "@/lib/format-conversion";
+import { downloadText } from "@/lib/download";
 
 const { Text } = Typography;
 const { TextArea } = Input;
 
-type Fmt = "toml" | "json" | "yaml";
-
-function convert(src: string, from: Fmt, to: Fmt): string {
-    if (!src.trim()) return "";
-    let data: unknown;
-    try {
-        if (from === "json") data = JSON.parse(src);
-        else if (from === "yaml") data = YAML.parse(src);
-        else data = parseToml(src);
-    } catch (err) {
-        throw new Error(`Parse (${from}): ${err instanceof Error ? err.message : String(err)}`);
-    }
-    try {
-        if (to === "json") return JSON.stringify(data, null, 2);
-        if (to === "yaml") return YAML.stringify(data);
-        return serializeToml(data as TomlValue);
-    } catch (err) {
-        throw new Error(`Serialize (${to}): ${err instanceof Error ? err.message : String(err)}`);
-    }
-}
+type Fmt = StructuredFormat;
 
 const SAMPLE_TOML = `# Sample config
 title = "mydevtools"
-version = "1.4"
+version = "2.0.0"
 
 [server]
 host = "0.0.0.0"
@@ -47,15 +29,28 @@ pool_size = 10
 tags = ["prod", "primary"]`;
 
 export default function TomlConverterPage() {
-    const { message } = App.useApp();
+    const { t } = useLanguage();
     const [from, setFrom] = useState<Fmt>("toml");
     const [to, setTo] = useState<Fmt>("json");
     const [input, setInput] = useState(SAMPLE_TOML);
+    const [rootName, setRootName] = useState("root");
 
     const { output, error } = useMemo(() => {
-        try { return { output: convert(input, from, to), error: null }; }
+        try { return { output: convertStructuredFormat(input, from, to, rootName), error: null }; }
         catch (err) { return { output: "", error: err instanceof Error ? err.message : String(err) }; }
-    }, [input, from, to]);
+    }, [input, from, to, rootName]);
+
+    const errorText = (() => {
+        if (!error) return "";
+        const invalidName = /^“([\s\S]*)” is not a valid XML element or attribute name\.$/.exec(error);
+        if (invalidName) return t("Invalid XML element or attribute name: {name}", { name: invalidName[1] });
+        const noNull = /^(TOML|XML) has no unambiguous null representation\. Remove nulls or choose JSON\/YAML\.$/.exec(error);
+        if (noNull) return t("{format} has no unambiguous null representation. Remove nulls or choose JSON/YAML.", { format: noNull[1] });
+        if (error.startsWith("Invalid XML: ")) return t("Invalid XML: {details}", { details: error.slice(13) });
+        const xmlOutputPrefix = "The data cannot be represented as a single XML document: ";
+        if (error.startsWith(xmlOutputPrefix)) return t("The data cannot be represented as a single XML document: {details}", { details: error.slice(xmlOutputPrefix.length) });
+        return t(error);
+    })();
 
     const swap = () => {
         if (!error) setInput(output);
@@ -64,83 +59,74 @@ export default function TomlConverterPage() {
 
     const copyOutput = async () => {
         await copyToClipboard(output);
-        message.success(`${to.toUpperCase()} copied`);
     };
 
     return (
         <ToolPageLayout
-            title="TOML Converter"
-            description="Convert between TOML, JSON and YAML config formats"
+            title="JSON / YAML / TOML / XML Converter"
+            description="Convert in all twelve directions between JSON, YAML, TOML and XML"
             icon={<SwapOutlined style={{ fontSize: 24, color: "#a16207" }} />}
             color="#a16207"
             learnMore={{
-                whatIs: "TOML Converter parses TOML, JSON or YAML input and re-emits it in another format. Useful when migrating between Cargo (TOML), npm/package.json (JSON), GitHub Actions (YAML) and pyproject.toml.",
-                whyUse: "Converting between config formats by hand drops types subtly (booleans become strings, ints become floats). A proper round-trip preserves them.",
-                howToUse: [
-                    "Pick the input format (defaults to TOML)",
-                    "Paste your config",
-                    "Pick the output format and copy the result",
-                    "Use the swap button to invert the conversion",
-                ],
-                tips: [
-                    "TOML support covers sections, dotted keys, scalars, arrays (including nested), inline tables ({ x = 1 }) and arrays of tables ([[server]]). Multi-line strings (\"\"\"...\"\"\") are the main gap — convert via JSON if you hit one.",
-                    "A `#` inside a quoted string is kept, not treated as a comment — so `color = \"#ff0000\"` and URLs with fragments round-trip correctly.",
-                    "YAML output uses block style for readability; pass it through `yq` if you need flow style.",
-                    "Round-trip JSON ↔ YAML is always lossless; TOML may lose comments.",
-                ],
-                useCases: [
-                    "Migrating a Python project's setup.cfg to pyproject.toml",
-                    "Converting between docker-compose.yaml and an equivalent JSON",
-                    "Generating example configs from a canonical source",
-                ],
+                whatIs: "Convert JSON, YAML, TOML and XML locally in all twelve directions. Unsupported mappings produce errors instead of silent data loss.",
+                whyUse: "Move supported configuration values between formats and inspect the result before saving it.",
+                howToUse: ["Choose the source and destination formats, then paste a document up to 2 MiB.", "Read the mapping notes and resolve any error before copying or downloading output.", "Swap uses valid output as the next input; when an error exists, it keeps your original input."],
+                tips: ["Comments and formatting are omitted. XML text stays strings, and TOML date/time values become ISO text.", "Quote precision-sensitive numeric values before conversion. TOML and XML cannot represent null unambiguously.", "XML uses @_attribute for attributes and #text for text. Top-level arrays use item elements inside the selected root."],
             }}
         >
             <Card>
                 <Space wrap size="middle" style={{ width: "100%", justifyContent: "space-between" }}>
-                    <Space>
-                        <Text type="secondary">From:</Text>
-                        <Select value={from} onChange={setFrom} options={[
+                    <Space wrap>
+                        <Text type="secondary">{t("From:")}</Text>
+                        <Select aria-label={t("Source format")} value={from} onChange={setFrom} options={[
                             { value: "toml", label: "TOML" },
                             { value: "json", label: "JSON" },
                             { value: "yaml", label: "YAML" },
+                            { value: "xml", label: "XML" },
                         ]} style={{ width: 100 }} />
-                        <a onClick={swap}>↔ swap</a>
-                        <Text type="secondary">To:</Text>
-                        <Select value={to} onChange={setTo} options={[
+                        <button type="button" onClick={swap}>{t("Swap formats")}</button>
+                        <Text type="secondary">{t("To:")}</Text>
+                        <Select aria-label={t("Destination format")} value={to} onChange={setTo} options={[
                             { value: "toml", label: "TOML" },
                             { value: "json", label: "JSON" },
                             { value: "yaml", label: "YAML" },
+                            { value: "xml", label: "XML" },
                         ]} style={{ width: 100 }} />
                     </Space>
-                    {error ? <Tag color="red">Parse error</Tag> : <Tag color="green">OK</Tag>}
+                    {error ? <Tag color="red">{t("Conversion error")}</Tag> : <Tag color="green">{t(input.trim() ? "Ready" : "Waiting for input")}</Tag>}
                 </Space>
             </Card>
 
+            <div className="wb-workbench" style={{ marginTop: 18 }}>{to === "xml" && <label>{t("XML root wrapper name")}<input dir="ltr" value={rootName} maxLength={100} onChange={(event) => setRootName(event.target.value)} /></label>}<p>{t("One named XML root is retained; otherwise the chosen root wraps the output. Conversion omits comments and formatting. Review the mapping notes before use.")}</p><button disabled={!!error || !output} onClick={() => downloadText(output, `converted.${to}`, to === "xml" ? "application/xml" : "text/plain")}>{t("Download {format}", { format: to.toUpperCase() })}</button></div>
             <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
                 <Col xs={24} md={12}>
-                    <Card size="small" title={<Space><Text strong>Input</Text><Tag color="blue">{from.toUpperCase()}</Tag></Space>}>
+                    <Card size="small" title={<Space><Text strong>{t("Input")}</Text><Tag color="blue">{from.toUpperCase()}</Tag></Space>}>
                         <TextArea
                             value={input}
+                            aria-label={t("Conversion input")}
+                            dir="ltr"
                             onChange={(e) => setInput(e.target.value)}
                             autoSize={{ minRows: 16, maxRows: 28 }}
-                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
+                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16, direction: "ltr", textAlign: "left" }}
                         />
                     </Card>
                 </Col>
                 <Col xs={24} md={12}>
                     <Card
                         size="small"
-                        title={<Space><Text strong>Output</Text><Tag color="green">{to.toUpperCase()}</Tag></Space>}
-                        extra={!error && <a onClick={copyOutput}><CopyOutlined /> Copy</a>}
+                        title={<Space><Text strong>{t("Output")}</Text><Tag color="green">{to.toUpperCase()}</Tag></Space>}
+                        extra={!error && <Button type="text" disabled={!output} onClick={copyOutput} icon={<CopyOutlined />}>{t("Copy")}</Button>}
                     >
                         {error ? (
-                            <Text type="danger" style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12, whiteSpace: "pre-wrap" }}>{error}</Text>
+                            <div role="alert"><p>{t("Conversion failed. Check the source format and mapping notes. Quote values that cannot be represented safely.")}</p><Text type="danger" dir="auto" style={{ whiteSpace: "pre-wrap" }}>{errorText}</Text></div>
                         ) : (
                             <TextArea
                                 value={output}
+                                aria-label={t("Conversion output")}
+                                dir="ltr"
                                 readOnly
                                 autoSize={{ minRows: 16, maxRows: 28 }}
-                                style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
+                                style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16, direction: "ltr", textAlign: "left" }}
                             />
                         )}
                     </Card>

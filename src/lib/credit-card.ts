@@ -3,8 +3,8 @@
  *
  * Used by the Credit Card Validator (detect + verify) and the Credit Card
  * Generator (synthesise Luhn-valid test numbers). Everything here is pure and
- * client-side — these are fake numbers for testing payment forms, they carry no
- * account behind them and will be declined by any real processor.
+ * client-side. Generated numbers are synthetic format fixtures; this code cannot
+ * establish account allocation or predict a payment provider’s response.
  */
 
 export interface CardType {
@@ -34,9 +34,14 @@ export const CARD_TYPES: CardType[] = [
     { name: "InterPayment", prefixes: [636], lengths: [16, 17, 18, 19], color: "#5b5b5b", cvvLength: 3 },
 ];
 
-/** Verify a card number's Luhn (mod-10) checksum. */
+/** Accept ASCII digits with ordinary spaces/hyphens; reject other characters. */
+export function cardDigits(source: string): string | null {
+    return /^[0-9 -]*$/.test(source) ? source.replace(/[ -]/g, "") : null;
+}
+
+/** Verify a card number's Luhn (mod-10) checksum; no account verification. */
 export function luhnCheck(cardNumber: string): boolean {
-    const digits = cardNumber.replace(/\D/g, "");
+    const digits = cardDigits(cardNumber);
     if (!digits) return false;
 
     let sum = 0;
@@ -62,7 +67,7 @@ export function luhnCheck(cardNumber: string): boolean {
  * Longest prefix wins, so `6521…` resolves to RuPay rather than UnionPay.
  */
 export function detectCardType(cardNumber: string): CardType | null {
-    const digits = cardNumber.replace(/\D/g, "");
+    const digits = cardDigits(cardNumber);
     if (!digits) return null;
 
     let best: CardType | null = null;
@@ -83,6 +88,7 @@ export function detectCardType(cardNumber: string): CardType | null {
 
 /** Append the Luhn check digit to a partial number. */
 export function appendLuhnCheckDigit(partial: string): string {
+    if (!/^[0-9]+$/.test(partial)) throw new Error("Enter ASCII digits for the partial card number.");
     let sum = 0;
     let isEven = true;
 
@@ -152,7 +158,7 @@ export interface GeneratedCard {
     length: number;
 }
 
-/** Build a full fake card record: number, CVV, future expiry, holder name. */
+/** Build synthetic format fixtures; CVV and holder do not identify an account. */
 export function generateCard(cardType: CardType, length?: number): GeneratedCard {
     const number = generateCardNumber(cardType, length);
 

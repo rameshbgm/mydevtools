@@ -4,6 +4,7 @@ import { Button, Card, Input, InputNumber, Space, Typography, Tooltip, Progress,
 import { PlayCircleOutlined, PauseCircleOutlined, ReloadOutlined, SoundOutlined, ClockCircleOutlined, CheckCircleOutlined, BellOutlined } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
 const { Text } = Typography;
@@ -75,6 +76,7 @@ function playAlarmChime(): void {
 
 export default function TimerPage() {
     const { darkMode } = useAppStore();
+    const { t } = useLanguage();
 
     const [mounted, setMounted] = useState<boolean>(false);
     useEffect(() => { setMounted(true); }, []);
@@ -90,6 +92,9 @@ export default function TimerPage() {
     const [inputMinutes, setInputMinutes] = useState<number>(25);
     const [inputSeconds, setInputSeconds] = useState<number>(0);
 
+    const deadlineRef = useRef(0);
+    const remainingMsRef = useRef(remainingSeconds * 1000);
+    const completedRef = useRef(false);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const clearTimer = useCallback(() => {
@@ -99,33 +104,38 @@ export default function TimerPage() {
         }
     }, []);
 
+    const completeTimer = useCallback(() => {
+        if (completedRef.current) return;
+        completedRef.current = true;
+        remainingMsRef.current = 0;
+        clearTimer();
+        setRemainingSeconds(0);
+        setIsRunning(false);
+        setIsComplete(true);
+        setSessions(count => count + 1);
+        playAlarmChime();
+    }, [clearTimer]);
+
     useEffect(() => {
-        if (isRunning) {
-            intervalRef.current = setInterval(() => {
-                setRemainingSeconds((prev) => {
-                    if (prev <= 1) {
-                        clearTimer();
-                        setIsRunning(false);
-                        setIsComplete(true);
-                        setSessions(s => s + 1);
-                        playAlarmChime();
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        } else {
-            clearTimer();
-        }
+        if (!isRunning) return clearTimer;
+        const tick = () => {
+            const remaining = Math.max(0, deadlineRef.current - Date.now());
+            remainingMsRef.current = remaining;
+            setRemainingSeconds(Math.ceil(remaining / 1000));
+            if (remaining === 0) completeTimer();
+        };
+        intervalRef.current = setInterval(tick, 250);
         return clearTimer;
-    }, [isRunning, clearTimer]);
+    }, [isRunning, clearTimer, completeTimer]);
 
     const applyCustomDuration = useCallback(() => {
-        const total = inputHours * 3600 + inputMinutes * 60 + inputSeconds;
+        const total = Math.trunc(inputHours) * 3600 + Math.trunc(inputMinutes) * 60 + Math.trunc(inputSeconds);
         if (total <= 0) return;
         clearTimer();
         setIsRunning(false);
         setIsComplete(false);
+        remainingMsRef.current = total * 1000;
+        completedRef.current = false;
         setTotalSeconds(total);
         setRemainingSeconds(total);
     }, [inputHours, inputMinutes, inputSeconds, clearTimer]);
@@ -134,6 +144,8 @@ export default function TimerPage() {
         clearTimer();
         setIsRunning(false);
         setIsComplete(false);
+        remainingMsRef.current = seconds * 1000;
+        completedRef.current = false;
         setTotalSeconds(seconds);
         setRemainingSeconds(seconds);
         const h = Math.floor(seconds / 3600);
@@ -146,18 +158,26 @@ export default function TimerPage() {
 
     const handleStart = useCallback(() => {
         if (remainingSeconds <= 0) return;
+        deadlineRef.current = Date.now() + remainingMsRef.current;
+        completedRef.current = false;
         setIsComplete(false);
         setIsRunning(true);
     }, [remainingSeconds]);
 
     const handlePause = useCallback(() => {
+        clearTimer();
+        remainingMsRef.current = Math.max(0, deadlineRef.current - Date.now());
+        if (remainingMsRef.current === 0) { completeTimer(); return; }
+        setRemainingSeconds(Math.ceil(remainingMsRef.current / 1000));
         setIsRunning(false);
-    }, []);
+    }, [clearTimer, completeTimer]);
 
     const handleReset = useCallback(() => {
         clearTimer();
         setIsRunning(false);
         setIsComplete(false);
+        remainingMsRef.current = totalSeconds * 1000;
+        completedRef.current = false;
         setRemainingSeconds(totalSeconds);
     }, [clearTimer, totalSeconds]);
 
@@ -171,16 +191,14 @@ export default function TimerPage() {
 
     return (
         <ToolPageLayout
-            title="Timer"
-            description="Countdown timer with presets, custom duration, and audio chime — runs entirely in your browser"
+            title={t("Timer")}
+            description={t("Countdown timer with presets, custom duration, and audio chime — runs entirely in your browser")}
             icon={<ClockCircleOutlined />}
             color="#6366f1"
             learnMore={{
-                whatIs: "A countdown timer that runs entirely in your browser — no server, no tracking. Set any duration and get an audio alert when time is up.",
-                whyUse: "Pomodoro technique sessions, cooking timers, meeting time-boxing, focus sprints, and lab timers.",
-                howToUse: ["Pick a preset or enter custom hours/minutes/seconds", "Optionally give your timer a name", "Hit Start — the ring shows progress", "A chime plays when time is up"],
-                tips: ["The timer keeps running if you switch tabs", "Sound uses Web Audio API — no permissions needed", "Refresh resets the timer"],
-                useCases: ["25-min Pomodoro focus blocks", "5-min breaks", "Presentation time limits", "Recipe cooking times"],
+                whatIs: t("A local countdown with presets, a custom duration and an optional label. Remaining time is calculated from a deadline rather than counting callbacks."),
+                howToUse: [t("Choose a preset or enter hours, minutes and seconds, apply the duration, then start. Pause, resume or reset as needed.")],
+                tips: [t("Background tabs and device sleep can delay the completion chime. Browser audio policies may block sound. Reloading clears the timer.")],
             }}
         >
             <Row gutter={[24, 24]}>
@@ -224,7 +242,7 @@ export default function TimerPage() {
                                                 </div>
                                                 {sessions > 0 && (
                                                     <Text style={{ fontSize: 12, color: "#10b981", opacity: 0.75 }}>
-                                                        Session {sessions}
+                                                        {t("Session {number}", { number: sessions })}
                                                     </Text>
                                                 )}
                                             </div>
@@ -234,7 +252,7 @@ export default function TimerPage() {
                                             <Space>
                                                 <CheckCircleOutlined style={{ color: "#10b981", fontSize: 24 }} />
                                                 <Text style={{ color: "#10b981", fontSize: 22, fontWeight: 600 }}>
-                                                    Time&apos;s Up!
+                                                    {t("Time’s up!")}
                                                 </Text>
                                             </Space>
                                             {timerLabel && (
@@ -255,8 +273,7 @@ export default function TimerPage() {
                                                 paddingInline: 32,
                                             }}
                                         >
-                                            Reset
-                                        </Button>
+                                            {t("Reset")}</Button>
                                     </Space>
                                 </Card>
                             </motion.div>
@@ -294,7 +311,7 @@ export default function TimerPage() {
                                                 </div>
                                                 {sessions > 0 && (
                                                     <Text style={{ fontSize: 12, color: strokeColor, opacity: 0.8 }}>
-                                                        {sessions} session{sessions !== 1 ? "s" : ""} done
+                                                        {t("{count} sessions done", { count: sessions })}
                                                     </Text>
                                                 )}
                                             </div>
@@ -306,7 +323,7 @@ export default function TimerPage() {
 
                                         <Space size={12}>
                                             {!isRunning ? (
-                                                <Tooltip title={remainingSeconds === 0 ? "Reset to start" : "Start"}>
+                                                <Tooltip title={remainingSeconds === 0 ? t("Reset to start") : t("Start")}>
                                                     <Button
                                                         size="large"
                                                         icon={<PlayCircleOutlined />}
@@ -321,8 +338,7 @@ export default function TimerPage() {
                                                             paddingInline: 28,
                                                         }}
                                                     >
-                                                        Start
-                                                    </Button>
+                                                        {t("Start")}</Button>
                                                 </Tooltip>
                                             ) : (
                                                 <Button
@@ -338,10 +354,9 @@ export default function TimerPage() {
                                                         paddingInline: 28,
                                                     }}
                                                 >
-                                                    Pause
-                                                </Button>
+                                                    {t("Pause")}</Button>
                                             )}
-                                            <Tooltip title="Reset">
+                                            <Tooltip title={t("Reset")}>
                                                 <Button
                                                     size="large"
                                                     icon={<ReloadOutlined />}
@@ -354,8 +369,7 @@ export default function TimerPage() {
                                                         background: "transparent",
                                                     }}
                                                 >
-                                                    Reset
-                                                </Button>
+                                                    {t("Reset")}</Button>
                                             </Tooltip>
                                         </Space>
                                     </Space>
@@ -369,7 +383,7 @@ export default function TimerPage() {
                     <Space orientation="vertical" size={20} style={{ width: "100%" }}>
                         <Card
                             title={
-                                <Text style={{ color: textColor, fontWeight: 600 }}>Presets</Text>
+                                <Text style={{ color: textColor, fontWeight: 600 }}>{t("Presets")}</Text>
                             }
                             style={{
                                 background: cardBg,
@@ -381,7 +395,7 @@ export default function TimerPage() {
                             <Space wrap>
                                 {PRESETS.map((p) => (
                                     <Button
-                                        key={p.label}
+                                        key={t(p.label)}
                                         size="small"
                                         onClick={() => applyPreset(p.seconds)}
                                         style={{
@@ -393,7 +407,7 @@ export default function TimerPage() {
                                             fontWeight: totalSeconds === p.seconds ? 600 : 400,
                                         }}
                                     >
-                                        {p.label}
+                                        {t(p.label)}
                                     </Button>
                                 ))}
                             </Space>
@@ -401,7 +415,7 @@ export default function TimerPage() {
 
                         <Card
                             title={
-                                <Text style={{ color: textColor, fontWeight: 600 }}>Custom Duration</Text>
+                                <Text style={{ color: textColor, fontWeight: 600 }}>{t("Custom Duration")}</Text>
                             }
                             style={{
                                 background: cardBg,
@@ -414,30 +428,33 @@ export default function TimerPage() {
                                 {mounted && (
                                 <Space wrap>
                                     <Space orientation="vertical" size={2}>
-                                        <Text style={{ color: secondaryColor, fontSize: 12 }}>Hours</Text>
-                                        <InputNumber
+                                        <Text style={{ color: secondaryColor, fontSize: 12 }}>{t("Hours")}</Text>
+                                        <InputNumber precision={0}
                                             min={0}
                                             max={23}
+                                            aria-label={t("Hours")}
                                             value={inputHours}
                                             onChange={(v) => setInputHours(v ?? 0)}
                                             style={{ width: 80 }}
                                         />
                                     </Space>
                                     <Space orientation="vertical" size={2}>
-                                        <Text style={{ color: secondaryColor, fontSize: 12 }}>Minutes</Text>
-                                        <InputNumber
+                                        <Text style={{ color: secondaryColor, fontSize: 12 }}>{t("Minutes")}</Text>
+                                        <InputNumber precision={0}
                                             min={0}
                                             max={59}
+                                            aria-label={t("Minutes")}
                                             value={inputMinutes}
                                             onChange={(v) => setInputMinutes(v ?? 0)}
                                             style={{ width: 80 }}
                                         />
                                     </Space>
                                     <Space orientation="vertical" size={2}>
-                                        <Text style={{ color: secondaryColor, fontSize: 12 }}>Seconds</Text>
-                                        <InputNumber
+                                        <Text style={{ color: secondaryColor, fontSize: 12 }}>{t("Seconds")}</Text>
+                                        <InputNumber precision={0}
                                             min={0}
                                             max={59}
+                                            aria-label={t("Seconds")}
                                             value={inputSeconds}
                                             onChange={(v) => setInputSeconds(v ?? 0)}
                                             style={{ width: 80 }}
@@ -455,14 +472,13 @@ export default function TimerPage() {
                                         fontWeight: 500,
                                     }}
                                 >
-                                    Apply
-                                </Button>
+                                    {t("Apply")}</Button>
                             </Space>
                         </Card>
 
                         <Card
                             title={
-                                <Text style={{ color: textColor, fontWeight: 600 }}>Timer Label</Text>
+                                <Text style={{ color: textColor, fontWeight: 600 }}>{t("Timer Label")}</Text>
                             }
                             style={{
                                 background: cardBg,
@@ -472,8 +488,8 @@ export default function TimerPage() {
                             styles={{ body: { paddingTop: 12 } }}
                         >
                             {mounted && (
-                            <Input
-                                placeholder='e.g. "Pomodoro", "Break", "Presentation"'
+                            <Input aria-label={t("Timer Label")} dir="auto" style={{ fontSize: 16 }}
+                                placeholder={t("e.g. \"Pomodoro\", \"Break\", \"Presentation\"")}
                                 value={timerLabel}
                                 onChange={(e) => setTimerLabel(e.target.value)}
                                 prefix={<BellOutlined style={{ color: secondaryColor }} />}
@@ -499,8 +515,7 @@ export default function TimerPage() {
                                     <Space>
                                         <SoundOutlined style={{ color: "#6366f1" }} />
                                         <Text style={{ color: "#6366f1", fontSize: 13 }}>
-                                            Timer running — audio chime plays on completion
-                                        </Text>
+                                            {t("Timer running — audio chime plays on completion")}</Text>
                                     </Space>
                                 </Card>
                             </motion.div>

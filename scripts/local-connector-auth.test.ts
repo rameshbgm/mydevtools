@@ -1,0 +1,31 @@
+import assert from "node:assert/strict";
+import { authorizeLocalConnector, ConnectorHttpError, readConnectorBody, withConnectorSlot } from "../src/lib/local-connector-auth";
+import { parseRedisConnection } from "../src/lib/redis-connector";
+import { parseSqlConnection } from "../src/lib/sql-connector";
+const token = "public-local-connector-fixture-key-000000000000";
+const environment = { MYDEVTOOLS_LOCAL_CONNECTORS: "true", MYDEVTOOLS_LOCAL_CONNECTOR_TOKEN: token };
+const request = (headers: Record<string, string> = {}, url = "http://127.0.0.1:3100/api/local-connectors") => new Request(url, { method: "POST", headers: { Origin: "http://127.0.0.1:3100", "Content-Type": "application/json", "X-MyDevtools-Local-Token": token, ...headers }, body: '{}' });
+async function main() {
+    assert.throws(() => authorizeLocalConnector(request(), {}), (cause: unknown) => cause instanceof ConnectorHttpError && cause.status === 503);
+    authorizeLocalConnector(request(), environment);
+    authorizeLocalConnector(request({ Host: "127.0.0.1:3100" }, "http://127.0.0.1:3000/api/local-connectors"), environment);
+    assert.throws(() => authorizeLocalConnector(request({ Host: "localhost:3100" }, "http://127.0.0.1:3000/api/local-connectors"), environment));
+    const invalidHeaders: Record<string, string>[] = [{ Origin: "https://evil.example" }, { Origin: "null" }, { "X-MyDevtools-Local-Token": "wrong" }, { "Sec-Fetch-Site": "cross-site" }, { "Content-Type": "text/plain" }, { Host: "evil.example" }];
+    for (const headers of invalidHeaders) assert.throws(() => authorizeLocalConnector(request(headers), environment));
+    assert.throws(() => authorizeLocalConnector(request({}, "https://public.example/api/local-connectors"), environment));
+    assert.deepEqual(await readConnectorBody(request()), {});
+    await assert.rejects(() => readConnectorBody(new Request("http://localhost", { method: "POST", body: '[]' })), /JSON object/);
+    await assert.rejects(() => readConnectorBody(new Request("http://localhost", { method: "POST", body: '123456' }), 5), /too large/);
+    assert.equal(parseSqlConnection({ engine: "postgresql", host: "127.0.0.1", port: 5432, database: "fixture", user: "fixture", password: "", tls: false }).host, "127.0.0.1");
+    assert.throws(() => parseSqlConnection({ engine: "postgresql", host: "169.254.169.254", port: 80, database: "", user: "fixture", password: "", tls: false }));
+    assert.throws(() => parseSqlConnection({ engine: "mysql", host: "/var/run/mysqld.sock", port: 3306, database: "", user: "fixture", password: "", tls: false }));
+    assert.equal(parseRedisConnection({ host: "[::1]", port: 6379, username: "", password: "", database: 0, tls: true }).host, "::1");
+    for (const patch of [{ host: "/tmp/redis.sock" }, { host: "169.254.169.254" }, { database: -1 }, { password: 123 }, { port: 0 }]) assert.throws(() => parseRedisConnection({ host: "127.0.0.1", port: 6379, username: "", password: "", database: 0, tls: false, ...patch }));
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const operations = Array.from({ length: 4 }, () => withConnectorSlot(() => gate));
+    await assert.rejects(() => withConnectorSlot(async () => {}), (cause: unknown) => cause instanceof ConnectorHttpError && cause.status === 429);
+    release(); await Promise.all(operations); await withConnectorSlot(async () => {});
+    console.log("Local connector disable/token/origin/host/content-type/body/concurrency gates and SQL settings validation passed.");
+}
+main().catch((error) => { console.error(error); process.exitCode = 1; });
