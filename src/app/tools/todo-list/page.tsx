@@ -59,8 +59,17 @@ import type { ColumnsType } from "antd/es/table";
 import type { MenuProps } from "antd";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import "dayjs/locale/hi";
+import "dayjs/locale/es";
+import "dayjs/locale/fr";
+import "dayjs/locale/de";
+import "dayjs/locale/ja";
+import "dayjs/locale/zh-cn";
+import "dayjs/locale/ar";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { downloadText } from "@/lib/download";
+import { tableToCsv } from "@/lib/table-export";
 import {
     checkIndexedDBSupport,
     getAllTodos,
@@ -142,6 +151,9 @@ function isDueTomorrow(item: TodoItem): boolean {
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function TodoListPage() {
+    const { t, language } = useLanguage();
+    const translationRef = useRef(t);
+    useEffect(() => { translationRef.current = t; }, [t]);
     const { message, modal } = App.useApp();
 
     // Browser compatibility
@@ -174,6 +186,7 @@ export default function TodoListPage() {
     const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
     const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+    const [categoryEditorOpen, setCategoryEditorOpen] = useState(false);
     const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
     const [selectedTodo, setSelectedTodo] = useState<TodoItem | null>(null);
 
@@ -212,7 +225,7 @@ export default function TodoListPage() {
             setStats(statsData);
         } catch (err) {
             console.error("Failed to load data:", err);
-            message.error("Failed to load data from IndexedDB");
+            message.error(translationRef.current("Failed to load data from IndexedDB"));
         } finally {
             setLoading(false);
         }
@@ -309,7 +322,7 @@ export default function TodoListPage() {
                     completedAt: values.status === "done" && editingTodo.status !== "done" ? now : editingTodo.completedAt,
                 });
                 setTodos(prev => prev.map(t => t.id === updated.id ? updated : t));
-                message.success("Task updated");
+                message.success(translationRef.current("Task updated"));
             } else {
                 const newTodo = await addTodo({
                     ...values,
@@ -327,7 +340,7 @@ export default function TodoListPage() {
                     projectId: null,
                 });
                 setTodos(prev => [newTodo, ...prev]);
-                message.success("Task added");
+                message.success(translationRef.current("Task added"));
             }
 
             setIsModalOpen(false);
@@ -349,8 +362,8 @@ export default function TodoListPage() {
             });
             setTodos(prev => prev.map(t => t.id === updated.id ? updated : t));
             refreshStats();
-        } catch (err) {
-            message.error("Failed to update status");
+        } catch {
+            message.error(translationRef.current("Failed to update status"));
         }
     }, [message, refreshStats]);
 
@@ -358,10 +371,10 @@ export default function TodoListPage() {
         try {
             const updated = await softDeleteTodo(id);
             setTodos(prev => prev.map(t => t.id === updated.id ? updated : t));
-            message.success("Task moved to trash");
+            message.success(translationRef.current("Task moved to trash"));
             refreshStats();
-        } catch (err) {
-            message.error("Failed to delete task");
+        } catch {
+            message.error(translationRef.current("Failed to delete task"));
         }
     }, [message, refreshStats]);
 
@@ -369,10 +382,10 @@ export default function TodoListPage() {
         try {
             const updated = await restoreTodo(id);
             setTodos(prev => prev.map(t => t.id === updated.id ? updated : t));
-            message.success("Task restored");
+            message.success(translationRef.current("Task restored"));
             refreshStats();
-        } catch (err) {
-            message.error("Failed to restore task");
+        } catch {
+            message.error(translationRef.current("Failed to restore task"));
         }
     }, [message, refreshStats]);
 
@@ -380,10 +393,10 @@ export default function TodoListPage() {
         try {
             await hardDeleteTodo(id);
             setTodos(prev => prev.filter(t => t.id !== id));
-            message.success("Task permanently deleted");
+            message.success(translationRef.current("Task permanently deleted"));
             refreshStats();
-        } catch (err) {
-            message.error("Failed to delete task");
+        } catch {
+            message.error(translationRef.current("Failed to delete task"));
         }
     }, [message, refreshStats]);
 
@@ -391,10 +404,10 @@ export default function TodoListPage() {
         try {
             const updated = await archiveTodo(id);
             setTodos(prev => prev.map(t => t.id === updated.id ? updated : t));
-            message.success("Task archived");
+            message.success(translationRef.current("Task archived"));
             refreshStats();
-        } catch (err) {
-            message.error("Failed to archive task");
+        } catch {
+            message.error(translationRef.current("Failed to archive task"));
         }
     }, [message, refreshStats]);
 
@@ -402,31 +415,32 @@ export default function TodoListPage() {
         try {
             const updated = await unarchiveTodo(id);
             setTodos(prev => prev.map(t => t.id === updated.id ? updated : t));
-            message.success("Task unarchived");
+            message.success(translationRef.current("Task unarchived"));
             refreshStats();
-        } catch (err) {
-            message.error("Failed to unarchive task");
+        } catch {
+            message.error(translationRef.current("Failed to unarchive task"));
         }
     }, [message, refreshStats]);
 
     const handleEmptyTrash = useCallback(async () => {
         modal.confirm({
-            title: "Empty Trash?",
-            content: "This will permanently delete all items in trash. This action cannot be undone.",
-            okText: "Empty Trash",
+            title: t("Empty Trash?"),
+            content: t("This will permanently delete all items in trash. This action cannot be undone."),
+            okText: t("Empty Trash"),
+            cancelText: t("Cancel"),
             okButtonProps: { danger: true },
             onOk: async () => {
                 try {
                     const count = await emptyTrash();
                     setTodos(prev => prev.filter(t => !t.isDeleted));
-                    message.success(`${count} items permanently deleted`);
+                    message.success(translationRef.current("Permanently deleted items: {count}", { count }));
                     refreshStats();
-                } catch (err) {
-                    message.error("Failed to empty trash");
+                } catch {
+                    message.error(translationRef.current("Failed to empty trash"));
                 }
             },
         });
-    }, [modal, message, refreshStats]);
+    }, [modal, message, refreshStats, t]);
 
     // ─── Bulk Actions ────────────────────────────────────────────────
 
@@ -443,10 +457,10 @@ export default function TodoListPage() {
                     : t
             ));
             setSelectedRowKeys([]);
-            message.success(`${selectedRowKeys.length} tasks updated`);
+            message.success(translationRef.current("Updated tasks: {count}", { count: selectedRowKeys.length }));
             refreshStats();
-        } catch (err) {
-            message.error("Failed to update tasks");
+        } catch {
+            message.error(translationRef.current("Failed to update tasks"));
         }
     }, [selectedRowKeys, message, refreshStats]);
 
@@ -462,10 +476,10 @@ export default function TodoListPage() {
                     : t
             ));
             setSelectedRowKeys([]);
-            message.success(`${selectedRowKeys.length} tasks moved to trash`);
+            message.success(translationRef.current("Tasks moved to trash: {count}", { count: selectedRowKeys.length }));
             refreshStats();
-        } catch (err) {
-            message.error("Failed to delete tasks");
+        } catch {
+            message.error(translationRef.current("Failed to delete tasks"));
         }
     }, [selectedRowKeys, message, refreshStats]);
 
@@ -481,10 +495,10 @@ export default function TodoListPage() {
                     : t
             ));
             setSelectedRowKeys([]);
-            message.success(`${selectedRowKeys.length} tasks archived`);
+            message.success(translationRef.current("Archived tasks: {count}", { count: selectedRowKeys.length }));
             refreshStats();
-        } catch (err) {
-            message.error("Failed to archive tasks");
+        } catch {
+            message.error(translationRef.current("Failed to archive tasks"));
         }
     }, [selectedRowKeys, message, refreshStats]);
 
@@ -494,34 +508,35 @@ export default function TodoListPage() {
         try {
             const data = await exportAllData();
             downloadText(JSON.stringify(data, null, 2), `todo-backup-${dayjs().format("YYYY-MM-DD-HHmmss")}.json`, "application/json");
-            message.success("Data exported successfully");
-        } catch (err) {
-            message.error("Failed to export data");
+            message.success(translationRef.current("Data exported successfully"));
+        } catch {
+            message.error(translationRef.current("Failed to export data"));
         }
     }, [message]);
 
     const handleExportCSV = useCallback(() => {
         const activeTodos = todos.filter(t => !t.isDeleted);
-        const csv = [
-            ["Title", "Description", "Priority", "Status", "Category", "Due Date", "Created", "Tags", "Est Hours", "Actual Hours", "Archived", "Notes"].join(","),
-            ...activeTodos.map((t) => [
-                `"${t.title.replace(/"/g, '""')}"`,
-                `"${t.description.replace(/"/g, '""')}"`,
+        const csv = tableToCsv(
+            ["Title", "Description", "Priority", "Status", "Category", "Due Date", "Created", "Tags", "Est Hours", "Actual Hours", "Archived", "Notes"],
+            activeTodos.map((t) => [
+                t.title,
+                t.description,
                 t.priority,
                 t.status,
                 categoryMap.get(t.categoryId)?.name || t.categoryId,
                 t.dueDate || "",
                 t.createdAt,
-                `"${t.tags.join(", ")}"`,
+                t.tags.join(", "),
                 t.estimatedHours,
                 t.actualHours,
                 t.isArchived ? "Yes" : "No",
-                `"${t.notes.replace(/"/g, '""')}"`,
-            ].join(","))
-        ].join("\n");
+                t.notes,
+            ]),
+            false, // Preserve the original field values exactly, including formula-like text.
+        );
 
         downloadText(csv, `todos-${dayjs().format("YYYY-MM-DD")}.csv`, "text/csv");
-        message.success("Exported to CSV");
+        message.success(translationRef.current("Exported to CSV"));
     }, [todos, categoryMap, message]);
 
     const handleImportClick = useCallback(() => {
@@ -538,58 +553,73 @@ export default function TodoListPage() {
 
             const validation = validateImportData(data);
             if (!validation.valid) {
-                message.error(validation.error || "Invalid file format");
+                message.error(translationRef.current(validation.error || "Invalid file format"));
                 return;
             }
 
-            modal.confirm({
-                title: "Import Data",
+            const runImport = async (mode: "merge" | "replace") => {
+                try {
+                    const result = await importData(data as ExportData, mode);
+                    message.success(translationRef.current("Imported tasks: {tasks}; categories: {categories}", { tasks: result.todosImported, categories: result.categoriesImported }));
+                    await loadData();
+                } catch (error) {
+                    message.error(translationRef.current("Import failed. Check the backup file and try again."));
+                    throw error;
+                }
+            };
+            const dialog = modal.confirm({
+                title: t("Import Data"),
                 content: (
                     <div>
-                        <p>Found {data.todos?.length || 0} todos and {data.categories?.length || 0} categories.</p>
-                        <p>How would you like to import?</p>
+                        <p>{t("Backup contains {tasks} tasks and {categories} categories.", { tasks: data.todos?.length || 0, categories: data.categories?.length || 0 })}</p>
+                        <p>{t("How would you like to import?")}</p>
                     </div>
                 ),
-                okText: "Merge with existing",
-                cancelText: "Replace all",
-                onOk: async () => {
-                    const result = await importData(data as ExportData, "merge");
-                    message.success(`Imported ${result.todosImported} todos, ${result.categoriesImported} categories`);
-                    loadData();
-                },
-                onCancel: async () => {
-                    modal.confirm({
-                        title: "Are you sure?",
-                        content: "This will replace ALL existing data. This cannot be undone.",
-                        okText: "Yes, replace everything",
-                        okButtonProps: { danger: true },
-                        onOk: async () => {
-                            const result = await importData(data as ExportData, "replace");
-                            message.success(`Imported ${result.todosImported} todos, ${result.categoriesImported} categories`);
-                            loadData();
-                        },
-                    });
-                },
+                closable: true,
+                keyboard: true,
+                okText: t("Merge with existing"),
+                cancelText: t("Cancel"),
+                onOk: () => runImport("merge"),
+                footer: (_, { OkBtn, CancelBtn }) => (
+                    <Space wrap>
+                        <CancelBtn />
+                        <Button danger onClick={() => {
+                            dialog.destroy();
+                            modal.confirm({
+                                title: t("Replace all task data?"),
+                                content: t("This replaces all task data in this workspace. This cannot be undone."),
+                                okText: t("Yes, replace everything"),
+                                cancelText: t("Cancel"),
+                                okButtonProps: { danger: true },
+                                onOk: () => runImport("replace"),
+                            });
+                        }}>
+                            {t("Replace all")}
+                        </Button>
+                        <OkBtn />
+                    </Space>
+                ),
             });
-        } catch (err) {
-            message.error("Failed to read file. Make sure it's a valid JSON backup file.");
+        } catch {
+            message.error(translationRef.current("Failed to read file. Make sure it's a valid JSON backup file."));
         }
 
         // Reset input
         if (fileInputRef.current) fileInputRef.current.value = "";
-    }, [message, modal, loadData]);
+    }, [message, modal, loadData, t]);
 
     // ─── Category Management ─────────────────────────────────────────
 
-    const handleAddCategory = useCallback(() => {
+    const handleManageCategories = useCallback(() => {
         setEditingCategory(null);
+        setCategoryEditorOpen(false);
         categoryForm.resetFields();
-        categoryForm.setFieldsValue({ name: "", color: "#1677ff", icon: "📁", isDefault: false });
         setCategoryDrawerOpen(true);
     }, [categoryForm]);
 
     const handleEditCategory = useCallback((cat: Category) => {
         setEditingCategory(cat);
+        setCategoryEditorOpen(true);
         categoryForm.setFieldsValue(cat);
         setCategoryDrawerOpen(true);
     }, [categoryForm]);
@@ -602,13 +632,14 @@ export default function TodoListPage() {
             if (editingCategory) {
                 const updated = await updateCategory(editingCategory.id, { ...values, color: colorValue });
                 setCategories(prev => prev.map(c => c.id === updated.id ? updated : c));
-                message.success("Category updated");
+                message.success(translationRef.current("Category updated"));
             } else {
                 const newCat = await addCategory({ ...values, color: colorValue, isDefault: false });
                 setCategories(prev => [...prev, newCat]);
-                message.success("Category added");
+                message.success(translationRef.current("Category added"));
             }
             setCategoryDrawerOpen(false);
+            setCategoryEditorOpen(false);
         } catch (err) {
             console.error("Save category failed:", err);
         }
@@ -618,15 +649,15 @@ export default function TodoListPage() {
         // Check if any todos use this category
         const count = todos.filter(t => t.categoryId === id).length;
         if (count > 0) {
-            message.warning(`Cannot delete category with ${count} tasks. Move or delete tasks first.`);
+            message.warning(translationRef.current("Cannot delete a category used by {count} tasks. Move those tasks to another category first.", { count }));
             return;
         }
         try {
             await deleteCategory(id);
             setCategories(prev => prev.filter(c => c.id !== id));
-            message.success("Category deleted");
-        } catch (err) {
-            message.error("Failed to delete category");
+            message.success(translationRef.current("Category deleted"));
+        } catch {
+            message.error(translationRef.current("Failed to delete category"));
         }
     }, [todos, message]);
 
@@ -648,8 +679,8 @@ export default function TodoListPage() {
             if (selectedTodo?.id === todoId) {
                 setSelectedTodo(updated);
             }
-        } catch (err) {
-            message.error("Failed to update subtask");
+        } catch {
+            message.error(translationRef.current("Failed to update subtask"));
         }
     }, [todos, selectedTodo, message]);
 
@@ -670,8 +701,8 @@ export default function TodoListPage() {
             if (selectedTodo?.id === todoId) {
                 setSelectedTodo(updated);
             }
-        } catch (err) {
-            message.error("Failed to add subtask");
+        } catch {
+            message.error(translationRef.current("Failed to add subtask"));
         }
     }, [todos, selectedTodo, message]);
 
@@ -687,8 +718,8 @@ export default function TodoListPage() {
             if (selectedTodo?.id === todoId) {
                 setSelectedTodo(updated);
             }
-        } catch (err) {
-            message.error("Failed to delete subtask");
+        } catch {
+            message.error(translationRef.current("Failed to delete subtask"));
         }
     }, [todos, selectedTodo, message]);
 
@@ -698,8 +729,8 @@ export default function TodoListPage() {
         try {
             const updated = await updateSettings(updates);
             setSettings(updated);
-        } catch (err) {
-            message.error("Failed to update settings");
+        } catch {
+            message.error(translationRef.current("Failed to update settings"));
         }
     }, [message]);
 
@@ -723,7 +754,7 @@ export default function TodoListPage() {
             key: "check",
             width: 40,
             render: (_, record) => (
-                <Checkbox
+                <Checkbox aria-label={t("Toggle task completion")}
                     checked={record.status === "done"}
                     onChange={() => handleToggleStatus(record)}
                     disabled={record.isDeleted}
@@ -731,7 +762,7 @@ export default function TodoListPage() {
             ),
         },
         {
-            title: "Task",
+            title: t("Task"),
             dataIndex: "title",
             key: "title",
             sorter: (a, b) => a.title.localeCompare(b.title),
@@ -753,9 +784,9 @@ export default function TodoListPage() {
                         >
                             {text}
                         </Text>
-                        {isOverdue(record) && <Tag color="error" style={{ fontSize: 10 }}>OVERDUE</Tag>}
-                        {isDueToday(record) && <Tag color="warning" style={{ fontSize: 10 }}>TODAY</Tag>}
-                        {isDueTomorrow(record) && <Tag color="blue" style={{ fontSize: 10 }}>TOMORROW</Tag>}
+                        {isOverdue(record) && <Tag color="error" style={{ fontSize: 10 }}>{t("OVERDUE")}</Tag>}
+                        {isDueToday(record) && <Tag color="warning" style={{ fontSize: 10 }}>{t("TODAY")}</Tag>}
+                        {isDueTomorrow(record) && <Tag color="blue" style={{ fontSize: 10 }}>{t("TOMORROW")}</Tag>}
                         {record.subtasks.length > 0 && (
                             <Text type="secondary" style={{ fontSize: 11 }}>
                                 ({record.subtasks.filter(s => s.done).length}/{record.subtasks.length})
@@ -779,31 +810,31 @@ export default function TodoListPage() {
             ),
         },
         {
-            title: "Priority",
+            title: t("Priority"),
             dataIndex: "priority",
             key: "priority",
             width: 100,
             sorter: (a, b) => PRIORITY_CONFIG[a.priority].order - PRIORITY_CONFIG[b.priority].order,
             render: (priority: Priority) => (
                 <Tag color={PRIORITY_CONFIG[priority].color}>
-                    {PRIORITY_CONFIG[priority].label}
+                    {t(PRIORITY_CONFIG[priority].label)}
                 </Tag>
             ),
         },
         {
-            title: "Status",
+            title: t("Status"),
             dataIndex: "status",
             key: "status",
             width: 120,
             sorter: (a, b) => STATUS_CONFIG[a.status].order - STATUS_CONFIG[b.status].order,
             render: (status: Status) => (
                 <Tag color={STATUS_CONFIG[status].color}>
-                    {STATUS_CONFIG[status].icon} {STATUS_CONFIG[status].label}
+                    {STATUS_CONFIG[status].icon} {t(STATUS_CONFIG[status].label)}
                 </Tag>
             ),
         },
         {
-            title: "Category",
+            title: t("Category"),
             dataIndex: "categoryId",
             key: "category",
             width: 120,
@@ -819,7 +850,7 @@ export default function TodoListPage() {
             },
         },
         {
-            title: "Due",
+            title: t("Due"),
             dataIndex: "dueDate",
             key: "dueDate",
             width: 100,
@@ -836,8 +867,8 @@ export default function TodoListPage() {
                 return (
                     <Tooltip title={d.format("YYYY-MM-DD HH:mm")}>
                         <Text type={overdue ? "danger" : undefined}>
-                            <CalendarOutlined style={{ marginRight: 4 }} />
-                            {d.fromNow()}
+                            <CalendarOutlined style={{ marginInlineEnd: 4 }} />
+                            {d.locale(language === "zh" ? "zh-cn" : language).fromNow()}
                         </Text>
                     </Tooltip>
                 );
@@ -851,32 +882,32 @@ export default function TodoListPage() {
                 <Space size="small">
                     {currentView === "deleted" ? (
                         <>
-                            <Tooltip title="Restore">
-                                <Button aria-label="Reset" size="small" type="text" icon={<ReloadOutlined />} onClick={() => handleRestore(record.id)} />
+                            <Tooltip title={t("Restore")}>
+                                <Button aria-label={t("Restore")} size="small" type="text" icon={<ReloadOutlined />} onClick={() => handleRestore(record.id)} />
                             </Tooltip>
-                            <Popconfirm title="Permanently delete?" onConfirm={() => handleHardDelete(record.id)}>
-                                <Tooltip title="Delete Forever">
-                                    <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} />
+                            <Popconfirm okText={t("Confirm")} cancelText={t("Cancel")} title={t("Permanently delete?")} onConfirm={() => handleHardDelete(record.id)}>
+                                <Tooltip title={t("Delete Forever")}>
+                                    <Button aria-label={t("Delete")} size="small" type="text" danger icon={<DeleteOutlined />} />
                                 </Tooltip>
                             </Popconfirm>
                         </>
                     ) : currentView === "archived" ? (
                         <>
-                            <Tooltip title="Unarchive">
-                                <Button aria-label="Archive" size="small" type="text" icon={<InboxOutlined />} onClick={() => handleUnarchive(record.id)} />
+                            <Tooltip title={t("Unarchive")}>
+                                <Button aria-label={t("Unarchive")} size="small" type="text" icon={<InboxOutlined />} onClick={() => handleUnarchive(record.id)} />
                             </Tooltip>
                         </>
                     ) : (
                         <>
-                            <Tooltip title="Edit">
-                                <Button aria-label="Edit" size="small" type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+                            <Tooltip title={t("Edit")}>
+                                <Button aria-label={t("Edit")} size="small" type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
                             </Tooltip>
-                            <Tooltip title="Archive">
-                                <Button aria-label="Archive" size="small" type="text" icon={<InboxOutlined />} onClick={() => handleArchive(record.id)} />
+                            <Tooltip title={t("Archive")}>
+                                <Button aria-label={t("Archive")} size="small" type="text" icon={<InboxOutlined />} onClick={() => handleArchive(record.id)} />
                             </Tooltip>
-                            <Popconfirm title="Move to trash?" onConfirm={() => handleSoftDelete(record.id)}>
-                                <Tooltip title="Delete">
-                                    <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} />
+                            <Popconfirm okText={t("Confirm")} cancelText={t("Cancel")} title={t("Move to trash?")} onConfirm={() => handleSoftDelete(record.id)}>
+                                <Tooltip title={t("Delete")}>
+                                    <Button aria-label={t("Delete")} size="small" type="text" danger icon={<DeleteOutlined />} />
                                 </Tooltip>
                             </Popconfirm>
                         </>
@@ -884,46 +915,46 @@ export default function TodoListPage() {
                 </Space>
             ),
         },
-    ], [currentView, categoryMap, handleToggleStatus, handleEdit, handleSoftDelete, handleRestore, handleHardDelete, handleArchive, handleUnarchive]);
+    ], [currentView, categoryMap, handleToggleStatus, handleEdit, handleSoftDelete, handleRestore, handleHardDelete, handleArchive, handleUnarchive, t, language]);
 
     // ─── Bulk Actions Menu ───────────────────────────────────────────
 
     const bulkActionsMenu: MenuProps = useMemo(() => ({
         items: [
-            { key: "done", label: "Mark as Done", icon: <CheckOutlined /> },
-            { key: "in-progress", label: "Mark In Progress", icon: <ClockCircleOutlined /> },
-            { key: "todo", label: "Mark as To Do" },
-            { key: "blocked", label: "Mark as Blocked", icon: <ExclamationCircleOutlined /> },
+            { key: "done", label: t("Mark as Done"), icon: <CheckOutlined /> },
+            { key: "in-progress", label: t("Mark In Progress"), icon: <ClockCircleOutlined /> },
+            { key: "todo", label: t("Mark as To Do") },
+            { key: "blocked", label: t("Mark as Blocked"), icon: <ExclamationCircleOutlined /> },
             { type: "divider" },
-            { key: "archive", label: "Archive Selected", icon: <InboxOutlined /> },
-            { key: "delete", label: "Delete Selected", icon: <DeleteOutlined />, danger: true },
+            { key: "archive", label: t("Archive Selected"), icon: <InboxOutlined /> },
+            { key: "delete", label: t("Delete Selected"), icon: <DeleteOutlined />, danger: true },
         ],
         onClick: ({ key }) => {
             if (key === "delete") handleBulkDelete();
             else if (key === "archive") handleBulkArchive();
             else handleBulkStatusChange(key as Status);
         },
-    }), [handleBulkDelete, handleBulkArchive, handleBulkStatusChange]);
+    }), [handleBulkDelete, handleBulkArchive, handleBulkStatusChange, t]);
 
     // ─── Render: Browser Not Supported ───────────────────────────────
 
     if (!isSupported) {
         return (
             <ToolPageLayout
-                title="Personal Todo List"
-                description="Production-grade task manager with IndexedDB storage"
+                title={t("Personal Todo List")}
+                description={t("Manage tasks, subtasks, categories and backups in your current workspace")}
                 icon={<CheckSquareOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
                 color="#52c41a"
             >
                 <Result
                     status="error"
-                    title="Browser Not Supported"
-                    subTitle={compatError || "Your browser does not support IndexedDB."}
+                    title={t("Browser Not Supported")}
+                    subTitle={t(compatError || "Your browser does not support IndexedDB.")}
                     extra={
                         <Space orientation="vertical">
-                            <Text>Please use a modern browser like:</Text>
-                            <Text strong>Chrome, Firefox, Safari, or Edge</Text>
-                            <Text type="secondary">If you are in private/incognito mode, try using a regular window.</Text>
+                            <Text>{t("Please use a modern browser like:")}</Text>
+                            <Text strong>{t("Chrome, Firefox, Safari, or Edge")}</Text>
+                            <Text type="secondary">{t("If you are in private/incognito mode, try using a regular window.")}</Text>
                         </Space>
                     }
                 />
@@ -935,36 +966,36 @@ export default function TodoListPage() {
 
     return (
         <ToolPageLayout
-            title="Personal Todo List"
-            description="Production-grade task manager with IndexedDB storage"
+            title={t("Personal Todo List")}
+            description={t("Manage tasks, subtasks, categories and backups in your current workspace")}
             icon={<CheckSquareOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
             color="#52c41a"
             learnMore={{
-                whatIs: "A fully-featured personal task manager that stores data locally in IndexedDB. It supports categories with custom emojis, priorities, due dates, drag-and-drop reordering, and data export/import.",
-                whyUse: "Unlike cloud-based todo apps, this tool keeps all data in your browser. It's private, works offline, and doesn't require an account. Perfect for developers who value privacy and local-first apps.",
+                whatIs: t("A local task manager with categories, priorities, due dates, subtasks, archive, trash and JSON backup import/export. Tasks are stored in this workspace using IndexedDB."),
+                whyUse: t("Plan tasks without an account or cloud sync. Task data stays in this browser; export a JSON backup before clearing site storage."),
                 howToUse: [
-                    "Create categories with custom emojis",
-                    "Add tasks with title, description, priority, and due date",
-                    "Drag and drop to reorder tasks",
-                    "Export data as JSON for backup"
+                    t("Create categories with custom emojis"),
+                    t("Add tasks with title, description, priority, and due date"),
+                    t("Use column headers to sort tasks and filters to narrow the list"),
+                    t("Export data as JSON for backup")
                 ],
                 tips: [
-                    "Data persists in IndexedDB (browser storage)",
-                    "Use categories to organize different projects",
-                    "Keyboard shortcuts available for power users",
-                    "Export regularly for backup"
+                    t("Data persists in IndexedDB (browser storage)"),
+                    t("Use categories to organize different projects"),
+                    t("Restore tasks from Trash, or permanently delete them after confirmation"),
+                    t("Export regularly for backup")
                 ],
                 useCases: [
-                    "Personal task management without cloud sync",
-                    "Privacy-focused note taking",
-                    "Project planning and tracking",
-                    "Developer workflow management"
+                    t("Personal task management without cloud sync"),
+                    t("Privacy-focused note taking"),
+                    t("Project planning and tracking"),
+                    t("Developer workflow management")
                 ]
             }}
         >
             <Spin spinning={loading}>
                 {/* Hidden file input for import */}
-                <input
+                <input aria-label={t("Import JSON Backup")}
                     type="file"
                     ref={fileInputRef}
                     style={{ display: "none" }}
@@ -977,45 +1008,45 @@ export default function TodoListPage() {
                     <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
                         <Col xs={12} sm={8} md={4} lg={3}>
                             <Card size="small" style={{ textAlign: "center" }}>
-                                <Statistic title="Active" value={stats.active} styles={{ content: { color: "#1677ff" } }} />
+                                <Statistic title={t("Active")} value={stats.active} styles={{ content: { color: "#1677ff" } }} />
                             </Card>
                         </Col>
                         <Col xs={12} sm={8} md={4} lg={3}>
                             <Card size="small" style={{ textAlign: "center" }}>
-                                <Statistic title="Done" value={stats.done} styles={{ content: { color: "#52c41a" } }} suffix={<CheckOutlined />} />
+                                <Statistic title={t("Done")} value={stats.done} styles={{ content: { color: "#52c41a" } }} suffix={<CheckOutlined />} />
                             </Card>
                         </Col>
                         <Col xs={12} sm={8} md={4} lg={3}>
                             <Card size="small" style={{ textAlign: "center" }}>
-                                <Statistic title="In Progress" value={stats.inProgress} styles={{ content: { color: "#1677ff" } }} />
+                                <Statistic title={t("In Progress")} value={stats.inProgress} styles={{ content: { color: "#1677ff" } }} />
                             </Card>
                         </Col>
                         <Col xs={12} sm={8} md={4} lg={3}>
                             <Card size="small" style={{ textAlign: "center" }}>
-                                <Statistic title="Overdue" value={stats.overdue} styles={{ content: { color: stats.overdue > 0 ? "#f5222d" : undefined } }} />
+                                <Statistic title={t("Overdue")} value={stats.overdue} styles={{ content: { color: stats.overdue > 0 ? "#f5222d" : undefined } }} />
                             </Card>
                         </Col>
                         <Col xs={12} sm={8} md={4} lg={3}>
                             <Card size="small" style={{ textAlign: "center" }}>
-                                <Statistic title="Due Today" value={stats.dueToday} styles={{ content: { color: stats.dueToday > 0 ? "#faad14" : undefined } }} />
+                                <Statistic title={t("Due Today")} value={stats.dueToday} styles={{ content: { color: stats.dueToday > 0 ? "#faad14" : undefined } }} />
                             </Card>
                         </Col>
                         <Col xs={12} sm={8} md={4} lg={3}>
                             <Card size="small" style={{ textAlign: "center" }}>
                                 <div style={{ marginBottom: 4 }}>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>Completion</Text>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>{t("Completion")}</Text>
                                 </div>
                                 <Progress percent={stats.completionRate} size="small" status={stats.completionRate === 100 ? "success" : "active"} />
                             </Card>
                         </Col>
                         <Col xs={12} sm={8} md={4} lg={3}>
                             <Card size="small" style={{ textAlign: "center" }}>
-                                <Statistic title="Archived" value={stats.archived} styles={{ content: { color: "#8c8c8c" } }} prefix={<InboxOutlined />} />
+                                <Statistic title={t("Archived")} value={stats.archived} styles={{ content: { color: "#8c8c8c" } }} prefix={<InboxOutlined />} />
                             </Card>
                         </Col>
                         <Col xs={12} sm={8} md={4} lg={3}>
                             <Card size="small" style={{ textAlign: "center" }}>
-                                <Statistic title="Trash" value={stats.deleted} styles={{ content: { color: stats.deleted > 0 ? "#f5222d" : "#8c8c8c" } }} prefix={<DeleteOutlined />} />
+                                <Statistic title={t("Trash")} value={stats.deleted} styles={{ content: { color: stats.deleted > 0 ? "#f5222d" : "#8c8c8c" } }} prefix={<DeleteOutlined />} />
                             </Card>
                         </Col>
                     </Row>
@@ -1030,20 +1061,20 @@ export default function TodoListPage() {
                                     value={currentView}
                                     onChange={(v) => { setCurrentView(v as ViewType); setSelectedRowKeys([]); }}
                                     options={[
-                                        { label: <><UnorderedListOutlined /> Active</>, value: "active" },
-                                        { label: <><InboxOutlined /> Archived ({stats?.archived || 0})</>, value: "archived" },
-                                        { label: <><DeleteOutlined /> Trash ({stats?.deleted || 0})</>, value: "deleted" },
+                                        { label: <><UnorderedListOutlined /> {t("Active")}</>, value: "active" },
+                                        { label: <><InboxOutlined /> {t("Archived: {count}", { count: stats?.archived || 0 })}</>, value: "archived" },
+                                        { label: <><DeleteOutlined /> {t("Trash: {count}", { count: stats?.deleted || 0 })}</>, value: "deleted" },
                                     ]}
                                 />
                             </Space>
                         </Col>
                         <Col>
                             <Space>
-                                <Tooltip title="Manage Categories">
-                                    <Button icon={<FolderOutlined />} onClick={handleAddCategory}>Categories</Button>
+                                <Tooltip title={t("Manage Categories")}>
+                                    <Button icon={<FolderOutlined />} onClick={handleManageCategories}>{t("Categories")}</Button>
                                 </Tooltip>
-                                <Tooltip title="Settings">
-                                    <Button aria-label="Settings" icon={<SettingOutlined />} onClick={() => setSettingsDrawerOpen(true)} />
+                                <Tooltip title={t("Settings")}>
+                                    <Button aria-label={t("Settings")} icon={<SettingOutlined />} onClick={() => setSettingsDrawerOpen(true)} />
                                 </Tooltip>
                             </Space>
                         </Col>
@@ -1055,12 +1086,11 @@ export default function TodoListPage() {
                     <Row gutter={[12, 12]} align="middle">
                         <Col>
                             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-                                Add Task
-                            </Button>
+                                {t("Add Task")}</Button>
                         </Col>
                         <Col flex="200px">
-                            <Input
-                                placeholder="Search tasks..."
+                            <Input dir="auto" styles={{ input: { fontSize: 16 } }}
+                                placeholder={t("Search tasks...")}
                                 prefix={<SearchOutlined />}
                                 value={searchText}
                                 onChange={(e) => setSearchText(e.target.value)}
@@ -1068,30 +1098,30 @@ export default function TodoListPage() {
                             />
                         </Col>
                         <Col>
-                            <Select
+                            <Select styles={{ input: { fontSize: 16 } }} aria-label={t("Choose an option")}
                                 value={filterStatus}
                                 onChange={setFilterStatus}
-                                style={{ width: 140 }}
+                                style={{ width: 180, maxWidth: "100%" }}
                                 showSearch
                                 optionFilterProp="label"
                                 options={[
-                                    { value: "all", label: "All Status" },
+                                    { value: "all", label: t("All Status") },
                                     ...Object.entries(STATUS_CONFIG).map(([k, v]) => ({
                                         value: k,
-                                        label: `${v.icon} ${v.label}`
+                                        label: `${v.icon} ${t(v.label)}`
                                     })),
                                 ]}
                             />
                         </Col>
                         <Col>
-                            <Select
+                            <Select styles={{ input: { fontSize: 16 } }} aria-label={t("Choose an option")}
                                 value={filterCategory}
                                 onChange={setFilterCategory}
-                                style={{ width: 150 }}
+                                style={{ width: 180, maxWidth: "100%" }}
                                 showSearch
                                 optionFilterProp="label"
                                 options={[
-                                    { value: "all", label: "All Categories" },
+                                    { value: "all", label: t("All Categories") },
                                     ...categories.map((c) => ({
                                         value: c.id,
                                         label: `${c.icon} ${c.name}`
@@ -1100,29 +1130,29 @@ export default function TodoListPage() {
                             />
                         </Col>
                         <Col>
-                            <Select
+                            <Select styles={{ input: { fontSize: 16 } }} aria-label={t("Choose an option")}
                                 value={filterPriority}
                                 onChange={setFilterPriority}
-                                style={{ width: 130 }}
+                                style={{ width: 180, maxWidth: "100%" }}
                                 showSearch
                                 optionFilterProp="label"
                                 options={[
-                                    { value: "all", label: "All Priorities" },
+                                    { value: "all", label: t("All Priorities") },
                                     ...Object.entries(PRIORITY_CONFIG).map(([k, v]) => ({
                                         value: k,
-                                        label: v.label
+                                        label: t(v.label)
                                     })),
                                 ]}
                             />
                         </Col>
                         {allTags.length > 0 && (
                             <Col>
-                                <Select
+                                <Select styles={{ input: { fontSize: 16 } }} aria-label={t("Choose an option")}
                                     mode="multiple"
                                     value={filterTags}
                                     onChange={setFilterTags}
                                     style={{ minWidth: 120 }}
-                                    placeholder="Tags"
+                                    placeholder={t("Tags")}
                                     maxTagCount={1}
                                     options={allTags.map(t => ({ value: t, label: t }))}
                                 />
@@ -1130,7 +1160,7 @@ export default function TodoListPage() {
                         )}
                         {hasActiveFilters && (
                             <Col>
-                                <Button icon={<ClearOutlined />} onClick={clearFilters}>Clear</Button>
+                                <Button icon={<ClearOutlined />} onClick={clearFilters}>{t("Clear")}</Button>
                             </Col>
                         )}
                         <Col flex="auto" />
@@ -1139,8 +1169,7 @@ export default function TodoListPage() {
                                 <Dropdown menu={bulkActionsMenu}>
                                     <Button>
                                         <Badge count={selectedRowKeys.length} size="small" offset={[8, 0]}>
-                                            Bulk Actions
-                                        </Badge>
+                                            {t("Bulk Actions")}</Badge>
                                     </Button>
                                 </Dropdown>
                             </Col>
@@ -1148,20 +1177,19 @@ export default function TodoListPage() {
                         {currentView === "deleted" && stats && stats.deleted > 0 && (
                             <Col>
                                 <Button danger icon={<DeleteOutlined />} onClick={handleEmptyTrash}>
-                                    Empty Trash
-                                </Button>
+                                    {t("Empty Trash")}</Button>
                             </Col>
                         )}
                         <Col>
                             <Space.Compact>
-                                <Tooltip title="Export JSON (Full Backup)">
-                                    <Button aria-label="Download" icon={<DownloadOutlined />} onClick={handleExportJSON} />
+                                <Tooltip title={t("Export JSON (Full Backup)")}>
+                                    <Button aria-label={t("Download")} icon={<DownloadOutlined />} onClick={handleExportJSON} />
                                 </Tooltip>
-                                <Tooltip title="Export CSV">
-                                    <Button aria-label="Export" icon={<ExportOutlined />} onClick={handleExportCSV} />
+                                <Tooltip title={t("Export CSV")}>
+                                    <Button aria-label={t("Export")} icon={<ExportOutlined />} onClick={handleExportCSV} />
                                 </Tooltip>
-                                <Tooltip title="Import JSON Backup">
-                                    <Button aria-label="Upload" icon={<UploadOutlined />} onClick={handleImportClick} />
+                                <Tooltip title={t("Import JSON Backup")}>
+                                    <Button aria-label={t("Upload")} icon={<UploadOutlined />} onClick={handleImportClick} />
                                 </Tooltip>
                             </Space.Compact>
                         </Col>
@@ -1177,7 +1205,7 @@ export default function TodoListPage() {
                         pagination={{
                             pageSize: 20,
                             showSizeChanger: true,
-                            showTotal: (t) => `${t} tasks`,
+                            showTotal: (total) => t("Tasks: {count}", { count: total }),
                             pageSizeOptions: ["10", "20", "50", "100"],
                         }}
                         rowSelection={currentView !== "deleted" ? {
@@ -1192,12 +1220,12 @@ export default function TodoListPage() {
                                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                                     description={
                                         currentView === "deleted"
-                                            ? "Trash is empty"
+                                            ? t("Trash is empty")
                                             : currentView === "archived"
-                                                ? "No archived tasks"
+                                                ? t("No archived tasks")
                                                 : hasActiveFilters
-                                                    ? "No tasks match your filters"
-                                                    : "No tasks yet. Click 'Add Task' to create one!"
+                                                    ? t("No tasks match your filters")
+                                                    : t("No tasks yet. Click 'Add Task' to create one!")
                                     }
                                 />
                             ),
@@ -1207,47 +1235,48 @@ export default function TodoListPage() {
 
                 {/* Add/Edit Modal */}
                 <Modal
-                    title={editingTodo ? "Edit Task" : "Add New Task"}
+                    title={editingTodo ? t("Edit Task") : t("Add New Task")}
                     open={isModalOpen}
                     onOk={handleSave}
                     onCancel={() => setIsModalOpen(false)}
-                    okText={editingTodo ? "Update" : "Add"}
+                    okText={editingTodo ? t("Update") : t("Add")}
+                    cancelText={t("Cancel")}
                     width={700}
                     destroyOnHidden
                 >
                     <Form form={form} layout="vertical">
-                        <Form.Item name="title" label="Task Title" rules={[{ required: true, message: "Please enter a title" }]}>
-                            <Input placeholder="What needs to be done?" size="large" />
+                        <Form.Item name="title" label={t("Task Title")} rules={[{ required: true, message: t("Please enter a title") }]}>
+                            <Input dir="auto" styles={{ input: { fontSize: 16 } }} placeholder={t("What needs to be done?")} size="large" />
                         </Form.Item>
 
-                        <Form.Item name="description" label="Description">
-                            <TextArea rows={3} placeholder="Add more details..." />
+                        <Form.Item name="description" label={t("Description")}>
+                            <TextArea dir="auto" style={{ fontSize: 16 }} rows={3} placeholder={t("Add more details...")} />
                         </Form.Item>
 
                         <Row gutter={16}>
                             <Col span={8}>
-                                <Form.Item name="priority" label="Priority" initialValue="medium">
-                                    <Select
+                                <Form.Item name="priority" label={t("Priority")} initialValue="medium">
+                                    <Select styles={{ input: { fontSize: 16 } }} aria-label={t("Choose an option")}
                                         options={Object.entries(PRIORITY_CONFIG).map(([k, v]) => ({
                                             value: k,
-                                            label: <><FlagOutlined style={{ color: v.color, marginRight: 8 }} />{v.label}</>,
+                                            label: <><FlagOutlined style={{ color: v.color, marginInlineEnd: 8 }} />{t(v.label)}</>,
                                         }))}
                                     />
                                 </Form.Item>
                             </Col>
                             <Col span={8}>
-                                <Form.Item name="status" label="Status" initialValue="todo">
-                                    <Select
+                                <Form.Item name="status" label={t("Status")} initialValue="todo">
+                                    <Select styles={{ input: { fontSize: 16 } }} aria-label={t("Choose an option")}
                                         options={Object.entries(STATUS_CONFIG).map(([k, v]) => ({
                                             value: k,
-                                            label: `${v.icon} ${v.label}`
+                                            label: `${v.icon} ${t(v.label)}`
                                         }))}
                                     />
                                 </Form.Item>
                             </Col>
                             <Col span={8}>
-                                <Form.Item name="categoryId" label="Category" initialValue="work">
-                                    <Select
+                                <Form.Item name="categoryId" label={t("Category")} initialValue="work">
+                                    <Select styles={{ input: { fontSize: 16 } }} aria-label={t("Choose an option")}
                                         showSearch
                                         optionFilterProp="label"
                                         options={categories.map((c) => ({
@@ -1261,43 +1290,42 @@ export default function TodoListPage() {
 
                         <Row gutter={16}>
                             <Col span={8}>
-                                <Form.Item name="dueDate" label="Due Date">
-                                    <DatePicker style={{ width: "100%" }} showTime format="YYYY-MM-DD HH:mm" />
+                                <Form.Item name="dueDate" label={t("Due Date")}>
+                                    <DatePicker aria-label={t("Due Date")} styles={{ input: { fontSize: 16 } }} style={{ width: "100%" }} showTime format="YYYY-MM-DD HH:mm" />
                                 </Form.Item>
                             </Col>
                             <Col span={8}>
-                                <Form.Item name="estimatedHours" label="Estimated Hours" initialValue={0}>
-                                    <InputNumber min={0} step={0.5} style={{ width: "100%" }} suffix="hrs" />
+                                <Form.Item name="estimatedHours" label={t("Estimated Hours")} initialValue={0}>
+                                    <InputNumber styles={{ input: { fontSize: 16 } }} min={0} step={0.5} style={{ width: "100%" }} suffix={t("hrs")} />
                                 </Form.Item>
                             </Col>
                             <Col span={8}>
-                                <Form.Item name="actualHours" label="Actual Hours" initialValue={0}>
-                                    <InputNumber min={0} step={0.5} style={{ width: "100%" }} suffix="hrs" />
+                                <Form.Item name="actualHours" label={t("Actual Hours")} initialValue={0}>
+                                    <InputNumber styles={{ input: { fontSize: 16 } }} min={0} step={0.5} style={{ width: "100%" }} suffix={t("hrs")} />
                                 </Form.Item>
                             </Col>
                         </Row>
 
-                        <Form.Item name="tags" label="Tags">
-                            <Select mode="tags" placeholder="Add tags (press Enter)" tokenSeparators={[","]} />
+                        <Form.Item name="tags" label={t("Tags")}>
+                            <Select styles={{ input: { fontSize: 16 } }} aria-label={t("Tags")} mode="tags" placeholder={t("Add tags (press Enter)")} tokenSeparators={[","]} />
                         </Form.Item>
 
-                        <Form.Item name="notes" label="Notes">
-                            <TextArea rows={2} placeholder="Additional notes..." />
+                        <Form.Item name="notes" label={t("Notes")}>
+                            <TextArea dir="auto" style={{ fontSize: 16 }} rows={2} placeholder={t("Additional notes...")} />
                         </Form.Item>
                     </Form>
                 </Modal>
 
                 {/* Task Detail Drawer */}
                 <Drawer
-                    title={selectedTodo?.title || "Task Details"}
+                    title={selectedTodo?.title || t("Task Details")}
                     open={detailDrawerOpen}
                     onClose={() => { setDetailDrawerOpen(false); setSelectedTodo(null); }}
                     size="large"
                     extra={
                         <Space>
                             <Button icon={<EditOutlined />} onClick={() => { setDetailDrawerOpen(false); if (selectedTodo) handleEdit(selectedTodo); }}>
-                                Edit
-                            </Button>
+                                {t("Edit")}</Button>
                         </Space>
                     }
                 >
@@ -1305,10 +1333,10 @@ export default function TodoListPage() {
                         <div>
                             <Space wrap style={{ marginBottom: 16 }}>
                                 <Tag color={PRIORITY_CONFIG[selectedTodo.priority].color}>
-                                    {PRIORITY_CONFIG[selectedTodo.priority].label}
+                                    {t(PRIORITY_CONFIG[selectedTodo.priority].label)}
                                 </Tag>
                                 <Tag color={STATUS_CONFIG[selectedTodo.status].color}>
-                                    {STATUS_CONFIG[selectedTodo.status].icon} {STATUS_CONFIG[selectedTodo.status].label}
+                                    {STATUS_CONFIG[selectedTodo.status].icon} {t(STATUS_CONFIG[selectedTodo.status].label)}
                                 </Tag>
                                 {categoryMap.get(selectedTodo.categoryId) && (
                                     <Tag style={{ borderColor: categoryMap.get(selectedTodo.categoryId)!.color }}>
@@ -1323,13 +1351,13 @@ export default function TodoListPage() {
 
                             <Row gutter={[16, 8]} style={{ marginBottom: 16 }}>
                                 <Col span={12}>
-                                    <Text type="secondary">Created:</Text>
+                                    <Text type="secondary">{t("Created:")}</Text>
                                     <br />
                                     <Text>{dayjs(selectedTodo.createdAt).format("YYYY-MM-DD HH:mm")}</Text>
                                 </Col>
                                 {selectedTodo.dueDate && (
                                     <Col span={12}>
-                                        <Text type="secondary">Due:</Text>
+                                        <Text type="secondary">{t("Due:")}</Text>
                                         <br />
                                         <Text type={isOverdue(selectedTodo) ? "danger" : undefined}>
                                             {dayjs(selectedTodo.dueDate).format("YYYY-MM-DD HH:mm")}
@@ -1338,28 +1366,28 @@ export default function TodoListPage() {
                                 )}
                                 {selectedTodo.completedAt && (
                                     <Col span={12}>
-                                        <Text type="secondary">Completed:</Text>
+                                        <Text type="secondary">{t("Completed:")}</Text>
                                         <br />
                                         <Text>{dayjs(selectedTodo.completedAt).format("YYYY-MM-DD HH:mm")}</Text>
                                     </Col>
                                 )}
                                 <Col span={12}>
-                                    <Text type="secondary">Hours:</Text>
+                                    <Text type="secondary">{t("Hours:")}</Text>
                                     <br />
-                                    <Text>Est: {selectedTodo.estimatedHours}h / Actual: {selectedTodo.actualHours}h</Text>
+                                    <Text>{t("Estimated: {estimated} h / Actual: {actual} h", { estimated: selectedTodo.estimatedHours, actual: selectedTodo.actualHours })}</Text>
                                 </Col>
                             </Row>
 
                             {selectedTodo.tags.length > 0 && (
                                 <div style={{ marginBottom: 16 }}>
-                                    <Text type="secondary">Tags:</Text>
+                                    <Text type="secondary">{t("Tags:")}</Text>
                                     <div style={{ marginTop: 4 }}>
                                         {selectedTodo.tags.map(tag => <Tag key={tag}>{tag}</Tag>)}
                                     </div>
                                 </div>
                             )}
 
-                            <Divider>Subtasks</Divider>
+                            <Divider>{t("Subtasks")}</Divider>
                             <SubtaskList
                                 subtasks={selectedTodo.subtasks}
                                 onToggle={(id) => handleToggleSubtask(selectedTodo.id, id)}
@@ -1369,7 +1397,7 @@ export default function TodoListPage() {
 
                             {selectedTodo.notes && (
                                 <>
-                                    <Divider>Notes</Divider>
+                                    <Divider>{t("Notes")}</Divider>
                                     <Paragraph>{selectedTodo.notes}</Paragraph>
                                 </>
                             )}
@@ -1379,7 +1407,7 @@ export default function TodoListPage() {
 
                 {/* Settings Drawer */}
                 <Drawer
-                    title="Settings"
+                    title={t("Settings")}
                     open={settingsDrawerOpen}
                     onClose={() => setSettingsDrawerOpen(false)}
                     size="default"
@@ -1387,8 +1415,8 @@ export default function TodoListPage() {
                     {settings && (
                         <Space orientation="vertical" style={{ width: "100%" }} size="large">
                             <div>
-                                <Text strong>Default Category</Text>
-                                <Select
+                                <Text strong>{t("Default Category")}</Text>
+                                <Select styles={{ input: { fontSize: 16 } }} aria-label={t("Choose an option")}
                                     value={settings.defaultCategory}
                                     onChange={(v) => handleUpdateSettings({ defaultCategory: v })}
                                     style={{ width: "100%", marginTop: 8 }}
@@ -1396,31 +1424,31 @@ export default function TodoListPage() {
                                 />
                             </div>
                             <div>
-                                <Text strong>Default Priority</Text>
-                                <Select
+                                <Text strong>{t("Default Priority")}</Text>
+                                <Select styles={{ input: { fontSize: 16 } }} aria-label={t("Choose an option")}
                                     value={settings.defaultPriority}
                                     onChange={(v) => handleUpdateSettings({ defaultPriority: v })}
                                     style={{ width: "100%", marginTop: 8 }}
-                                    options={Object.entries(PRIORITY_CONFIG).map(([k, v]) => ({ value: k, label: v.label }))}
+                                    options={Object.entries(PRIORITY_CONFIG).map(([k, v]) => ({ value: k, label: t(v.label) }))}
                                 />
                             </div>
                             <Divider />
                             <div>
-                                <Text strong>Database Info</Text>
+                                <Text strong>{t("Database Info")}</Text>
                                 <div style={{ marginTop: 8 }}>
-                                    <Text type="secondary">Total Tasks: {stats?.total || 0}</Text>
+                                    <Text type="secondary">{t("Total Tasks:")}{stats?.total || 0}</Text>
                                     <br />
-                                    <Text type="secondary">Categories: {categories.length}</Text>
+                                    <Text type="secondary">{t("Categories:")}{categories.length}</Text>
                                     <br />
                                     <Text type="secondary">
-                                        Last Export: {settings.lastExportDate ? dayjs(settings.lastExportDate).format("YYYY-MM-DD HH:mm") : "Never"}
+                                        {t("Last Export:")}{settings.lastExportDate ? dayjs(settings.lastExportDate).format("YYYY-MM-DD HH:mm") : t("Never")}
                                     </Text>
                                 </div>
                             </div>
                             <Alert
                                 type="info"
-                                title="Data Storage"
-                                description="All data is stored locally in your browser using IndexedDB. Export regularly to backup your data."
+                                title={t("Data Storage")}
+                                description={t("All data is stored locally in your browser using IndexedDB. Export regularly to backup your data.")}
                                 showIcon
                             />
                         </Space>
@@ -1429,31 +1457,31 @@ export default function TodoListPage() {
 
                 {/* Category Management Drawer */}
                 <Drawer
-                    title={editingCategory ? "Edit Category" : "Manage Categories"}
+                    title={editingCategory ? t("Edit Category") : t("Manage Categories")}
                     open={categoryDrawerOpen}
-                    onClose={() => { setCategoryDrawerOpen(false); setEditingCategory(null); }}
+                    onClose={() => { setCategoryDrawerOpen(false); setEditingCategory(null); setCategoryEditorOpen(false); }}
                     size="default"
                     extra={
-                        editingCategory ? (
-                            <Button type="primary" onClick={handleSaveCategory}>Save</Button>
+                        categoryEditorOpen ? (
+                            <Button type="primary" onClick={handleSaveCategory}>{t("Save")}</Button>
                         ) : (
                             <Button type="primary" icon={<PlusOutlined />} onClick={() => {
                                 setEditingCategory(null);
+                                setCategoryEditorOpen(true);
                                 categoryForm.resetFields();
                                 categoryForm.setFieldsValue({ name: "", color: "#1677ff", icon: "📁" });
                                 setSelectedEmoji("📁");
                             }}>
-                                New Category
-                            </Button>
+                                {t("New Category")}</Button>
                         )
                     }
                 >
-                    {editingCategory || categoryForm.getFieldValue("name") !== undefined ? (
+                    {categoryEditorOpen ? (
                         <Form form={categoryForm} layout="vertical">
-                            <Form.Item name="name" label="Name" rules={[{ required: true }]}>
-                                <Input placeholder="Category name" />
+                            <Form.Item name="name" label={t("Name")} rules={[{ required: true, message: t("Enter a category name") }]}>
+                                <Input dir="auto" styles={{ input: { fontSize: 16 } }} placeholder={t("Category name")} />
                             </Form.Item>
-                            <Form.Item name="icon" label="Icon (emoji)">
+                            <Form.Item name="icon" label={t("Icon (emoji)")}>
                                 <Space>
                                     <Button
                                         style={{ fontSize: 24, width: 50, height: 50, display: "flex", alignItems: "center", justifyContent: "center" }}
@@ -1464,17 +1492,17 @@ export default function TodoListPage() {
                                     >
                                         {categoryForm.getFieldValue("icon") || "📁"}
                                     </Button>
-                                    <Text type="secondary">Click to choose emoji</Text>
+                                    <Text type="secondary">{t("Click to choose emoji")}</Text>
                                 </Space>
                             </Form.Item>
-                            <Form.Item name="color" label="Color">
+                            <Form.Item name="color" label={t("Color")}>
                                 <ColorPicker format="hex" />
                             </Form.Item>
                             <Space>
                                 <Button type="primary" onClick={handleSaveCategory}>
-                                    {editingCategory ? "Update" : "Add"}
+                                    {editingCategory ? t("Update") : t("Add")}
                                 </Button>
-                                <Button onClick={() => setEditingCategory(null)}>Cancel</Button>
+                                <Button onClick={() => { setEditingCategory(null); setCategoryEditorOpen(false); categoryForm.resetFields(); }}>{t("Cancel")}</Button>
                             </Space>
                         </Form>
                     ) : (
@@ -1486,13 +1514,13 @@ export default function TodoListPage() {
                                     style={{ marginBottom: 8 }}
                                     extra={
                                         <Space>
-                                            <Button aria-label="Edit" size="small" type="text" icon={<EditOutlined />} onClick={() => {
+                                            <Button aria-label={t("Edit")} size="small" type="text" icon={<EditOutlined />} onClick={() => {
                                                 handleEditCategory(cat);
                                                 setSelectedEmoji(cat.icon);
                                             }} />
                                             {!cat.isDefault && (
-                                                <Popconfirm title="Delete category?" onConfirm={() => handleDeleteCategory(cat.id)}>
-                                                    <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} />
+                                                <Popconfirm okText={t("Confirm")} cancelText={t("Cancel")} title={t("Delete category?")} onConfirm={() => handleDeleteCategory(cat.id)}>
+                                                    <Button aria-label={t("Delete")} size="small" type="text" danger icon={<DeleteOutlined />} />
                                                 </Popconfirm>
                                             )}
                                         </Space>
@@ -1502,7 +1530,7 @@ export default function TodoListPage() {
                                         <span style={{ fontSize: 24 }}>{cat.icon}</span>
                                         <Text strong>{cat.name}</Text>
                                         <div style={{ width: 16, height: 16, backgroundColor: cat.color, borderRadius: 4 }} />
-                                        {cat.isDefault && <Tag>Default</Tag>}
+                                        {cat.isDefault && <Tag>{t("Default")}</Tag>}
                                     </Space>
                                 </Card>
                             ))}
@@ -1512,23 +1540,23 @@ export default function TodoListPage() {
 
                 {/* Emoji Picker Modal */}
                 <Modal
-                    title="Choose Icon"
+                    title={t("Choose Icon")}
                     open={emojiPickerOpen}
                     onCancel={() => setEmojiPickerOpen(false)}
                     width={500}
                     footer={[
-                        <Button key="cancel" onClick={() => setEmojiPickerOpen(false)}>Cancel</Button>,
+                        <Button key="cancel" onClick={() => setEmojiPickerOpen(false)}>{t("Cancel")}</Button>,
                         <Button key="select" type="primary" onClick={() => {
                             categoryForm.setFieldValue("icon", selectedEmoji);
                             setEmojiPickerOpen(false);
                         }}>
-                            Select {selectedEmoji}
+                            {t("Select")}{selectedEmoji}
                         </Button>
                     ]}
                 >
                     <Space orientation="vertical" style={{ width: "100%" }} size="middle">
-                        <Input
-                            placeholder="Search emojis..."
+                        <Input dir="auto" styles={{ input: { fontSize: 16 } }}
+                            placeholder={t("Search emojis...")}
                             prefix={<SearchOutlined />}
                             value={emojiSearchText}
                             onChange={(e) => setEmojiSearchText(e.target.value)}
@@ -1538,14 +1566,14 @@ export default function TodoListPage() {
                         <Segmented
                             value={selectedEmojiCategory}
                             onChange={(v) => setSelectedEmojiCategory(v as string)}
-                            options={Object.keys(EMOJI_CATEGORIES)}
+                            options={Object.keys(EMOJI_CATEGORIES).map(value => ({ value, label: t(value) }))}
                             block
                             style={{ overflowX: "auto" }}
                         />
 
                         <div style={{
                             display: "grid",
-                            gridTemplateColumns: "repeat(10, 1fr)",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(40px, 1fr))",
                             gap: 4,
                             maxHeight: 300,
                             overflowY: "auto",
@@ -1579,15 +1607,15 @@ export default function TodoListPage() {
                         <div style={{ textAlign: "center", marginTop: 8 }}>
                             <Text strong style={{ fontSize: 32 }}>{selectedEmoji}</Text>
                             <br />
-                            <Text type="secondary">Selected Icon</Text>
+                            <Text type="secondary">{t("Selected Icon")}</Text>
                         </div>
                     </Space>
                 </Modal>
 
                 {/* Floating Action Button */}
                 <FloatButton.Group shape="circle" style={{ insetInlineEnd: 24 }}>
-                    <FloatButton icon={<PlusOutlined />} type="primary" tooltip="Add Task" onClick={handleAdd} />
-                    <FloatButton icon={<ReloadOutlined />} tooltip="Refresh" onClick={loadData} />
+                    <FloatButton icon={<PlusOutlined />} type="primary" tooltip={t("Add Task")} onClick={handleAdd} />
+                    <FloatButton icon={<ReloadOutlined />} tooltip={t("Refresh")} onClick={loadData} />
                 </FloatButton.Group>
             </Spin>
         </ToolPageLayout>
@@ -1604,6 +1632,7 @@ interface SubtaskListProps {
 }
 
 function SubtaskList({ subtasks, onToggle, onDelete, onAdd }: SubtaskListProps) {
+    const { t } = useLanguage();
     const [newSubtask, setNewSubtask] = useState("");
 
     const handleAdd = () => {
@@ -1617,21 +1646,21 @@ function SubtaskList({ subtasks, onToggle, onDelete, onAdd }: SubtaskListProps) 
         <div>
             {subtasks.map(st => (
                 <div key={st.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                    <Checkbox checked={st.done} onChange={() => onToggle(st.id)} />
+                    <Checkbox aria-label={t("Toggle subtask completion")} checked={st.done} onChange={() => onToggle(st.id)} />
                     <Text style={{ flex: 1, textDecoration: st.done ? "line-through" : "none", opacity: st.done ? 0.5 : 1 }}>
                         {st.title}
                     </Text>
-                    <Button aria-label="Delete" size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => onDelete(st.id)} />
+                    <Button aria-label={t("Delete")} size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => onDelete(st.id)} />
                 </div>
             ))}
             <Space.Compact style={{ width: "100%", marginTop: 8 }}>
-                <Input
-                    placeholder="Add subtask..."
+                <Input dir="auto" styles={{ input: { fontSize: 16 } }}
+                    placeholder={t("Add subtask...")}
                     value={newSubtask}
                     onChange={(e) => setNewSubtask(e.target.value)}
                     onPressEnter={handleAdd}
                 />
-                <Button aria-label="Add" type="primary" icon={<PlusOutlined />} onClick={handleAdd} />
+                <Button aria-label={t("Add")} type="primary" icon={<PlusOutlined />} onClick={handleAdd} />
             </Space.Compact>
         </div>
     );

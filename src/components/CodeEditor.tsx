@@ -1,5 +1,6 @@
 "use client";
 
+import { useLanguage } from "./LanguageProvider";
 import React, { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { loader } from "@monaco-editor/react";
@@ -56,6 +57,7 @@ interface CodeEditorProps {
     readOnly?: boolean;
     showCopy?: boolean;
     copyLabel?: string;
+    ariaLabel?: string;
 }
 
 export function CodeEditor({
@@ -66,7 +68,9 @@ export function CodeEditor({
     readOnly = false,
     showCopy = true,
     copyLabel,
+    ariaLabel,
 }: CodeEditorProps) {
+    const { t } = useLanguage();
     const { darkMode } = useAppStore();
     const isMobile = useIsMobile();
     const [copied, setCopied] = useState(false);
@@ -84,13 +88,14 @@ export function CodeEditor({
     }, [value, copyLabel]);
 
     return (
-        <div style={{ position: "relative" }}>
+        <div dir="ltr" style={{ position: "relative" }}>
             {showCopy && value && (
-                <Tooltip title={copied ? "Copied!" : "Copy to clipboard"}>
+                <Tooltip title={copied ? t("Copied!") : t("Copy to clipboard")}>
                     <Button
                         size="small"
                         type={copied ? "primary" : "text"}
                         icon={copied ? <CheckOutlined /> : <CopyOutlined />}
+                        aria-label={t("Copy to clipboard")}
                         onClick={handleCopy}
                         style={{
                             position: "absolute",
@@ -113,6 +118,7 @@ export function CodeEditor({
                 onChange={(v) => onChange?.(v ?? "")}
                 loading={<Spin />}
                 options={{
+                    ariaLabel: ariaLabel ?? t("Code editor"),
                     minimap: { enabled: false },
                     fontSize: isMobile ? 13 : 14,
                     lineNumbers: isMobile ? "off" : "on",
@@ -148,6 +154,7 @@ export function CodeDiff({
     height = "500px",
     showCopy = true,
 }: CodeDiffProps) {
+    const { t } = useLanguage();
     const { darkMode } = useAppStore();
     const isMobile = useIsMobile();
     const [copiedOrig, setCopiedOrig] = useState(false);
@@ -160,22 +167,22 @@ export function CodeDiff({
         : height;
 
     const handleCopyOrig = useCallback(() => {
-        copyToClipboard(original, "Original copied!");
+        copyToClipboard(original, t("Original copied!"));
         setCopiedOrig(true);
         setTimeout(() => setCopiedOrig(false), 2000);
-    }, [original]);
+    }, [original, t]);
 
     const handleCopyMod = useCallback(() => {
-        copyToClipboard(modified, "Modified copied!");
+        copyToClipboard(modified, t("Modified copied!"));
         setCopiedMod(true);
         setTimeout(() => setCopiedMod(false), 2000);
-    }, [modified]);
+    }, [modified, t]);
 
     return (
-        <div style={{ position: "relative" }}>
+        <div dir="ltr" style={{ position: "relative" }}>
             {showCopy && (
                 <div style={{ position: "absolute", top: 8, right: 24, zIndex: 10, display: "flex", gap: 4 }}>
-                    <Tooltip title={copiedOrig ? "Copied!" : "Copy original"}>
+                    <Tooltip title={copiedOrig ? t("Copied!") : t("Copy original")}>
                         <Button
                             size="small"
                             type={copiedOrig ? "primary" : "text"}
@@ -183,10 +190,10 @@ export function CodeDiff({
                             onClick={handleCopyOrig}
                             style={{ opacity: copiedOrig ? 1 : 0.7 }}
                         >
-                            Left
+                            {t("Left")}
                         </Button>
                     </Tooltip>
-                    <Tooltip title={copiedMod ? "Copied!" : "Copy modified"}>
+                    <Tooltip title={copiedMod ? t("Copied!") : t("Copy modified")}>
                         <Button
                             size="small"
                             type={copiedMod ? "primary" : "text"}
@@ -194,7 +201,7 @@ export function CodeDiff({
                             onClick={handleCopyMod}
                             style={{ opacity: copiedMod ? 1 : 0.7 }}
                         >
-                            Right
+                            {t("Right")}
                         </Button>
                     </Tooltip>
                 </div>

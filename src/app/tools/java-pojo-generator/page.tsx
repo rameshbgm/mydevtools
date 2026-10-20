@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
     Input,
     Select,
@@ -22,6 +22,7 @@ import {
     FolderOutlined,
     DownloadOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -626,6 +627,9 @@ function buildEnum(name: string, fields: FD[], opts: GeneratorOptions, ind: stri
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function JavaPojoGeneratorPage() {
+    const { t } = useLanguage();
+    const translation = useRef(t);
+    useEffect(() => { translation.current = t; }, [t]);
     const { message } = App.useApp();
     const [mode, setMode] = useState<ConversionMode>("json-to-java");
     const [input, setInput] = useState(SAMPLE_JSON);
@@ -674,7 +678,7 @@ export default function JavaPojoGeneratorPage() {
                     setSelectedFile(first);
                     setOutput(fm.get(first) ?? "");
                 }
-                message.success(`Generated ${fm.size} Java file${fm.size > 1 ? "s" : ""}!`);
+                message.success(translation.current("Generated Java files: {count}", { count: fm.size }));
             } else {
                 const classes = parseJavaClasses(input);
                 if (classes.length === 0) throw new Error("No Java classes found");
@@ -686,10 +690,11 @@ export default function JavaPojoGeneratorPage() {
                     const xi = options.useTab ? "\t" : " ".repeat(options.indentSize);
                     setOutput(`<?xml version="1.0" encoding="UTF-8"?>\n` + objToXml(obj, tag, xi, 0));
                 }
-                message.success(`Converted to ${mode === "java-to-json" ? "JSON" : "XML"}!`);
+                message.success(translation.current("Converted to {format}.", { format: mode === "java-to-json" ? "JSON" : "XML" }));
             }
         } catch (err: unknown) {
-            message.error(`Failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+            const detail = err instanceof Error ? err.message : "Unknown error";
+            message.error(`${translation.current("Conversion failed. Check the input and options.")} ${translation.current(detail)}`);
         }
     }, [input, mode, options, isToJava, message]);
 
@@ -714,102 +719,87 @@ export default function JavaPojoGeneratorPage() {
 
     const toJavaOpts = useMemo(() => (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-3">
-            <div><label className="block text-xs opacity-60 mb-1">Package Name</label><Input size="small" value={options.packageName} onChange={(e) => updateOpt("packageName", e.target.value)} /></div>
-            <div><label className="block text-xs opacity-60 mb-1">Root Class Name</label><Input size="small" value={options.rootClassName} onChange={(e) => updateOpt("rootClassName", e.target.value)} /></div>
-            <div><label className="block text-xs opacity-60 mb-1">Java Type</label>
-                <Select size="small" value={options.javaType} onChange={(v) => updateOpt("javaType", v)} className="w-full" options={[
-                    { label: "Class (POJO)", value: "class" }, { label: "Abstract Class", value: "abstract-class" },
-                    { label: "Record (Java 16+)", value: "record" }, { label: "Interface", value: "interface" },
-                    { label: "Annotation", value: "annotation" }, { label: "Enum", value: "enum" },
+            <div><label className="block text-xs opacity-60 mb-1">{t("Package Name")}</label><Input dir="ltr" aria-label={t("Package Name")} styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }} size="small" value={options.packageName} onChange={(e) => updateOpt("packageName", e.target.value)} /></div>
+            <div><label className="block text-xs opacity-60 mb-1">{t("Root Class Name")}</label><Input dir="ltr" aria-label={t("Root Class Name")} styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }} size="small" value={options.rootClassName} onChange={(e) => updateOpt("rootClassName", e.target.value)} /></div>
+            <div><label className="block text-xs opacity-60 mb-1">{t("Java Type")}</label>
+                <Select aria-label={t("Java Type")} size="small" value={options.javaType} onChange={(v) => updateOpt("javaType", v)} className="w-full" options={[
+                    { label: t("Class (POJO)"), value: "class" }, { label: t("Abstract Class"), value: "abstract-class" },
+                    { label: t("Record (Java 16+)"), value: "record" }, { label: t("Interface"), value: "interface" },
+                    { label: t("Annotation"), value: "annotation" }, { label: t("Enum"), value: "enum" },
                 ]} />
             </div>
-            <div><label className="block text-xs opacity-60 mb-1">Output Mode</label>
-                <Select size="small" value={options.outputMode} onChange={(v) => updateOpt("outputMode", v)} className="w-full" options={[
-                    { label: "📄 Single File (all classes)", value: "single-file" },
-                    { label: "📁 Multiple Files (per class)", value: "multiple-files" },
+            <div><label className="block text-xs opacity-60 mb-1">{t("Output Mode")}</label>
+                <Select aria-label={t("Output Mode")} size="small" value={options.outputMode} onChange={(v) => updateOpt("outputMode", v)} className="w-full" options={[
+                    { label: t("Single file (all classes)"), value: "single-file" },
+                    { label: t("Multiple files (per class)"), value: "multiple-files" },
                 ]} />
             </div>
-            <div><label className="block text-xs opacity-60 mb-1">Field Access</label>
-                <Select size="small" value={options.fieldAccessModifier} onChange={(v) => updateOpt("fieldAccessModifier", v)} className="w-full" options={[
+            <div><label className="block text-xs opacity-60 mb-1">{t("Field Access")}</label>
+                <Select aria-label={t("Field Access")} size="small" value={options.fieldAccessModifier} onChange={(v) => updateOpt("fieldAccessModifier", v)} className="w-full" options={[
                     { label: "private", value: "private" }, { label: "protected", value: "protected" },
                     { label: "public", value: "public" }, { label: "package-private", value: "package-private" },
                 ]} />
             </div>
-            <div><label className="block text-xs opacity-60 mb-1">Naming Convention</label>
-                <Select size="small" value={options.fieldNaming} onChange={(v) => updateOpt("fieldNaming", v)} className="w-full" options={[
+            <div><label className="block text-xs opacity-60 mb-1">{t("Naming Convention")}</label>
+                <Select aria-label={t("Naming Convention")} size="small" value={options.fieldNaming} onChange={(v) => updateOpt("fieldNaming", v)} className="w-full" options={[
                     { label: "camelCase", value: "camelCase" }, { label: "snake_case", value: "snake_case" }, { label: "PascalCase", value: "PascalCase" },
                 ]} />
             </div>
-            <div><label className="block text-xs opacity-60 mb-1">Field Prefix</label><Input size="small" value={options.fieldPrefix} onChange={(e) => updateOpt("fieldPrefix", e.target.value)} placeholder="e.g. m_ or _" /></div>
-            <div><label className="block text-xs opacity-60 mb-1">Indent</label>
-                <Select size="small" value={options.indentSize} onChange={(v) => updateOpt("indentSize", v)} className="w-full" options={[{ label: "2", value: 2 }, { label: "4", value: 4 }, { label: "8", value: 8 }]} />
+            <div><label className="block text-xs opacity-60 mb-1">{t("Field Prefix")}</label><Input dir="ltr" aria-label={t("Field Prefix")} styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }} size="small" value={options.fieldPrefix} onChange={(e) => updateOpt("fieldPrefix", e.target.value)} placeholder={t("e.g. m_ or _")} /></div>
+            <div><label className="block text-xs opacity-60 mb-1">{t("Indent")}</label>
+                <Select aria-label={t("Indent")} size="small" value={options.indentSize} onChange={(v) => updateOpt("indentSize", v)} className="w-full" options={[{ label: "2", value: 2 }, { label: "4", value: 4 }, { label: "8", value: 8 }]} />
             </div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.useTab} onChange={(v) => updateOpt("useTab", v)} /><span className="text-sm">Tabs</span></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Tabs")} size="small" checked={options.useTab} onChange={(v) => updateOpt("useTab", v)} /><span className="text-sm">{t("Tabs")}</span></div>
 
-            <div className="col-span-full mt-2 mb-0"><span className="text-xs font-bold opacity-50 uppercase tracking-wider">Annotations & Libraries</span></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.useLombok} onChange={(v) => updateOpt("useLombok", v)} /><Tooltip title="@Data / @NoArgsConstructor / @AllArgsConstructor"><span className="text-sm">Lombok @Data</span></Tooltip></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.generateBuilder} onChange={(v) => updateOpt("generateBuilder", v)} /><Tooltip title="Lombok @Builder"><span className="text-sm">@Builder</span></Tooltip></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.lombokValue} onChange={(v) => updateOpt("lombokValue", v)} /><Tooltip title="Immutable @Value class"><span className="text-sm">@Value (immutable)</span></Tooltip></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.lombokSuperBuilder} onChange={(v) => updateOpt("lombokSuperBuilder", v)} /><Tooltip title="For inheritance"><span className="text-sm">@SuperBuilder</span></Tooltip></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.useJackson} onChange={(v) => updateOpt("useJackson", v)} /><Tooltip title="@JsonProperty, @JsonInclude"><span className="text-sm">Jackson</span></Tooltip></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.useGson} onChange={(v) => updateOpt("useGson", v)} /><Tooltip title="@SerializedName"><span className="text-sm">Gson</span></Tooltip></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.useValidation} onChange={(v) => updateOpt("useValidation", v)} /><Tooltip title="@NotNull, @NotBlank, @NotEmpty"><span className="text-sm">Jakarta Validation</span></Tooltip></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.useJaxb} onChange={(v) => updateOpt("useJaxb", v)} /><Tooltip title="@XmlRootElement, @XmlElement"><span className="text-sm">JAXB (XML)</span></Tooltip></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.useSwagger} onChange={(v) => updateOpt("useSwagger", v)} /><Tooltip title="OpenAPI @Schema"><span className="text-sm">Swagger / OpenAPI</span></Tooltip></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.useJpa} onChange={(v) => updateOpt("useJpa", v)} /><Tooltip title="@Entity, @Table, @Id, @Column"><span className="text-sm">JPA / Hibernate</span></Tooltip></div>
+            <div className="col-span-full mt-2 mb-0"><span className="text-xs font-bold opacity-50 uppercase tracking-wider">{t("Annotations & Libraries")}</span></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Lombok @Data")} size="small" checked={options.useLombok} onChange={(v) => updateOpt("useLombok", v)} /><Tooltip title="@Data / @NoArgsConstructor / @AllArgsConstructor"><span className="text-sm">Lombok @Data</span></Tooltip></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("@Builder")} size="small" checked={options.generateBuilder} onChange={(v) => updateOpt("generateBuilder", v)} /><Tooltip title="Lombok @Builder"><span className="text-sm">@Builder</span></Tooltip></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("@Value (immutable)")} size="small" checked={options.lombokValue} onChange={(v) => updateOpt("lombokValue", v)} /><Tooltip title={t("Immutable @Value class")}><span className="text-sm">{t("@Value (immutable)")}</span></Tooltip></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("@SuperBuilder")} size="small" checked={options.lombokSuperBuilder} onChange={(v) => updateOpt("lombokSuperBuilder", v)} /><Tooltip title={t("For inheritance")}><span className="text-sm">@SuperBuilder</span></Tooltip></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Jackson")} size="small" checked={options.useJackson} onChange={(v) => updateOpt("useJackson", v)} /><Tooltip title="@JsonProperty, @JsonInclude"><span className="text-sm">Jackson</span></Tooltip></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Gson")} size="small" checked={options.useGson} onChange={(v) => updateOpt("useGson", v)} /><Tooltip title="@SerializedName"><span className="text-sm">Gson</span></Tooltip></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Jakarta Validation")} size="small" checked={options.useValidation} onChange={(v) => updateOpt("useValidation", v)} /><Tooltip title="@NotNull, @NotBlank, @NotEmpty"><span className="text-sm">Jakarta Validation</span></Tooltip></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("JAXB (XML)")} size="small" checked={options.useJaxb} onChange={(v) => updateOpt("useJaxb", v)} /><Tooltip title="@XmlRootElement, @XmlElement"><span className="text-sm">JAXB (XML)</span></Tooltip></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Swagger / OpenAPI")} size="small" checked={options.useSwagger} onChange={(v) => updateOpt("useSwagger", v)} /><Tooltip title="OpenAPI @Schema"><span className="text-sm">Swagger / OpenAPI</span></Tooltip></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("JPA / Hibernate")} size="small" checked={options.useJpa} onChange={(v) => updateOpt("useJpa", v)} /><Tooltip title="@Entity, @Table, @Id, @Column"><span className="text-sm">{t("JPA / Hibernate")}</span></Tooltip></div>
 
-            <div className="col-span-full mt-2 mb-0"><span className="text-xs font-bold opacity-50 uppercase tracking-wider">Code Generation</span></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.generateConstructors} onChange={(v) => updateOpt("generateConstructors", v)} /><span className="text-sm">Constructors</span></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.generateGettersSetters} onChange={(v) => updateOpt("generateGettersSetters", v)} /><span className="text-sm">Getters / Setters</span></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.generateToString} onChange={(v) => updateOpt("generateToString", v)} /><span className="text-sm">toString()</span></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.generateEqualsHashCode} onChange={(v) => updateOpt("generateEqualsHashCode", v)} /><span className="text-sm">equals() & hashCode()</span></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.usePrimitives} onChange={(v) => updateOpt("usePrimitives", v)} /><span className="text-sm">Primitives (int vs Integer)</span></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.makeFieldsFinal} onChange={(v) => updateOpt("makeFieldsFinal", v)} /><span className="text-sm">Final Fields</span></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.serializable} onChange={(v) => updateOpt("serializable", v)} /><span className="text-sm">Serializable</span></div>
+            <div className="col-span-full mt-2 mb-0"><span className="text-xs font-bold opacity-50 uppercase tracking-wider">{t("Code Generation")}</span></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Constructors")} size="small" checked={options.generateConstructors} onChange={(v) => updateOpt("generateConstructors", v)} /><span className="text-sm">{t("Constructors")}</span></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Getters / Setters")} size="small" checked={options.generateGettersSetters} onChange={(v) => updateOpt("generateGettersSetters", v)} /><span className="text-sm">{t("Getters / Setters")}</span></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("toString()")} size="small" checked={options.generateToString} onChange={(v) => updateOpt("generateToString", v)} /><span className="text-sm">toString()</span></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("equals() & hashCode()")} size="small" checked={options.generateEqualsHashCode} onChange={(v) => updateOpt("generateEqualsHashCode", v)} /><span className="text-sm">equals() & hashCode()</span></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Primitives (int vs Integer)")} size="small" checked={options.usePrimitives} onChange={(v) => updateOpt("usePrimitives", v)} /><span className="text-sm">{t("Primitives (int vs Integer)")}</span></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Final Fields")} size="small" checked={options.makeFieldsFinal} onChange={(v) => updateOpt("makeFieldsFinal", v)} /><span className="text-sm">{t("Final Fields")}</span></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Serializable")} size="small" checked={options.serializable} onChange={(v) => updateOpt("serializable", v)} /><span className="text-sm">Serializable</span></div>
         </div>
-    ), [options, updateOpt]);
+    ), [options, updateOpt, t]);
 
     const fromJavaOpts = useMemo(() => (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.includeNulls} onChange={(v) => updateOpt("includeNulls", v)} /><span className="text-sm">Include Nulls</span></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.prettyPrint} onChange={(v) => updateOpt("prettyPrint", v)} /><span className="text-sm">Pretty Print</span></div>
-            {mode === "java-to-xml" && <div><label className="block text-xs opacity-60 mb-1">XML Root Element</label><Input size="small" value={options.xmlRootElement} onChange={(e) => updateOpt("xmlRootElement", e.target.value)} /></div>}
-            <div><label className="block text-xs opacity-60 mb-1">Indent</label><Select size="small" value={options.indentSize} onChange={(v) => updateOpt("indentSize", v)} className="w-full" options={[{ label: "2", value: 2 }, { label: "4", value: 4 }]} /></div>
-            <div className="flex items-center gap-2"><Switch size="small" checked={options.useTab} onChange={(v) => updateOpt("useTab", v)} /><span className="text-sm">Tabs</span></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Include Nulls")} size="small" checked={options.includeNulls} onChange={(v) => updateOpt("includeNulls", v)} /><span className="text-sm">{t("Include Nulls")}</span></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Pretty Print")} size="small" checked={options.prettyPrint} onChange={(v) => updateOpt("prettyPrint", v)} /><span className="text-sm">{t("Pretty Print")}</span></div>
+            {mode === "java-to-xml" && <div><label className="block text-xs opacity-60 mb-1">{t("XML Root Element")}</label><Input dir="ltr" aria-label={t("XML Root Element")} styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }} size="small" value={options.xmlRootElement} onChange={(e) => updateOpt("xmlRootElement", e.target.value)} /></div>}
+            <div><label className="block text-xs opacity-60 mb-1">{t("Indent")}</label><Select aria-label={t("Indent")} size="small" value={options.indentSize} onChange={(v) => updateOpt("indentSize", v)} className="w-full" options={[{ label: "2", value: 2 }, { label: "4", value: 4 }]} /></div>
+            <div className="flex items-center gap-2"><Switch aria-label={t("Tabs")} size="small" checked={options.useTab} onChange={(v) => updateOpt("useTab", v)} /><span className="text-sm">{t("Tabs")}</span></div>
         </div>
-    ), [options, updateOpt, mode]);
+    ), [options, updateOpt, mode, t]);
 
     return (
         <ToolPageLayout
-            title="Java POJO Generator"
-            description="Generate Java classes, records, interfaces from JSON/XML — or convert Java back to JSON/XML"
+            title={t("Java POJO Generator")}
+            description={t("Generate Java classes, records, interfaces from JSON/XML — or convert Java back to JSON/XML")}
             icon={<CodeOutlined />}
             color="#597ef7"
             learnMore={{
-                whatIs: "A Java POJO (Plain Old Java Object) Generator creates Java classes from JSON or XML data structures. It can generate traditional classes with getters/setters, modern Java records, or interfaces.",
-                whyUse: "Manually writing data classes from API responses is tedious and error-prone. This tool instantly generates type-safe Java code with proper naming conventions, annotations, and structure.",
-                howToUse: [
-                    "Paste JSON or XML data in the input panel",
-                    "Choose output type: Class, Record, or Interface",
-                    "Configure options: Lombok, Jackson annotations, etc.",
-                    "Copy the generated Java code to your project"
-                ],
-                tips: [
-                    "Use Lombok annotations to reduce boilerplate",
-                    "Java Records are great for immutable data objects",
-                    "Jackson annotations help with JSON serialization",
-                    "Nested objects generate separate classes"
-                ],
-                useCases: [
-                    "Creating DTOs from REST API responses",
-                    "Generating model classes from JSON schemas",
-                    "Converting XML configurations to Java objects",
-                    "Bootstrapping new projects with data models"
-                ]
+                whatIs: "Generate Java model templates from JSON or XML, or produce sample JSON or XML from Java declarations.",
+                whyUse: "Create a starting point for data models; review and compile generated code in your project.",
+                howToUse: ["Choose a conversion mode, edit the input and options, then select Generate or Convert."],
+                tips: ["Arrays infer from the first item. Reverse conversion creates example values; it does not execute Java or recover original runtime data."],
             }}
         >
             <div className="flex flex-col gap-4">
                 <div className="flex flex-wrap items-center gap-3">
+                    <div style={{ maxWidth: "100%", overflowX: "auto" }}>
                     <Segmented
                         options={[
                             { label: "JSON → Java", value: "json-to-java" },
@@ -820,23 +810,24 @@ export default function JavaPojoGeneratorPage() {
                         value={mode}
                         onChange={handleModeChange}
                     />
+                    </div>
                     <Button type="primary" icon={<ThunderboltOutlined />} onClick={generate} size="large">
-                        {isToJava ? "Generate" : "Convert"}
+                        {isToJava ? t("Generate") : t("Convert")}
                     </Button>
-                    <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setOutputFiles(new Map()); }}>Clear</Button>
+                    <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setOutputFiles(new Map()); }}>{t("Clear")}</Button>
                     {output && (
                         <>
                             <Button icon={<CopyOutlined />} onClick={handleCopy}>
-                                {options.outputMode === "multiple-files" && outputFiles.size > 1 ? "Copy All" : "Copy"}
+                                {options.outputMode === "multiple-files" && outputFiles.size > 1 ? t("Copy All") : t("Copy")}
                             </Button>
-                            {isToJava && <Button icon={<DownloadOutlined />} onClick={handleDownload}>Download</Button>}
+                            {isToJava && <Button icon={<DownloadOutlined />} onClick={handleDownload}>{t("Download")}</Button>}
                         </>
                     )}
                 </div>
 
                 <Collapse size="small" items={[{
                     key: "opts",
-                    label: <span>Options{options.useLombok && <Tag color="green" className="ml-2" style={{ fontSize: 10 }}>Lombok</Tag>}{options.useJackson && <Tag color="blue" className="ml-1" style={{ fontSize: 10 }}>Jackson</Tag>}{options.useJpa && <Tag color="orange" className="ml-1" style={{ fontSize: 10 }}>JPA</Tag>}{options.useValidation && <Tag color="purple" className="ml-1" style={{ fontSize: 10 }}>Validation</Tag>}{options.useSwagger && <Tag color="cyan" className="ml-1" style={{ fontSize: 10 }}>Swagger</Tag>}{options.useJaxb && <Tag color="red" className="ml-1" style={{ fontSize: 10 }}>JAXB</Tag>}</span>,
+                    label: <span>{t("Options")}{options.useLombok && <Tag color="green" className="ml-2" style={{ fontSize: 10 }}>Lombok</Tag>}{options.useJackson && <Tag color="blue" className="ml-1" style={{ fontSize: 10 }}>Jackson</Tag>}{options.useJpa && <Tag color="orange" className="ml-1" style={{ fontSize: 10 }}>JPA</Tag>}{options.useValidation && <Tag color="purple" className="ml-1" style={{ fontSize: 10 }}>{t("Validation")}</Tag>}{options.useSwagger && <Tag color="cyan" className="ml-1" style={{ fontSize: 10 }}>Swagger</Tag>}{options.useJaxb && <Tag color="red" className="ml-1" style={{ fontSize: 10 }}>JAXB</Tag>}</span>,
                     children: isToJava ? toJavaOpts : fromJavaOpts,
                 }]} />
 
@@ -844,11 +835,10 @@ export default function JavaPojoGeneratorPage() {
                     <div className="flex flex-wrap gap-2">
                         {[...outputFiles.keys()].map((n) => (
                             <Button key={n} type={selectedFile === n ? "primary" : "default"} size="small" icon={<FileOutlined />} onClick={() => handleFileSelect(n)}>
-                                {n}.java
-                            </Button>
+                                {n}{".java"}</Button>
                         ))}
                         <Badge count={outputFiles.size} style={{ backgroundColor: "#597ef7" }}>
-                            <Button size="small" icon={<FolderOutlined />} disabled>Files</Button>
+                            <Button size="small" icon={<FolderOutlined />} disabled>{t("Files")}</Button>
                         </Badge>
                     </div>
                 )}
@@ -856,15 +846,14 @@ export default function JavaPojoGeneratorPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
                         <div className="text-xs font-semibold opacity-60 mb-1">
-                            {mode === "json-to-java" ? "JSON" : mode === "xml-to-java" ? "XML" : "Java"} Input
-                        </div>
-                        <CodeEditor value={input} onChange={(v) => setInput(v ?? "")} language={inLang} height="65vh" />
+                            {mode === "json-to-java" ? "JSON" : mode === "xml-to-java" ? "XML" : "Java"}{" "}{t("Input")}</div>
+                        <CodeEditor ariaLabel={t("Input")} value={input} onChange={(v) => setInput(v ?? "")} language={inLang} height="65vh" />
                     </div>
                     <div>
                         <div className="text-xs font-semibold opacity-60 mb-1">
-                            {isToJava ? <>Generated Java {selectedFile && options.outputMode === "multiple-files" && outputFiles.size > 1 && <Tag color="blue" style={{ fontSize: 10 }}>{selectedFile}.java</Tag>}</> : mode === "java-to-json" ? "JSON Output" : "XML Output"}
+                            {isToJava ? <>{t("Generated Java")}{selectedFile && options.outputMode === "multiple-files" && outputFiles.size > 1 && <Tag color="blue" style={{ fontSize: 10 }}>{selectedFile}{".java"}</Tag>}</> : mode === "java-to-json" ? t("JSON Output") : t("XML Output")}
                         </div>
-                        <CodeEditor value={output} language={outLang} height="65vh" readOnly />
+                        <CodeEditor ariaLabel={t("Output")} value={output} language={outLang} height="65vh" readOnly />
                     </div>
                 </div>
             </div>

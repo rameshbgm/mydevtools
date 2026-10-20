@@ -3,10 +3,11 @@
 import React, { useState, useMemo } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, Table, Tag, Descriptions } from "antd";
 import { GlobalOutlined, CopyOutlined, LinkOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 interface ParsedURL {
     href: string;
@@ -58,72 +59,42 @@ const SAMPLE_URLS = [
 ];
 
 export default function UrlParserPage() {
+    const { t } = useLanguage();
     const [url, setUrl] = useState(SAMPLE_URLS[0]);
 
     const parsed = useMemo(() => parseURL(url), [url]);
 
-    const copyValue = (value: string, label: string) => copyToClipboard(value, `${label} copied!`);
+    const copyValue = (value: string) => copyToClipboard(value, t("Copied!"));
 
-    const buildUrl = () => {
-        if (!parsed) return;
 
-        const newUrl = new URL(parsed.origin);
-        newUrl.pathname = parsed.pathname;
-        newUrl.hash = parsed.hash;
-        parsed.queryParams.forEach((p) => {
-            newUrl.searchParams.set(p.key, p.value);
-        });
-
-        setUrl(newUrl.href);
-    };
 
     return (
         <ToolPageLayout
-            title="URL Parser"
-            description="Parse and analyze URLs into components"
+            title={t("URL Parser")}
+            description={t("Parse and analyze URLs into components")}
             icon={<GlobalOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
             color="#1677ff"
             learnMore={{
-                whatIs: "A URL parser dissects any URL into its WHATWG-standard components — scheme, username, password, host, port, pathname, search params, and fragment. It mirrors how browsers, servers, and routers interpret URLs internally, exposing the structure that drives routing, redirects, and request building.",
-                whyUse: "URLs are deceptively complex: an extra slash, encoded character, or unsafe scheme can break authentication callbacks, OAuth flows, or signed S3 links. Parsing surfaces exactly what each segment contains, so you can verify percent-encoding, spot stray query params, and confirm a URL behaves the same in every client.",
-                howToUse: [
-                    "Paste any HTTP, HTTPS, FTP, file, mailto, or custom-scheme URL into the input field",
-                    "Inspect the breakdown of scheme, host, port, pathname, query, and fragment",
-                    "Review query parameters as a key-value table — duplicate keys are preserved in order",
-                    "Copy any individual component or the rebuilt URL with one click",
-                    "Test edge cases: unicode hosts, IPv6 literals, percent-encoded paths, deep links",
-                ],
-                tips: [
-                    "Query keys can repeat (?tag=a&tag=b) — order is preserved by the URL spec",
-                    "Fragments (#anchor) never reach the server — they are client-only",
-                    "Default ports (HTTP 80, HTTPS 443) are stripped by `URL.toString()`",
-                    "Punycode (xn--…) is how internationalized domains travel across DNS — the browser converts back automatically",
-                    "Trailing slashes matter for SEO and some routers — /about and /about/ may resolve differently",
-                    "Use `encodeURIComponent` for individual params, `encodeURI` for whole URLs",
-                ],
-                useCases: [
-                    "Debugging OAuth, OIDC, and SAML callback URLs that fail with subtle encoding bugs",
-                    "Validating signed URLs (AWS S3, GCS, CloudFront) before they expire",
-                    "Auditing tracking parameters (utm_*, fbclid, gclid) in marketing links",
-                    "Extracting tokens from password-reset, magic-link, or share URLs",
-                    "Verifying webhook target URLs match exactly what's registered with the provider",
-                    "Inspecting deep links and universal links during mobile development",
-                ],
+                whatIs: t("Inspect URL components using the browser WHATWG URL parser. Parsing happens locally and does not open the URL."),
+                whyUse: t("Check encoded paths, credentials, duplicate query parameters and fragments while debugging links."),
+                howToUse: [t("Paste an absolute URL, including its scheme."), t("Inspect components and query parameters. Duplicate keys stay in their original order."), t("Copy the normalized full URL or an individual component.")],
+                tips: [t("Query values are decoded once by URLSearchParams. Fragments stay client-side; default ports are normalized."), t("Usernames, passwords and tokens remain visible in the input and results.")],
+                useCases: [t("Inspect callback URLs, signed links and application deep links.")],
             }}
         >
             <Row gutter={[24, 24]}>
                 <Col xs={24}>
                     <Card>
-                        <Input
+                        <Input dir="ltr" styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                             size="large"
-                            value={url}
+                            aria-label={t("URL to parse")} value={url}
                             onChange={(e) => setUrl(e.target.value)}
-                            placeholder="Enter URL to parse..."
+                            placeholder={t("Enter URL to parse...")}
                             prefix={<LinkOutlined />}
                             allowClear
                         />
                         <Space wrap style={{ marginTop: 12 }}>
-                            <Text type="secondary">Examples:</Text>
+                            <Text type="secondary">{t("Examples:")}</Text>
                             {SAMPLE_URLS.map((sample, i) => (
                                 <Button
                                     key={i}
@@ -140,7 +111,7 @@ export default function UrlParserPage() {
                 {parsed ? (
                     <>
                         <Col xs={24} lg={12}>
-                            <Card title="URL Components">
+                            <Card title={t("URL Components")}>
                                 <Descriptions column={1} size="small" bordered>
                                     {[
                                         { label: "Full URL", value: parsed.href },
@@ -148,39 +119,39 @@ export default function UrlParserPage() {
                                         { label: "Origin", value: parsed.origin },
                                         { label: "Host", value: parsed.host },
                                         { label: "Hostname", value: parsed.hostname },
-                                        { label: "Port", value: parsed.port || "(default)" },
+                                        { label: "Port", value: parsed.port, empty: "(default)" },
                                         { label: "Pathname", value: parsed.pathname },
-                                        { label: "Search", value: parsed.search || "(none)" },
-                                        { label: "Hash", value: parsed.hash || "(none)" },
+                                        { label: "Search", value: parsed.search, empty: "(none)" },
+                                        { label: "Hash", value: parsed.hash, empty: "(none)" },
                                     ].map((item) => (
                                         <Descriptions.Item
                                             key={item.label}
-                                            label={item.label}
+                                            label={t(item.label)}
                                             styles={{ label: { width: 100 } }}
                                         >
                                             <Space>
-                                                <Text code style={{ fontSize: 12, wordBreak: "break-all" }}>
-                                                    {item.value}
+                                                <Text dir="ltr" code style={{ fontSize: 16, wordBreak: "break-all" }}>
+                                                    {item.value || (item.empty ? t(item.empty) : "")}
                                                 </Text>
-                                                {item.value && item.value !== "(none)" && item.value !== "(default)" && (
-                                                    <Button aria-label="Copy"
+                                                {item.value && (
+                                                    <Button aria-label={t("Copy")}
                                                         size="small"
                                                         type="text"
                                                         icon={<CopyOutlined />}
-                                                        onClick={() => copyValue(item.value, item.label)}
+                                                        onClick={() => copyValue(item.value)}
                                                     />
                                                 )}
                                             </Space>
                                         </Descriptions.Item>
                                     ))}
                                     {parsed.username && (
-                                        <Descriptions.Item label="Username">
-                                            <Text code>{parsed.username}</Text>
+                                        <Descriptions.Item label={t("Username")}>
+                                            <Text dir="ltr" code>{parsed.username}</Text>
                                         </Descriptions.Item>
                                     )}
                                     {parsed.password && (
-                                        <Descriptions.Item label="Password">
-                                            <Text code>{parsed.password}</Text>
+                                        <Descriptions.Item label={t("Password")}>
+                                            <Text dir="ltr" code>{parsed.password}</Text>
                                         </Descriptions.Item>
                                     )}
                                 </Descriptions>
@@ -191,7 +162,7 @@ export default function UrlParserPage() {
                             <Card
                                 title={
                                     <Space>
-                                        <span>Query Parameters</span>
+                                        <span>{t("Query Parameters")}</span>
                                         <Tag>{parsed.queryParams.length}</Tag>
                                     </Space>
                                 }
@@ -199,41 +170,42 @@ export default function UrlParserPage() {
                                 {parsed.queryParams.length > 0 ? (
                                     <Table
                                         size="small"
+                                        scroll={{ x: 460 }}
                                         pagination={false}
                                         dataSource={parsed.queryParams.map((p, i) => ({ ...p, rowKey: i, paramKey: p.key }))}
                                         rowKey="rowKey"
                                         columns={[
                                             {
-                                                title: "Key",
+                                                title: t("Key"),
                                                 dataIndex: "paramKey",
-                                                render: (k: string) => <Text code>{k}</Text>,
+                                                render: (k: string) => <Text dir="ltr" code>{k}</Text>,
                                             },
                                             {
-                                                title: "Value",
+                                                title: t("Value"),
                                                 dataIndex: "value",
-                                                render: (v: string) => <Text code style={{ wordBreak: "break-all" }}>{decodeURIComponent(v)}</Text>,
+                                                render: (v: string) => <Text dir="ltr" code style={{ wordBreak: "break-all" }}>{v}</Text>,
                                             },
                                             {
                                                 title: "",
                                                 width: 50,
                                                 render: (_, record: { paramKey: string; value: string }) => (
-                                                    <Button aria-label="Copy"
+                                                    <Button aria-label={t("Copy")}
                                                         size="small"
                                                         type="text"
                                                         icon={<CopyOutlined />}
-                                                        onClick={() => copyValue(record.value, record.paramKey)}
+                                                        onClick={() => copyValue(record.value)}
                                                     />
                                                 ),
                                             },
                                         ]}
                                     />
                                 ) : (
-                                    <Text type="secondary">No query parameters</Text>
+                                    <Text type="secondary">{t("No query parameters")}</Text>
                                 )}
                             </Card>
 
-                            <Card title="URL Structure" style={{ marginTop: 16 }}>
-                                <div style={{ fontFamily: "monospace", fontSize: 12, overflowX: "auto" }}>
+                            <Card title={t("URL Structure")} style={{ marginTop: 16 }}>
+                                <div dir="ltr" style={{ fontFamily: "monospace", fontSize: 16, overflowX: "auto" }}>
                                     <span style={{ color: "#722ed1" }}>{parsed.protocol}</span>
                                     <span style={{ color: "#8c8c8c" }}>{ "//" }</span>
                                     {parsed.username && (
@@ -273,7 +245,7 @@ export default function UrlParserPage() {
                 ) : url ? (
                     <Col xs={24}>
                         <Card>
-                            <Text type="danger">Invalid URL. Please enter a valid URL.</Text>
+                            <Text type="danger">{t("Invalid URL. Please enter a valid URL.")}</Text>
                         </Card>
                     </Col>
                 ) : null}

@@ -1,0 +1,34 @@
+import assert from "node:assert/strict";
+import vm from "node:vm";
+import { readFile } from "node:fs/promises";
+const listeners = {}, stores = new Map(), origin = "https://tools.example";
+const key = (value) => new URL(typeof value === "string" ? value : value.url || value.href, origin).toString();
+const cacheFor = (name) => {
+    if (!stores.has(name)) stores.set(name, new Map());
+    const store = stores.get(name);
+    return { match: async (request) => store.get(key(request))?.clone(), put: async (request, response) => store.set(key(request), response.clone()) };
+};
+const cacheApi = { open: async (name) => cacheFor(name), keys: async () => [...stores.keys()], delete: async (name) => stores.delete(name), match: async (request) => { for (const store of stores.values()) if (store.has(key(request))) return store.get(key(request)).clone(); } };
+let online = true; const fetched = [];
+const context = { URL, Response, AbortSignal, caches: cacheApi, self: { location: { origin }, clients: { claim: async () => {} }, skipWaiting: async () => {}, addEventListener: (name, listener) => { listeners[name] = listener; } }, fetch: async (request) => {
+    const url = key(request); fetched.push(url);
+    if (!online) throw new Error("Offline");
+    return new Response(url.includes("_next/static/") ? "script" : '<html><script src="/_next/static/chunk.js"></script><link href="/_next/static/style.css" rel="stylesheet"></html>', { headers: { "content-type": url.includes("_next/static/") ? "application/javascript" : "text/html" } });
+} };
+vm.runInNewContext(await readFile(new URL("../public/sw.js", import.meta.url), "utf8"), context);
+const runEvent = async (name, extra = {}) => { const waits = []; let response; listeners[name]({ ...extra, waitUntil: (promise) => waits.push(promise), respondWith: (promise) => { response = promise; } }); const result = await response; await Promise.all(waits); return result; };
+await runEvent("install");
+assert.ok(await cacheApi.match(origin + "/")); assert.ok(await cacheApi.match(origin + "/_next/static/chunk.js"));
+await runEvent("message", { data: { type: "CACHE_PUBLIC_PAGE", path: "/formatters/json-formatter" } });
+assert.ok(await cacheApi.match(origin + "/formatters/json-formatter"));
+const count = fetched.length;
+await runEvent("message", { data: { type: "CACHE_PUBLIC_PAGE", path: "/api/proxy" } });
+assert.equal(fetched.length, count);
+online = false;
+const request = (path, headers = {}) => ({ url: origin + path, method: "GET", mode: "navigate", headers: new Headers(headers) });
+assert.equal((await runEvent("fetch", { request: request("/formatters/json-formatter") })).status, 200);
+assert.equal((await runEvent("fetch", { request: request("/formatters/xml-formatter") })).status, 503);
+for (const req of [request("/api/proxy"), request("/formatters/json-formatter", { authorization: "Bearer secret" }), request("/formatters/json-formatter?_rsc=random"), request("/formatters/json-formatter", { rsc: "1" })]) assert.equal(await runEvent("fetch", { request: req }), undefined);
+await cacheApi.open("other-app-cache"); await cacheApi.open("mydevtools-old");
+await runEvent("activate"); assert.ok(stores.has("other-app-cache")); assert.equal(stores.has("mydevtools-old"), false);
+console.log("✓ Service worker: public page/assets warmed, visited page offline, uncached failure, API/auth/RSC excluded, unrelated caches preserved");

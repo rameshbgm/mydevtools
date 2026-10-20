@@ -10,6 +10,7 @@ import {
     CheckCircleOutlined,
     CloseCircleOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SendToButton from "@/components/SendToButton";
@@ -33,6 +34,9 @@ interface ShareState { input: string; mode: Mode; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "mermaid-formatter", version: 1 };
 
 export default function MermaidFormatterPage() {
+    const { t } = useLanguage();
+    const translationRef = React.useRef(t);
+    useEffect(() => { translationRef.current = t; }, [t]);
     const { message } = App.useApp();
     const [input, setInput] = useState(SAMPLE);
     const [output, setOutput] = useState("");
@@ -45,7 +49,7 @@ export default function MermaidFormatterPage() {
     const loadMermaid = async (): Promise<Mermaid> => {
         if (!mermaidRef.current) {
             const mermaid = (await import("mermaid")).default;
-            mermaid.initialize({ theme: "base", securityLevel: "loose", fontFamily: "monospace", startOnLoad: false });
+            mermaid.initialize({ theme: "base", securityLevel: "strict", fontFamily: "monospace", startOnLoad: false });
             mermaidRef.current = mermaid;
         }
         return mermaidRef.current;
@@ -70,9 +74,9 @@ export default function MermaidFormatterPage() {
                 const validationResult = await validateMermaid(mermaid, src);
                 setValidState(validationResult.valid ? "valid" : "invalid");
                 if (validationResult.valid) {
-                    message.success("✅ Valid Mermaid!");
+                    message.success(translationRef.current("Valid Mermaid!"));
                 } else {
-                    message.error("❌ Invalid Mermaid: " + validationResult.error);
+                    message.error(translationRef.current("Invalid Mermaid: {error}", { error: validationResult.error ?? "" }));
                 }
                 setOutput("");
             } else {
@@ -81,17 +85,17 @@ export default function MermaidFormatterPage() {
                     setPreviewSvg(svg);
                     setOutput("");
                 } catch (e) {
-                    setError(e instanceof Error ? e.message : "Rendering error");
+                    setError(e instanceof Error ? e.message : translationRef.current("Rendering error"));
                     setOutput("");
                 }
             }
         } catch (e: unknown) {
-            const errMessage = e instanceof Error ? e.message : "Processing error";
+            const errMessage = e instanceof Error ? e.message : translationRef.current("Processing error");
             if (m === "Validate") {
                 setValidState("invalid");
-                message.error("❌ Invalid Mermaid: " + errMessage);
+                message.error(translationRef.current("Invalid Mermaid: {error}", { error: errMessage }));
             } else {
-                message.error("Error: " + errMessage);
+                message.error(translationRef.current("Error: {error}", { error: errMessage }));
             }
             setOutput("");
         }
@@ -106,7 +110,6 @@ export default function MermaidFormatterPage() {
             const trimmed = line.trim();
             if (!trimmed) return '';
 
-            const hasSemicolon = trimmed.endsWith('%;');
             const words = trimmed.replace(/[;]$/, '').split(/\s+/);
 
             if (words.length > 1 && words[1] === '{') {
@@ -128,7 +131,7 @@ export default function MermaidFormatterPage() {
             await mermaid.parse(cleanedCode);
             return { valid: true };
         } catch (e) {
-            return { valid: false, error: e instanceof Error ? e.message : "Parse error" };
+            return { valid: false, error: e instanceof Error ? e.message : translationRef.current("Parse error") };
         }
     };
 
@@ -157,33 +160,19 @@ export default function MermaidFormatterPage() {
 
     return (
         <ToolPageLayout
-            title="Mermaid Formatter"
-            description="Format, validate and preview Mermaid diagrams and flowcharts"
+            title={t("Mermaid Formatter")}
+            description={t("Format, validate and preview Mermaid diagrams and flowcharts")}
             icon={<FileMarkdownOutlined style={{ fontSize: 24, color: "#667eea" }} />}
             color="#667eea"
             learnMore={{
-                whatIs: "A Mermaid Formatter beautifies Mermaid diagram code by applying consistent indentation, formatting, and validation. It also renders diagrams as visual graphs and charts, making it easier to create flowcharts, sequence diagrams, class diagrams, and more.",
-                whyUse: "Mermaid makes it easy to create diagrams and flowcharts from text. This tool helps you write cleaner, more readable Mermaid code with proper indentation, validates your syntax to catch errors early, and provides a live preview so you can see the rendered diagram instantly.",
+                whatIs: "Format, validate and preview Mermaid diagram code.",
+                whyUse: "Check diagram syntax and apply consistent two-space indentation.",
                 howToUse: [
-                    "Paste your Mermaid diagram code into the input editor",
-                    "Select 'Format' to apply consistent indentation and formatting",
-                    "Choose 'Validate' to check for syntax errors and validate your diagram",
-                    "Use 'View' to see a live rendered preview of your diagram",
-                    "Copy formatted code or the SVG preview as needed"
+                    "Enter Mermaid code and select Format, Validate or View.",
                 ],
                 tips: [
-                    "Standard indentation of 2 spaces for readability",
-                    "Use validation to catch undefined shapes or syntax errors early",
-                    "The preview shows exactly how your diagram will render",
-                    "Copy the SVG output for use in documentation"
+                    "Copy keeps the diagram code. Validation diagnostics remain in their original form.",
                 ],
-                useCases: [
-                    "Creating flowcharts and process diagrams",
-                    "Documenting API endpoints and services",
-                    "Designing database schemas and relationships",
-                    "Building sequence diagrams for technical documentation",
-                    "Creating class diagrams for software architecture"
-                ]
             }}
         >
             <ToolBridgeBanner
@@ -193,26 +182,26 @@ export default function MermaidFormatterPage() {
 
             <Space style={{ marginBottom: 16 }} wrap>
                 <Segmented<Mode>
-                    options={["Format", "Validate", "View"]}
+                    options={(["Format", "Validate", "View"] as const).map(value => ({ value, label: t(value) }))}
                     value={mode}
                     onChange={(v) => setMode(v)}
                     size="large"
                 />
                 {validState === "valid" && (
-                    <Tag icon={<CheckCircleOutlined />} color="success">Valid Mermaid</Tag>
+                    <Tag icon={<CheckCircleOutlined />} color="success">{t("Valid Mermaid")}</Tag>
                 )}
                 {validState === "invalid" && (
-                    <Tag icon={<CloseCircleOutlined />} color="error">Invalid Mermaid</Tag>
+                    <Tag icon={<CloseCircleOutlined />} color="error">{t("Invalid Mermaid")}</Tag>
                 )}
-                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output || input)}>Copy</Button>
-                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setValidState(null); setPreviewSvg(""); setError(""); }}>Clear</Button>
+                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output || input)}>{t("Copy")}</Button>
+                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setValidState(null); setPreviewSvg(""); setError(""); }}>{t("Clear")}</Button>
                 <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, mode })} size="middle" />
                 <SendToButton data={output || input} kind="mermaid" sourceToolId="mermaid-formatter" size="middle" />
             </Space>
 
             {mode === "View" && previewSvg && (
                 <Alert
-                    title="Preview is generated by Mermaid.js"
+                    title={t("Preview is generated by Mermaid.js")}
                     type="info"
                     showIcon
                     style={{ marginBottom: 16 }}
@@ -220,9 +209,8 @@ export default function MermaidFormatterPage() {
             )}
 
             <div className="tool-split-pane" style={{ gap: 16 }}>
-                <Card size="small" title="Input" styles={{ body: { padding: 0 } }}>
-                    <CodeEditor
-                        value={input}
+                <Card size="small" title={t("Input")} styles={{ body: { padding: 0 } }}>
+                    <CodeEditor ariaLabel={t("Diagram code editor")} value={input}
                         onChange={(v) => { setInput(v); run(mode, v); }}
                         language="text"
                         height="500px"
@@ -230,7 +218,7 @@ export default function MermaidFormatterPage() {
                 </Card>
                 <Card
                     size="small"
-                    title={mode === "Validate" ? "Validation" : mode === "View" ? "Preview" : "Output"}
+                    title={t(mode === "Validate" ? "Validation" : mode === "View" ? "Preview" : "Output")}
                     styles={{ body: mode === "Validate" ? { padding: 24 } : mode === "View" ? { padding: 32, textAlign: "center" } : { padding: 0 } }}
                 >
                     {mode === "Validate" ? (
@@ -240,30 +228,29 @@ export default function MermaidFormatterPage() {
                             ) : validState === "invalid" ? (
                                 <CloseCircleOutlined style={{ fontSize: 64, color: "#f5222d" }} />
                             ) : (
-                                <Text type="secondary">Paste Mermaid and it will be validated automatically</Text>
+                                <Text type="secondary">{t("Paste Mermaid and it will be validated automatically")}</Text>
                             )}
                             {validState && (
                                 <div style={{ marginTop: 16, fontSize: 18 }}>
                                     <Text type={validState === "valid" ? "success" : "danger"}>
-                                        {validState === "valid" ? "Mermaid is valid!" : "Mermaid is invalid"}
+                                        {t(validState === "valid" ? "Mermaid is valid!" : "Mermaid is invalid")}
                                     </Text>
                                 </div>
                             )}
                         </div>
                     ) : mode === "View" ? (
                         previewSvg ? (
-                            <div dangerouslySetInnerHTML={{ __html: previewSvg }} />
+                            <iframe title={t("Mermaid diagram preview")} sandbox="" referrerPolicy="no-referrer" srcDoc={previewSvg} style={{ width: "100%", minHeight: 500, border: 0 }} />
                         ) : error ? (
                             <div>
                                 <Text type="danger">{error}</Text>
                             </div>
                         ) : (
                             <Text type="secondary" style={{ display: "block", padding: "80px 0", textAlign: "center" }}>
-                                Paste Mermaid diagram and it will be rendered here
-                            </Text>
+                                {t("Paste Mermaid diagram and it will be rendered here")}</Text>
                         )
                     ) : (
-                        <CodeEditor value={output} language="text" height="500px" readOnly />
+                        <CodeEditor ariaLabel={t("Diagram code editor")} value={output} language="text" height="500px" readOnly />
                     )}
                 </Card>
             </div>

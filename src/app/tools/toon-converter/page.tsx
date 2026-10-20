@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Card, Typography, Input, Row, Col, Space, Tag, Radio, Segmented, App, Tooltip } from "antd";
+import { Card, Typography, Input, Row, Col, Space, Tag, Radio, Segmented, Switch, Tooltip } from "antd";
 import { CompressOutlined, CopyOutlined, SwapOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
+import { parseQueryJson } from "@/lib/json-number-source";
 import { encodeToon, decodeToon } from "@/lib/toon";
 import SendToButton from "@/components/SendToButton";
 import ShareButton from "@/components/ShareButton";
@@ -36,7 +38,7 @@ function xmlToObject(xml: string): unknown {
 }
 
 function elementToValue(el: Element): unknown {
-    const result: Record<string, unknown> = {};
+    const result: Record<string, unknown> = Object.create(null);
     for (const attr of Array.from(el.attributes)) {
         result[`@${attr.name}`] = attr.value;
     }
@@ -47,7 +49,7 @@ function elementToValue(el: Element): unknown {
         if (text) result["#text"] = text;
         return result;
     }
-    const grouped: Record<string, Element[]> = {};
+    const grouped: Record<string, Element[]> = Object.create(null);
     for (const child of children) {
         (grouped[child.tagName] = grouped[child.tagName] || []).push(child);
     }
@@ -82,22 +84,28 @@ function objectToXml(obj: unknown, rootTag = "root"): string {
         const entries = Object.entries(obj as Record<string, unknown>);
         if (entries.length === 1) return valueToXml(entries[0][0], entries[0][1]);
     }
-    return valueToXml(rootTag, obj);
+    return Array.isArray(obj) ? `<${rootTag}>${obj.map((value) => valueToXml("item", value)).join("")}</${rootTag}>` : valueToXml(rootTag, obj);
 }
 
 function escapeXml(s: string): string {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function convert(src: string, direction: Direction, from: StructFmt, to: StructFmt): { output: string; error: string | null } {
-    if (!src.trim()) return { output: "", error: null };
+function convert(src: string, direction: Direction, from: StructFmt, to: StructFmt, legacyDataRootArray = false): { output: string; error: string | null } {
+    if (!src.trim() && direction === "encode") return { output: "", error: null };
     try {
         if (direction === "encode") {
-            const data = from === "json" ? JSON.parse(src) : xmlToObject(src);
+            const data = from === "json" ? parseQueryJson(src, "reject", "A numeric value would lose precision or negative zero. Quote that value as text before converting.") : xmlToObject(src);
             return { output: encodeToon(data), error: null };
         }
-        const data = decodeToon(src);
-        return { output: to === "xml" ? objectToXml(data) : JSON.stringify(data, null, 2), error: null };
+        const data = decodeToon(src, { legacyDataRootArray });
+        if (to === "xml") {
+            const output = objectToXml(data);
+            const doc = new DOMParser().parseFromString(output, "application/xml");
+            if (doc.querySelector("parsererror")) throw new Error("Output cannot be represented as well-formed XML");
+            return { output, error: null };
+        }
+        return { output: JSON.stringify(data, null, 2), error: null };
     } catch (err) {
         return { output: "", error: err instanceof Error ? err.message : String(err) };
     }
@@ -141,13 +149,15 @@ tags[3]:
   - release
   - stable`;
 
-interface ShareState { direction: Direction; structFmt: StructFmt; input: string; }
+interface ShareState { direction: Direction; structFmt: StructFmt; input: string; legacyDataRootArray?: boolean; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "toon-converter", version: 1 };
 
 export default function ToonConverterPage() {
-    const { message } = App.useApp();
+    const { t } = useLanguage();
+
     const [direction, setDirection] = useState<Direction>("encode");
     const [structFmt, setStructFmt] = useState<StructFmt>("json");
+    const [legacyDataRootArray, setLegacyDataRootArray] = useState(false);
     const [input, setInput] = useState(SAMPLE_JSON);
     const [tokenCounts, setTokenCounts] = useState<{ in: number; out: number } | null>(null);
     const countTokensRef = useRef<((t: string) => number) | null>(null);
@@ -156,8 +166,8 @@ export default function ToonConverterPage() {
     const to = direction === "encode" ? ("toon" as const) : structFmt;
 
     const { output, error } = useMemo(
-        () => convert(input, direction, structFmt, structFmt),
-        [input, direction, structFmt]
+        () => convert(input, direction, structFmt, structFmt, legacyDataRootArray),
+        [input, direction, structFmt, legacyDataRootArray]
     );
 
     useEffect(() => {
@@ -194,55 +204,49 @@ export default function ToonConverterPage() {
 
     const inChars = input.length;
     const outChars = output.length;
-    const charsSaved = Math.max(0, inChars - outChars);
+    const charsSaved = inChars - outChars;
     const savingsPct = inChars > 0 ? (charsSaved / inChars) * 100 : 0;
 
     const tokensIn = tokenCounts?.in ?? 0;
     const tokensOut = tokenCounts?.out ?? 0;
-    const tokensSaved = Math.max(0, tokensIn - tokensOut);
+    const tokensSaved = tokensIn - tokensOut;
     const tokensSavedPct = tokensIn > 0 ? (tokensSaved / tokensIn) * 100 : 0;
 
     const copyOutput = async () => {
         await copyToClipboard(output);
-        message.success("Copied");
+
     };
 
     useShareableState(SHARE_SCHEMA, (s) => {
         setDirection(s.direction);
         setStructFmt(s.structFmt);
         setInput(s.input);
+        setLegacyDataRootArray(s.legacyDataRootArray === true);
     });
 
     const emitKind = direction === "encode" ? "text" : structFmt;
 
     return (
         <ToolPageLayout
-            title="TOON Converter"
-            description="Convert JSON or XML to TOON (Token-Oriented Object Notation) and back — compact, LLM-friendly, with real token savings"
+            title={t("TOON Converter")}
+            description={t("Convert JSON or XML to TOON (Token-Oriented Object Notation) and back — compare compact structured text with local token counts")}
             icon={<CompressOutlined style={{ fontSize: 24, color: "#7c3aed" }} />}
             color="#7c3aed"
             learnMore={{
-                whatIs: "TOON (Token-Oriented Object Notation) is a compact text format for structured data. It uses indentation instead of braces, declares array shapes upfront (e.g. users[2]{id,name}:), and drops quotes on strings that don't need them. The result reads like YAML but parses more strictly, and uses noticeably fewer tokens than equivalent JSON.",
-                whyUse: "Large language models price requests by tokens, not characters; configuration files and structured fixtures are often the largest single contribution to prompt size. Converting JSON or XML payloads to TOON typically cuts real token counts noticeably for tabular data, and this tool measures the actual token difference rather than approximating from character count.",
-                howToUse: [
-                    "Choose a direction: encode (JSON/XML → TOON) or decode (TOON → JSON/XML)",
-                    "Pick the structured format on the other side of the conversion",
-                    "Paste your document; the converted output appears on the right",
-                    "The token badges show the real difference, measured with the same tokenizer OpenAI uses server-side",
+                "whatIs": "Converts JSON or an XML object mapping to a supported TOON subset and back. Local o200k_base counts compare encoded text; savings depend on the data.",
+                "whyUse": "Compare compact tabular structured data with JSON before including it in a prompt. Counts are not a verified model mapping or provider request estimate.",
+                "howToUse": [
+                                "Choose encode or decode and JSON or XML, then paste a document.",
+                                "Inspect the output and token difference; use the swap control to reuse the actual output as input."
                 ],
-                tips: [
-                    "Tabular data (arrays of objects with the same scalar fields) compress the most — TOON emits a header row plus CSV-like rows instead of repeating keys.",
-                    "Strings that look like numbers, booleans, null, or contain structural characters are auto-quoted to preserve type information on parse.",
-                    "XML attributes are mapped to keys prefixed with @ to preserve them through the conversion.",
-                    "Decoding is strict about indentation — TOON emitted by this tool round-trips exactly, but hand-edited TOON with inconsistent indentation may not parse as expected.",
+                "tips": [
+                                "XML attributes use @ keys and text uses #text. Mixed-content order, whitespace and namespace semantics are not preserved.",
+                                "This implementation is not a full TOON specification validator. Verify output before depending on unsupported syntax."
                 ],
-                useCases: [
-                    "Reducing token spend on LLM prompts that embed structured data",
-                    "Converting a model's TOON output back to JSON for your application code",
-                    "Embedding fixtures in markdown documentation without huge JSON blocks",
-                    "Producing readable diffs of large configs",
-                ],
-            }}
+                "useCases": [
+                                "Compare prompt encodings and convert structured fixtures for documentation."
+                ]
+}}
         >
             <ToolBridgeBanner
                 accepts={["json", "xml", "text"]}
@@ -264,40 +268,41 @@ export default function ToonConverterPage() {
                                 { value: "decode", label: `TOON → ${structFmt.toUpperCase()}` },
                             ]}
                         />
-                        <Text type="secondary">Format:</Text>
+                        <Text type="secondary">{t("Format:")}</Text>
                         <Radio.Group
                             value={structFmt}
                             onChange={(e) => switchStructFmt(e.target.value)}
                             options={[
-                                { value: "json", label: "JSON" },
-                                { value: "xml", label: "XML" },
+                                { value: "json", label: t("JSON") },
+                                { value: "xml", label: t("XML") },
                             ]}
                             optionType="button"
                             buttonStyle="solid"
                         />
                     </Space>
                     <Space wrap>
-                        <Tooltip title="Real token counts, measured with gpt-tokenizer (o200k_base — same tokenizer OpenAI uses for GPT-4o/5.x)">
-                            <Tag>in: {tokensIn.toLocaleString()} tok</Tag>
+                        <Tooltip title={t("Local o200k_base encoding counts, not a verified model mapping or provider request count")}>
+                            <Tag>{t("in:")}{tokensIn.toLocaleString()} {t("tok")}</Tag>
                         </Tooltip>
-                        <Tooltip title="Output tokens">
-                            <Tag color="purple">out: {tokensOut.toLocaleString()} tok</Tag>
+                        <Tooltip title={t("Output tokens")}>
+                            <Tag color="purple">{t("out:")}{tokensOut.toLocaleString()} {t("tok")}</Tag>
                         </Tooltip>
-                        <Tooltip title="Token difference between input and output">
+                        <Tooltip title={t("Token difference between input and output")}>
                             <Tag color={tokensSaved > 0 ? "green" : "default"}>
-                                {tokensSaved > 0 ? "saved" : "delta"}: {tokensSaved.toLocaleString()} ({tokensSavedPct.toFixed(1)}%)
+                                {t(tokensSaved > 0 ? "saved" : "delta")}: {tokensSaved.toLocaleString()} ({tokensSavedPct.toFixed(1)}%)
                             </Tag>
                         </Tooltip>
-                        <Tooltip title="Character counts, for reference">
-                            <Tag color="default">chars: {inChars.toLocaleString()} → {outChars.toLocaleString()} ({savingsPct.toFixed(0)}%)</Tag>
+                        <Tooltip title={t("Character counts, for reference")}>
+                            <Tag color="default">{t("chars:")}{inChars.toLocaleString()} → {outChars.toLocaleString()} ({savingsPct.toFixed(0)}%)</Tag>
                         </Tooltip>
                     </Space>
                 </Space>
             </Card>
 
+            {direction === "decode" && <Space style={{ marginTop: 12 }}><Switch checked={legacyDataRootArray} onChange={setLegacyDataRootArray} aria-label={t("Legacy root array")} /><Text>{t("Legacy root array: unwrap a single data array from older exports")}</Text></Space>}
             <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
                 <Col xs={24} md={12}>
-                    <Card size="small" title={<Space><Text strong>Input</Text><Tag color="blue">{from.toUpperCase()}</Tag></Space>}>
+                    <Card size="small" title={<Space><Text strong>{t("Input")}</Text><Tag color="blue">{from.toUpperCase()}</Tag></Space>}>
                         <TextArea
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
@@ -309,21 +314,21 @@ export default function ToonConverterPage() {
                 <Col xs={24} md={12}>
                     <Card
                         size="small"
-                        title={<Space><Text strong>Output</Text><Tag color="purple">{to.toUpperCase()}</Tag></Space>}
+                        title={<Space><Text strong>{t("Output")}</Text><Tag color="purple">{to.toUpperCase()}</Tag></Space>}
                         extra={
                             <Space>
-                                {!error && output && <a onClick={copyOutput}><CopyOutlined /> Copy</a>}
+                                {!error && input.trim() && <a onClick={copyOutput}><CopyOutlined /> {t("Copy")}</a>}
                                 <SwapOutlined
-                                    onClick={() => { if (!error && output) { setInput(output); switchDirection(direction === "encode" ? "decode" : "encode"); } }}
-                                    style={{ cursor: !error && output ? "pointer" : "not-allowed", opacity: !error && output ? 1 : 0.4 }}
-                                    title="Send output back as input, flipping direction"
+                                    onClick={() => { if (!error && input.trim()) { setInput(output); setDirection(direction === "encode" ? "decode" : "encode"); } }}
+                                    style={{ cursor: !error && input.trim() ? "pointer" : "not-allowed", opacity: !error && input.trim() ? 1 : 0.4 }}
+                                    title={t("Send output back as input, flipping direction")}
                                 />
                             </Space>
                         }
                     >
                         {error ? (
                             <Text type="danger" style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12, whiteSpace: "pre-wrap" }}>
-                                {error}
+                                {t(error)}
                             </Text>
                         ) : (
                             <TextArea
@@ -338,17 +343,16 @@ export default function ToonConverterPage() {
             </Row>
 
             <Space style={{ marginTop: 16 }}>
-                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ direction, structFmt, input })} size="middle" />
+                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ direction, structFmt, input, legacyDataRootArray })} size="middle" />
                 <SendToButton data={output} kind={emitKind} sourceToolId="toon-converter" size="middle" />
             </Space>
 
-            <Card size="small" style={{ marginTop: 16 }} title="How TOON compresses">
+            <Card size="small" style={{ marginTop: 16 }} title={t("How TOON compresses")}>
                 <Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 8 }}>
-                    TOON&rsquo;s biggest savings come from <b>tabular arrays</b> — arrays of objects with the same scalar fields. Instead of repeating keys per row, it emits one header line and CSV-like rows.
-                </Paragraph>
+                    {t("Tabular arrays share one field header instead of repeating the same keys for every row.")}</Paragraph>
                 <Row gutter={[12, 12]}>
                     <Col xs={24} md={12}>
-                        <Card size="small" type="inner" title="JSON" style={{ background: "rgba(0,0,0,0.02)" }}>
+                        <Card size="small" type="inner" title={t("JSON")} style={{ background: "rgba(0,0,0,0.02)" }}>
                             <pre style={{ margin: 0, fontFamily: "var(--font-geist-mono)", fontSize: 11 }}>{`[
   {"id":1,"name":"Ada","role":"admin"},
   {"id":2,"name":"Bob","role":"user"},
@@ -357,7 +361,7 @@ export default function ToonConverterPage() {
                         </Card>
                     </Col>
                     <Col xs={24} md={12}>
-                        <Card size="small" type="inner" title="TOON" style={{ background: "rgba(124,58,237,0.04)" }}>
+                        <Card size="small" type="inner" title={t("TOON")} style={{ background: "rgba(124,58,237,0.04)" }}>
                             <pre style={{ margin: 0, fontFamily: "var(--font-geist-mono)", fontSize: 11 }}>{`data[3]{id,name,role}:
   1,Ada,admin
   2,Bob,user

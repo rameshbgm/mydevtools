@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
+
 import React, { useState, useMemo } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, Alert, Switch, Select } from "antd";
 import { SwapOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
@@ -130,6 +132,7 @@ interface ShareState { input: string; attributePrefix: string; textKey: string; 
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "json-to-xml", version: 1 };
 
 export default function JsonToXmlPage() {
+    const { t } = useLanguage();
     const [input, setInput] = useState(SAMPLE_JSON);
     const [attributePrefix, setAttributePrefix] = useState("@");
     const [textKey, setTextKey] = useState("#text");
@@ -149,7 +152,7 @@ export default function JsonToXmlPage() {
         }
     }, [input, attributePrefix, textKey, declaration, indent]);
 
-    const copyOutput = () => copyToClipboard(output, "XML copied!");
+    const copyOutput = () => copyToClipboard(output, t("XML copied!"));
 
     useShareableState(SHARE_SCHEMA, (s) => {
         setInput(s.input);
@@ -161,8 +164,8 @@ export default function JsonToXmlPage() {
 
     return (
         <ToolPageLayout
-            title="JSON to XML Converter"
-            description="Convert JSON objects to well-formed XML"
+            title={t("JSON to XML Converter")}
+            description={t("Convert JSON objects to well-formed XML")}
             icon={<SwapOutlined style={{ fontSize: 24, color: "#faad14" }} />}
             color="#faad14"
             learnMore={{
@@ -198,10 +201,10 @@ export default function JsonToXmlPage() {
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card
-                        title="JSON Input"
+                        title={t("JSON Input")}
                         extra={
                             <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
-                                Clear
+                                {t("Clear")}
                             </Button>
                         }
                     >
@@ -216,17 +219,17 @@ export default function JsonToXmlPage() {
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title="XML Output"
+                        title={t("XML Output")}
                         extra={
                             output && (
                                 <Button size="small" icon={<CopyOutlined />} onClick={copyOutput}>
-                                    Copy
+                                    {t("Copy")}
                                 </Button>
                             )
                         }
                     >
                         {error ? (
-                            <Alert type="error" title={error} showIcon style={{ marginBottom: 16 }} />
+                            <Alert type="error" title={t("Conversion failed. Check the input and options, then try again.")} description={<bdi dir="ltr">{error}</bdi>} showIcon style={{ marginBottom: 16 }} />
                         ) : null}
                         <CodeEditor
                             value={output}
@@ -238,27 +241,33 @@ export default function JsonToXmlPage() {
                 </Col>
 
                 <Col xs={24}>
-                    <Card title="Conversion Options">
+                    <Card title={t("Conversion Options")}>
                         <Space wrap size="large">
                             <div>
-                                <Text style={{ display: "block", marginBottom: 4 }}>Attribute Prefix</Text>
+                                <Text style={{ display: "block", marginBottom: 4 }}>{t("Attribute Prefix")}</Text>
                                 <Select
+                                    direction="ltr"
+                                    styles={{ input: { direction: "ltr", textAlign: "left" }, itemContent: { direction: "ltr", textAlign: "left" } }}
+                                    aria-label={t("Attribute Prefix")}
                                     value={attributePrefix}
                                     onChange={setAttributePrefix}
-                                    style={{ width: 120 }}
+                                    style={{ minWidth: 120 }}
                                     options={[
-                                        { value: "@", label: "@ (default)" },
-                                        { value: "_", label: "_ (underscore)" },
-                                        { value: "$", label: "$ (dollar)" },
+                                        { value: "@", label: t("@ (default)") },
+                                        { value: "_", label: t("_ (underscore)") },
+                                        { value: "$", label: t("$ (dollar)") },
                                     ]}
                                 />
                             </div>
                             <div>
-                                <Text style={{ display: "block", marginBottom: 4 }}>Text Content Key</Text>
+                                <Text style={{ display: "block", marginBottom: 4 }}>{t("Text Content Key")}</Text>
                                 <Select
+                                    direction="ltr"
+                                    styles={{ input: { direction: "ltr", textAlign: "left" }, itemContent: { direction: "ltr", textAlign: "left" } }}
+                                    aria-label={t("Text Content Key")}
                                     value={textKey}
                                     onChange={setTextKey}
-                                    style={{ width: 120 }}
+                                    style={{ minWidth: 120 }}
                                     options={[
                                         { value: "#text", label: "#text" },
                                         { value: "_text", label: "_text" },
@@ -267,22 +276,25 @@ export default function JsonToXmlPage() {
                                 />
                             </div>
                             <div>
-                                <Text style={{ display: "block", marginBottom: 4 }}>Indentation</Text>
+                                <Text style={{ display: "block", marginBottom: 4 }}>{t("Indentation")}</Text>
                                 <Select
+                                    direction="ltr"
+                                    styles={{ input: { direction: "ltr", textAlign: "left" }, itemContent: { direction: "ltr", textAlign: "left" } }}
+                                    aria-label={t("Indentation")}
                                     value={indent}
                                     onChange={setIndent}
-                                    style={{ width: 120 }}
+                                    style={{ minWidth: 120 }}
                                     options={[
-                                        { value: 0, label: "None" },
-                                        { value: 2, label: "2 spaces" },
-                                        { value: 4, label: "4 spaces" },
+                                        { value: 0, label: t("None") },
+                                        { value: 2, label: t("2 spaces") },
+                                        { value: 4, label: t("4 spaces") },
                                     ]}
                                 />
                             </div>
                             <div style={{ paddingTop: 22 }}>
                                 <Space>
-                                    <Switch checked={declaration} onChange={setDeclaration} />
-                                    <Text>XML Declaration</Text>
+                                    <Switch aria-label={t("XML Declaration")} checked={declaration} onChange={setDeclaration} />
+                                    <Text>{t("XML Declaration")}</Text>
                                 </Space>
                             </div>
                         </Space>

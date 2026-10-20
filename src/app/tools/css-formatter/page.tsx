@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, InputNumber, Switch, Select } from "antd";
 import { FormatPainterOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -15,6 +16,7 @@ const { Text } = Typography;
 const SAMPLE_CSS = `.container{display:flex;flex-direction:column;align-items:center;padding:20px;margin:0 auto;max-width:1200px;}.header{background:#1677ff;color:#fff;padding:16px 24px;border-radius:8px;}.nav ul{list-style:none;display:flex;gap:16px;margin:0;padding:0;}.nav ul li a{color:#333;text-decoration:none;font-weight:500;}@media(max-width:768px){.container{padding:10px;}.nav ul{flex-direction:column;}}`;
 
 export default function CssFormatterPage() {
+    const { t } = useLanguage();
     const [input, setInput] = useState(SAMPLE_CSS);
     const [indentSize, setIndentSize] = useState(2);
     const [useTabs, setUseTabs] = useState(false);
@@ -47,9 +49,9 @@ export default function CssFormatterPage() {
             .trim();
     }, [input]);
 
-    const copyFormatted = () => copyToClipboard(formatted, "Formatted CSS copied!");
+    const copyFormatted = () => copyToClipboard(formatted, t("Formatted CSS copied!"));
 
-    const copyMinified = () => copyToClipboard(minified, "Minified CSS copied!");
+    const copyMinified = () => copyToClipboard(minified, t("Minified CSS copied!"));
 
     const stats = useMemo(() => {
         const selectors = (input.match(/[^{}]+(?=\{)/g) || []).length;
@@ -62,8 +64,8 @@ export default function CssFormatterPage() {
 
     return (
         <ToolPageLayout
-            title="CSS Formatter"
-            description="Beautify and minify CSS stylesheets"
+            title={t("CSS Formatter")}
+            description={t("Beautify and minify CSS stylesheets")}
             icon={<FormatPainterOutlined style={{ fontSize: 24, color: "#264de4" }} />}
             color="#264de4"
             learnMore={{
@@ -92,22 +94,23 @@ export default function CssFormatterPage() {
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card
-                        title="Input CSS"
+                        title={t("Input CSS")}
                         extra={
                             <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
-                                Clear
+                                {t("Clear")}
                             </Button>
                         }
                     >
                         <CodeEditor
                             value={input}
                             onChange={(val) => setInput(val || "")}
+                            ariaLabel={t("Input CSS")}
                             language="css"
                             height={350}
                         />
                         <div style={{ marginTop: 8 }}>
                             <Text type="secondary">
-                                {stats.selectors} selectors • {stats.properties} properties • {stats.originalSize} bytes
+                                {t("{selectors} selectors · {properties} properties", { selectors: stats.selectors, properties: stats.properties })} · {t("{count} bytes", { count: stats.originalSize })}
                             </Text>
                         </div>
                     </Card>
@@ -115,31 +118,34 @@ export default function CssFormatterPage() {
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title="Beautified CSS"
+                        title={t("Beautified CSS")}
                         extra={
                             <Button size="small" icon={<CopyOutlined />} onClick={copyFormatted}>
-                                Copy
+                                {t("Copy")}
                             </Button>
                         }
                     >
                         <CodeEditor
                             value={formatted}
+                            ariaLabel={t("Beautified CSS")}
                             language="css"
                             height={350}
                             readOnly
                         />
                         <div style={{ marginTop: 8 }}>
-                            <Text type="secondary">{stats.formattedSize} bytes</Text>
+                            <Text type="secondary">{t("{count} bytes", { count: stats.formattedSize })}</Text>
                         </div>
+                        <Text type="secondary" style={{ display: "block", marginTop: 8 }}>{t("If formatting fails, check the source syntax and options. Parser details are shown unchanged.")}</Text>
                     </Card>
                 </Col>
 
                 <Col xs={24} lg={12}>
-                    <Card title="Formatting Options">
+                    <Card title={t("Formatting Options")}>
                         <Row gutter={[16, 16]}>
                             <Col span={12}>
-                                <Text style={{ display: "block", marginBottom: 4 }}>Indent Size</Text>
+                                <Text style={{ display: "block", marginBottom: 4 }}>{t("Indent Size")}</Text>
                                 <InputNumber
+                                    aria-label={t("Indent Size")}
                                     value={indentSize}
                                     onChange={(v) => setIndentSize(v || 2)}
                                     min={1}
@@ -149,20 +155,20 @@ export default function CssFormatterPage() {
                             </Col>
                             <Col span={12}>
                                 <Space>
-                                    <Switch checked={useTabs} onChange={setUseTabs} />
-                                    <Text>Use Tabs</Text>
+                                    <Switch aria-label={t("Use Tabs")} checked={useTabs} onChange={setUseTabs} />
+                                    <Text>{t("Use Tabs")}</Text>
                                 </Space>
                             </Col>
                             <Col span={12}>
                                 <Space>
-                                    <Switch checked={selectorSeparatorNewline} onChange={setSelectorSeparatorNewline} />
-                                    <Text>Selector Newlines</Text>
+                                    <Switch aria-label={t("Selector Newlines")} checked={selectorSeparatorNewline} onChange={setSelectorSeparatorNewline} />
+                                    <Text>{t("Selector Newlines")}</Text>
                                 </Space>
                             </Col>
                             <Col span={12}>
                                 <Space>
-                                    <Switch checked={newlineBetweenRules} onChange={setNewlineBetweenRules} />
-                                    <Text>Newline Between Rules</Text>
+                                    <Switch aria-label={t("Newline Between Rules")} checked={newlineBetweenRules} onChange={setNewlineBetweenRules} />
+                                    <Text>{t("Newline Between Rules")}</Text>
                                 </Space>
                             </Col>
                         </Row>
@@ -171,14 +177,16 @@ export default function CssFormatterPage() {
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title="Minified CSS"
+                        title={t("Minified CSS")}
                         extra={
                             <Button size="small" icon={<CopyOutlined />} onClick={copyMinified}>
-                                Copy
+                                {t("Copy")}
                             </Button>
                         }
                     >
                         <Input.TextArea
+                            dir="ltr"
+                            aria-label={t("Minified CSS")}
                             value={minified}
                             readOnly
                             rows={4}
@@ -186,7 +194,7 @@ export default function CssFormatterPage() {
                         />
                         <div style={{ marginTop: 8 }}>
                             <Text type="secondary">
-                                {stats.minSize} bytes ({Math.round((1 - stats.minSize / stats.originalSize) * 100)}% smaller)
+                                {t("{count} bytes ({percent}% smaller)", { count: stats.minSize, percent: stats.originalSize ? Math.round((1 - stats.minSize / stats.originalSize) * 100) : 0 })}
                             </Text>
                         </div>
                     </Card>

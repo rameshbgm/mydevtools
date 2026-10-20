@@ -8,6 +8,8 @@ import {
 import {
     PictureOutlined, UploadOutlined, DownloadOutlined, SwapOutlined,
 } from "@ant-design/icons";
+import { AuthoredDiagnosticError, authoredDiagnosticText } from "@/lib/i18n/authored-diagnostics";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
 const { Text, Paragraph } = Typography;
@@ -49,7 +51,7 @@ function loadImage(file: File): Promise<Original> {
         img.onload = () => resolve({
             file, img, naturalW: img.naturalWidth, naturalH: img.naturalHeight, blobUrl: url,
         });
-        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Decode failed")); };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new AuthoredDiagnosticError("Decode failed")); };
         img.src = url;
     });
 }
@@ -94,7 +96,7 @@ function resize(
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return Promise.reject(new Error("Canvas not supported"));
+    if (!ctx) return Promise.reject(new AuthoredDiagnosticError("Canvas not supported"));
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
@@ -114,7 +116,11 @@ function resize(
     const usesQuality = outFormat === "image/jpeg" || outFormat === "image/webp";
     return new Promise((resolve, reject) => {
         canvas.toBlob(
-            (b) => b ? resolve(b) : reject(new Error("Encoding failed")),
+            (b) => {
+                if (!b) { reject(new AuthoredDiagnosticError("Encoding failed")); return; }
+                if (b.type !== outFormat) { const error = new AuthoredDiagnosticError("Unsupported encoder: requested {requested}, received {received}. Choose PNG instead.", { requested: outFormat, received: b.type || "unknown" }); error.name = "UnsupportedImageEncoderError"; reject(error); return; }
+                resolve(b);
+            },
             outFormat,
             usesQuality ? quality : undefined,
         );
@@ -122,6 +128,9 @@ function resize(
 }
 
 export default function ImageResizerPage() {
+    const { t } = useLanguage();
+    const translation = useRef(t);
+    useEffect(() => { translation.current = t; }, [t]);
     const { message } = App.useApp();
     const [original, setOriginal] = useState<Original | null>(null);
     const [width, setWidth] = useState(800);
@@ -194,7 +203,7 @@ export default function ImageResizerPage() {
                     height: targetDimensions.h,
                 });
             } catch (err) {
-                message.error(err instanceof Error ? err.message : String(err));
+                if (!cancelled) { setResized(null); message.error(`${translation.current(err instanceof Error && err.name === "UnsupportedImageEncoderError" ? "This browser cannot encode the selected format. Choose PNG and try again." : "Unable to process this image. Check the image format and size, then try again.")}\n${authoredDiagnosticText(translation.current, err)}`); }
             } finally {
                 if (!cancelled) setWorking(false);
             }
@@ -210,7 +219,7 @@ export default function ImageResizerPage() {
                 originalUrlRef.current = loaded.blobUrl;
                 setOriginal(loaded);
             } catch (err) {
-                message.error(err instanceof Error ? err.message : String(err));
+                message.error(`${translation.current(err instanceof Error && err.name === "UnsupportedImageEncoderError" ? "This browser cannot encode the selected format. Choose PNG and try again." : "Unable to process this image. Check the image format and size, then try again.")}\n${authoredDiagnosticText(translation.current, err)}`);
             }
             return false;
         },
@@ -245,6 +254,7 @@ export default function ImageResizerPage() {
     const download = () => {
         if (!resized || !original) return;
         const outFormat = format === "keep" ? original.file.type : format;
+        if (resized.blob.type !== outFormat) return;
         const ext = outFormat === "image/jpeg" ? "jpg"
             : outFormat === "image/webp" ? "webp"
             : outFormat === "image/png" ? "png"
@@ -258,8 +268,8 @@ export default function ImageResizerPage() {
 
     return (
         <ToolPageLayout
-            title="Image Resizer"
-            description="Resize images by pixels, percent or preset — 100% client-side, files never leave your machine"
+            title={t("Image Resizer")}
+            description={t("Resize images by pixels, percent or preset — 100% client-side, files never leave your machine")}
             icon={<PictureOutlined style={{ fontSize: 24, color: "#0284c7" }} />}
             color="#0284c7"
             learnMore={{
@@ -276,7 +286,7 @@ export default function ImageResizerPage() {
                     "Lock aspect ratio: width and height move together so the image stays proportional",
                     "Fit + JPEG output paints a white background (JPEG can't be transparent)",
                     "WebP is usually 25–35% smaller than JPEG at equivalent quality",
-                    "Canvas uses high-quality bicubic-ish resampling — sharper than nearest-neighbour",
+                    "The browser controls Canvas resampling; inspect the result at its actual display size.",
                 ],
                 useCases: [
                     "Generating social-media images at platform-specific sizes",
@@ -290,20 +300,20 @@ export default function ImageResizerPage() {
                 <Card>
                     <Dragger {...upload} style={{ padding: 32 }}>
                         <UploadOutlined style={{ fontSize: 36, color: "#0284c7" }} />
-                        <Text style={{ display: "block", marginTop: 12, fontSize: 16 }}>Drop image or click to choose</Text>
-                        <Text type="secondary">JPEG · PNG · WebP · GIF · any browser-decodable format</Text>
+                        <Text style={{ display: "block", marginTop: 12, fontSize: 16 }}>{t("Drop image or click to choose")}</Text>
+                        <Text type="secondary">{t("JPEG · PNG · WebP · GIF · any browser-decodable format")}</Text>
                     </Dragger>
                 </Card>
             ) : (
                 <Row gutter={[16, 16]}>
                     <Col xs={24} lg={8}>
-                        <Card size="small" title="Source">
+                        <Card size="small" title={t("Source")}>
                             <Space orientation="vertical" style={{ width: "100%" }}>
                                 <Tag>{original.file.name}</Tag>
                                 <Space wrap>
                                     <Tag color="default">{original.naturalW}×{original.naturalH}</Tag>
                                     <Tag>{formatBytes(original.file.size)}</Tag>
-                                    <Tag>{original.file.type || "unknown"}</Tag>
+                                    <Tag>{original.file.type || t("Unknown image type")}</Tag>
                                 </Space>
                                 <Button
                                     size="small"
@@ -315,13 +325,11 @@ export default function ImageResizerPage() {
                                         setOriginal(null);
                                         setResized(null);
                                     }}
-                                >
-                                    Choose another
-                                </Button>
+                                >{t("Choose another")}</Button>
                             </Space>
                         </Card>
 
-                        <Card size="small" title="Dimensions" style={{ marginTop: 16 }}>
+                        <Card size="small" title={t("Dimensions")} style={{ marginTop: 16 }}>
                             <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                 <Radio.Group
                                     value={mode}
@@ -330,124 +338,120 @@ export default function ImageResizerPage() {
                                     buttonStyle="solid"
                                     size="small"
                                     options={[
-                                        { value: "pixels", label: "Pixels" },
-                                        { value: "percent", label: "Percent" },
+                                        { value: "pixels", label: t("Pixels") },
+                                        { value: "percent", label: t("Percent") },
                                     ]}
                                 />
                                 {mode === "pixels" ? (
                                     <>
                                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-                                                <Text type="secondary" style={{ fontSize: 11 }}>Width (px)</Text>
-                                                <InputNumber
+                                                <Text type="secondary" style={{ fontSize: 11 }}>{t("Width (px)")}</Text>
+                                                <InputNumber dir="ltr" aria-label={t("Image dimensions in pixels")}
                                                     value={width}
                                                     onChange={updateWidth}
                                                     min={1}
                                                     max={10000}
-                                                    style={{ width: "100%" }}
+                                                    style={{ width: "100%", fontSize: 16 }}
                                                 />
                                             </div>
-                                            <Button aria-label="Swap"
+                                            <Button aria-label={t("Swap")}
                                                 icon={<SwapOutlined />}
                                                 onClick={swapDimensions}
-                                                title="Swap width and height"
+                                                title={t("Swap width and height")}
                                                 style={{ marginTop: 16 }}
                                             />
                                             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-                                                <Text type="secondary" style={{ fontSize: 11 }}>Height (px)</Text>
-                                                <InputNumber
+                                                <Text type="secondary" style={{ fontSize: 11 }}>{t("Height (px)")}</Text>
+                                                <InputNumber dir="ltr" aria-label={t("Image dimensions in pixels")}
                                                     value={height}
                                                     onChange={updateHeight}
                                                     min={1}
                                                     max={10000}
-                                                    style={{ width: "100%" }}
+                                                    style={{ width: "100%", fontSize: 16 }}
                                                 />
                                             </div>
                                         </div>
                                         <Space>
-                                            <Switch
+                                            <Switch aria-label={t("Lock aspect ratio")}
                                                 checked={lockAspect}
                                                 onChange={setLockAspect}
                                                 size="small"
                                             />
-                                            <Text type="secondary" style={{ fontSize: 12 }}>Lock aspect ratio</Text>
+                                            <Text type="secondary" style={{ fontSize: 12 }}>{t("Lock aspect ratio")}</Text>
                                         </Space>
                                     </>
                                 ) : (
                                     <div>
-                                        <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
-                                            Scale: <Tag>{percent}%</Tag>
+                                        <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>{t("Scale:")}<Tag>{percent}%</Tag>
                                             <Text type="secondary" style={{ marginLeft: 8, fontSize: 11 }}>
                                                 → {targetDimensions.w}×{targetDimensions.h}
                                             </Text>
                                         </Text>
-                                        <Slider min={1} max={400} value={percent} onChange={setPercent} />
+                                        <Slider aria-label={t("Scale:")} min={1} max={400} value={percent} onChange={setPercent} />
                                     </div>
                                 )}
 
                                 <div>
-                                    <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Fit mode</Text>
+                                    <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>{t("Fit mode")}</Text>
                                     <Radio.Group
                                         value={fit}
                                         onChange={(e) => setFit(e.target.value)}
                                         optionType="button"
                                         size="small"
                                         options={[
-                                            { value: "fit", label: "Fit (letterbox)" },
-                                            { value: "fill", label: "Fill (crop)" },
-                                            { value: "stretch", label: "Stretch" },
+                                            { value: "fit", label: t("Fit (letterbox)") },
+                                            { value: "fill", label: t("Fill (crop)") },
+                                            { value: "stretch", label: t("Stretch") },
                                         ]}
                                     />
                                 </div>
 
                                 <div>
-                                    <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Presets</Text>
-                                    <Select
+                                    <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>{t("Presets")}</Text>
+                                    <Select aria-label={t("Presets")}
                                         size="small"
-                                        placeholder="Pick a preset…"
-                                        style={{ width: "100%" }}
+                                        placeholder={t("Pick a preset…")}
+                                        style={{ width: "100%", fontSize: 16 }}
                                         onChange={(idx) => applyPreset(PRESETS[idx])}
-                                        options={PRESETS.map((p, i) => ({ value: i, label: p.label }))}
+                                        options={PRESETS.map((p, i) => ({ value: i, label: t(p.label) }))}
                                     />
                                 </div>
                             </Space>
                         </Card>
 
-                        <Card size="small" title="Output" style={{ marginTop: 16 }}>
+                        <Card size="small" title={t("Output")} style={{ marginTop: 16 }}>
                             <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                                 <div>
-                                    <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Format</Text>
+                                    <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>{t("Format")}</Text>
                                     <Radio.Group
                                         value={format}
                                         onChange={(e) => setFormat(e.target.value)}
                                         optionType="button"
                                         size="small"
                                         options={[
-                                            { value: "keep", label: "Keep" },
-                                            { value: "image/jpeg", label: "JPEG" },
-                                            { value: "image/png", label: "PNG" },
-                                            { value: "image/webp", label: "WebP" },
+                                            { value: "keep", label: t("Keep") },
+                                            { value: "image/jpeg", label: t("JPEG") },
+                                            { value: "image/png", label: t("PNG") },
+                                            { value: "image/webp", label: t("WebP") },
                                         ]}
                                     />
                                 </div>
                                 {(format === "image/jpeg" || format === "image/webp" ||
                                   (format === "keep" && (original.file.type === "image/jpeg" || original.file.type === "image/webp"))) && (
                                     <div>
-                                        <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
-                                            Quality: <Tag>{Math.round(quality * 100)}%</Tag>
+                                        <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>{t("Quality:")}<Tag>{Math.round(quality * 100)}%</Tag>
                                         </Text>
-                                        <Slider min={0.1} max={1} step={0.05} value={quality} onChange={setQuality} />
+                                        <Slider aria-label={t("Quality:")} min={0.1} max={1} step={0.05} value={quality} onChange={setQuality} />
                                     </div>
                                 )}
                                 <Button
                                     type="primary"
                                     icon={<DownloadOutlined />}
                                     onClick={download}
-                                    disabled={!resized || working}
+                                    disabled={!resized || working || resized.blob.type !== (format === "keep" ? original.file.type : format)}
                                     block
-                                >
-                                    Download
-                                </Button>
+                                >{t("Download")}</Button>
                             </Space>
                         </Card>
                     </Col>
@@ -459,7 +463,7 @@ export default function ImageResizerPage() {
                                     size="small"
                                     title={
                                         <Space>
-                                            <Text strong>Original</Text>
+                                            <Text strong>{t("Original")}</Text>
                                             <Tag>{original.naturalW}×{original.naturalH}</Tag>
                                             <Tag>{formatBytes(original.file.size)}</Tag>
                                         </Space>
@@ -478,7 +482,7 @@ export default function ImageResizerPage() {
                                     size="small"
                                     title={
                                         <Space>
-                                            <Text strong>Resized</Text>
+                                            <Text strong>{t("Resized")}</Text>
                                             {resized && (
                                                 <>
                                                     <Tag color="blue">{resized.width}×{resized.height}</Tag>
@@ -497,18 +501,16 @@ export default function ImageResizerPage() {
                                         // eslint-disable-next-line @next/next/no-img-element
                                         <img
                                             src={resized.url}
-                                            alt="resized"
+                                            alt={t("resized")}
                                             style={{ width: "100%", display: "block", borderRadius: 4, background: "rgba(0,0,0,0.04)" }}
                                         />
                                     ) : (
-                                        <Empty description={working ? "Resizing…" : "Adjust the dimensions"} />
+                                        <Empty description={working ? t("Resizing…") : t("Adjust the dimensions")} />
                                     )}
                                 </Card>
                             </Col>
                         </Row>
-                        <Paragraph type="secondary" style={{ marginTop: 12, fontSize: 11, marginBottom: 0 }}>
-                            Resizing runs entirely in your browser via the Canvas API — the file is never uploaded to a server.
-                        </Paragraph>
+                        <Paragraph type="secondary" style={{ marginTop: 12, fontSize: 11, marginBottom: 0 }}>{t("Resizing runs entirely in your browser via the Canvas API — the file is never uploaded to a server.")}</Paragraph>
                     </Col>
                 </Row>
             )}

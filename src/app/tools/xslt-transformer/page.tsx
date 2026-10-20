@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
+
 import React, { useState, useMemo } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, Alert } from "antd";
 import { SettingOutlined, CopyOutlined, ClearOutlined, PlayCircleOutlined } from "@ant-design/icons";
@@ -102,6 +104,7 @@ function transformXSLT(xmlString: string, xsltString: string): string {
 }
 
 export default function XsltTransformerPage() {
+    const { t } = useLanguage();
     const [xml, setXml] = useState(SAMPLE_XML);
     const [xslt, setXslt] = useState(SAMPLE_XSLT);
     const [output, setOutput] = useState("");
@@ -119,12 +122,12 @@ export default function XsltTransformerPage() {
         }
     };
 
-    const copyOutput = () => copyToClipboard(output, "Output copied!");
+    const copyOutput = () => copyToClipboard(output, t("Output copied!"));
 
     return (
         <ToolPageLayout
-            title="XSLT Transformer"
-            description="Transform XML documents using XSLT stylesheets"
+            title={t("XSLT Transformer")}
+            description={t("Transform XML documents using XSLT stylesheets")}
             icon={<SettingOutlined style={{ fontSize: 24, color: "#722ed1" }} />}
             color="#722ed1"
             learnMore={{
@@ -153,10 +156,10 @@ export default function XsltTransformerPage() {
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card
-                        title="XML Input"
+                        title={t("XML Input")}
                         extra={
                             <Button size="small" icon={<ClearOutlined />} onClick={() => setXml("")}>
-                                Clear
+                                {t("Clear")}
                             </Button>
                         }
                     >
@@ -171,10 +174,10 @@ export default function XsltTransformerPage() {
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title="XSLT Stylesheet"
+                        title={t("XSLT Stylesheet")}
                         extra={
                             <Button size="small" icon={<ClearOutlined />} onClick={() => setXslt("")}>
-                                Clear
+                                {t("Clear")}
                             </Button>
                         }
                     >
@@ -195,23 +198,23 @@ export default function XsltTransformerPage() {
                         onClick={handleTransform}
                         style={{ background: "#722ed1" }}
                     >
-                        Transform
+                        {t("Transform")}
                     </Button>
                 </Col>
 
                 <Col xs={24}>
                     <Card
-                        title="Output"
+                        title={t("Output")}
                         extra={
                             output && (
                                 <Button size="small" icon={<CopyOutlined />} onClick={copyOutput}>
-                                    Copy
+                                    {t("Copy")}
                                 </Button>
                             )
                         }
                     >
                         {error ? (
-                            <Alert type="error" title={error} showIcon />
+                            <Alert type="error" title={t("Transformation failed. Check the XML and XSLT, then try again.")} description={<bdi dir="ltr">{error}</bdi>} showIcon />
                         ) : output ? (
                             <CodeEditor
                                 value={output}
@@ -221,36 +224,30 @@ export default function XsltTransformerPage() {
                             />
                         ) : (
                             <div style={{ textAlign: "center", padding: 40, color: "#8c8c8c" }}>
-                                Click Transform to see the output
-                            </div>
+                                {t("Click Transform to see the output")}</div>
                         )}
                     </Card>
                 </Col>
 
                 <Col xs={24} lg={12}>
-                    <Card title="About XSLT">
+                    <Card title={t("About XSLT")}>
                         <Paragraph type="secondary">
-                            XSLT (eXtensible Stylesheet Language Transformations) is a language
-                            for transforming XML documents into other XML documents, HTML, or
-                            plain text.
-                        </Paragraph>
+                            {t("XSLT (eXtensible Stylesheet Language Transformations) is a language for transforming XML documents into other XML documents, HTML, or plain text.")}</Paragraph>
                         <Paragraph type="secondary">
-                            Common uses include converting XML data to HTML for web display,
-                            transforming between different XML schemas, and generating reports.
-                        </Paragraph>
+                            {t("Common uses include converting XML data to HTML for web display, transforming between different XML schemas, and generating reports.")}</Paragraph>
                     </Card>
                 </Col>
 
                 <Col xs={24} lg={12}>
-                    <Card title="Common XSLT Elements">
-                        <ul style={{ paddingLeft: 20, margin: 0, fontSize: 13 }}>
-                            <li><Text code>xsl:template</Text> - Define templates</li>
-                            <li><Text code>xsl:value-of</Text> - Extract values</li>
-                            <li><Text code>xsl:for-each</Text> - Loop through nodes</li>
-                            <li><Text code>xsl:if</Text> - Conditional processing</li>
-                            <li><Text code>xsl:choose</Text> - Multiple conditions</li>
-                            <li><Text code>xsl:sort</Text> - Sort elements</li>
-                            <li><Text code>xsl:apply-templates</Text> - Apply templates</li>
+                    <Card title={t("Common XSLT Elements")}>
+                        <ul style={{ paddingInlineStart: 20, margin: 0, fontSize: 13 }}>
+                            <li><Text code dir="ltr">xsl:template</Text> {t("- Define templates")}</li>
+                            <li><Text code dir="ltr">xsl:value-of</Text> {t("- Extract values")}</li>
+                            <li><Text code dir="ltr">xsl:for-each</Text> {t("- Loop through nodes")}</li>
+                            <li><Text code dir="ltr">xsl:if</Text> {t("- Conditional processing")}</li>
+                            <li><Text code dir="ltr">xsl:choose</Text> {t("- Multiple conditions")}</li>
+                            <li><Text code dir="ltr">xsl:sort</Text> {t("- Sort elements")}</li>
+                            <li><Text code dir="ltr">xsl:apply-templates</Text> {t("- Apply templates")}</li>
                         </ul>
                     </Card>
                 </Col>

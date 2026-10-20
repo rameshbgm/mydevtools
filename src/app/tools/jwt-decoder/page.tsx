@@ -23,6 +23,8 @@ import {
     CloseCircleOutlined,
     CodeOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
+import { localizeJoseError } from "@/lib/i18n/jose-tools";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -68,32 +70,34 @@ function decodeJwt(token: string): {
     if (parts.length !== 3) throw new Error("JWT must have exactly 3 parts separated by '.'");
     const header = JSON.parse(b64urlDecode(parts[0]));
     const payload = JSON.parse(b64urlDecode(parts[1]));
+    if (!header || typeof header !== "object" || Array.isArray(header) || !payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("JWT header and claims must be JSON objects");
     return { header, payload, signature: parts[2], headerRaw: parts[0], payloadRaw: parts[1] };
 }
 
 function encodeJwt(header: object, payload: object, signatureHint: string): string {
+    if (!header || typeof header !== "object" || Array.isArray(header) || !payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("JWT header and claims must be JSON objects");
     const h = b64urlEncode(header);
     const p = b64urlEncode(payload);
-    // Preserve original signature (tampered notice shown in UI — full HMAC signing needs backend key)
+    // Preserve original signature (tampered notice shown in UI — signing requires a key and the separate JWS tool)
     return `${h}.${p}.${signatureHint}`;
 }
 
-function expiryLabel(exp: unknown): { label: string; expired: boolean } | null {
-    if (typeof exp !== "number") return null;
+function expiryLabel(exp: unknown, t: (source: string, values?: Record<string, string | number>) => string, language: string): { label: string; expired: boolean } | null {
+    if (typeof exp !== "number" || !Number.isFinite(exp)) return null;
     const now = Math.floor(Date.now() / 1000);
     const diff = exp - now;
     const expired = diff < 0;
     if (expired) {
         const ago = Math.abs(diff);
-        if (ago < 60) return { label: `Expired ${ago}s ago`, expired: true };
-        if (ago < 3600) return { label: `Expired ${Math.floor(ago / 60)}m ago`, expired: true };
-        if (ago < 86400) return { label: `Expired ${Math.floor(ago / 3600)}h ago`, expired: true };
-        return { label: `Expired ${Math.floor(ago / 86400)}d ago`, expired: true };
+        if (ago < 60) return { label: t("Expired {count} seconds ago", { count: new Intl.NumberFormat(language).format(ago) }), expired: true };
+        if (ago < 3600) return { label: t("Expired {count} minutes ago", { count: new Intl.NumberFormat(language).format(Math.floor(ago / 60)) }), expired: true };
+        if (ago < 86400) return { label: t("Expired {count} hours ago", { count: new Intl.NumberFormat(language).format(Math.floor(ago / 3600)) }), expired: true };
+        return { label: t("Expired {count} days ago", { count: new Intl.NumberFormat(language).format(Math.floor(ago / 86400)) }), expired: true };
     }
-    if (diff < 60) return { label: `Expires in ${diff}s`, expired: false };
-    if (diff < 3600) return { label: `Expires in ${Math.floor(diff / 60)}m`, expired: false };
-    if (diff < 86400) return { label: `Expires in ${Math.floor(diff / 3600)}h`, expired: false };
-    return { label: `Expires in ${Math.floor(diff / 86400)}d`, expired: false };
+    if (diff < 60) return { label: t("Expires in {count} seconds", { count: new Intl.NumberFormat(language).format(diff) }), expired: false };
+    if (diff < 3600) return { label: t("Expires in {count} minutes", { count: new Intl.NumberFormat(language).format(Math.floor(diff / 60)) }), expired: false };
+    if (diff < 86400) return { label: t("Expires in {count} hours", { count: new Intl.NumberFormat(language).format(Math.floor(diff / 3600)) }), expired: false };
+    return { label: t("Expires in {count} days", { count: new Intl.NumberFormat(language).format(Math.floor(diff / 86400)) }), expired: false };
 }
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -102,6 +106,7 @@ interface ShareState { token: string; }
 const SHARE_SCHEMA: ShareSchemaT<ShareState> = { toolId: "jwt-decoder", version: 1 };
 
 export default function JwtDecoderPage() {
+    const { t, language } = useLanguage();
     const { message } = App.useApp();
     const [token, setToken] = useState(SAMPLE_TOKEN);
     const [decoded, setDecoded] = useState<ReturnType<typeof decodeJwt> | null>(null);
@@ -128,7 +133,7 @@ export default function JwtDecoderPage() {
         }
     }, []);
 
-    useEffect(() => { decode(token); }, []);
+    useEffect(() => { decode(token); }, [token, decode]);
 
     useShareableState(SHARE_SCHEMA, (s) => { setToken(s.token); decode(s.token); });
 
@@ -139,14 +144,14 @@ export default function JwtDecoderPage() {
             const newToken = encodeJwt(header, payload, decoded?.signature ?? "UNSIGNED");
             setModifiedToken(newToken);
             setEditError("");
-            message.success("Re-encoded! Note: signature is NOT re-signed (needs your secret key).");
+            message.success(t("Re-encoded! Note: signature is NOT re-signed (needs your secret key)."));
         } catch (e: unknown) {
             setEditError(e instanceof Error ? e.message : "Invalid JSON in header or payload");
         }
     };
 
     const expiry = decoded
-        ? expiryLabel((decoded.payload as Record<string, unknown>).exp)
+        ? expiryLabel((decoded.payload as Record<string, unknown>).exp, t, language)
         : null;
 
     const iat = decoded
@@ -155,8 +160,8 @@ export default function JwtDecoderPage() {
 
     return (
         <ToolPageLayout
-            title="JWT Decoder & Editor"
-            description="Decode, inspect and re-encode JSON Web Tokens"
+            title={t("JWT Decoder & Editor")}
+            description={t("Decode, inspect and re-encode JSON Web Tokens")}
             icon={<SafetyCertificateOutlined style={{ fontSize: 24, color: "#13c2c2" }} />}
             color="#13c2c2"
             learnMore={{
@@ -166,13 +171,13 @@ export default function JwtDecoderPage() {
                     "Paste your JWT token in the input field",
                     "View the decoded header and payload",
                     "Check expiration time and other claims",
-                    "Edit claims and re-encode with a secret (for testing)"
+                    "Edit claims and re-encode for testing; the original signature is preserved, not renewed"
                 ],
                 tips: [
                     "Never share JWTs with sensitive data publicly",
                     "Check 'exp' claim for token expiration",
                     "'iat' is issued-at time, 'nbf' is not-before time",
-                    "Signature verification requires the secret key"
+                    "Signature verification requires a trusted secret or public key; this decoder does not verify signatures."
                 ],
                 useCases: [
                     "Debugging OAuth2 and OIDC authentication",
@@ -187,6 +192,7 @@ export default function JwtDecoderPage() {
                 onAccept={(p) => { setToken(p.data); decode(p.data); }}
             />
 
+            <Alert type="warning" showIcon title={t("Decoded claims are untrusted")} description={t("Decoding does not verify a signature. Follow RFC 8725: allow only expected algorithms and trusted keys, then validate issuer, audience, expiry and token purpose in your application.")} style={{ marginBottom: 16 }} />
             {/* Token Input */}
             <Card
                 size="small"
@@ -196,23 +202,22 @@ export default function JwtDecoderPage() {
                         <ShareButton
                             schema={SHARE_SCHEMA}
                             getState={() => ({ token })}
-                            sensitiveFieldHint="JWT tokens often carry sensitive claims (user IDs, scopes). Only share with people you trust."
+                            sensitiveFieldHint={t("JWT tokens often carry sensitive claims (user IDs, scopes). Only share with people you trust.")}
                         />
                         {decoded && (
                             <SendToButton
                                 data={JSON.stringify(decoded.payload, null, 2)}
                                 kind="json"
                                 sourceToolId="jwt-decoder"
-                                label="JWT payload"
+                                label={t("JWT payload")}
                             />
                         )}
                     </Space>
                 }
             >
                 <Text type="secondary" style={{ display: "block", marginBottom: 6, fontSize: 12 }}>
-                    Paste a JWT token
-                </Text>
-                <Input.TextArea
+                    {t("Paste a JWT token")}</Text>
+                <Input.TextArea aria-label={t("JWT token")} dir="ltr" styles={{ textarea: { direction: "ltr" } }}
                     rows={3}
                     value={token}
                     onChange={(e) => { setToken(e.target.value); decode(e.target.value); }}
@@ -221,19 +226,18 @@ export default function JwtDecoderPage() {
                 />
                 {error && (
                     <Text type="danger" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
-                        ❌ {error}
+                        {t("Unable to decode this JWT. Check its three parts and JSON content.")}<br /><span dir="ltr">{localizeJoseError(t, error)}</span>
                     </Text>
                 )}
                 {decoded && (
                     <Space style={{ marginTop: 8 }} wrap>
                         <Tag icon={<CheckCircleOutlined />} color="success">
-                            Valid structure
-                        </Tag>
+                            {t("Valid structure")}</Tag>
                         <Tag color="blue">
-                            {(decoded.header as Record<string, unknown>).alg as string ?? "?"}
+                            {typeof (decoded.header as Record<string, unknown>).alg === "string" ? String((decoded.header as Record<string, unknown>).alg) : "?"}
                         </Tag>
                         <Tag color="purple">
-                            {(decoded.header as Record<string, unknown>).typ as string ?? "JWT"}
+                            {typeof (decoded.header as Record<string, unknown>).typ === "string" ? String((decoded.header as Record<string, unknown>).typ) : "JWT"}
                         </Tag>
                         {expiry && (
                             <Tag
@@ -245,7 +249,7 @@ export default function JwtDecoderPage() {
                         )}
                         {typeof iat === "number" && (
                             <Tag color="default">
-                                Issued: {new Date(iat * 1000).toLocaleString()}
+                                {t("Issued:")}{new Date(iat * 1000).toLocaleString(language)}
                             </Tag>
                         )}
                         <Button
@@ -253,8 +257,7 @@ export default function JwtDecoderPage() {
                             icon={<CopyOutlined />}
                             onClick={() => copyToClipboard(token)}
                         >
-                            Copy Token
-                        </Button>
+                            {t("Copy Token")}</Button>
                     </Space>
                 )}
             </Card>
@@ -266,25 +269,25 @@ export default function JwtDecoderPage() {
                     items={[
                         {
                             key: "decode",
-                            label: "Decoded View",
+                            label: t("Decoded View"),
                             icon: <CodeOutlined />,
                             children: (
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 250px), 1fr))", gap: 16 }}>
                                     {/* Header */}
                                     <Card
                                         size="small"
                                         title={
                                             <Space>
-                                                <Tag color="blue">Header</Tag>
-                                                <Text type="secondary" style={{ fontSize: 11 }}>ALGORITHM & TYPE</Text>
+                                                <Tag color="blue">{t("Header")}</Tag>
+                                                <Text type="secondary" style={{ fontSize: 11 }}>{t("ALGORITHM & TYPE")}</Text>
                                             </Space>
                                         }
                                         extra={
-                                            <Button aria-label="Copy" size="small" icon={<CopyOutlined />}
+                                            <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />}
                                                 onClick={() => copyToClipboard(JSON.stringify(decoded.header, null, 2))} />
                                         }
                                     >
-                                        <pre style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13, whiteSpace: "pre-wrap", margin: 0 }}>
+                                        <pre dir="ltr" style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13, whiteSpace: "pre-wrap", margin: 0 }}>
                                             {JSON.stringify(decoded.header, null, 2)}
                                         </pre>
                                     </Card>
@@ -294,12 +297,12 @@ export default function JwtDecoderPage() {
                                         size="small"
                                         title={
                                             <Space>
-                                                <Tag color="green">Payload</Tag>
-                                                <Text type="secondary" style={{ fontSize: 11 }}>CLAIMS</Text>
+                                                <Tag color="green">{t("Payload")}</Tag>
+                                                <Text type="secondary" style={{ fontSize: 11 }}>{t("CLAIMS")}</Text>
                                             </Space>
                                         }
                                         extra={
-                                            <Button aria-label="Copy" size="small" icon={<CopyOutlined />}
+                                            <Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />}
                                                 onClick={() => copyToClipboard(JSON.stringify(decoded.payload, null, 2))} />
                                         }
                                     >
@@ -309,44 +312,45 @@ export default function JwtDecoderPage() {
                                     {/* Signature */}
                                     <Card
                                         size="small"
-                                        title={<Space><Tag color="red">Signature</Tag><Text type="secondary" style={{ fontSize: 11 }}>BASE64URL</Text></Space>}
-                                        extra={<Button aria-label="Copy" size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(decoded.signature)} />}
+                                        title={<Space><Tag color="red">{t("Signature")}</Tag><Text type="secondary" style={{ fontSize: 11 }}>BASE64URL</Text></Space>}
+                                        extra={<Button aria-label={t("Copy")} size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(decoded.signature)} />}
                                     >
-                                        <Text code style={{ fontSize: 12, wordBreak: "break-all" }}>
+                                        <Text dir="ltr" code style={{ fontSize: 12, wordBreak: "break-all" }}>
                                             {decoded.signature}
                                         </Text>
                                         <Divider style={{ margin: "12px 0 8px" }} />
                                         <Text type="secondary" style={{ fontSize: 11 }}>
-                                            ⚠️ Signature verification requires the secret/public key on the server side.
-                                        </Text>
+                                            {t("Signature verification requires a trusted secret or public key; this decoder does not verify signatures.")}</Text>
                                     </Card>
                                 </div>
                             ),
                         },
                         {
                             key: "edit",
-                            label: "Edit & Re-encode",
+                            label: t("Edit & Re-encode"),
                             icon: <EditOutlined />,
                             children: (
                                 <div>
                                     <Alert
                                         type="warning"
                                         showIcon
-                                        title="Signature will NOT be re-signed"
-                                        description="Editing header/payload and re-encoding produces a structurally valid JWT but the signature becomes invalid. You need the original secret key to produce a verifiable token."
+                                        title={t("Signature will NOT be re-signed")}
+                                        description={t("Editing header/payload and re-encoding produces a structurally valid JWT but the signature becomes invalid. You need the original secret key to produce a verifiable token.")}
                                         style={{ marginBottom: 16 }}
                                     />
                                     <div className="tool-split-pane" style={{ gap: 16, marginBottom: 16 }}>
-                                        <Card size="small" title={<><Tag color="blue">Header</Tag> Edit JSON</>} styles={{ body: { padding: 0 } }}>
+                                        <Card size="small" title={<><Tag color="blue">{t("Header")}</Tag> {t("Edit JSON")}</>} styles={{ body: { padding: 0 } }}>
                                             <CodeEditor
+                                                ariaLabel={t("Header")}
                                                 value={headerJson}
                                                 onChange={setHeaderJson}
                                                 language="json"
                                                 height="200px"
                                             />
                                         </Card>
-                                        <Card size="small" title={<><Tag color="green">Payload</Tag> Edit Claims</>} styles={{ body: { padding: 0 } }}>
+                                        <Card size="small" title={<><Tag color="green">{t("Payload")}</Tag> {t("Edit Claims")}</>} styles={{ body: { padding: 0 } }}>
                                             <CodeEditor
+                                                ariaLabel={t("Payload")}
                                                 value={payloadJson}
                                                 onChange={setPayloadJson}
                                                 language="json"
@@ -361,8 +365,7 @@ export default function JwtDecoderPage() {
                                             icon={<ReloadOutlined />}
                                             onClick={handleReEncode}
                                         >
-                                            Re-encode Token
-                                        </Button>
+                                            {t("Re-encode Token")}</Button>
                                         <Button
                                             onClick={() => {
                                                 setHeaderJson(JSON.stringify(decoded.header, null, 2));
@@ -371,15 +374,14 @@ export default function JwtDecoderPage() {
                                                 setEditError("");
                                             }}
                                         >
-                                            Reset to Original
-                                        </Button>
+                                            {t("Reset to Original")}</Button>
                                     </Space>
 
                                     {editError && (
                                         <Alert
                                             type="error"
-                                            title="JSON Parse Error"
-                                            description={editError}
+                                            title={t("JSON Parse Error")}
+                                            description={<>{t("Check the header and payload JSON, then try again.")}<br /><span dir="ltr">{editError}</span></>}
                                             showIcon
                                             style={{ marginBottom: 16 }}
                                         />
@@ -388,18 +390,17 @@ export default function JwtDecoderPage() {
                                     {modifiedToken && (
                                         <Card
                                             size="small"
-                                            title="Modified JWT Token"
+                                            title={t("Modified JWT Token")}
                                             extra={
                                                 <Button
                                                     size="small"
                                                     icon={<CopyOutlined />}
                                                     onClick={() => copyToClipboard(modifiedToken)}
                                                 >
-                                                    Copy
-                                                </Button>
+                                                    {t("Copy")}</Button>
                                             }
                                         >
-                                            <Text code style={{ fontSize: 12, wordBreak: "break-all", display: "block" }}>
+                                            <Text dir="ltr" code style={{ fontSize: 12, wordBreak: "break-all", display: "block", direction: "ltr" }}>
                                                 <span style={{ color: "#1677ff" }}>
                                                     {modifiedToken.split(".")[0]}
                                                 </span>
@@ -413,8 +414,7 @@ export default function JwtDecoderPage() {
                                                 </span>
                                             </Text>
                                             <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 8 }}>
-                                                🔵 Header &nbsp;|&nbsp; 🟢 Payload &nbsp;|&nbsp; 🔴 Signature (invalidated — original preserved as placeholder)
-                                            </Text>
+                                                {t("Header | Payload | Signature (invalidated — original preserved as placeholder)")}</Text>
                                         </Card>
                                     )}
                                 </div>
@@ -445,8 +445,9 @@ const CLAIM_DESCRIPTIONS: Record<string, string> = {
 };
 
 function PayloadClaims({ payload }: { payload: Record<string, unknown> }) {
+    const { t, language } = useLanguage();
     return (
-        <div style={{ fontSize: 13 }}>
+        <div dir="ltr" style={{ fontSize: 13 }}>
             {Object.entries(payload).map(([key, val]) => {
                 let display: React.ReactNode = String(val);
                 if (key === "exp" || key === "iat" || key === "nbf") {
@@ -454,27 +455,26 @@ function PayloadClaims({ payload }: { payload: Record<string, unknown> }) {
                         const d = new Date(val * 1000);
                         display = (
                             <span>
-                                <Text code>{val}</Text>
-                                <Text type="secondary" style={{ fontSize: 11, marginLeft: 6 }}>
-                                    ({d.toLocaleString()})
-                                </Text>
+                                <Text dir="ltr" code>{val}</Text>
+                                <Text type="secondary" style={{ fontSize: 11, marginInlineStart: 6 }}>
+                                    ({d.toLocaleString(language)})</Text>
                             </span>
                         );
                     }
                 } else if (typeof val === "object") {
-                    display = <Text code style={{ fontSize: 11 }}>{JSON.stringify(val)}</Text>;
+                    display = <Text dir="ltr" code style={{ fontSize: 11 }}>{JSON.stringify(val)}</Text>;
                 } else {
-                    display = <Text code>{String(val)}</Text>;
+                    display = <Text dir="ltr" code>{String(val)}</Text>;
                 }
 
                 return (
                     <div key={key} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start" }}>
-                        <Tooltip title={CLAIM_DESCRIPTIONS[key] ?? "Custom claim"}>
+                        <Tooltip title={t(CLAIM_DESCRIPTIONS[key] ?? "Custom claim")}>
                             <Tag color={CLAIM_DESCRIPTIONS[key] ? "cyan" : "default"} style={{ flexShrink: 0, fontFamily: "var(--font-geist-mono)" }}>
                                 {key}
                             </Tag>
                         </Tooltip>
-                        <span style={{ wordBreak: "break-all" }}>{display}</span>
+                        <span dir="ltr" style={{ wordBreak: "break-all" }}>{display}</span>
                     </div>
                 );
             })}

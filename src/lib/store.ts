@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { appStateStorage, activeSessionProjectId } from "./project-storage";
 
 export interface BookmarkMenu {
     id: string;
@@ -29,7 +30,7 @@ interface AppState {
 export const useAppStore = create<AppState>()(
     persist(
         (set) => ({
-            darkMode: true,
+            darkMode: false,
             sidebarCollapsed: false,
             recentTools: [],
             isNavigating: false,
@@ -75,6 +76,7 @@ export const useAppStore = create<AppState>()(
         }),
         {
             name: "devtools-hub-storage",
+            storage: createJSONStorage(() => appStateStorage(window.localStorage, activeSessionProjectId)),
             partialize: (state) => ({
                 darkMode: state.darkMode,
                 sidebarCollapsed: state.sidebarCollapsed,

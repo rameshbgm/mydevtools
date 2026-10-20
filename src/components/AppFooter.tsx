@@ -5,18 +5,21 @@ import { GithubOutlined, LinkedinFilled, HeartFilled } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { toolsRegistry } from "@/lib/tools-registry";
-import { APP_VERSION } from "@/lib/release-notes";
+import { APP_VERSION } from "@/lib/app-version";
 import PwaInstallButton from "./PwaInstallButton";
+import { useLanguage } from "./LanguageProvider";
 
 const { Text } = Typography;
 
 export default function AppFooter() {
+    const { t } = useLanguage();
     const { darkMode } = useAppStore();
     const year = new Date().getFullYear();
 
     return (
         <footer className="wb-footer">
 
+            <a href="/guides">{t("Debugging guides")}</a>
             <div
                 style={{
                     maxWidth: 1200,
@@ -42,7 +45,7 @@ export default function AppFooter() {
                         fontSize: 14,
                     }}
                 >
-                    <Text style={{ color: "var(--wb-text-body)" }}>Made with</Text>
+                    <Text style={{ color: "var(--wb-text-body)" }}>{t("Made with")}</Text>
                     <motion.span
                         animate={{ scale: [1, 1.25, 1] }}
                         transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
@@ -50,7 +53,7 @@ export default function AppFooter() {
                     >
                         <HeartFilled style={{ color: "#ec4899", fontSize: 16 }} />
                     </motion.span>
-                    <Text style={{ color: "var(--wb-text-body)" }}>by</Text>
+                    <Text style={{ color: "var(--wb-text-body)" }}>{t("by")}</Text>
                     <a
                         href="https://rameshsnotebook.com/"
                         target="_blank"
@@ -78,7 +81,7 @@ export default function AppFooter() {
                             rel="noopener noreferrer"
                             whileHover={{ y: -3, scale: 1.08 }}
                             whileTap={{ scale: 0.95 }}
-                            aria-label="LinkedIn profile"
+                            aria-label={t("LinkedIn profile")}
                             style={{
                                 width: 40,
                                 height: 40,
@@ -105,7 +108,7 @@ export default function AppFooter() {
                             rel="noopener noreferrer"
                             whileHover={{ y: -3, scale: 1.08 }}
                             whileTap={{ scale: 0.95 }}
-                            aria-label="GitHub profile"
+                            aria-label={t("GitHub profile")}
                             style={{
                                 width: 40,
                                 height: 40,
@@ -147,11 +150,11 @@ export default function AppFooter() {
                     </a>
                     <span className="footer-dot" />
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                        {toolsRegistry.length} tools
+                        {t("{count} tools", { count: toolsRegistry.length })}
                     </Text>
                     <span className="footer-dot" />
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                        Client-side by default · see each tool for details
+                        {t("Client-side by default · see each tool for details")}
                     </Text>
                     <PwaInstallButton />
                 </div>

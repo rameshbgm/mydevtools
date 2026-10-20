@@ -16,7 +16,7 @@
  * Public-facing version number shown in the topbar. Bump on a meaningful
  * shipping milestone — does NOT need to match individual entries below.
  */
-export const APP_VERSION = "1.5.1";
+export { APP_VERSION } from "./app-version";
 
 export type ReleaseKind = "feature" | "fix" | "security" | "ui" | "perf";
 
@@ -65,6 +65,114 @@ export interface ReleaseNote {
  * V1.0 — initial public release of the toolkit (80+ tools).
  */
 const ENTRIES: ReleaseNote[] = [
+    {
+        date: "2026-10-19", version: "2.0.0", kind: "feature",
+        title: "V2.0 — project workspaces, private vaults and connected data tools",
+        summary: "Expands the catalog to 147 tools with project isolation, encrypted storage, database clients and deeper capabilities in existing tools.",
+        sections: [
+            { label: "Projects and private work", bullets: [
+                "Restore each workspace's last page and selected tool tab; keep saved notes, snippets, bookmarks, workflows and connections separate.",
+                "Translate snippet controls and shared editor copy actions across eight languages; retain saved snippet identity and highlighting when loading records.",
+                "Keep Personal protected; rename projects, move other projects to Deleted projects and restore them with their saved data and encrypted vaults.",
+                "Store credentials, connection settings and files in passphrase-protected AES-256-GCM vaults; export encrypted backups and use the local recovery CLI.",
+                "Inspect project/global records, encrypted vaults, session data and offline caches in the redesigned Memory & Storage inventory, with filters, previews, backups and scoped clear actions.",
+                "Align project forms and row actions, keep the current-project status beside its name, and stack project rows in narrow layouts.",
+                "Open version-specific release notes from the branding area; remember the seen release on this browser and retain an accessible icon afterward.",
+            ] },
+            { label: "Databases and storage", bullets: [
+                "Run SQLite locally in a browser worker, import and export databases, browse schemas and retain project-specific query text and history.",
+                "Connect to PostgreSQL, MySQL, MariaDB and Redis through an explicitly enabled, authenticated localhost runtime. Native connectors are disabled by default.",
+                "Browse S3-compatible buckets, prefixes and metadata; upload and download bounded files, confirm deletion and save connections in the encrypted vault.",
+                "Browse MongoDB collections with canonical Extended JSON, typed Firestore documents and Elasticsearch indexes, mappings and search results; keep precision-sensitive numeric data intact in raw exports.",
+                "Keep Document Data Explorer read-only, with bounded responses, query timeouts and explicit cloud credentials or isolated emulator settings.",
+            ] },
+            { label: "Data, APIs and references", bullets: [
+                "Convert spreadsheets with XLSX sheet selection, JSON, CSV and TSV; infer JSON Schema and generate models in nine target languages. Reject numeric values that Excel cannot preserve and keep quoted precision-sensitive values as text.",
+                "Convert in all twelve directions between JSON, YAML, TOML and XML; report incompatible mappings and precision-sensitive values before they can change silently, and retain TOML timestamp fractions as text.",
+                "Preserve exact JSON numeric spelling, negative zero, escaped strings and duplicate keys when formatting snippets, using JSON Formatter or running JSON format/minify workflow steps.",
+                "Add JMESPath and interactive JSON graphs with search, JSONPath focus, tables and image exports; expand binary Base64 and arbitrary-base number conversion.",
+                "Infer numeric schema types from original JSON tokens. Reject input numbers that would round during JSON queries, with an explicit option to preserve affected values as strings.",
+                "Build GraphQL operations from schema fields; use visual cron controls with time zones, plan across DST changes and convert units across 34 scientific and engineering categories.",
+                "Generate TOTP codes, namespaced UUIDs and ULIDs, bulk secrets, PHP/Ruby/C# API client snippets and documented Docker Compose starters.",
+                "Run HTTP collections with variable captures and assertions, call proto-defined gRPC methods and start bounded temporary localhost HTTP mocks through authenticated native transports.",
+                "Format PostgreSQL, MySQL and SQLite syntax without changing quoted values; convert HTML into Markdown and export sanitized HTML documents.",
+                "Inspect keyboard events and user agents, query RDAP registration data, run explicit email MX diagnostics and generate local gitignore starters.",
+            ] },
+            { label: "Correctness and compatibility", bullets: [
+                "Keep exact YAML numeric tokens when formatting snippets or standalone documents, including large integers, long decimals and negative zero.",
+                "Encode supplementary Unicode characters correctly in HTML references and UTF-16; decode one entity layer and preserve ordinary versus non-breaking spaces.",
+                "Open the CSV-to-XML entry route in XML mode; initialize timestamp clocks after hydration and reject out-of-range input without replacing the date draft.",
+                "Identify CryptoJS Keccak digests accurately in displayed and copied results; show the AES tool's actual fixed legacy AES-256-CBC format and unauthenticated-data limitation.",
+                "Repair JWE direct encryption, AES key wrapping and CBC-HMAC authentication; preserve exact decrypted UTF-8 and require correctly sized keys.",
+                "Sign and verify Unicode JWS payloads, match expected algorithms and key requirements, and generate JWK metadata consistent with the actual key.",
+                "Preserve URL percent-encoded query values and support IPv4 /0; accept JSON/YAML OpenAPI input and explicitly encode A2A Basic credentials as UTF-8/NFC.",
+                "Isolate Mermaid previews in a sandbox with strict rendering and escape document titles in exported HTML.",
+                "Keep QR results tied to the latest input and report generation failures; reject unsupported Canvas encoders before a download can receive the wrong extension.",
+            ] },
+            { label: "Certificates and SSH keys", bullets: [
+                "Generate real self-signed X.509 certificates and PKCS#10 requests with matching keys and validated subject alternative names; generate native Ed25519 keys when the browser supports them.",
+                "Export interoperable RSA, ECDSA and Ed25519 OpenSSH keys and SHA-256 fingerprints. Private files are unencrypted; add a passphrase locally with ssh-keygen.",
+                "Recognize PEM certificates in .crt and .cer uploads and retain the actual format of generated downloads.",
+            ] },
+            { label: "Images and design", bullets: [
+                "Build CSS gradients, layered shadows, elliptical radii, fluid typography, flex and grid layouts; explore color harmonies and shade scales, and create highlighted code screenshots.",
+                "Inspect EXIF and image metadata, remove supported metadata without recompressing image data, and create multi-image ICO, maskable PNG and manifest bundles.",
+            ] },
+            { label: "Reference and workflow repairs", bullets: [
+                "Preserve intervening snippet and bookmark edits during imports; guard binary-file reads against replacements or cancellation, and reject malformed file-vault records before saving.",
+                "Validate complete IPv6, decimal-address and port inputs; return multiple services for shared ports and copy exact port numbers or CIDRs.",
+                "Update curated HTTP, RFC, port and IP references from primary sources; separate formal RFC maturity from obsolescence and deployment advice, and include current TLS, DMARC and IPv6 documentation references.",
+                "Preserve exact model rates and context limits in pricing tables; correct YAML and EOT MIME mappings and include the generic binary media type.",
+                "Preserve physical JSONL line numbers, JSON null and original number tokens; reject precision-losing TOON conversions and preserve root arrays, scalar types and quoted strings with explicit legacy-array recovery.",
+                "Keep countdowns aligned with elapsed time, cancel stale animation callbacks, prevent zero-valued dice and preserve active game results when changing language.",
+                "Reject corrupted card-number input, retain generated batch metadata and export exact text, CSV or JSON fixtures with the correct media type. Generation does not verify an account or predict payment responses.",
+                "Reject invalid contrast inputs, compare unrounded ratios and handle deterministic palette extraction, file races, decode failures and clipboard failures without false success notices.",
+                "Keep SOAP and WSDL support boundaries explicit, preserve original XML and webhook bodies, quote generated shell arguments safely and avoid inferring an exact CORS failure cause from opaque browser errors.",
+            ] },
+            { label: "Tool guidance and data disclosures", bullets: [
+                "Show detailed network data disclosures collapsed by default, including the destination, sent fields, data handling and source links; distinguish direct browser requests, managed proxies, localhost connectors and model downloads.",
+                "Add missing Learn More sections to 21 tool pages with practical instructions and limits; retain authored help and route aliases that open the corresponding tool tab.",
+                "Translate generator, task and note controls and security helper findings; fix stable sample generation, Markdown table escaping, mock SQL identifiers, TypeScript inference, CSV quoting and explicit task import confirmations.",
+                "Prepare safely quoted Java keytool commands with interactive password prompts, and describe the browser tool accurately as a PKCS#12 builder and command helper.",
+            ] },
+            { label: "Delivery and scope", bullets: [
+                "Choose English, Hindi, Spanish, French, German, Japanese, Chinese or Arabic, including RTL navigation. Translate authored interface guidance, reference explanations, catalog descriptions and release notes while preserving code, identifiers and user data.",
+                "Bundle the production runtime and local assets in the desktop edition with a separate persistent profile and automatic native access. Current package validation covers macOS Apple Silicon with local ad-hoc signing; other platform targets and public signing need separate validation.",
+                "Publish a current canonical tool catalog, Markdown debugging guides and release notes, llms.txt and a custom read-only agent catalog; include a generated social preview and accurate structured counts.",
+                "Rename workspace tabs by double-clicking their names or pressing F2; use the top-corner close icon to confirm permanent deletion of the workspace and its saved content. Keep Personal protected and limit active workspaces to ten.",
+                "Default to the compact workspace while respecting saved view choices; keep Show introduction available and remove the old live demo, recent/pinned block and paste-to-find section.",
+                "Use Node.js 24 or newer for the full connector runtime and precision-preserving JSON support; keep native connector access on localhost with a separate access key.",
+                "Retain canonical category/tool URLs, self-hosted fonts and editor assets, light/dark themes and visited-page PWA caching. Network features still need connectivity.",
+            ] },
+        ],
+    },
+    {
+        date: "2026-10-19", version: "1.6.0", kind: "feature",
+        title: "V1.6 — repeatable workflows, current protocols and a faster workspace",
+        summary: "Adds four tools, refreshes version-sensitive references, and improves catalog performance, validation and privacy boundaries.",
+        sections: [
+            { label: "New tools and workflows", bullets: [
+                "Save executable local workflows for decoding, JSON formatting, JSONPath, redaction, fixture comparison and SHA-256; pin workflows and opt in to draft restoration.",
+                "Preview and export redacted HAR, JSON and logs; verify GitHub, Stripe, Slack and raw HMAC-SHA256 signatures against the original UTF-8 body.",
+                "Inspect and generate W3C trace context; generate UUIDv4/v7 and inspect v7 timestamps. The catalog now contains 125 tools.",
+                "Suggest tools from an explicit local smart paste and search by common debugging tasks.",
+            ] },
+            { label: "Standards and correctness", bullets: [
+                "Validate JSON Schema Draft 2020-12, 2019-09 and Draft-07 with Ajv in a bounded worker; fail unknown dialects, rules and unresolved references explicitly.",
+                "Compare selected OpenAPI request and response constraints with local references, media changes and manual-review warnings for unsupported semantics; reference OpenAPI 3.2.1.",
+                "Support MCP 2026-07-28 per-request metadata and discovery plus explicit legacy initialization; support A2A 1.0 JSONRPC with labeled 0.3 and older modes.",
+                "Add reviewed model records with pricing tier/expiry notes, honest local tokenizer scope, optional direct provider counting, OAuth/JWT BCP references and current IANA HTTP names.",
+                "Publish runnable debugging fixtures, shared source/review records and a read-only weekly source monitor that requires review before dataset updates.",
+            ] },
+            { label: "Workspace, privacy and delivery", bullets: [
+                "Use native canonical catalog links, reserve sidebar space before hydration, remove delayed marketing entrances and lazy-load workspace overlays.",
+                "Self-host licensed fonts so production builds do not depend on Google Fonts requests.",
+                "Label data boundaries, redact credentials in exports by default and exclude API/authenticated/RSC requests from service-worker persistence.",
+                "Warm public pages and hashed assets for visited-tool offline use; offer an explicit reload for updates. Network and uncached features still require connectivity.",
+                "Add a nonroot standalone Docker deployment, configurable canonical site URL, refreshed compatible dependencies and regression fixtures for the new behavior. Existing upstream dependency advisories remain disclosed in the validation report.",
+            ] },
+        ],
+    },
     {
         date: "2026-09-05",
         version: "1.5.1",

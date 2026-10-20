@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import { Button, Card, Row, Col, Select, InputNumber, Typography, Space, Tag, Tooltip, Statistic } from "antd";
+import { Button, Card, Row, Col, Select, InputNumber, Typography, Space, Tag } from "antd";
 import { ThunderboltOutlined, ReloadOutlined, HistoryOutlined } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
 
@@ -115,6 +116,7 @@ interface HistoryEntry {
 
 export default function DiceRollPage() {
     const { darkMode } = useAppStore();
+    const { t } = useLanguage();
 
     const [mounted, setMounted] = useState(false);
     const [dieType, setDieType] = useState<DieType>(6);
@@ -126,6 +128,13 @@ export default function DiceRollPage() {
 
     useEffect(() => { setMounted(true); }, []);
 
+    const animationRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+    const resultRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => {
+        if (animationRef.current) clearInterval(animationRef.current);
+        if (resultRef.current) clearTimeout(resultRef.current);
+    }, []);
+
     const roll = useCallback(() => {
         if (rolling) return;
         setRolling(true);
@@ -133,13 +142,13 @@ export default function DiceRollPage() {
         const count = mode === "normal" ? dieCount : 2;
 
         // Show animated random values during roll
-        const animInterval = setInterval(() => {
-            setCurrentRolls(Array.from({ length: count }, () => Math.ceil(Math.random() * dieType)));
+        const animInterval = animationRef.current = setInterval(() => {
+            setCurrentRolls(Array.from({ length: count }, () => Math.floor(Math.random() * dieType) + 1));
         }, 80);
 
-        setTimeout(() => {
+        resultRef.current = setTimeout(() => {
             clearInterval(animInterval);
-            const finalRolls = Array.from({ length: count }, () => Math.ceil(Math.random() * dieType));
+            const finalRolls = Array.from({ length: count }, () => Math.floor(Math.random() * dieType) + 1);
             setCurrentRolls(finalRolls);
             setRolling(false);
 
@@ -176,30 +185,14 @@ export default function DiceRollPage() {
 
     return (
         <ToolPageLayout
-            title="Dice Roll"
-            description="Roll any polyhedral dice — d4, d6, d8, d10, d12, d20"
+            title={t("Dice Roll")}
+            description={t("Roll any polyhedral dice — d4, d6, d8, d10, d12, d20")}
             icon={<ThunderboltOutlined style={{ fontSize: 24, color: "#8b5cf6" }} />}
             color="#8b5cf6"
             learnMore={{
-                whatIs: "A configurable virtual dice roller supporting all standard polyhedral dice used in tabletop RPGs and probability experiments. Roll multiple dice at once, or use advantage/disadvantage mode to roll two and take the higher or lower result.",
-                howToUse: [
-                    "Choose a die type (d4 through d20)",
-                    "Set how many dice to roll (1–10)",
-                    "Select Normal, Advantage (take higher), or Disadvantage (take lower) mode",
-                    "Click Roll and watch the animation",
-                ],
-                tips: [
-                    "Advantage: roll 2 dice, keep the higher — useful in D&D 5e for favourable situations",
-                    "Disadvantage: roll 2 dice, keep the lower — for unfavourable conditions",
-                    "A critical hit (max value) is highlighted in gold",
-                    "A critical fail (min value) is highlighted in red",
-                ],
-                useCases: [
-                    "Tabletop RPG sessions (D&D, Pathfinder, etc.)",
-                    "Probability and statistics experiments",
-                    "Random selection and decision making",
-                    "Game development and testing",
-                ],
+                whatIs: t("Roll d4, d6, d8, d10, d12 or d20 dice locally. Advantage keeps the higher of two rolls; disadvantage keeps the lower."),
+                howToUse: [t("Choose dice, count and mode, then roll. Configuration is locked during the animation.")],
+                tips: [t("Results use Math.random, not a cryptographic generator. History keeps the last 20 rolls in this tab.")],
             }}
         >
             <Row gutter={[20, 20]}>
@@ -210,8 +203,9 @@ export default function DiceRollPage() {
                         {mounted && (
                         <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
                             <Col xs={24} sm={8}>
-                                <Text style={{ display: "block", fontSize: 11, fontWeight: 600, color: muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Die type</Text>
-                                <Select
+                                <Text style={{ display: "block", fontSize: 11, fontWeight: 600, color: muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{t("Die type")}</Text>
+                                <Select aria-label={t("Die type")}
+                                    disabled={rolling}
                                     value={dieType}
                                     onChange={(v) => { setDieType(v); setCurrentRolls([]); }}
                                     style={{ width: "100%" }}
@@ -220,26 +214,27 @@ export default function DiceRollPage() {
                                 />
                             </Col>
                             <Col xs={12} sm={8}>
-                                <Text style={{ display: "block", fontSize: 11, fontWeight: 600, color: muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Count</Text>
-                                <InputNumber
+                                <Text style={{ display: "block", fontSize: 11, fontWeight: 600, color: muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{t("Count")}</Text>
+                                <InputNumber aria-label={t("Count")} precision={0}
                                     min={1} max={10} value={dieCount}
-                                    onChange={(v) => { if (v) setDieCount(v); }}
+                                    onChange={(v) => { if (v) { setDieCount(Math.max(1, Math.min(10, Math.trunc(v)))); setCurrentRolls([]); } }}
                                     style={{ width: "100%" }}
                                     size="large"
-                                    disabled={mode !== "normal"}
+                                    disabled={rolling || mode !== "normal"}
                                 />
                             </Col>
                             <Col xs={12} sm={8}>
-                                <Text style={{ display: "block", fontSize: 11, fontWeight: 600, color: muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Mode</Text>
-                                <Select
+                                <Text style={{ display: "block", fontSize: 11, fontWeight: 600, color: muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{t("Mode")}</Text>
+                                <Select aria-label={t("Mode")}
+                                    disabled={rolling}
                                     value={mode}
-                                    onChange={setMode}
+                                    onChange={next => { setMode(next); setCurrentRolls([]); }}
                                     style={{ width: "100%" }}
                                     size="large"
                                     options={[
-                                        { value: "normal", label: "Normal" },
-                                        { value: "advantage", label: "Advantage ↑" },
-                                        { value: "disadvantage", label: "Disadvantage ↓" },
+                                        { value: "normal", label: t("Normal") },
+                                        { value: "advantage", label: t("Advantage ↑") },
+                                        { value: "disadvantage", label: t("Disadvantage ↓") },
                                     ]}
                                 />
                             </Col>
@@ -256,7 +251,7 @@ export default function DiceRollPage() {
                                             : <PolyDiceFace sides={dieType} value={Math.ceil(dieType / 2)} size={90} color={color} />
                                         }
                                     </div>
-                                    <Text style={{ color: muted }}>Press Roll to throw the {mode !== "normal" ? "2" : dieCount}d{dieType}</Text>
+                                    <Text style={{ color: muted }}>{t("Press Roll to throw {count}d{sides}", { count: mode !== "normal" ? 2 : dieCount, sides: dieType })}</Text>
                                 </div>
                             ) : (
                                 <AnimatePresence>
@@ -294,8 +289,8 @@ export default function DiceRollPage() {
                                         ({displayRolls.join(" + ")})
                                     </Text>
                                 )}
-                                {isMax && <div><Tag color="gold" style={{ marginTop: 4 }}>⚡ Critical Hit!</Tag></div>}
-                                {isMin && !isMax && <div><Tag color="red" style={{ marginTop: 4 }}>Critical Fail</Tag></div>}
+                                {isMax && <div><Tag color="gold" style={{ marginTop: 4 }}>{t("⚡ Critical Hit!")}</Tag></div>}
+                                {isMin && !isMax && <div><Tag color="red" style={{ marginTop: 4 }}>{t("Critical Fail")}</Tag></div>}
                             </motion.div>
                         )}
 
@@ -308,7 +303,7 @@ export default function DiceRollPage() {
                                 loading={rolling}
                                 style={{ background: color, borderColor: color, fontWeight: 700, fontSize: 16, height: 48, flex: 1 }}
                             >
-                                {rolling ? "Rolling…" : `Roll ${mode !== "normal" ? "2" : dieCount}d${dieType}`}
+                                {rolling ? t("Rolling…") : t("Roll {count}d{sides}", { count: mode !== "normal" ? 2 : dieCount, sides: dieType })}
                             </Button>
                             <Button
                                 size="large"
@@ -317,8 +312,7 @@ export default function DiceRollPage() {
                                 disabled={rolling || currentRolls.length === 0}
                                 style={{ height: 48 }}
                             >
-                                Reset
-                            </Button>
+                                {t("Reset")}</Button>
                         </Space.Compact>
                     </Card>
                 </Col>
@@ -330,12 +324,12 @@ export default function DiceRollPage() {
                         title={
                             <Space>
                                 <HistoryOutlined />
-                                <Text style={{ fontSize: 13, fontWeight: 600 }}>Roll History</Text>
+                                <Text style={{ fontSize: 13, fontWeight: 600 }}>{t("Roll History")}</Text>
                                 {history.length > 0 && (
                                     <Button type="text" size="small" icon={<ReloadOutlined />}
                                         onClick={() => setHistory([])}
                                         style={{ color: muted, fontSize: 11 }}
-                                    >Clear</Button>
+                                    >{t("Clear")}</Button>
                                 )}
                             </Space>
                         }
@@ -343,8 +337,7 @@ export default function DiceRollPage() {
                     >
                         {history.length === 0 ? (
                             <div style={{ textAlign: "center", padding: "24px 0", color: muted, fontSize: 13 }}>
-                                No rolls yet
-                            </div>
+                                {t("No rolls yet")}</div>
                         ) : (
                             <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 380, overflowY: "auto" }}>
                                 <AnimatePresence>
@@ -375,11 +368,11 @@ export default function DiceRollPage() {
                                                     display: "flex", alignItems: "center", justifyContent: "center",
                                                     color: "#fff", fontSize: 11, fontWeight: 700, flexShrink: 0,
                                                 }}>
-                                                    d{entry.sides}
+                                                    {"d"}{entry.sides}
                                                 </span>
                                                 <div style={{ flex: 1, minWidth: 0 }}>
                                                     <div style={{ fontSize: 11, color: muted }}>
-                                                        {entry.mode !== "normal" ? entry.mode : `${entry.count} dice`}
+                                                        {entry.mode !== "normal" ? t(entry.mode === "advantage" ? "Advantage" : "Disadvantage") : t("{count} dice", { count: entry.count })}
                                                         {" · "}[{entry.rolls.join(", ")}]
                                                     </div>
                                                 </div>

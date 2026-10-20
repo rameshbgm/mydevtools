@@ -23,6 +23,8 @@
 
 # production
 /build
+/.desktop/
+/desktop-dist/
 
 # misc
 .DS_Store
@@ -43,3 +45,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Read-only source review output (uploaded as a CI artifact)
+/reference-source-report.json
+
+# SQLite WebAssembly assets copied from the locked sql.js package.
+/public/sqlite/
+
+# ONNX Runtime factories and WASM copied from the locked package.
+/public/onnx/
+
+# Local browser QA evidence; design records remain versionable.
+/.impeccable/review/

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Button, Card, Typography, Tag, Row, Col, Select, Progress } from "antd";
 import { ReloadOutlined, FontSizeOutlined, TrophyOutlined } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useAppStore } from "@/lib/store";
 
@@ -49,6 +50,7 @@ function calcAccuracy(typed: string, target: string): { accuracy: number; errors
 
 export default function TypingTestPage() {
     const { darkMode } = useAppStore();
+    const { t } = useLanguage();
     const [duration, setDuration] = useState(60);
     const [textIdx, setTextIdx] = useState(0);
     const [typed, setTyped] = useState("");
@@ -62,10 +64,24 @@ export default function TypingTestPage() {
     const startTimeRef = useRef<number>(0);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    useEffect(() => { setMounted(true); }, []);
+    useEffect(() => { setMounted(true); return () => { if (intervalRef.current) clearInterval(intervalRef.current); }; }, []);
     useEffect(() => { setTimeLeft(duration); }, [duration]);
 
     const target = TEXTS[textIdx];
+
+    const latestTyped = useRef(typed);
+    useEffect(() => { latestTyped.current = typed; }, [typed]);
+    const recorded = useRef(false);
+    const finish = useCallback((value: string) => {
+        if (recorded.current) return;
+        recorded.current = true;
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setFinished(true);
+        const elapsed = Math.max(1, Math.min(duration, (Date.now() - startTimeRef.current) / 1000));
+        const correctChars = value.split("").filter((c, i) => c === target[i]).length;
+        const { accuracy, errors } = calcAccuracy(value, target);
+        setResults(prev => [{ wpm: calcWpm(correctChars, elapsed), accuracy, errors, duration: Math.round(elapsed * 100) / 100, ts: Date.now() }, ...prev].slice(0, 5));
+    }, [duration, target]);
 
     const startTimer = useCallback(() => {
         startTimeRef.current = Date.now();
@@ -75,15 +91,16 @@ export default function TypingTestPage() {
             setTimeLeft(left);
             if (left === 0) {
                 clearInterval(intervalRef.current!);
-                setFinished(true);
+                finish(latestTyped.current);
             }
         }, 250);
-    }, [duration]);
+    }, [duration, finish]);
 
     const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
         if (finished) return;
 
+        if (!started && !val.length) return;
         if (!started) {
             setStarted(true);
             startTimer();
@@ -91,33 +108,26 @@ export default function TypingTestPage() {
 
         // Cap at target length
         if (val.length <= target.length) {
+            latestTyped.current = val;
             setTyped(val);
         }
 
         // Auto-finish when full text typed correctly
         if (val === target) {
             clearInterval(intervalRef.current!);
-            setFinished(true);
+            finish(val);
         }
-    }, [finished, started, startTimer, target]);
+    }, [finished, started, startTimer, target, finish]);
 
-    useEffect(() => {
-        if (finished) {
-            const elapsed = started ? Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000)) : duration;
-            const correctChars = typed.split("").filter((c, i) => c === target[i]).length;
-            const { accuracy, errors } = calcAccuracy(typed, target);
-            const wpm = calcWpm(correctChars, elapsed);
-            const result: TestResult = { wpm, accuracy, errors, duration: elapsed, ts: Date.now() };
-            setResults(prev => [result, ...prev].slice(0, 5));
-        }
-    }, [finished]);
 
-    const reset = () => {
+    const reset = (nextDuration = duration) => {
+        recorded.current = false;
+        latestTyped.current = "";
         clearInterval(intervalRef.current!);
         setTyped("");
         setStarted(false);
         setFinished(false);
-        setTimeLeft(duration);
+        setTimeLeft(nextDuration);
         setTextIdx(Math.floor(Math.random() * TEXTS.length));
         setTimeout(() => textareaRef.current?.focus(), 50);
     };
@@ -162,26 +172,14 @@ export default function TypingTestPage() {
 
     return (
         <ToolPageLayout
-            title="Typing Speed Test"
-            description="Measure your typing speed in WPM with real-time accuracy tracking"
+            title={t("Typing Speed Test")}
+            description={t("Measure your typing speed in WPM with real-time accuracy tracking")}
             icon={<FontSizeOutlined style={{ fontSize: 24, color: "#06b6d4" }} />}
             color="#06b6d4"
             learnMore={{
-                whatIs: "A typing speed test that measures your words per minute (WPM) and accuracy in real time. Characters highlight green for correct, red for incorrect, and faded for untyped. Finishes when the timer runs out or you complete the passage.",
-                whyUse: "Track your typing progress over time, warm up before a coding session, or compete with yourself. Results history shows your last 5 tests.",
-                howToUse: [
-                    "Choose a duration (15s, 30s, 60s, or 2 minutes)",
-                    "Click the text area and start typing — the timer starts on your first keystroke",
-                    "Green = correct, red = error, faded = not yet typed",
-                    "Results are shown when time runs out or you finish the text",
-                    "Click Restart to try a new passage",
-                ],
-                tips: [
-                    "WPM = correct characters ÷ 5 ÷ minutes (standard formula)",
-                    "Focus on accuracy first — errors waste time on corrections",
-                    "Shorter durations (15–30s) give higher burst WPM; 60s+ is more representative",
-                ],
-                useCases: ["Typing practice", "Pre-coding warm-up", "Measuring progress", "Friendly competitions"],
+                whatIs: t("Practice typing with fixed English passages. WPM is correct characters divided by five and by elapsed minutes; accuracy compares your current text with the passage."),
+                howToUse: [t("Choose a duration and type to start. The test ends when time runs out or the full passage matches. Restart selects a new passage.")],
+                tips: [t("The interface language does not change the English practice passage or reset a running test. The last five results stay in this tab.")],
             }}
         >
             <Row gutter={[20, 20]}>
@@ -191,21 +189,20 @@ export default function TypingTestPage() {
                         {/* Controls */}
                         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
                             {mounted && (
-                                <Select
+                                <Select aria-label={t("Custom Duration")}
                                     value={duration}
-                                    onChange={v => { setDuration(v); reset(); }}
-                                    options={DURATIONS}
+                                    onChange={v => { setDuration(v); reset(v); }}
+                                    options={DURATIONS.map(option => ({ ...option, label: t(option.label) }))}
                                     disabled={started && !finished}
                                     style={{ width: 90 }}
                                 />
                             )}
                             <Button
                                 icon={<ReloadOutlined />}
-                                onClick={reset}
+                                onClick={() => reset()}
                                 size="small"
                             >
-                                Restart
-                            </Button>
+                                {t("Restart")}</Button>
                             <div style={{ flex: 1 }} />
                             {/* Timer */}
                             <div style={{
@@ -217,8 +214,7 @@ export default function TypingTestPage() {
                                 textAlign: "right",
                                 fontVariantNumeric: "tabular-nums",
                             }}>
-                                {timeLeft}s
-                            </div>
+                                {timeLeft}{t("s")}</div>
                         </div>
 
                         {/* Progress bar */}
@@ -230,8 +226,9 @@ export default function TypingTestPage() {
                             style={{ marginBottom: 16 }}
                         />
 
+                        <Text type="secondary">{t("English practice passage")}</Text>
                         {/* Text display */}
-                        <div
+                        <div dir="ltr"
                             style={{
                                 fontFamily: "var(--font-geist-mono), monospace",
                                 fontSize: 16,
@@ -251,14 +248,14 @@ export default function TypingTestPage() {
                         </div>
 
                         {/* Hidden textarea for input capture */}
-                        <textarea
+                        <textarea dir="ltr"
                             ref={textareaRef}
                             value={typed}
                             onChange={handleInput}
                             disabled={finished}
                             autoFocus
-                            aria-label="Typing test input"
-                            title="Typing test input"
+                            aria-label={t("Typing test input")}
+                            title={t("Typing test input")}
                             spellCheck={false}
                             autoCorrect="off"
                             autoCapitalize="off"
@@ -284,8 +281,7 @@ export default function TypingTestPage() {
                                     fontSize: 13,
                                 }}
                             >
-                                Click here and start typing to begin the test
-                            </div>
+                                {t("Click here and start typing to begin the test")}</div>
                         )}
 
                         {/* Live stats */}
@@ -301,7 +297,7 @@ export default function TypingTestPage() {
                                         {stat.value}
                                     </div>
                                     <Text type="secondary" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                                        {stat.label}
+                                        {t(stat.label)}
                                     </Text>
                                 </Col>
                             ))}
@@ -325,25 +321,24 @@ export default function TypingTestPage() {
                                     <TrophyOutlined style={{ fontSize: 28, color: "#f59e0b", marginBottom: 8 }} />
                                     <div style={{ fontSize: 48, fontWeight: 900, color: "#06b6d4", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
                                         {results[0].wpm}
-                                        <span style={{ fontSize: 18, fontWeight: 600, color: muted, marginLeft: 4 }}>WPM</span>
+                                        <span style={{ fontSize: 18, fontWeight: 600, color: muted, marginLeft: 4 }}>{t("WPM")}</span>
                                     </div>
                                     <div style={{ marginTop: 8, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
                                         <Tag color={results[0].accuracy >= 90 ? "success" : results[0].accuracy >= 70 ? "warning" : "error"}>
-                                            {results[0].accuracy}% accuracy
+                                            {t("{percent}% accuracy", { percent: results[0].accuracy })}
                                         </Tag>
                                         <Tag color={results[0].errors === 0 ? "success" : "default"}>
-                                            {results[0].errors} error{results[0].errors !== 1 ? "s" : ""}
+                                            {t("{count} errors", { count: results[0].errors })}
                                         </Tag>
-                                        <Tag>{results[0].duration}s</Tag>
+                                        <Tag>{results[0].duration}{t("s")}</Tag>
                                     </div>
                                     <Button
                                         type="primary"
                                         icon={<ReloadOutlined />}
-                                        onClick={reset}
+                                        onClick={() => reset()}
                                         style={{ marginTop: 16, background: "#06b6d4", borderColor: "#06b6d4" }}
                                     >
-                                        Try Again
-                                    </Button>
+                                        {t("Try Again")}</Button>
                                 </Card>
                             </motion.div>
                         )}
@@ -352,11 +347,11 @@ export default function TypingTestPage() {
 
                 {/* History */}
                 <Col xs={24} lg={8}>
-                    <Card size="small" style={{ background: cardBg }} title={<Text strong>History</Text>}>
+                    <Card size="small" style={{ background: cardBg }} title={<Text strong>{t("History")}</Text>}>
                         {results.length === 0 ? (
                             <div style={{ textAlign: "center", padding: "24px 0" }}>
                                 <div style={{ fontSize: 36, marginBottom: 8 }}>⌨️</div>
-                                <Text type="secondary" style={{ fontSize: 12 }}>Complete a test to see results</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>{t("Complete a test to see results")}</Text>
                             </div>
                         ) : (
                             results.map((r, i) => (
@@ -371,17 +366,17 @@ export default function TypingTestPage() {
                                         minWidth: 44, fontVariantNumeric: "tabular-nums",
                                     }}>
                                         {r.wpm}
-                                        <span style={{ fontSize: 9, color: muted, fontWeight: 500, marginLeft: 2 }}>WPM</span>
+                                        <span style={{ fontSize: 9, color: muted, fontWeight: 500, marginLeft: 2 }}>{t("WPM")}</span>
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <div>
                                             <Tag color={r.accuracy >= 90 ? "success" : r.accuracy >= 70 ? "warning" : "error"} style={{ fontSize: 10 }}>
                                                 {r.accuracy}%
                                             </Tag>
-                                            <Text type="secondary" style={{ fontSize: 10 }}>{r.duration}s</Text>
+                                            <Text type="secondary" style={{ fontSize: 10 }}>{r.duration}{t("s")}</Text>
                                         </div>
                                         <div>
-                                            <Text type="secondary" style={{ fontSize: 10 }}>{r.errors} error{r.errors !== 1 ? "s" : ""}</Text>
+                                            <Text type="secondary" style={{ fontSize: 10 }}>{t("{count} errors", { count: r.errors })}</Text>
                                         </div>
                                     </div>
                                 </div>

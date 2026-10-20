@@ -1,0 +1,42 @@
+"use client";
+import { useLanguage } from "@/components/LanguageProvider";
+import { useEffect, useState } from "react";
+import { CodeOutlined } from "@ant-design/icons";
+import ToolPageLayout from "@/components/ToolPageLayout";
+import { CodeEditor } from "@/components/CodeEditor";
+import { projectStorage } from "@/lib/project-storage";
+import { SNIPPET_LANGUAGES, detectCodeLanguage, formatSnippet, parseLibrary, type CodeSnippet } from "@/lib/local-library";
+import { downloadText } from "@/lib/download";
+import { copyToClipboard } from "@/lib/clipboard";
+const KEY = "mydevtools-code-snippets-v1";
+const blank = { id: "", title: "", code: "", language: "plaintext", tags: "" };
+export default function CodeSnippetsPage() {
+    const { t } = useLanguage();
+    const [importedCount, setImportedCount] = useState<number | null>(null);
+    const [records, setRecords] = useState<CodeSnippet[]>([]), [draft, setDraft] = useState(blank);
+    const [search, setSearch] = useState(""), [readOnly, setReadOnly] = useState(false), [ready, setReady] = useState(false), [busy, setBusy] = useState(false);
+    const [error, setError] = useState(""), [notice, setNotice] = useState(""), [removed, setRemoved] = useState<CodeSnippet | null>(null);
+    useEffect(() => { try { setRecords(parseLibrary(JSON.parse(projectStorage.getItem(KEY) ?? "[]"), "snippets")); setReady(true); } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); } }, []);
+    // Re-read immediately before the synchronous commit. File reads can finish
+    // after another edit, delete, import or another tab's storage update.
+    const persist = (update: (current: CodeSnippet[]) => CodeSnippet[]) => {
+        if (!ready) throw new Error("Stored library could not be loaded. Back it up in Memory Manager before clearing or restoring it.");
+        const current = parseLibrary(JSON.parse(projectStorage.getItem(KEY) ?? "[]"), "snippets");
+        const valid = parseLibrary(update(current), "snippets");
+        projectStorage.setItem(KEY, JSON.stringify(valid));
+        setRecords(valid);
+    };
+    const perform = (action: () => void) => { try { action(); setError(""); } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); } };
+    const visible = records.filter((row) => `${row.title} ${row.language} ${row.code} ${row.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase()));
+    return <ToolPageLayout title="Code Snippets" description={t("Build a searchable project library with syntax highlighting, formatting and export")} icon={<CodeOutlined />} color="#08979c"><div className="wb-workbench wb-snippets">
+        <div className="wb-library-layout"><aside className="wb-workbench"><label>{t("Search snippets")}<input disabled={busy} type="search" value={search} onChange={(event) => setSearch(event.target.value)} /></label><button disabled={busy} onClick={() => { setDraft(blank); setReadOnly(false); }}>{t("New snippet")}</button>{visible.length ? <ul className="wb-snippet-list">{visible.map((row) => <li key={row.id}><button disabled={busy} aria-pressed={draft.id === row.id} onClick={() => { setDraft({ ...row, tags: row.tags.join(", ") }); setReadOnly(true); }}><bdi>{row.title}</bdi><small dir="auto">{row.language} · {row.tags.join(", ")}</small></button></li>)}</ul> : <p>{ready ? records.length ? t("No snippets match this search.") : t("Your project library is empty.") : t("Loading snippets…")}</p>}</aside>
+        <div className="wb-workbench"><div className="wb-form-grid"><label>{t("Snippet name")}<input dir="auto" disabled={busy} value={draft.title} maxLength={160} onChange={(event) => { const title = event.target.value; setDraft((current) => ({ ...current, title })); }} /></label><label>{t("Language")}<select disabled={busy} value={draft.language} onChange={(event) => { const language = event.target.value; setDraft((current) => ({ ...current, language })); }}>{SNIPPET_LANGUAGES.map((language) => <option key={language}>{language}</option>)}</select></label><label>{t("Tags, separated by commas")}<input dir="auto" disabled={busy} maxLength={1200} value={draft.tags} onChange={(event) => { const tags = event.target.value; setDraft((current) => ({ ...current, tags })); }} /></label></div>
+            <div className="wb-workbench-actions"><button disabled={busy} onClick={() => { setDraft({ ...draft, language: detectCodeLanguage(draft.code) }); setNotice("Language suggested from the code. You can change it above."); }}>{t("Detect language")}</button><button disabled={busy} onClick={() => setReadOnly(!readOnly)}>{readOnly ? t("Edit code") : t("View code")}</button><button disabled={busy || !draft.code.trim()} onClick={async () => { setBusy(true); try { const formatted = await formatSnippet(draft.code, draft.language); setDraft((current) => ({ ...current, code: formatted })); setError(""); } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); } finally { setBusy(false); } }}>{busy ? t("Formatting…") : t("Format code")}</button><button disabled={!draft.code} onClick={() => void copyToClipboard(draft.code)}>{t("Copy code")}</button></div>
+            <div aria-label={t("Snippet code editor")}><CodeEditor ariaLabel={t("Snippet code editor")} value={draft.code} language={draft.language} height={440} readOnly={readOnly || busy} onChange={(code) => { if (code.length > 200_000) { setError("Snippet limit is 200,000 characters."); return; } setDraft((current) => ({ ...current, code })); }} /></div>
+            <div className="wb-workbench-actions"><button disabled={!ready || busy} onClick={() => perform(() => { if (!draft.title.trim() || !draft.code.trim()) throw new Error("Name the snippet and enter some code before saving."); const record: CodeSnippet = { ...draft, id: draft.id || crypto.randomUUID(), title: draft.title.trim(), tags: draft.tags.split(",").map((tag) => tag.trim()).filter(Boolean), updatedAt: new Date().toISOString() }; persist((current) => [...current.filter((row) => row.id !== record.id), record]); setDraft({ ...record, tags: record.tags.join(", ") }); setNotice("Snippet saved in this project."); })}>{t("Save snippet")}</button>{draft.id && <button disabled={busy} onClick={() => perform(() => { const row = records.find((record) => record.id === draft.id); persist((current) => current.filter((record) => record.id !== draft.id)); if (row) setRemoved(row); setDraft(blank); setReadOnly(false); setNotice("Snippet removed. Undo is available below."); })}>{t("Remove saved snippet")}</button>}<button disabled={!draft.code} onClick={() => downloadText(draft.code, `${draft.title || "snippet"}.txt`)}>{t("Download code")}</button></div>
+        </div></div>
+        {removed && <button onClick={() => perform(() => { persist((current) => current.some((row) => row.id === removed.id) ? current : [...current, removed]); setRemoved(null); setNotice("Snippet restored."); })}>{t("Undo removal of {name}", { name: removed.title })}</button>}
+        <div className="wb-workbench-actions"><button onClick={() => downloadText(JSON.stringify({ version: 1, kind: "snippets", records }, null, 2), "project-snippets.json", "application/json")}>{t("Export library")}</button><label>{t("Import snippet library")}<input disabled={!ready || busy} type="file" accept=".json,application/json" onChange={async (event) => { const file = event.target.files?.[0]; event.target.value = ""; if (!file) return; try { if (file.size > 5 * 1024 * 1024) throw new Error("Snippet import limit is 5 MiB."); const value = JSON.parse(await file.text()); if (value.version !== 1 || value.kind !== "snippets") throw new Error("Unsupported snippet export."); const incoming = parseLibrary(value.records, "snippets"); persist((current) => [...current, ...incoming.map((row) => ({ ...row, id: crypto.randomUUID() }))]); setNotice(""); setImportedCount(incoming.length); setError(""); } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); } }} /></label></div>
+        {notice && <p role="status">{t(notice)}</p>}{importedCount !== null && !notice && <p role="status">{t("Imported snippets: {count}.", { count: importedCount })}</p>}{error && <p role="alert">{t("Review the snippet or import file and try again.")} {t(error)}</p>}<p>{t("Snippets stay in this project on this browser. Libraries and exports are unencrypted; use the credential vault for secrets.")}</p>
+    </div></ToolPageLayout>;
+}

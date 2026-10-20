@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button, Card, Space, InputNumber, Select, Typography, Row, Col, App } from "antd";
+import React, { useState, useEffect } from "react";
+import { Button, Card, Space, InputNumber, Select, Typography, Row, Col } from "antd";
 import { FileTextOutlined, CopyOutlined, ReloadOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
 const { Text } = Typography;
@@ -74,11 +75,13 @@ function generate(type: "words" | "sentences" | "paragraphs", count: number, sta
 }
 
 export default function LoremIpsumPage() {
-    const { message } = App.useApp();
+    const { t } = useLanguage();
     const [type, setType] = useState<"words" | "sentences" | "paragraphs">("paragraphs");
     const [count, setCount] = useState(3);
     const [startWithLorem, setStartWithLorem] = useState(true);
-    const [output, setOutput] = useState(() => generate("paragraphs", 3, true));
+    const [output, setOutput] = useState("");
+
+    useEffect(() => { setOutput(generate("paragraphs", 3, true)); }, []);
 
     const handleGenerate = () => {
         setOutput(generate(type, count, startWithLorem));
@@ -92,54 +95,38 @@ export default function LoremIpsumPage() {
 
     return (
         <ToolPageLayout
-            title="Lorem Ipsum Generator"
-            description="Generate placeholder text"
+            title={t("Lorem Ipsum Generator")}
+            description={t("Generate placeholder text")}
             icon={<FileTextOutlined style={{ fontSize: 24, color: "#13c2c2" }} />}
             color="#13c2c2"
             learnMore={{
-                whatIs: "Lorem Ipsum is placeholder text used in design and publishing since the 1500s. It provides realistic-looking text without distracting from the visual design with meaningful content.",
-                whyUse: "Designers and developers need placeholder text to visualize layouts before real content is ready. Lorem Ipsum looks like natural language but doesn't distract reviewers with readable content.",
-                howToUse: [
-                    "Select output type: paragraphs, sentences, or words",
-                    "Set the desired count for your content",
-                    "Choose whether to start with 'Lorem ipsum...'",
-                    "Generate and copy the placeholder text"
-                ],
-                tips: [
-                    "Paragraphs work best for content blocks",
-                    "Words are useful for testing truncation",
-                    "The classic 'Lorem ipsum dolor sit amet...' opening is traditional",
-                    "Consider using your actual content length estimates"
-                ],
-                useCases: [
-                    "Filling mockups and wireframes with realistic text",
-                    "Testing typography and layout designs",
-                    "Creating sample content for development",
-                    "Populating test databases"
-                ]
+                whatIs: "Generate Latin-style placeholder words, sentences or paragraphs locally.",
+                whyUse: "Use placeholder text to test layouts before final copy is ready.",
+                howToUse: ["Choose a type and count, then select Generate. Copy keeps the generated text unchanged."],
+                tips: ["The interface language changes labels, not the Latin placeholder text."],
             }}
         >
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={8}>
-                    <Card title="Options">
+                    <Card title={t("Options")}>
                         <Space orientation="vertical" style={{ width: "100%" }} size="large">
                             <div>
-                                <Text strong style={{ display: "block", marginBottom: 8 }}>Type</Text>
-                                <Select
+                                <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Type")}</Text>
+                                <Select aria-label={t("Type")}
                                     value={type}
                                     onChange={setType}
                                     style={{ width: "100%" }}
                                     options={[
-                                        { value: "words", label: "Words" },
-                                        { value: "sentences", label: "Sentences" },
-                                        { value: "paragraphs", label: "Paragraphs" },
+                                        { value: "words", label: t("Words") },
+                                        { value: "sentences", label: t("Sentences") },
+                                        { value: "paragraphs", label: t("Paragraphs") },
                                     ]}
                                 />
                             </div>
 
                             <div>
-                                <Text strong style={{ display: "block", marginBottom: 8 }}>Count</Text>
-                                <InputNumber
+                                <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Count")}</Text>
+                                <InputNumber dir="ltr" aria-label={t("Count")} styles={{ input: { direction: "ltr", fontSize: 16 } }}
                                     min={1}
                                     max={type === "words" ? 1000 : type === "sentences" ? 100 : 20}
                                     value={count}
@@ -155,32 +142,28 @@ export default function LoremIpsumPage() {
                                         checked={startWithLorem}
                                         onChange={(e) => setStartWithLorem(e.target.checked)}
                                     />
-                                    <Text>Start with &ldquo;Lorem ipsum...&rdquo;</Text>
+                                    <Text>{t("Start with Lorem ipsum...")}</Text>
                                 </label>
                             </div>
 
-                            <Button type="primary" icon={<ReloadOutlined />} onClick={handleGenerate} block>
-                                Generate
-                            </Button>
+                            <Button type="primary" icon={<ReloadOutlined />} onClick={handleGenerate} block>{t("Generate")}</Button>
 
-                            <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output)} block>
-                                Copy to Clipboard
-                            </Button>
+                            <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output)} block>{t("Copy to Clipboard")}</Button>
                         </Space>
                     </Card>
 
-                    <Card title="Statistics" style={{ marginTop: 16 }}>
+                    <Card title={t("Statistics")} style={{ marginTop: 16 }}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, textAlign: "center" }}>
                             <div>
-                                <Text type="secondary" style={{ fontSize: 12 }}>Words</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>{t("Words")}</Text>
                                 <div style={{ fontSize: 20, fontWeight: 600 }}>{stats.words}</div>
                             </div>
                             <div>
-                                <Text type="secondary" style={{ fontSize: 12 }}>Characters</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>{t("Characters")}</Text>
                                 <div style={{ fontSize: 20, fontWeight: 600 }}>{stats.characters}</div>
                             </div>
                             <div>
-                                <Text type="secondary" style={{ fontSize: 12 }}>Paragraphs</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>{t("Paragraphs")}</Text>
                                 <div style={{ fontSize: 20, fontWeight: 600 }}>{stats.paragraphs}</div>
                             </div>
                         </div>
@@ -188,8 +171,8 @@ export default function LoremIpsumPage() {
                 </Col>
 
                 <Col xs={24} lg={16}>
-                    <Card title="Generated Text" styles={{ body: { padding: 0 } }}>
-                        <textarea
+                    <Card title={t("Generated Text")} styles={{ body: { padding: 0 } }}>
+                        <textarea dir="ltr" aria-label={t("Generated Text")}
                             value={output}
                             readOnly
                             style={{
@@ -200,7 +183,7 @@ export default function LoremIpsumPage() {
                                 outline: "none",
                                 resize: "vertical",
                                 fontFamily: "var(--font-geist-sans)",
-                                fontSize: 14,
+                                fontSize: 16,
                                 lineHeight: 1.7,
                                 background: "transparent",
                             }}

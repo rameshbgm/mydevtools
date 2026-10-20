@@ -1,17 +1,19 @@
-// Shared browser download helper — Blob + object URL + synthetic anchor click.
+export function downloadBlob(contents: BlobPart, filename: string, type = "text/plain;charset=utf-8") {
+    const blob = contents instanceof Blob ? contents : new Blob([contents], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename.replace(/[\\/\x00-\x1f]/g, "_");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export function downloadBytes(bytes: Uint8Array, filename: string, mime = "application/octet-stream") {
-    const blob = new Blob([new Uint8Array(bytes)], { type: mime });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadBlob(new Uint8Array(bytes).buffer, filename, mime);
 }
 
 export function downloadText(text: string, filename: string, mime = "text/plain") {
-    downloadBytes(new TextEncoder().encode(text), filename, mime);
+    downloadBlob(text, filename, mime);
 }

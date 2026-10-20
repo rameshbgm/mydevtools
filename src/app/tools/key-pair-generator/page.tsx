@@ -1,7 +1,8 @@
 "use client";
+import { useLanguage } from "@/components/LanguageProvider";
 
 import { useState, useCallback } from "react";
-import { Input, Typography, Card, Button, Space, message, Select, Divider, Collapse, Tag, InputNumber } from "antd";
+import { Input, Typography, Card, Button, Space, message, Select, Divider, Collapse, Tag } from "antd";
 import {
     KeyOutlined,
     CopyOutlined,
@@ -10,7 +11,6 @@ import {
     LockOutlined,
 } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
-import { useAppStore } from "@/lib/store";
 import { showErrorModal } from "@/lib/errorModal";
 import { downloadText } from "@/lib/download";
 import { copyToClipboard as sharedCopy } from "@/lib/clipboard";
@@ -31,7 +31,7 @@ interface KeyPairResult {
 }
 
 export default function KeyPairGeneratorPage() {
-    const { darkMode } = useAppStore();
+    const { t } = useLanguage();
     const [algorithm, setAlgorithm] = useState<KeyAlgorithm>("RSA");
     const [rsaKeySize, setRsaKeySize] = useState<RSAKeySize>(2048);
     const [ecCurve, setEcCurve] = useState<ECCurve>("P-256");
@@ -54,8 +54,7 @@ export default function KeyPairGeneratorPage() {
 
         try {
             let cryptoKeyPair: CryptoKeyPair;
-            let algorithmName: string;
-            let keyInfo: string;
+                        let keyInfo: string;
 
             if (algorithm === "RSA") {
                 cryptoKeyPair = await crypto.subtle.generateKey(
@@ -68,7 +67,6 @@ export default function KeyPairGeneratorPage() {
                     true,
                     ["sign", "verify"]
                 );
-                algorithmName = "RSA";
                 keyInfo = `RSA ${rsaKeySize}-bit`;
             } else if (algorithm === "ECDSA") {
                 cryptoKeyPair = await crypto.subtle.generateKey(
@@ -79,22 +77,12 @@ export default function KeyPairGeneratorPage() {
                     true,
                     ["sign", "verify"]
                 );
-                algorithmName = "ECDSA";
                 keyInfo = `ECDSA ${ecCurve}`;
             } else {
-                // Ed25519 - not yet widely supported in Web Crypto API
-                // Fallback to ECDSA P-256 with a message
-                message.warning("Ed25519 not supported in browser. Using ECDSA P-256 instead.");
                 cryptoKeyPair = await crypto.subtle.generateKey(
-                    {
-                        name: "ECDSA",
-                        namedCurve: "P-256",
-                    },
-                    true,
-                    ["sign", "verify"]
+                    { name: "Ed25519" }, true, ["sign", "verify"]
                 );
-                algorithmName = "ECDSA (Ed25519 fallback)";
-                keyInfo = "ECDSA P-256";
+                keyInfo = "Ed25519";
             }
 
             let publicKeyStr: string;
@@ -122,64 +110,62 @@ export default function KeyPairGeneratorPage() {
                 format: outputFormat,
             });
 
-            message.success("Key pair generated successfully!");
+            message.success(t("Key pair generated successfully!"));
 
         } catch (error) {
             console.error("Key pair generation error:", error);
             showErrorModal({
-                title: "Key pair generation failed",
+                title: t("Key pair generation failed"),
                 error,
-                context: `Tried to generate a ${algorithm} key pair${
-                    algorithm === "RSA" ? ` (${rsaKeySize}-bit)` : ` (${ecCurve})`
-                } in ${outputFormat} format.`,
+                context: t("Could not generate {algorithm} key pair in {format} format.", { algorithm: algorithm === "RSA" ? `RSA ${rsaKeySize}` : algorithm === "ECDSA" ? `ECDSA ${ecCurve}` : "Ed25519", format: outputFormat }),
                 recommendations: [
-                    "Try RSA 2048 or ECDSA P-256 — the most widely supported across browsers.",
-                    "Ed25519 needs Chrome 113+ / Firefox 130+ / Safari 17+ — older browsers reject it.",
-                    "If RSA 4096+ is failing, your browser may be capping key sizes — drop to 2048 or 3072.",
+                    t("Try RSA 2048 or ECDSA P-256 — the most widely supported across browsers."),
+                    t("Ed25519 requires native Web Crypto support. Choose RSA or ECDSA if this browser does not support it."),
+                    t("If RSA 4096+ is failing, your browser may be capping key sizes — drop to 2048 or 3072."),
                 ],
             });
         } finally {
             setIsGenerating(false);
         }
-    }, [algorithm, rsaKeySize, ecCurve, outputFormat]);
+    }, [algorithm, rsaKeySize, ecCurve, outputFormat, t]);
 
-    const copyToClipboard = (text: string, label: string) => sharedCopy(text, `${label} copied to clipboard!`);
+    const copyToClipboard = (text: string, label: string) => sharedCopy(text, t("{label} copied to clipboard!", { label }));
 
     const downloadKey = (content: string, filename: string) => {
-        const ext = outputFormat === "JWK" ? ".jwk" : ".pem";
-        const type = outputFormat === "JWK" ? "application/json" : "application/x-pem-file";
+        const ext = keyPair?.format === "JWK" ? ".jwk" : ".pem";
+        const type = keyPair?.format === "JWK" ? "application/json" : "application/x-pem-file";
         downloadText(content, filename + ext, type);
     };
 
     return (
         <ToolPageLayout
-            title="Key Pair Generator"
-            description="Generate RSA, ECDSA, and Ed25519 key pairs"
+            title={t("Key Pair Generator")}
+            description={t("Generate RSA, ECDSA, and Ed25519 key pairs")}
             icon={<KeyOutlined style={{ fontSize: 24 }} />}
             color="#597ef7"
             learnMore={{
-                whatIs: "A cryptographic key pair consists of a public key and a private key. The public key can be shared freely and is used to verify signatures or encrypt data. The private key must be kept secret and is used to sign data or decrypt messages.",
-                whyUse: "Key pairs are fundamental to public-key cryptography used in SSL/TLS certificates, SSH authentication, code signing, JWTs, and secure communication. Generating keys locally ensures the private key never leaves your machine.",
+                whatIs: t("A cryptographic key pair consists of a public key and a private key. The public key can be shared freely and is used to verify signatures or encrypt data. The private key must be kept secret and is used to sign data or decrypt messages."),
+                whyUse: t("Key pairs are fundamental to public-key cryptography used in SSL/TLS certificates, SSH authentication, code signing, JWTs, and secure communication. Generating keys locally ensures the private key never leaves your machine."),
                 howToUse: [
-                    "Select the key algorithm: RSA for broad compatibility, ECDSA for efficiency",
-                    "Choose the key size (RSA) or curve (ECDSA)",
-                    "Select the output format: PEM for most uses, JWK for web applications",
-                    "Click Generate to create your key pair",
-                    "Download and securely store the private key",
+                    t("Select the key algorithm: RSA for broad compatibility, ECDSA for efficiency"),
+                    t("Choose the key size (RSA) or curve (ECDSA)"),
+                    t("Select the output format: PEM for most uses, JWK for web applications"),
+                    t("Click Generate to create your key pair"),
+                    t("Download and securely store the private key"),
                 ],
                 tips: [
-                    "RSA 2048-bit is minimum for security; use 3072+ for long-term keys",
-                    "ECDSA P-256 offers equivalent security to RSA 3072 with smaller keys",
-                    "Never share your private key - only the public key is meant to be distributed",
-                    "Use PEM format for certificates and SSH, JWK for web APIs and JWT",
-                    "Consider encrypting private keys with a passphrase for storage",
+                    t("RSA 2048-bit is minimum for security; use 3072+ for long-term keys"),
+                    t("ECDSA P-256 offers equivalent security to RSA 3072 with smaller keys"),
+                    t("Never share your private key - only the public key is meant to be distributed"),
+                    t("PEM exports SPKI public keys and unencrypted PKCS#8 private keys; JWK exports JSON keys."),
+                    t("Private keys are not encrypted by this tool. Store downloaded keys securely."),
                 ],
                 useCases: [
-                    "Generating keys for SSL/TLS certificates",
-                    "Creating SSH authentication keys",
-                    "JWT signing keys for authentication systems",
-                    "Code signing certificates",
-                    "S/MIME email encryption",
+                    t("Generating keys for SSL/TLS certificates"),
+                    t("Exporting signing key material"),
+                    t("JWT signing keys for authentication systems"),
+                    t("Code signing certificates"),
+                    t("S/MIME email encryption"),
                 ],
             }}
         >
@@ -187,30 +173,30 @@ export default function KeyPairGeneratorPage() {
                 <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                         <div style={{ flex: 1, minWidth: 180 }}>
-                            <Text strong style={{ display: "block", marginBottom: 8 }}>Algorithm</Text>
-                            <Select
+                            <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Algorithm")}</Text>
+                            <Select styles={{ root: { maxWidth: "100%", minWidth: 0 }, input: { fontSize: 16 }, popup: { root: { maxWidth: "calc(100vw - 32px)", overflowWrap: "anywhere" } } }} aria-label={t("Algorithm")}
                                 value={algorithm}
                                 onChange={setAlgorithm}
                                 style={{ width: "100%" }}
                                 options={[
                                     { value: "RSA", label: "RSA" },
-                                    { value: "ECDSA", label: "ECDSA (Elliptic Curve)" },
-                                    { value: "Ed25519", label: "Ed25519 (Edwards Curve)" },
+                                    { value: "ECDSA", label: t("ECDSA (Elliptic Curve)") },
+                                    { value: "Ed25519", label: t("Ed25519 (Edwards Curve)") },
                                 ]}
                             />
                         </div>
 
                         {algorithm === "RSA" && (
                             <div style={{ flex: 1, minWidth: 180 }}>
-                                <Text strong style={{ display: "block", marginBottom: 8 }}>Key Size</Text>
-                                <Select
+                                <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Key Size")}</Text>
+                                <Select styles={{ root: { maxWidth: "100%", minWidth: 0 }, input: { fontSize: 16 }, popup: { root: { maxWidth: "calc(100vw - 32px)", overflowWrap: "anywhere" } } }} aria-label={t("Key Size")}
                                     value={rsaKeySize}
                                     onChange={setRsaKeySize}
                                     style={{ width: "100%" }}
                                     options={[
-                                        { value: 2048, label: "2048 bits (Standard)" },
-                                        { value: 3072, label: "3072 bits (Enhanced)" },
-                                        { value: 4096, label: "4096 bits (Maximum)" },
+                                        { value: 2048, label: t("2048 bits (Standard)") },
+                                        { value: 3072, label: t("3072 bits (Enhanced)") },
+                                        { value: 4096, label: t("4096 bits (Maximum)") },
                                     ]}
                                 />
                             </div>
@@ -218,8 +204,8 @@ export default function KeyPairGeneratorPage() {
 
                         {algorithm === "ECDSA" && (
                             <div style={{ flex: 1, minWidth: 180 }}>
-                                <Text strong style={{ display: "block", marginBottom: 8 }}>Curve</Text>
-                                <Select
+                                <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Curve")}</Text>
+                                <Select styles={{ root: { maxWidth: "100%", minWidth: 0 }, input: { fontSize: 16 }, popup: { root: { maxWidth: "calc(100vw - 32px)", overflowWrap: "anywhere" } } }} aria-label={t("Curve")}
                                     value={ecCurve}
                                     onChange={setEcCurve}
                                     style={{ width: "100%" }}
@@ -233,8 +219,8 @@ export default function KeyPairGeneratorPage() {
                         )}
 
                         <div style={{ flex: 1, minWidth: 180 }}>
-                            <Text strong style={{ display: "block", marginBottom: 8 }}>Output Format</Text>
-                            <Select
+                            <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Output Format")}</Text>
+                            <Select styles={{ root: { maxWidth: "100%", minWidth: 0 }, input: { fontSize: 16 }, popup: { root: { maxWidth: "calc(100vw - 32px)", overflowWrap: "anywhere" } } }} aria-label={t("Output Format")}
                                 value={outputFormat}
                                 onChange={setOutputFormat}
                                 style={{ width: "100%" }}
@@ -253,9 +239,7 @@ export default function KeyPairGeneratorPage() {
                         loading={isGenerating}
                         size="large"
                         block
-                    >
-                        Generate Key Pair
-                    </Button>
+                    >{t("Generate Key Pair")}</Button>
 
                     {keyPair && (
                         <>
@@ -273,8 +257,8 @@ export default function KeyPairGeneratorPage() {
                                     key: "public",
                                     label: (
                                         <Space>
-                                            <Text strong>Public Key</Text>
-                                            <Tag color="green">Safe to share</Tag>
+                                            <Text strong>{t("Public Key")}</Text>
+                                            <Tag color="green">{t("Safe to share")}</Tag>
                                         </Space>
                                     ),
                                     children: (
@@ -283,23 +267,19 @@ export default function KeyPairGeneratorPage() {
                                                 <Button
                                                     size="small"
                                                     icon={<CopyOutlined />}
-                                                    onClick={() => copyToClipboard(keyPair.publicKey, "Public key")}
-                                                >
-                                                    Copy
-                                                </Button>
+                                                    onClick={() => copyToClipboard(keyPair.publicKey, t("Public key"))}
+                                                >{t("Copy")}</Button>
                                                 <Button
                                                     size="small"
                                                     icon={<DownloadOutlined />}
                                                     onClick={() => downloadKey(keyPair.publicKey, "public-key")}
-                                                >
-                                                    Download
-                                                </Button>
+                                                >{t("Download")}</Button>
                                             </div>
-                                            <TextArea
+                                            <TextArea aria-label={t("Public key output")} dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                 value={keyPair.publicKey}
                                                 readOnly
                                                 rows={outputFormat === "JWK" ? 12 : 8}
-                                                style={{ fontFamily: "monospace", fontSize: 11 }}
+                                                style={{ fontFamily: "monospace", fontSize: 16 }}
                                             />
                                         </div>
                                     ),
@@ -309,8 +289,8 @@ export default function KeyPairGeneratorPage() {
                                     label: (
                                         <Space>
                                             <LockOutlined />
-                                            <Text strong>Private Key</Text>
-                                            <Tag color="red">Keep Secret!</Tag>
+                                            <Text strong>{t("Private Key")}</Text>
+                                            <Tag color="red">{t("Keep Secret!")}</Tag>
                                         </Space>
                                     ),
                                     children: (
@@ -319,23 +299,19 @@ export default function KeyPairGeneratorPage() {
                                                 <Button
                                                     size="small"
                                                     icon={<CopyOutlined />}
-                                                    onClick={() => copyToClipboard(keyPair.privateKey, "Private key")}
-                                                >
-                                                    Copy
-                                                </Button>
+                                                    onClick={() => copyToClipboard(keyPair.privateKey, t("Private key"))}
+                                                >{t("Copy")}</Button>
                                                 <Button
                                                     size="small"
                                                     icon={<DownloadOutlined />}
                                                     onClick={() => downloadKey(keyPair.privateKey, "private-key")}
-                                                >
-                                                    Download
-                                                </Button>
+                                                >{t("Download")}</Button>
                                             </div>
-                                            <TextArea
+                                            <TextArea aria-label={t("Private key output")} dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                 value={keyPair.privateKey}
                                                 readOnly
                                                 rows={algorithm === "RSA" ? 20 : outputFormat === "JWK" ? 15 : 10}
-                                                style={{ fontFamily: "monospace", fontSize: 11 }}
+                                                style={{ fontFamily: "monospace", fontSize: 16 }}
                                             />
                                         </div>
                                     ),

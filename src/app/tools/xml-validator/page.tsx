@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, Alert, Tag, Collapse } from "antd";
 import { CheckCircleOutlined, CloseCircleOutlined, ClearOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 
@@ -71,14 +72,15 @@ function validateXML(input: string): ValidationResult {
 }
 
 export default function XmlValidatorPage() {
+    const { t, direction } = useLanguage();
     const [input, setInput] = useState(SAMPLE_XML);
 
     const result = useMemo(() => validateXML(input), [input]);
 
     return (
         <ToolPageLayout
-            title="XML Validator"
-            description="Validate XML syntax and well-formedness"
+            title={t("XML Validator")}
+            description={t("Validate XML syntax and well-formedness")}
             icon={<CheckCircleOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
             color="#52c41a"
             learnMore={{
@@ -104,17 +106,16 @@ export default function XmlValidatorPage() {
                 ]
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row dir={direction} gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card
-                        title="XML Input"
+                        title={t("XML Input")}
                         extra={
-                            <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
-                                Clear
-                            </Button>
+                            <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>{t("Clear")}</Button>
                         }
                     >
                         <CodeEditor
+                            ariaLabel={t("XML input editor")}
                             value={input}
                             onChange={(val) => setInput(val || "")}
                             language="xml"
@@ -122,19 +123,19 @@ export default function XmlValidatorPage() {
                         />
                     </Card>
 
-                    <Card title="Validation Result" style={{ marginTop: 16 }}>
+                    <Card title={t("Validation Result")} style={{ marginTop: 16 }}>
                         {result.valid ? (
                             <Alert
                                 type="success"
                                 showIcon
                                 icon={<CheckCircleOutlined />}
-                                title="Valid XML"
+                                title={t("Valid XML")}
                                 description={
                                     <Space orientation="vertical">
-                                        <Text>The XML is well-formed and valid.</Text>
+                                        <Text>{t("The XML is well-formed and valid.")}</Text>
                                         <Space wrap>
-                                            <Tag color="green">Elements: {result.elements}</Tag>
-                                            <Tag color="blue">Attributes: {result.attributes}</Tag>
+                                            <Tag color="green">{t("Elements: {count}", { count: result.elements ?? 0 })}</Tag>
+                                            <Tag color="blue">{t("Attributes: {count}", { count: result.attributes ?? 0 })}</Tag>
                                         </Space>
                                     </Space>
                                 }
@@ -144,13 +145,12 @@ export default function XmlValidatorPage() {
                                 type="error"
                                 showIcon
                                 icon={<CloseCircleOutlined />}
-                                title="Invalid XML"
+                                title={t("Invalid XML")}
                                 description={
                                     <Space orientation="vertical">
-                                        <Text style={{ whiteSpace: "pre-wrap" }}>{result.error}</Text>
+                                        <Text dir="ltr" style={{ whiteSpace: "pre-wrap", unicodeBidi: "isolate" }}>{result.error}</Text>
                                         {result.line && (
-                                            <Text type="secondary">
-                                                Line {result.line}{result.column && `, Column ${result.column}`}
+                                            <Text type="secondary">{t("Line {line}", { line: result.line })}{result.column && t(", Column {column}", { column: result.column })}
                                             </Text>
                                         )}
                                     </Space>
@@ -161,47 +161,47 @@ export default function XmlValidatorPage() {
                 </Col>
 
                 <Col xs={24} lg={8}>
-                    <Card title="Common XML Errors">
+                    <Card title={t("Common XML Errors")}>
                         <Collapse
                             ghost
                             items={[
                                 {
                                     key: "1",
-                                    label: "Unclosed tags",
-                                    children: <Text type="secondary">Every opening tag must have a corresponding closing tag, or be self-closing.</Text>,
+                                    label: t("Unclosed tags"),
+                                    children: <Text type="secondary">{t("Every opening tag must have a corresponding closing tag, or be self-closing.")}</Text>,
                                 },
                                 {
                                     key: "2",
-                                    label: "Mismatched tags",
-                                    children: <Text type="secondary">Tags must be properly nested. {"<a><b></a></b>"} is invalid.</Text>,
+                                    label: t("Mismatched tags"),
+                                    children: <Text type="secondary">{t("Tags must be properly nested.")}{" "}<code dir="ltr">{"<a><b></a></b>"}</code>{" "}{t("is invalid.")}</Text>,
                                 },
                                 {
                                     key: "3",
-                                    label: "Unquoted attributes",
-                                    children: <Text type="secondary">Attribute values must be quoted: name="value"</Text>,
+                                    label: t("Unquoted attributes"),
+                                    children: <Text type="secondary">{t("Attribute values must be quoted: name=\"value\"")}</Text>,
                                 },
                                 {
                                     key: "4",
-                                    label: "Special characters",
-                                    children: <Text type="secondary">Use entities for &lt; &gt; &amp; in text content.</Text>,
+                                    label: t("Special characters"),
+                                    children: <Text type="secondary">{t("Use entities for < > & in text content.")}</Text>,
                                 },
                                 {
                                     key: "5",
-                                    label: "Multiple root elements",
-                                    children: <Text type="secondary">XML must have exactly one root element.</Text>,
+                                    label: t("Multiple root elements"),
+                                    children: <Text type="secondary">{t("XML must have exactly one root element.")}</Text>,
                                 },
                             ]}
                         />
                     </Card>
 
-                    <Card title="XML Quick Reference" style={{ marginTop: 16 }}>
-                        <ul style={{ paddingLeft: 20, margin: 0 }}>
-                            <li>Declaration: &lt;?xml version="1.0"?&gt;</li>
-                            <li>Tags are case-sensitive</li>
-                            <li>Attribute values must be quoted</li>
-                            <li>Self-closing: &lt;element /&gt;</li>
-                            <li>Comments: &lt;!-- comment --&gt;</li>
-                            <li>CDATA: &lt;![CDATA[...]]&gt;</li>
+                    <Card title={t("XML Quick Reference")} style={{ marginTop: 16 }}>
+                        <ul style={{ paddingInlineStart: 20, margin: 0 }}>
+                            <li>{t("Declaration:")} <code dir="ltr">{'<?xml version="1.0"?>'}</code></li>
+                            <li>{t("Tags are case-sensitive")}</li>
+                            <li>{t("Attribute values must be quoted")}</li>
+                            <li>{t("Self-closing:")} <code dir="ltr">{"<element />"}</code></li>
+                            <li>{t("Comments:")} <code dir="ltr">{"<!-- comment -->"}</code></li>
+                            <li>{t("CDATA:")} <code dir="ltr">{"<![CDATA[...]]>"}</code></li>
                         </ul>
                     </Card>
                 </Col>

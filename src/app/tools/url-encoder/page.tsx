@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Button, Input, Card, Space, message, Segmented } from "antd";
 import { copyToClipboard } from "@/lib/clipboard";
 import { LinkOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import SendToButton from "@/components/SendToButton";
 import ShareButton from "@/components/ShareButton";
@@ -16,6 +17,7 @@ interface ShareState { input: string; mode: string; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "url-encoder", version: 1 };
 
 export default function UrlEncoderPage() {
+    const { t } = useLanguage();
     const [input, setInput] = useState("https://example.com/path?name=John Doe&city=New York");
     const [output, setOutput] = useState("");
     const [mode, setMode] = useState<string>("Encode");
@@ -26,8 +28,8 @@ export default function UrlEncoderPage() {
         try {
             if (m === "Encode") setOutput(encodeURIComponent(src));
             else setOutput(decodeURIComponent(src));
-        } catch {
-            message.error("Invalid input");
+        } catch (error) {
+            message.error(`${t("Invalid URL input. Check percent escapes and try again.")}\n${error instanceof Error ? error.message : ""}`);
         }
     };
 
@@ -38,8 +40,8 @@ export default function UrlEncoderPage() {
 
     return (
         <ToolPageLayout
-            title="URL Encode / Decode"
-            description="Encode and decode URL components"
+            title={t("URL Encode / Decode")}
+            description={t("Encode and decode URL components")}
             icon={<LinkOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
             color="#1677ff"
             learnMore={{
@@ -71,19 +73,19 @@ export default function UrlEncoderPage() {
             />
 
             <Space style={{ marginBottom: 16 }} wrap>
-                <Segmented options={["Encode", "Decode"]} value={mode} onChange={(v) => setMode(v as string)} />
-                <Button type="primary" onClick={() => handleAction()}>{mode}</Button>
-                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output)}>Copy</Button>
-                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); }}>Clear</Button>
+                <Segmented options={[{ value: "Encode", label: t("Encode") }, { value: "Decode", label: t("Decode") }]} value={mode} onChange={(v) => setMode(v as string)} />
+                <Button type="primary" onClick={() => handleAction()}>{t(mode)}</Button>
+                <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(output)}>{t("Copy")}</Button>
+                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); }}>{t("Clear")}</Button>
                 <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input, mode })} />
                 <SendToButton data={output} kind={mode === "Encode" ? "url" : "text"} sourceToolId="url-encoder" />
             </Space>
             <div className="tool-split-pane" style={{ gap: 16 }}>
-                <Card size="small" title="Input">
-                    <TextArea rows={10} value={input} onChange={(e) => setInput(e.target.value)} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
+                <Card size="small" title={t("Input")}>
+                    <TextArea dir={mode === "Encode" ? "auto" : "ltr"} aria-label={t("Input")} rows={10} value={input} onChange={(e) => setInput(e.target.value)} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
                 </Card>
-                <Card size="small" title="Output">
-                    <TextArea rows={10} value={output} readOnly style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
+                <Card size="small" title={t("Output")}>
+                    <TextArea dir={mode === "Encode" ? "ltr" : "auto"} aria-label={t("Output")} rows={10} value={output} readOnly style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }} />
                 </Card>
             </div>
         </ToolPageLayout>

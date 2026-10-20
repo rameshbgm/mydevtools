@@ -1,6 +1,11 @@
 "use client";
+import { useLanguage } from "@/components/LanguageProvider";
+import { projectStorage } from "@/lib/project-storage";
+import { APP_VERSION } from "@/lib/app-version";
 
-import React, { useState, useCallback, useEffect } from "react";
+import { firstSseRpcResult } from "@/lib/sse";
+import { McpHttpError, connectMcp, makeMcpRequest, mcpProtocolHeaders, MCP_CURRENT_VERSION, MCP_LEGACY_VERSIONS, type McpVersion, type McpVersionChoice } from "@/lib/mcp-protocol";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
     Card, Input, Button, Typography, Row, Col, Space, Tabs, Tag,
     Select, Switch, InputNumber, Table, Collapse, Alert, Empty,
@@ -73,6 +78,7 @@ interface CallHistoryEntry {
 }
 
 interface McpConfig {
+    protocolVersion: McpVersionChoice;
     transport: TransportType;
     connectionMode: ConnectionMode;
     // stdio
@@ -99,12 +105,13 @@ interface McpConfig {
 }
 
 const DEFAULT_CONFIG: McpConfig = {
-    transport: "sse",
+    protocolVersion: "auto",
+    transport: "http",
     connectionMode: "direct",
     command: "npx",
     args: "-y @modelcontextprotocol/server-everything",
     serverEntry: "",
-    serverUrl: "http://localhost:3001/sse",
+    serverUrl: "http://localhost:3001/mcp",
     headers: [],
     requestTimeoutMs: 30000,
     maxTotalTimeoutMs: 120000,
@@ -120,7 +127,7 @@ const DEFAULT_CONFIG: McpConfig = {
         accessToken: "",
         tokenUrl: "",
     },
-    sslVerify: false,
+    sslVerify: true,
     sslCaCert: "",
     sslClientCert: "",
     sslClientKey: "",
@@ -232,36 +239,24 @@ async function mcpFetchDirect(
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    let res: Response;
     try {
-        res = await fetch(url, {
-            method: "POST",
-            headers: buildMcpHeaders(headers, sessionId),
-            body: JSON.stringify(body),
-            signal: controller.signal,
+        const res = await fetch(url, {
+            method: "POST", headers: buildMcpHeaders(headers, sessionId),
+            body: JSON.stringify(body), signal: controller.signal,
         });
-    } catch (err: any) {
-        clearTimeout(timer);
-        if (err?.name === "AbortError") throw new Error(`Request timed out after ${timeoutMs}ms`);
+        const nextSessionId = res.headers.get("mcp-session-id") || sessionId;
+        if (res.status === 202) return { data: { jsonrpc: "2.0", result: null }, sessionId: nextSessionId };
+        if (res.ok && res.headers.get("content-type")?.includes("text/event-stream")) return { data: await firstSseRpcResult(res, (body as { id?: unknown }).id), sessionId: nextSessionId };
+        const text = await res.text();
+        if (!res.ok) {
+            try { const rpcError = JSON.parse(text); if (rpcError.jsonrpc === "2.0" && rpcError.error) return { data: rpcError, sessionId: nextSessionId }; } catch { /* ordinary HTTP failure */ }
+            throw new McpHttpError(res.status, `HTTP ${res.status} ${res.statusText}: ${text.slice(0, 300)}`);
+        }
+        return { data: parseMcpResponse(text, res.headers.get("content-type") || ""), sessionId: nextSessionId };
+    } catch (err) {
+        if (controller.signal.aborted) throw new Error(`Request timed out after ${timeoutMs}ms`);
         throw err;
-    }
-    clearTimeout(timer);
-
-    const nextSessionId = res.headers.get("mcp-session-id") || sessionId;
-
-    if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status} ${res.statusText}${txt ? ": " + txt.slice(0, 300) : ""}`);
-    }
-
-    // 202 Accepted: notification or async response; nothing to parse.
-    if (res.status === 202) {
-        return { data: { jsonrpc: "2.0", id: (body as any)?.id ?? null, result: null }, sessionId: nextSessionId };
-    }
-
-    const text = await res.text();
-    const contentType = res.headers.get("content-type") || "";
-    return { data: parseMcpResponse(text, contentType), sessionId: nextSessionId };
+    } finally { clearTimeout(timer); }
 }
 
 async function mcpFetchViaProxy(
@@ -295,7 +290,8 @@ async function mcpFetchViaProxy(
 
     if (proxy.status < 200 || proxy.status >= 300) {
         const snippet = typeof proxy.body === "string" ? proxy.body.slice(0, 200) : "";
-        throw new Error(`HTTP ${proxy.status}: ${proxy.statusText || snippet}`);
+        try { const rpcError = JSON.parse(String(proxy.body)); if (rpcError.jsonrpc === "2.0" && rpcError.error) return { data: rpcError, sessionId: nextSessionId }; } catch { /* Ordinary HTTP failure. */ }
+        throw new McpHttpError(proxy.status, `HTTP ${proxy.status}: ${proxy.statusText || snippet}`);
     }
     if (proxy.status === 202) {
         return { data: { jsonrpc: "2.0", id: (body as any)?.id ?? null, result: null }, sessionId: nextSessionId };
@@ -372,7 +368,7 @@ async function mcpFetch(
     sessionId?: string,
 ): Promise<{ data: unknown; usedProxy: boolean; corsFallback: boolean; sessionId?: string }> {
     const applied = applyConnectionMode(url, headers, mode, proxyAddress, proxySessionToken);
-    const hasSslConfig = sslFields.sslVerify === true ||
+    const hasSslConfig = sslFields.sslVerify === false ||
         !!sslFields.sslCaCert || !!sslFields.sslClientCert || !!sslFields.sslClientKey;
 
     // Hard-routed through /api/proxy: explicit user choice or SSL options that the browser cannot honour.
@@ -405,17 +401,23 @@ async function mcpFetch(
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function McpInspectorPage() {
+    const { t } = useLanguage();
+    const translateRef = useRef(t);
+    useEffect(() => { translateRef.current = t; }, [t]);
+    const notice = (source: string, values?: Record<string, string | number>) => translateRef.current(source, values);
+
     const { darkMode } = useAppStore();
 
     const [config, setConfig] = useState<McpConfig>(DEFAULT_CONFIG);
 
     useEffect(() => {
         try {
-            const saved = localStorage.getItem("mcp-inspector-config");
+            const saved = projectStorage.getItem("mcp-inspector-config");
             const parsed = saved ? JSON.parse(saved) : {};
             setConfig(prev => ({
                 ...prev,
                 ...parsed,
+                protocolVersion: [MCP_CURRENT_VERSION, ...MCP_LEGACY_VERSIONS, "auto"].includes(parsed.protocolVersion) ? parsed.protocolVersion : "auto",
                 oauth: {
                     ...prev.oauth,
                     redirectUrl: `${window.location.origin}/oauth/callback`,
@@ -433,6 +435,7 @@ export default function McpInspectorPage() {
     const [connected, setConnected] = useState(false);
     const [connecting, setConnecting] = useState(false);
     const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+    const [negotiatedVersion, setNegotiatedVersion] = useState<McpVersion>(MCP_CURRENT_VERSION);
     const [tools, setTools] = useState<McpTool[]>([]);
     const [selectedTool, setSelectedTool] = useState<McpTool | null>(null);
     const [callArgs, setCallArgs] = useState("{}");
@@ -441,7 +444,7 @@ export default function McpInspectorPage() {
     const [lastError, setLastError] = useState<string>("");
     const [history, setHistory] = useState<CallHistoryEntry[]>(() => {
         try {
-            const saved = typeof window !== "undefined" ? localStorage.getItem("mcp-inspector-history") : null;
+            const saved = typeof window !== "undefined" ? projectStorage.getItem("mcp-inspector-history") : null;
             return JSON.parse(saved || "[]");
         } catch { return []; }
     });
@@ -456,7 +459,7 @@ export default function McpInspectorPage() {
     const patchConfig = (patch: Partial<McpConfig>) => {
         setConfig(prev => {
             const next = { ...prev, ...patch };
-            try { localStorage.setItem("mcp-inspector-config", JSON.stringify(next)); } catch {}
+            try { projectStorage.setItem("mcp-inspector-config", JSON.stringify(next)); } catch {}
             return next;
         });
     };
@@ -479,7 +482,7 @@ export default function McpInspectorPage() {
     const pushHistory = useCallback((entry: CallHistoryEntry) => {
         setHistory(prev => {
             const next = [entry, ...prev].slice(0, 100);
-            try { localStorage.setItem("mcp-inspector-history", JSON.stringify(next)); } catch {}
+            try { projectStorage.setItem("mcp-inspector-history", JSON.stringify(next)); } catch {}
             return next;
         });
     }, []);
@@ -489,7 +492,7 @@ export default function McpInspectorPage() {
     const handleConnect = async () => {
         if (config.transport === "stdio") {
             setActiveTab("connect");
-            message.info("stdio transport: copy the CLI command below and run it in your terminal, then switch to SSE/HTTP to connect from the browser.");
+            message.info(notice("stdio transport: copy the CLI command below and run it in your terminal, then switch to SSE/HTTP to connect from the browser."));
             return;
         }
 
@@ -515,64 +518,30 @@ export default function McpInspectorPage() {
             let viaProxy = false;
             let corsHit = false;
 
-            // 1. initialize — captures Mcp-Session-Id
-            const init = await mcpFetch(url, headers,
-                { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "mydevtools-mcp-inspector", version: "1.3" } } },
-                config.requestTimeoutMs,
-                sslFields(config),
-                config.connectionMode,
-                config.proxyAddress,
-                config.proxySessionToken,
-            );
-            viaProxy = viaProxy || init.usedProxy;
-            corsHit = corsHit || init.corsFallback;
-            const sid = init.sessionId;
-            setSessionId(sid);
-
-            const initData = init.data as any;
-            if (initData?.error) throw new Error(`initialize: ${initData.error.message || JSON.stringify(initData.error)}`);
-
-            // 2. notifications/initialized — required by spec; servers usually 202 here.
-            await mcpFetch(url, headers,
-                { jsonrpc: "2.0", method: "notifications/initialized", params: {} },
-                config.requestTimeoutMs,
-                sslFields(config),
-                config.connectionMode,
-                config.proxyAddress,
-                config.proxySessionToken,
-                sid,
-            ).catch(() => undefined);
-
-            // 3. tools/list — uses the session
-            const list = await mcpFetch(url, headers,
-                { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
-                config.requestTimeoutMs,
-                sslFields(config),
-                config.connectionMode,
-                config.proxyAddress,
-                config.proxySessionToken,
-                sid,
-            );
-            viaProxy = viaProxy || list.usedProxy;
-            corsHit = corsHit || list.corsFallback;
-            if (list.sessionId) setSessionId(list.sessionId);
-
-            const listData = list.data as any;
-            if (listData?.error) throw new Error(`tools/list: ${listData.error.message || JSON.stringify(listData.error)}`);
-            setTools(listData?.result?.tools || []);
+            const deadline = Date.now() + config.maxTotalTimeoutMs;
+            const connection = await connectMcp(async (request, version, sid) => {
+                const remaining = deadline - Date.now();
+                if (remaining <= 0) throw new Error("Connection exceeded the total timeout.");
+                const response = await mcpFetch(url, { ...headers, ...mcpProtocolHeaders(version, request) }, request,
+                    Math.min(config.requestTimeoutMs, remaining), sslFields(config), config.connectionMode,
+                    config.proxyAddress, config.proxySessionToken, sid);
+                viaProxy ||= response.usedProxy; corsHit ||= response.corsFallback;
+                return response;
+            }, config.protocolVersion);
+            setSessionId(connection.sessionId);
+            setNegotiatedVersion(connection.version);
+            setTools(connection.tools as McpTool[]);
 
             setProxyInUse(viaProxy);
             setCorsFallback(corsHit);
             setConnected(true);
             setActiveTab("tools");
             message.success(
-                corsHit ? "Connected — direct fetch was blocked by CORS, retried via server proxy"
-                    : viaProxy ? "Connected via server proxy"
-                        : "Connected — tool list loaded"
+                corsHit ? notice("Connected — direct fetch was blocked by CORS, retried via server proxy") : viaProxy ? notice("Connected via server proxy") : notice("Connected — tool list loaded")
             );
         } catch (err: any) {
             setLastError(err.message);
-            message.error("Connection failed: " + err.message);
+            message.error(notice("Connection failed: {value1}", { value1: err.message }));
         } finally {
             setConnecting(false);
         }
@@ -585,7 +554,7 @@ export default function McpInspectorPage() {
         setSelectedTool(null);
         setProxyInUse(false);
         setCorsFallback(false);
-        message.info("Disconnected");
+        message.info(notice("Disconnected"));
     };
 
     // ── Diagnose connection ─────────────────────────────────────────
@@ -593,7 +562,7 @@ export default function McpInspectorPage() {
     // Helps the user understand exactly what's blocking before they try Connect.
     const handleDiagnose = async () => {
         if (config.transport === "stdio") {
-            message.warning("Diagnose only works for SSE/HTTP transports.");
+            message.warning(notice("Diagnose only works for SSE/HTTP transports."));
             return;
         }
         setDiagnosing(true);
@@ -601,7 +570,7 @@ export default function McpInspectorPage() {
         try {
             const target = config.serverUrl.trim();
             if (!target) {
-                message.warning("Enter a server URL first.");
+                message.warning(notice("Enter a server URL first."));
                 return;
             }
             let parsed: URL;
@@ -637,16 +606,20 @@ export default function McpInspectorPage() {
                 });
             }
 
-            // Step 2: direct browser POST with the real init request
+            const probeVersion = config.protocolVersion === "auto" ? MCP_CURRENT_VERSION : config.protocolVersion;
+            const probe = makeMcpRequest(probeVersion, probeVersion === MCP_CURRENT_VERSION ? "server/discover" : "initialize", probeVersion === MCP_CURRENT_VERSION ? {} : { protocolVersion: probeVersion, capabilities: {}, clientInfo: { name: "mydevtools-diagnose", version: APP_VERSION } }, 0);
+            const probeHeaders = buildMcpHeaders({ ...Object.fromEntries(config.headers.filter((h) => h.key).map((h) => [h.key, h.value])), ...(config.oauth.accessToken ? { Authorization: `Bearer ${config.oauth.accessToken}` } : {}), ...mcpProtocolHeaders(probeVersion, probe) });
+            // Step 2: direct browser protocol probe
             const t2 = Date.now();
             try {
                 const res = await fetch(target, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "diagnose", version: "1.0" } } }),
+                    headers: probeHeaders,
+                    signal: AbortSignal.timeout(config.requestTimeoutMs),
+                    body: JSON.stringify(probe),
                 });
                 steps.push({
-                    name: "Direct POST initialize",
+                    name: `Direct POST ${probe.method}`,
                     ok: res.ok,
                     detail: `HTTP ${res.status} ${res.statusText}`,
                     duration: Date.now() - t2,
@@ -654,7 +627,7 @@ export default function McpInspectorPage() {
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);
                 steps.push({
-                    name: "Direct POST initialize",
+                    name: `Direct POST ${probe.method}`,
                     ok: false,
                     detail: msg + (isLikelyCorsError(err) ? " — likely CORS block" : ""),
                     duration: Date.now() - t2,
@@ -670,8 +643,8 @@ export default function McpInspectorPage() {
                     body: JSON.stringify({
                         url: target,
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "diagnose", version: "1.0" } } }),
+                        headers: probeHeaders,
+                        body: JSON.stringify(probe),
                         bodyIsBase64: false,
                         timeout: 10000,
                         followRedirects: true,
@@ -739,10 +712,11 @@ export default function McpInspectorPage() {
 
             const url = config.serverUrl.trim();
             const effectiveTimeout = Math.min(config.requestTimeoutMs, config.maxTotalTimeoutMs);
+            const request = makeMcpRequest(negotiatedVersion, "tools/call", { name: selectedTool.name, arguments: parsedArgs }, Date.now());
             const result = await mcpFetch(
                 url,
-                headers,
-                { jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name: selectedTool.name, arguments: parsedArgs } },
+                { ...headers, ...mcpProtocolHeaders(negotiatedVersion, request) },
+                request,
                 effectiveTimeout,
                 sslFields(config),
                 config.connectionMode,
@@ -791,27 +765,27 @@ export default function McpInspectorPage() {
 
     const historyColumns: ColumnsType<CallHistoryEntry> = [
         {
-            title: "Tool",
+            title: t("Tool"),
             dataIndex: "tool",
             width: 160,
-            render: (v: string) => <Text code style={{ fontSize: 11 }}>{v}</Text>,
+            render: (v: string) => <Text dir="ltr" code style={{ fontSize: 11 }}>{v}</Text>,
         },
         {
-            title: "Duration",
+            title: t("Duration"),
             dataIndex: "durationMs",
             width: 80,
             render: (v: number) => <Text style={{ fontSize: 11 }}>{formatMs(v)}</Text>,
         },
         {
-            title: "Status",
+            title: t("Status"),
             dataIndex: "error",
             width: 70,
             render: (err: boolean) => err
-                ? <Tag color="error" icon={<CloseCircleOutlined />}>Error</Tag>
-                : <Tag color="success" icon={<CheckCircleOutlined />}>OK</Tag>,
+                ? <Tag color="error" icon={<CloseCircleOutlined />}>{t("Error")}</Tag>
+                : <Tag color="success" icon={<CheckCircleOutlined />}>{t("OK")}</Tag>,
         },
         {
-            title: "Time",
+            title: t("Time"),
             dataIndex: "ts",
             width: 80,
             render: (ts: number) => <Text type="secondary" style={{ fontSize: 10 }}>{new Date(ts).toLocaleTimeString()}</Text>,
@@ -820,8 +794,8 @@ export default function McpInspectorPage() {
 
     return (
         <ToolPageLayout
-            title="MCP Inspector"
-            description="Test and inspect Model Context Protocol servers"
+            title={t("MCP Inspector")}
+            description={t("Test and inspect Model Context Protocol servers")}
             icon={<ThunderboltOutlined style={{ fontSize: 24, color: "#6366f1" }} />}
             color="#6366f1"
             learnMore={{
@@ -832,7 +806,7 @@ export default function McpInspectorPage() {
                     "Set the Connection Type to control CORS handling — 'Direct (auto-fallback)' tries a browser fetch and retries via server proxy on CORS failure; 'Direct (strict)' surfaces errors; 'Via Server Proxy' always routes via /api/proxy; 'Via MCP Proxy' tunnels through npx @modelcontextprotocol/inspector running locally",
                     "Click Diagnose to test direct fetch, CORS preflight, and proxy connectivity before committing to a connection",
                     "Open Authentication (collapsed by default) to add Custom Headers (Form or JSON), OAuth 2.0 client credentials, or paste an Access Token directly",
-                    "Open Configuration to adjust request/max timeouts, task TTL, and Reset Timeout on Progress for long-running tools",
+                    "Open Configuration to adjust request and total timeouts. Task execution extensions and progress-based deadline resets are not exercised.",
                     "For Via MCP Proxy: run 'npx @modelcontextprotocol/inspector' locally — it prints the proxy address and a session token; paste both in Configuration → Inspector Proxy",
                     "Click Connect to establish the session and load the tool list",
                     "Select a tool from the list — arguments are auto-scaffolded from its JSON Schema — fill them in, and click Call",
@@ -845,7 +819,7 @@ export default function McpInspectorPage() {
                     "Custom Headers accept 'Authorization: Bearer <token>' in Form or JSON mode — JSON auto-syncs back to the form",
                     "Via MCP Proxy uses dual auth: Bearer header + MCP_PROXY_AUTH_TOKEN query param to match the official inspector's authentication pattern",
                     "SSL options (CA bundle, client cert, mTLS key) force routing through the server-side proxy — the browser cannot handle custom TLS",
-                    "Reset Timeout on Progress keeps long-running tools alive as long as the server streams progress events — useful for generation or search tools",
+                    "Requests use a fixed deadline. Progress notifications do not extend the timeout; increase it before invoking long-running tools.",
                     "Call history is persisted to localStorage (up to 100 entries) — expand any row to see the full args and result",
                 ],
                 useCases: [
@@ -863,16 +837,14 @@ export default function McpInspectorPage() {
                         "MCP server URL",
                         "Custom headers you configured (including any Authorization / Bearer tokens)",
                         "OAuth Access Token (sent as Authorization: Bearer header)",
-                        "JSON-RPC 2.0 payload: initialize handshake, tools/list discovery, tools/call with your arguments",
+                        "JSON-RPC 2.0 payload: versioned server/discover or legacy initialize, tools/list discovery, tools/call with your arguments",
                         "SSL/TLS fields when configured (CA bundle, client cert, client key — used server-side only)",
                     ],
                     extra: (
                         <Text style={{ fontSize: 12 }}>
-                            <Text strong>To keep traffic 100% in-browser:</Text> configure your MCP server with{" "}
-                            <Text code>Access-Control-Allow-Origin: *</Text> and{" "}
-                            <Text code>Access-Control-Allow-Headers: Content-Type, Authorization</Text>.
-                            Direct browser fetch will then succeed and no proxy badges will appear.
-                        </Text>
+                            <Text strong>{t("To keep traffic 100% in-browser:")}</Text> {" "}{t("configure your MCP server with")}{" "}
+                            <Text dir="ltr" code>Access-Control-Allow-Origin: *</Text> {" "}{t("and")}{" "}
+                            <Text dir="ltr" code>Access-Control-Allow-Headers: Content-Type, Authorization</Text>{t(". Direct browser fetch will then succeed and no proxy badges will appear.")}</Text>
                     ),
                 },
             }}
@@ -884,7 +856,7 @@ export default function McpInspectorPage() {
                         const parsed = JSON.parse(p.data);
                         const servers = parsed?.mcpServers;
                         if (!servers || typeof servers !== "object" || Object.keys(servers).length === 0) {
-                            message.error("Payload doesn't look like an MCP config (missing mcpServers)");
+                            message.error(notice("Payload doesn't look like an MCP config (missing mcpServers)"));
                             return;
                         }
                         const [, entry] = Object.entries(servers)[0] as [string, Record<string, unknown>];
@@ -902,9 +874,9 @@ export default function McpInspectorPage() {
                             }
                             return prev;
                         });
-                        message.success("MCP server config loaded into the connection form below");
+                        message.success(notice("MCP server config loaded into the connection form below"));
                     } catch {
-                        message.error("Payload isn't valid JSON");
+                        message.error(notice("Payload isn't valid JSON"));
                     }
                 }}
             />
@@ -914,23 +886,21 @@ export default function McpInspectorPage() {
                 onChange={setActiveTab}
                 tabBarExtraContent={
                     <Space>
-                        {connected
-                            ? <Badge status="success" text={<Text style={{ fontSize: 12, color: "#22c55e" }}>Connected</Text>} />
-                            : <Badge status="default" text={<Text type="secondary" style={{ fontSize: 12 }}>Disconnected</Text>} />}
+                        {connected ? <Badge status="success" text={<Text style={{ fontSize: 12, color: "#22c55e" }}>{t("Connected")}</Text>} /> : <Badge status="default" text={<Text type="secondary" style={{ fontSize: 12 }}>{t("Disconnected")}</Text>} />}
                         {connected && corsFallback && (
-                            <Tooltip title="Browser direct fetch was blocked by CORS — auto-fell back to /api/proxy. Switch Connection Type to 'Via Server Proxy' to skip this fallback in future, or fix CORS on the agent.">
-                                <Tag color="warning" style={{ fontSize: 11, margin: 0 }}>CORS fallback</Tag>
+                            <Tooltip title={t("Browser direct fetch was blocked by CORS — auto-fell back to /api/proxy. Switch Connection Type to 'Via Server Proxy' to skip this fallback in future, or fix CORS on the agent.")}>
+                                <Tag color="warning" style={{ fontSize: 11, margin: 0 }}>{t("CORS fallback")}</Tag>
                             </Tooltip>
                         )}
                         {connected && proxyInUse && !corsFallback && (
-                            <Tooltip title="Requests are being routed through this app's /api/proxy (chosen by your Connection Type or required by SSL config).">
-                                <Tag color="cyan" style={{ fontSize: 11, margin: 0 }}>via proxy</Tag>
+                            <Tooltip title={t("Requests are being routed through this app's /api/proxy (chosen by your Connection Type or required by SSL config).")}>
+                                <Tag color="cyan" style={{ fontSize: 11, margin: 0 }}>{t("via proxy")}</Tag>
                             </Tooltip>
                         )}
+                        {connected && <Tag>MCP {negotiatedVersion}</Tag>}
                         {connected && (
                             <Button size="small" danger icon={<CloseCircleOutlined />} onClick={handleDisconnect}>
-                                Disconnect
-                            </Button>
+                                {t("Disconnect")}</Button>
                         )}
                     </Space>
                 }
@@ -938,16 +908,19 @@ export default function McpInspectorPage() {
                     // ── Connection tab ──────────────────────────────────────
                     {
                         key: "connect",
-                        label: <><SettingOutlined /> Connection</>,
+                        label: <><SettingOutlined /> {" "}{t("Connection")}</>,
                         children: (
                             <Row gutter={[16, 16]}>
                                 {/* Top: URL + Connection Type + Connect button */}
                                 <Col xs={24}>
                                     <Card>
                                         <Form layout="vertical" size="small">
+                                            <Form.Item label={t("MCP protocol version")}>
+                                                <Select value={config.protocolVersion} onChange={(protocolVersion) => patchConfig({ protocolVersion })} options={[{ value: "auto", label: t("Auto · modern 2026-07-28, then supported legacy") }, { value: MCP_CURRENT_VERSION, label: t("2026-07-28 · stateless") }, ...MCP_LEGACY_VERSIONS.map((version) => ({ value: version, label: t("{version} · legacy handshake", { version }) }))]} />
+                                            </Form.Item>
                                             <Row gutter={12}>
                                                 <Col xs={24} md={6}>
-                                                    <Form.Item label="Transport">
+                                                    <Form.Item label={t("Transport")}>
                                                         <Select
                                                             value={config.transport}
                                                             onChange={(v) => patchConfig({ transport: v })}
@@ -960,16 +933,16 @@ export default function McpInspectorPage() {
                                                     </Form.Item>
                                                 </Col>
                                                 <Col xs={24} md={config.transport === "stdio" ? 18 : 12}>
-                                                    <Form.Item label={config.transport === "stdio" ? "Command + arguments" : config.transport === "sse" ? "SSE Server URL" : "HTTP Server URL"}>
+                                                    <Form.Item label={config.transport === "stdio" ? t("Command + arguments") : config.transport === "sse" ? t("SSE Server URL") : t("HTTP Server URL")}>
                                                         {config.transport === "stdio" ? (
                                                             <Input.Group compact>
-                                                                <Input
+                                                                <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                     value={config.command}
                                                                     onChange={e => patchConfig({ command: e.target.value })}
                                                                     placeholder="npx"
                                                                     style={{ width: "30%" }}
                                                                 />
-                                                                <Input
+                                                                <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                     value={config.args}
                                                                     onChange={e => patchConfig({ args: e.target.value })}
                                                                     placeholder="-y @modelcontextprotocol/server-everything"
@@ -977,7 +950,7 @@ export default function McpInspectorPage() {
                                                                 />
                                                             </Input.Group>
                                                         ) : (
-                                                            <Input
+                                                            <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                 value={config.serverUrl}
                                                                 onChange={e => patchConfig({ serverUrl: e.target.value })}
                                                                 placeholder={config.transport === "sse" ? "http://localhost:3001/sse" : "http://localhost:3001/mcp"}
@@ -991,14 +964,13 @@ export default function McpInspectorPage() {
                                                         <Form.Item
                                                             label={
                                                                 <Space>
-                                                                    Connection Type
-                                                                    <Tooltip
+                                                                    {t("Connection Type")}<Tooltip
                                                                         title={
                                                                             <div style={{ fontSize: 12 }}>
-                                                                                <div><b>Direct (auto-fallback):</b> browser → MCP server. If a CORS error occurs, automatically retries through this app&apos;s /api/proxy.</div>
-                                                                                <div style={{ marginTop: 4 }}><b>Direct (strict):</b> direct only — surfaces CORS errors instead of falling back. Useful for debugging CORS configuration on the agent.</div>
-                                                                                <div style={{ marginTop: 4 }}><b>Via Server Proxy:</b> always routes through /api/proxy. Bypasses browser CORS entirely; required for SSL/TLS options.</div>
-                                                                                <div style={{ marginTop: 4 }}><b>Via MCP Proxy:</b> tunnels through the user-run <code>npx @modelcontextprotocol/inspector</code> proxy at the configured address (with session token).</div>
+                                                                                <div><b>{t("Direct (auto-fallback):")}</b> {" "}{t("browser → MCP server. If a CORS error occurs, automatically retries through this app's /api/proxy.")}</div>
+                                                                                <div style={{ marginTop: 4 }}><b>{t("Direct (strict):")}</b> {" "}{t("direct only — surfaces CORS errors instead of falling back. Useful for debugging CORS configuration on the agent.")}</div>
+                                                                                <div style={{ marginTop: 4 }}><b>{t("Via Server Proxy:")}</b> {" "}{t("always routes through /api/proxy. Bypasses browser CORS entirely; required for SSL/TLS options.")}</div>
+                                                                                <div style={{ marginTop: 4 }}><b>{t("Via MCP Proxy:")}</b> {" "}{t("tunnels through the user-run")}{" "}<code dir="ltr">npx @modelcontextprotocol/inspector</code> {" "}{t("proxy at the configured address (with session token).")}</div>
                                                                             </div>
                                                                         }
                                                                     >
@@ -1011,10 +983,10 @@ export default function McpInspectorPage() {
                                                                 value={config.connectionMode}
                                                                 onChange={(v) => patchConfig({ connectionMode: v })}
                                                                 options={[
-                                                                    { label: "Direct (auto-fallback)", value: "direct" },
-                                                                    { label: "Direct (strict)", value: "direct-strict" },
-                                                                    { label: "Via Server Proxy", value: "via-server-proxy" },
-                                                                    { label: "Via MCP Proxy", value: "via-mcp-proxy" },
+                                                                    { label: t("Direct (auto-fallback)"), value: "direct" },
+                                                                    { label: t("Direct (strict)"), value: "direct-strict" },
+                                                                    { label: t("Via Server Proxy"), value: "via-server-proxy" },
+                                                                    { label: t("Via MCP Proxy"), value: "via-mcp-proxy" },
                                                                 ]}
                                                             />
                                                         </Form.Item>
@@ -1031,18 +1003,17 @@ export default function McpInspectorPage() {
                                                     disabled={connected}
                                                     style={{ background: "#6366f1", borderColor: "#6366f1", flex: 1 }}
                                                 >
-                                                    {config.transport === "stdio" ? "Generate CLI Command" : connecting ? "Connecting…" : "Connect"}
+                                                    {config.transport === "stdio" ? t("Generate CLI Command") : connecting ? t("Connecting…") : t("Connect")}
                                                 </Button>
                                                 {config.transport !== "stdio" && (
-                                                    <Tooltip title="Test connectivity to the server: tries direct fetch, CORS preflight, and the server proxy. Recommends a Connection Type based on the results.">
+                                                    <Tooltip title={t("Test connectivity to the server: tries direct fetch, CORS preflight, and the server proxy. Recommends a Connection Type based on the results.")}>
                                                         <Button
                                                             size="large"
                                                             icon={<ExperimentOutlined />}
                                                             onClick={handleDiagnose}
                                                             loading={diagnosing}
                                                         >
-                                                            Diagnose
-                                                        </Button>
+                                                            {t("Diagnose")}</Button>
                                                     </Tooltip>
                                                 )}
                                             </Space.Compact>
@@ -1054,10 +1025,10 @@ export default function McpInspectorPage() {
                                                     style={{ marginTop: 12 }}
                                                     title={
                                                         <Space>
-                                                            <Text strong>Connection Diagnostic</Text>
+                                                            <Text strong>{t("Connection Diagnostic")}</Text>
                                                             {diagnosticResult.crossOrigin
-                                                                ? <Tag color="orange">cross-origin</Tag>
-                                                                : <Tag color="green">same-origin</Tag>}
+                                                                ? <Tag color="orange">{t("cross-origin")}</Tag>
+                                                                : <Tag color="green">{t("same-origin")}</Tag>}
                                                         </Space>
                                                     }
                                                     description={
@@ -1068,7 +1039,7 @@ export default function McpInspectorPage() {
                                                                         ? <CheckCircleOutlined style={{ color: "#22c55e", marginTop: 3 }} />
                                                                         : <CloseCircleOutlined style={{ color: "#ef4444", marginTop: 3 }} />}
                                                                     <div style={{ flex: 1 }}>
-                                                                        <Text strong style={{ fontSize: 12 }}>{step.name}</Text>
+                                                                        <Text strong style={{ fontSize: 12 }}>{t(step.name)}</Text>
                                                                         {step.duration !== undefined && (
                                                                             <Text type="secondary" style={{ fontSize: 11, marginLeft: 6 }}>({step.duration}ms)</Text>
                                                                         )}
@@ -1078,7 +1049,7 @@ export default function McpInspectorPage() {
                                                             ))}
                                                             <Divider style={{ margin: "6px 0" }} />
                                                             <Text style={{ fontSize: 12 }}>
-                                                                <Text strong>Recommendation: </Text>{diagnosticResult.recommendation}
+                                                                <Text strong>{t("Recommendation:")}{" "}</Text>{t(diagnosticResult.recommendation)}
                                                             </Text>
                                                         </Space>
                                                     }
@@ -1086,12 +1057,12 @@ export default function McpInspectorPage() {
                                             )}
                                             {config.transport === "stdio" && (
                                                 <div style={{ marginTop: 12 }}>
-                                                    <Text type="secondary" style={{ fontSize: 11 }}>Generated command (run in your terminal):</Text>
-                                                    <Input.TextArea
+                                                    <Text type="secondary" style={{ fontSize: 11 }}>{t("Generated command (run in your terminal):")}</Text>
+                                                    <Input.TextArea dir="ltr"
                                                         value={buildCliCommand(config)}
                                                         readOnly
                                                         rows={2}
-                                                        style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 11, marginTop: 4 }}
+                                                        style={{ direction: "ltr", textAlign: "left",  fontFamily: "var(--font-geist-mono), monospace", fontSize: 16, marginTop: 4 }}
                                                     />
                                                     <Button
                                                         size="small"
@@ -1099,8 +1070,7 @@ export default function McpInspectorPage() {
                                                         style={{ marginTop: 4 }}
                                                         onClick={() => copyToClipboard(buildCliCommand(config))}
                                                     >
-                                                        Copy command
-                                                    </Button>
+                                                        {t("Copy command")}</Button>
                                                 </div>
                                             )}
                                         </Form>
@@ -1116,11 +1086,11 @@ export default function McpInspectorPage() {
                                                 label: (
                                                     <Space>
                                                         <KeyOutlined />
-                                                        <Text strong>Authentication</Text>
+                                                        <Text strong>{t("Authentication")}</Text>
                                                         {config.headers.filter(h => h.key.trim()).length > 0 && (
-                                                            <Tag color="purple">{config.headers.filter(h => h.key.trim()).length} header(s)</Tag>
+                                                            <Tag color="purple">{config.headers.filter(h => h.key.trim()).length} {" "}{t("header(s)")}</Tag>
                                                         )}
-                                                        {config.oauth.accessToken && <Tag color="gold">OAuth token</Tag>}
+                                                        {config.oauth.accessToken && <Tag color="gold">{t("OAuth token")}</Tag>}
                                                     </Space>
                                                 ),
                                                 children: (
@@ -1128,13 +1098,13 @@ export default function McpInspectorPage() {
                                                         {/* Custom Headers */}
                                                         <div>
                                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                                                                <Text strong style={{ fontSize: 13 }}>Custom Headers</Text>
+                                                                <Text strong style={{ fontSize: 13 }}>{t("Custom Headers")}</Text>
                                                                 <Segmented
                                                                     size="small"
                                                                     value={headerMode}
                                                                     onChange={(v) => switchHeaderMode(v as "form" | "json")}
                                                                     options={[
-                                                                        { label: "Form", value: "form" },
+                                                                        { label: t("Form"), value: "form" },
                                                                         { label: "JSON", value: "json" },
                                                                     ]}
                                                                 />
@@ -1144,23 +1114,22 @@ export default function McpInspectorPage() {
                                                                     {config.headers.map(h => (
                                                                         <Row gutter={8} key={h.id} style={{ marginBottom: 6 }}>
                                                                             <Col span={10}>
-                                                                                <Input placeholder="Header name" value={h.key} onChange={e => updateHeader(h.id, "key", e.target.value)} />
+                                                                                <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }} placeholder={t("Header name")} value={h.key} onChange={e => updateHeader(h.id, "key", e.target.value)} />
                                                                             </Col>
                                                                             <Col span={12}>
-                                                                                <Input placeholder="Value" value={h.value} onChange={e => updateHeader(h.id, "value", e.target.value)} />
+                                                                                <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }} placeholder={t("Value")} value={h.value} onChange={e => updateHeader(h.id, "value", e.target.value)} />
                                                                             </Col>
                                                                             <Col span={2}>
-                                                                                <Button aria-label="Delete" danger type="text" icon={<DeleteOutlined />} onClick={() => removeHeader(h.id)} />
+                                                                                <Button aria-label={t("Delete")} danger type="text" icon={<DeleteOutlined />} onClick={() => removeHeader(h.id)} />
                                                                             </Col>
                                                                         </Row>
                                                                     ))}
                                                                     <Button size="small" icon={<PlusOutlined />} onClick={addHeader}>
-                                                                        Add header
-                                                                    </Button>
+                                                                        {t("Add header")}</Button>
                                                                 </>
                                                             ) : (
                                                                 <div>
-                                                                    <TextArea
+                                                                    <TextArea dir="ltr"
                                                                         value={headerJson}
                                                                         onChange={e => {
                                                                             setHeaderJson(e.target.value);
@@ -1168,12 +1137,11 @@ export default function McpInspectorPage() {
                                                                             if (parsed !== null) patchConfig({ headers: parsed });
                                                                         }}
                                                                         rows={5}
-                                                                        style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 12 }}
+                                                                        style={{ direction: "ltr", textAlign: "left",  fontFamily: "var(--font-geist-mono), monospace", fontSize: 16 }}
                                                                         placeholder={'{\n  "Authorization": "Bearer xxx"\n}'}
                                                                     />
                                                                     <Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: "block" }}>
-                                                                        JSON object — auto-syncs to form when valid
-                                                                    </Text>
+                                                                        {t("JSON object — auto-syncs to form when valid")}</Text>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -1184,8 +1152,7 @@ export default function McpInspectorPage() {
                                                         <div>
                                                             <Text strong style={{ fontSize: 13, display: "block", marginBottom: 8 }}>
                                                                 <Space>
-                                                                    OAuth 2.0 Flow
-                                                                    <Tooltip title="When an access token is set it will be sent as 'Authorization: Bearer <token>'. Other fields are stored for documentation; full browser-side OAuth requires server-side token exchange.">
+                                                                    {t("OAuth 2.0 Flow")}<Tooltip title={t("When an access token is set it will be sent as 'Authorization: Bearer <token>'. Other fields are stored for documentation; full browser-side OAuth requires server-side token exchange.")}>
                                                                         <InfoCircleOutlined style={{ color: "#9a9a9a" }} />
                                                                     </Tooltip>
                                                                 </Space>
@@ -1193,28 +1160,28 @@ export default function McpInspectorPage() {
                                                             <Form layout="vertical" size="small">
                                                                 <Row gutter={8}>
                                                                     <Col xs={24} md={12}>
-                                                                        <Form.Item label="Client ID">
-                                                                            <Input
+                                                                        <Form.Item label={t("Client ID")}>
+                                                                            <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                                 value={config.oauth.clientId}
                                                                                 onChange={e => patchConfig({ oauth: { ...config.oauth, clientId: e.target.value } })}
-                                                                                placeholder="Client ID"
+                                                                                placeholder={t("Client ID")}
                                                                             />
                                                                         </Form.Item>
                                                                     </Col>
                                                                     <Col xs={24} md={12}>
-                                                                        <Form.Item label="Client Secret (optional)">
-                                                                            <Input.Password
+                                                                        <Form.Item label={t("Client Secret (optional)")}>
+                                                                            <Input.Password styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                                 value={config.oauth.clientSecret}
                                                                                 onChange={e => patchConfig({ oauth: { ...config.oauth, clientSecret: e.target.value } })}
-                                                                                placeholder="Client Secret"
+                                                                                placeholder={t("Client Secret")}
                                                                             />
                                                                         </Form.Item>
                                                                     </Col>
                                                                 </Row>
                                                                 <Row gutter={8}>
                                                                     <Col xs={24} md={12}>
-                                                                        <Form.Item label="Redirect URL">
-                                                                            <Input
+                                                                        <Form.Item label={t("Redirect URL")}>
+                                                                            <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                                 value={config.oauth.redirectUrl}
                                                                                 onChange={e => patchConfig({ oauth: { ...config.oauth, redirectUrl: e.target.value } })}
                                                                                 placeholder="http://localhost:3000/oauth/callback"
@@ -1222,8 +1189,8 @@ export default function McpInspectorPage() {
                                                                         </Form.Item>
                                                                     </Col>
                                                                     <Col xs={24} md={12}>
-                                                                        <Form.Item label="Scope (space-separated)">
-                                                                            <Input
+                                                                        <Form.Item label={t("Scope (space-separated)")}>
+                                                                            <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                                 value={config.oauth.scope}
                                                                                 onChange={e => patchConfig({ oauth: { ...config.oauth, scope: e.target.value } })}
                                                                                 placeholder="read write"
@@ -1231,18 +1198,18 @@ export default function McpInspectorPage() {
                                                                         </Form.Item>
                                                                     </Col>
                                                                 </Row>
-                                                                <Form.Item label="Token URL (optional)">
-                                                                    <Input
+                                                                <Form.Item label={t("Token URL (optional)")}>
+                                                                    <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                         value={config.oauth.tokenUrl}
                                                                         onChange={e => patchConfig({ oauth: { ...config.oauth, tokenUrl: e.target.value } })}
                                                                         placeholder="https://auth.example.com/oauth/token"
                                                                     />
                                                                 </Form.Item>
-                                                                <Form.Item label="Access Token">
-                                                                    <Input.Password
+                                                                <Form.Item label={t("Access Token")}>
+                                                                    <Input.Password styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                         value={config.oauth.accessToken}
                                                                         onChange={e => patchConfig({ oauth: { ...config.oauth, accessToken: e.target.value } })}
-                                                                        placeholder="Paste a pre-obtained access token"
+                                                                        placeholder={t("Paste a pre-obtained access token")}
                                                                     />
                                                                 </Form.Item>
                                                             </Form>
@@ -1255,7 +1222,7 @@ export default function McpInspectorPage() {
                                                 label: (
                                                     <Space>
                                                         <SettingOutlined />
-                                                        <Text strong>Configuration</Text>
+                                                        <Text strong>{t("Configuration")}</Text>
                                                         <Tag>{formatMs(config.requestTimeoutMs)}</Tag>
                                                     </Space>
                                                 ),
@@ -1263,8 +1230,8 @@ export default function McpInspectorPage() {
                                                     <Form layout="vertical" size="small">
                                                         <Row gutter={12}>
                                                             <Col xs={24} md={8}>
-                                                                <Form.Item label={`Request Timeout (${formatMs(config.requestTimeoutMs)})`}>
-                                                                    <InputNumber
+                                                                <Form.Item label={t("Request Timeout ({value1})", { value1: formatMs(config.requestTimeoutMs) })}>
+                                                                    <InputNumber styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                         value={config.requestTimeoutMs}
                                                                         onChange={v => patchConfig({ requestTimeoutMs: v || 30000 })}
                                                                         min={1000} max={300000} step={1000}
@@ -1273,8 +1240,8 @@ export default function McpInspectorPage() {
                                                                 </Form.Item>
                                                             </Col>
                                                             <Col xs={24} md={8}>
-                                                                <Form.Item label={`Max Total Timeout (${formatMs(config.maxTotalTimeoutMs)})`}>
-                                                                    <InputNumber
+                                                                <Form.Item label={t("Max Total Timeout ({value1})", { value1: formatMs(config.maxTotalTimeoutMs) })}>
+                                                                    <InputNumber styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                         value={config.maxTotalTimeoutMs}
                                                                         onChange={v => patchConfig({ maxTotalTimeoutMs: v || 120000 })}
                                                                         min={1000} max={3600000} step={5000}
@@ -1283,9 +1250,10 @@ export default function McpInspectorPage() {
                                                                 </Form.Item>
                                                             </Col>
                                                             <Col xs={24} md={8}>
-                                                                <Form.Item label={`Task TTL (${formatMs(config.taskTtlMs)})`}>
-                                                                    <InputNumber
+                                                                <Form.Item label={t("Task TTL · extension not supported")}>
+                                                                    <InputNumber styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                         value={config.taskTtlMs}
+                                                                        disabled
                                                                         onChange={v => patchConfig({ taskTtlMs: v || 300000 })}
                                                                         min={1000} max={86400000} step={60000}
                                                                         style={{ width: "100%" }}
@@ -1296,28 +1264,28 @@ export default function McpInspectorPage() {
                                                         <Form.Item>
                                                             <Space>
                                                                 <Switch
-                                                                    checked={config.resetTimeoutOnProgress}
+                                                                    checked={false}
+                                                                    disabled
                                                                     onChange={v => patchConfig({ resetTimeoutOnProgress: v })}
                                                                     size="small"
                                                                 />
-                                                                <Text style={{ fontSize: 12 }}>Reset timeout on progress</Text>
-                                                                <Tooltip title="When the server emits progress notifications during a long-running tool call, restart the request timer.">
+                                                                <Text style={{ fontSize: 12 }}>{t("Fixed request deadline · progress reset unavailable")}</Text>
+                                                                <Tooltip title={t("This inspector uses a fixed deadline, including when progress events arrive.")}>
                                                                     <InfoCircleOutlined style={{ color: "#9a9a9a" }} />
                                                                 </Tooltip>
                                                             </Space>
                                                         </Form.Item>
 
-                                                        <Divider style={{ margin: "12px 0" }}>Inspector Proxy (only used when Connection Type = "Via MCP Proxy")</Divider>
+                                                        <Divider style={{ margin: "12px 0" }}>{t("Inspector Proxy (only used when Connection Type = \"Via MCP Proxy\")")}</Divider>
                                                         <Alert
                                                             type="info"
                                                             showIcon
-                                                            title="Run the official inspector locally to get these values"
+                                                            title={t("Run the official inspector locally to get these values")}
                                                             description={
                                                                 <div>
-                                                                    <Text code style={{ fontSize: 11 }}>npx @modelcontextprotocol/inspector</Text>
+                                                                    <Text dir="ltr" code style={{ fontSize: 11 }}>npx @modelcontextprotocol/inspector</Text>
                                                                     <Text style={{ fontSize: 11, display: "block", marginTop: 4 }}>
-                                                                        It will print the proxy address (default <Text code>http://localhost:6277</Text>) and a session token. Paste both below.
-                                                                    </Text>
+                                                                        {t("It will print the proxy address (default")}{" "}<Text dir="ltr" code>http://localhost:6277</Text>{t(") and a session token. Paste both below.")}</Text>
                                                                 </div>
                                                             }
                                                             style={{ marginBottom: 12, fontSize: 12 }}
@@ -1327,14 +1295,13 @@ export default function McpInspectorPage() {
                                                                 <Form.Item
                                                                     label={
                                                                         <Space>
-                                                                            Inspector Proxy Address
-                                                                            <Tooltip title="Set this if you are running the MCP Inspector Proxy on a non-default address. Example: http://10.1.1.22:5577">
+                                                                            {t("Inspector Proxy Address")}<Tooltip title={t("Set this if you are running the MCP Inspector Proxy on a non-default address. Example: http://10.1.1.22:5577")}>
                                                                                 <InfoCircleOutlined style={{ color: "#9a9a9a" }} />
                                                                             </Tooltip>
                                                                         </Space>
                                                                     }
                                                                 >
-                                                                    <Input
+                                                                    <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                         value={config.proxyAddress}
                                                                         onChange={e => patchConfig({ proxyAddress: e.target.value })}
                                                                         placeholder="http://localhost:6277"
@@ -1345,14 +1312,13 @@ export default function McpInspectorPage() {
                                                                 <Form.Item
                                                                     label={
                                                                         <Space>
-                                                                            Proxy Session Token
-                                                                            <Tooltip title="Session token for authenticating with the MCP Proxy Server (displayed in proxy console on startup as 🔑 Session token: ...)">
+                                                                            {t("Proxy Session Token")}<Tooltip title={t("Session token for authenticating with the MCP Proxy Server (displayed in proxy console on startup as 🔑 Session token: ...)")}>
                                                                                 <InfoCircleOutlined style={{ color: "#9a9a9a" }} />
                                                                             </Tooltip>
                                                                         </Space>
                                                                     }
                                                                 >
-                                                                    <Input.Password
+                                                                    <Input.Password styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                                         value={config.proxySessionToken}
                                                                         onChange={e => patchConfig({ proxySessionToken: e.target.value })}
                                                                         placeholder="c97d7ad9f3e400c68fa443eeb076d944..."
@@ -1369,8 +1335,8 @@ export default function McpInspectorPage() {
                                                     <Space>
                                                         <SafetyCertificateOutlined />
                                                         <Text strong>SSL / TLS</Text>
-                                                        {(config.sslVerify || config.sslCaCert.trim() || config.sslClientCert.trim()) && (
-                                                            <Tag color="orange">configured</Tag>
+                                                        {(!config.sslVerify || config.sslCaCert.trim() || config.sslClientCert.trim()) && (
+                                                            <Tag color="orange">{t("configured")}</Tag>
                                                         )}
                                                     </Space>
                                                 ),
@@ -1399,8 +1365,7 @@ export default function McpInspectorPage() {
                         label: (
                             <Space size={4}>
                                 <CodeOutlined />
-                                Tools
-                                {tools.length > 0 && <Badge count={tools.length} size="small" color="#6366f1" />}
+                                {t("Tools")}{tools.length > 0 && <Badge count={tools.length} size="small" color="#6366f1" />}
                             </Space>
                         ),
                         children: (
@@ -1411,15 +1376,15 @@ export default function McpInspectorPage() {
                                         title={
                                             <Space>
                                                 <ApiOutlined style={{ color: "#6366f1" }} />
-                                                <Text>Available Tools</Text>
+                                                <Text>{t("Available Tools")}</Text>
                                                 {tools.length > 0 && <Tag>{tools.length}</Tag>}
                                             </Space>
                                         }
                                     >
                                         {!connected ? (
-                                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Not connected" />
+                                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("Not connected")} />
                                         ) : tools.length === 0 ? (
-                                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No tools found" />
+                                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("No tools found")} />
                                         ) : (
                                             <div style={{ maxHeight: 480, overflowY: "auto" }}>
                                                 {tools.map(tool => (
@@ -1439,7 +1404,7 @@ export default function McpInspectorPage() {
                                                                 : "1px solid transparent",
                                                         }}
                                                     >
-                                                        <Text code style={{ fontSize: 12 }}>{tool.name}</Text>
+                                                        <Text dir="ltr" code style={{ fontSize: 12 }}>{tool.name}</Text>
                                                         {tool.description && (
                                                             <div>
                                                                 <Text type="secondary" style={{ fontSize: 11 }}>{tool.description}</Text>
@@ -1460,7 +1425,7 @@ export default function McpInspectorPage() {
                                                 title={
                                                     <Space>
                                                         <ThunderboltOutlined style={{ color: "#6366f1" }} />
-                                                        <Text code>{selectedTool.name}</Text>
+                                                        <Text dir="ltr" code>{selectedTool.name}</Text>
                                                     </Space>
                                                 }
                                                 extra={
@@ -1473,8 +1438,7 @@ export default function McpInspectorPage() {
                                                         disabled={!connected}
                                                         style={{ background: "#6366f1", borderColor: "#6366f1" }}
                                                     >
-                                                        Call
-                                                    </Button>
+                                                        {t("Call")}</Button>
                                                 }
                                             >
                                                 {selectedTool.description && (
@@ -1484,8 +1448,7 @@ export default function McpInspectorPage() {
                                                 )}
 
                                                 <Text style={{ display: "block", marginBottom: 4, fontSize: 12 }} strong>
-                                                    Arguments (JSON)
-                                                </Text>
+                                                    {t("Arguments (JSON)")}</Text>
                                                 <CodeEditor
                                                     value={callArgs}
                                                     onChange={v => setCallArgs(v || "{}")}
@@ -1499,9 +1462,9 @@ export default function McpInspectorPage() {
                                                         style={{ marginTop: 8 }}
                                                         items={[{
                                                             key: "schema",
-                                                            label: <Text style={{ fontSize: 11 }}>Input Schema</Text>,
+                                                            label: <Text style={{ fontSize: 11 }}>{t("Input Schema")}</Text>,
                                                             children: (
-                                                                <pre style={{ fontSize: 10, margin: 0, overflow: "auto", maxHeight: 160 }}>
+                                                                <pre dir="ltr" style={{ fontSize: 10, margin: 0, overflow: "auto", maxHeight: 160 }}>
                                                                     {JSON.stringify(selectedTool.inputSchema, null, 2)}
                                                                 </pre>
                                                             ),
@@ -1518,12 +1481,12 @@ export default function McpInspectorPage() {
                                                             {lastError
                                                                 ? <CloseCircleOutlined style={{ color: "#ef4444" }} />
                                                                 : <CheckCircleOutlined style={{ color: "#22c55e" }} />}
-                                                            <Text>{lastError ? "Error" : "Result"}</Text>
+                                                            <Text>{lastError ? t("Error") : t("Result")}</Text>
                                                         </Space>
                                                     }
                                                     style={{ marginTop: 8 }}
                                                     extra={
-                                                        <Button aria-label="Copy"
+                                                        <Button aria-label={t("Copy")}
                                                             size="small"
                                                             icon={<CopyOutlined />}
                                                             onClick={() => copyToClipboard(lastResult || lastError)}
@@ -1542,7 +1505,7 @@ export default function McpInspectorPage() {
                                     ) : (
                                         <Card>
                                             <Empty
-                                                description={connected ? "Select a tool to call it" : "Connect to a server first"}
+                                                description={connected ? t("Select a tool to call it") : t("Connect to a server first")}
                                             />
                                         </Card>
                                     )}
@@ -1557,8 +1520,7 @@ export default function McpInspectorPage() {
                         label: (
                             <Space size={4}>
                                 <HistoryOutlined />
-                                History
-                                {history.length > 0 && <Badge count={history.length} size="small" color="#6366f1" overflowCount={99} />}
+                                {t("History")}{history.length > 0 && <Badge count={history.length} size="small" color="#6366f1" overflowCount={99} />}
                             </Space>
                         ),
                         children: (
@@ -1566,8 +1528,7 @@ export default function McpInspectorPage() {
                                 title={
                                     <Space>
                                         <HistoryOutlined style={{ color: "#6366f1" }} />
-                                        Call History
-                                    </Space>
+                                        {t("Call History")}</Space>
                                 }
                                 extra={
                                     history.length > 0 && (
@@ -1577,16 +1538,15 @@ export default function McpInspectorPage() {
                                             icon={<DeleteOutlined />}
                                             onClick={() => {
                                                 setHistory([]);
-                                                try { localStorage.removeItem("mcp-inspector-history"); } catch {}
+                                                try { projectStorage.removeItem("mcp-inspector-history"); } catch {}
                                             }}
                                         >
-                                            Clear
-                                        </Button>
+                                            {t("Clear")}</Button>
                                     )
                                 }
                             >
                                 {history.length === 0 ? (
-                                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No calls yet" />
+                                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("No calls yet")} />
                                 ) : (
                                     <Table<CallHistoryEntry>
                                         columns={historyColumns}
@@ -1598,12 +1558,12 @@ export default function McpInspectorPage() {
                                             expandedRowRender: (record) => (
                                                 <Row gutter={8}>
                                                     <Col span={12}>
-                                                        <Text style={{ fontSize: 11 }} strong>Args</Text>
-                                                        <pre style={{ fontSize: 10, maxHeight: 120, overflow: "auto", marginTop: 4 }}>{record.args}</pre>
+                                                        <Text style={{ fontSize: 11 }} strong>{t("Args")}</Text>
+                                                        <pre dir="ltr" style={{ fontSize: 10, maxHeight: 120, overflow: "auto", marginTop: 4 }}>{record.args}</pre>
                                                     </Col>
                                                     <Col span={12}>
-                                                        <Text style={{ fontSize: 11 }} strong>Result</Text>
-                                                        <pre style={{ fontSize: 10, maxHeight: 120, overflow: "auto", marginTop: 4 }}>{record.result}</pre>
+                                                        <Text style={{ fontSize: 11 }} strong>{t("Result")}</Text>
+                                                        <pre dir="ltr" style={{ fontSize: 10, maxHeight: 120, overflow: "auto", marginTop: 4 }}>{record.result}</pre>
                                                     </Col>
                                                 </Row>
                                             ),

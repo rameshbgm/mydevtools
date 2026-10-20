@@ -1,15 +1,15 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Space, Button, Alert, Table, Tag } from "antd";
-import { FileSearchOutlined, CopyOutlined, PlayCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { Card, Input, Typography, Row, Col, Space, Button, Alert, Table, Tag, Select, Checkbox } from "antd";
+import { FileSearchOutlined, CopyOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import { copyToClipboard } from "@/lib/clipboard";
-import { JSONPath } from "jsonpath-plus";
+import { queryJson, type JsonQueryEngine } from "@/lib/json-query";
 
-const { Text, Paragraph } = Typography;
-const { TextArea } = Input;
+const { Text } = Typography;
 
 const SAMPLE_JSON = `{
   "store": {
@@ -54,26 +54,28 @@ const SYNTAX_REFERENCE = [
 ];
 
 export default function JsonPathTesterPage() {
+    const { t } = useLanguage();
+    const [preserveNumbers, setPreserveNumbers] = useState(false);
     const [json, setJson] = useState(SAMPLE_JSON);
     const [path, setPath] = useState("$.store.book[*].author");
-    const [error, setError] = useState<string | null>(null);
-
-    const result = useMemo(() => {
-        setError(null);
-        if (!json.trim() || !path.trim()) return null;
-
-        try {
-            const data = JSON.parse(json);
-            const results = JSONPath({ path, json: data, wrap: true });
-            return results;
-        } catch (err: any) {
-            setError(err.message);
-            return null;
-        }
-    }, [json, path]);
+    const [engine, setEngine] = useState<JsonQueryEngine>("jsonpath");
+    const query = useMemo(() => {
+        if (!json.trim() || !path.trim()) return { value: undefined, error: null };
+        try { return { value: queryJson(json, path, engine, preserveNumbers ? "strings" : "reject"), error: null }; }
+        catch (cause) { return { value: undefined, error: cause instanceof Error ? cause.message : String(cause) }; }
+    }, [json, path, engine, preserveNumbers]);
+    const result = query.value, error = query.error;
+    const hasResult = result !== undefined && !error;
+    const matchCount = Array.isArray(result) ? result.length : 1;
+    const examples = engine === "jsonpath" ? EXAMPLES : [
+        { path: "store.book[].author", desc: "All authors" },
+        { path: "store.book[?price < `10`].title", desc: "Titles priced below 10" },
+        { path: "length(store.book)", desc: "Number of books" },
+        { path: "sort_by(store.book, &price)[].{title: title, price: price}", desc: "Objects sorted by price" },
+    ];
 
     const copyResult = () => {
-        if (result) copyToClipboard(JSON.stringify(result, null, 2), "Result copied to clipboard!");
+        if (hasResult) copyToClipboard(JSON.stringify(result, null, 2), t("Result copied to clipboard!"));
     };
 
     const loadExample = (examplePath: string) => {
@@ -83,73 +85,55 @@ export default function JsonPathTesterPage() {
     return (
         <ToolPageLayout
             title="JSONPath Tester"
-            description="Test and validate JSONPath expressions"
+            description="Query JSON with JSONPath or JMESPath and inspect exact array, object or scalar results"
             icon={<FileSearchOutlined style={{ fontSize: 24, color: "#722ed1" }} />}
             color="#722ed1"
             learnMore={{
-                whatIs: "JSONPath is a query language for JSON, originally proposed by Stefan Goessner in 2007 and standardized as RFC 9535 in 2024. It mirrors XPath's role for XML — letting you reach into deeply nested objects with terse path expressions like `$.store.book[?(@.price < 10)].title` instead of writing a custom traversal each time.",
-                whyUse: "Modern APIs return rich, nested JSON, and config files balloon with hundreds of keys. JSONPath lets you describe the exact slice you want declaratively — perfect for prototyping data-extraction logic before committing to code, building tests against API responses, or pulling fields out of webhook payloads in tools like jq, Postman, AWS CLI, and Kubernetes kubectl.",
-                howToUse: [
-                    "Paste a JSON document in the left editor (any size — query runs in your browser)",
-                    "Enter a JSONPath expression in the query field — the result updates as you type",
-                    "Click any of the example expressions to see how operators behave",
-                    "Read the syntax reference for filters, slices, recursive descent, and unions",
-                    "Copy the matched array as JSON and paste it into your code or tests",
-                ],
-                tips: [
-                    "`$` is the root, `@` is the current node inside a filter expression",
-                    "`..` is recursive descent — `$..price` finds every price at any depth",
-                    "`[?(@.foo == 'bar')]` filters arrays — quotes must match the JSON's quoting style",
-                    "Slices borrow Python syntax — `[:3]` is the first three, `[-1:]` is the last",
-                    "Unions like `[0,2,4]` pick specific indices in one query",
-                    "Different implementations differ on edge cases (script expressions, unicode, regex) — RFC 9535 picks the safer subset",
-                    "When a query returns nothing, double-check the path is rooted with `$.` and that array indices are zero-based",
-                ],
-                useCases: [
-                    "Extracting specific fields from REST API responses for assertions",
-                    "Building Postman/Bruno test scripts that pluck values from JSON bodies",
-                    "Filtering large config files (Helm values, Kustomize, Terraform JSON output)",
-                    "Drilling into Kubernetes resource manifests with `kubectl -o jsonpath`",
-                    "Parsing log aggregator output (CloudWatch, Datadog, Elastic) for ad-hoc fields",
-                    "Designing JMESPath-equivalent queries before porting to AWS CLI or Azure CLI",
-                ],
+                whatIs: "JSONPath selects nodes; JMESPath also projects, filters and transforms JSON values. Queries run locally in your browser.",
+                whyUse: "Inspect API responses and test extraction logic without uploading the document.",
+                howToUse: ["Choose a query language, paste JSON up to 2 MiB, then enter an expression up to 2048 characters.", "Click an example to change the expression. Examples use the initial sample; restore it with Load sample JSON.", "Results update as you type. Copy preserves the returned array, object, scalar or null."],
+                tips: ["JSONPath uses jsonpath-plus safe evaluation; implementation extensions may differ from RFC 9535 or other tools.", "JMESPath examples use projections, filters, functions and pipes. Syntax differs from JSONPath.", "A JSONPath result is always a list of matches. JMESPath returns the expression value; null can mean no match."],
             }}
         >
+            <Select aria-label={t("JSON query language")} value={engine} onChange={(value: JsonQueryEngine) => { setEngine(value); setPath(value === "jsonpath" ? "$.store.book[*].author" : "store.book[].author"); }} options={[{ value: "jsonpath", label: "JSONPath" }, { value: "jmespath", label: "JMESPath" }]} style={{ minWidth: 180, maxWidth: "100%", marginBottom: 18 }} />
+            <Button onClick={() => setJson(SAMPLE_JSON)} style={{ marginInlineStart: 8, marginBottom: 18 }}>{t("Load sample JSON")}</Button>
+            <div className="wb-query-precision">
+                <Checkbox checked={preserveNumbers} onChange={(event) => setPreserveNumbers(event.target.checked)}>{t("Preserve precision-sensitive numbers as text")}</Checkbox>
+                <p>{t(preserveNumbers ? "Affected input numbers become strings. Numeric filters and functions no longer receive numbers. Use quoted text equality; string sorting is lexical." : "Input numbers that cannot round-trip through JavaScript numbers are rejected instead of silently changed.")}</p>
+                <p>{t("Numeric functions use IEEE 754 arithmetic and may round. JMESPath JSON literals follow the input precision setting.")}</p>
+            </div>
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
-                    <Card title="JSON Input" style={{ marginBottom: 16 }}>
+                    <Card title={t("JSON Input")} style={{ marginBottom: 16 }}>
                         <CodeEditor
                             value={json}
                             onChange={(val) => setJson(val || "")}
                             language="json"
+                            ariaLabel={t("JSON input editor")}
                             height={250}
                         />
                     </Card>
 
-                    <Card title="JSONPath Expression">
+                    <Card title={t(engine === "jsonpath" ? "JSONPath Expression" : "JMESPath Expression")}>
                         <Space.Compact style={{ width: "100%", marginBottom: 16 }}>
                             <Input
                                 size="large"
                                 value={path}
                                 onChange={(e) => setPath(e.target.value)}
-                                placeholder="Enter JSONPath expression (e.g., $.store.book[*].author)"
+                                aria-label={t("JSON query expression")}
+                                dir="ltr"
+                                styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                                placeholder={engine === "jsonpath" ? "$.store.book[*].author" : "store.book[].author"}
                                 prefix={<FileSearchOutlined />}
                             />
-                            <Button
-                                type="primary"
-                                size="large"
-                                icon={<PlayCircleOutlined />}
-                                style={{ background: "#722ed1" }}
-                            >
-                                Evaluate
-                            </Button>
+
                         </Space.Compact>
 
                         {error && (
                             <Alert
                                 type="error"
-                                title="Error"
-                                description={error}
+                                title={t("Query could not run")}
+                                description={<><p>{t("Check the JSON and expression syntax, limits and numeric precision settings.")}</p><span dir="auto">{t(error)}</span></>}
                                 showIcon
                                 style={{ marginBottom: 16 }}
                             />
@@ -159,28 +143,29 @@ export default function JsonPathTesterPage() {
                             type="inner"
                             title={
                                 <Space>
-                                    <Text>Result</Text>
-                                    {result && <Tag color="purple">{result.length} match{result.length !== 1 ? "es" : ""}</Tag>}
+                                    <Text>{t("Result")}</Text>
+                                    {hasResult && <Tag color="purple">{t(Array.isArray(result) ? "Items: {count}" : "Values: {count}", { count: matchCount })}</Tag>}
                                 </Space>
                             }
                             extra={
-                                result && (
+                                hasResult && (
                                     <Button icon={<CopyOutlined />} size="small" onClick={copyResult}>
-                                        Copy
+                                        {t("Copy")}
                                     </Button>
                                 )
                             }
                         >
-                            {result ? (
+                            {hasResult ? (
                                 <CodeEditor
                                     value={JSON.stringify(result, null, 2)}
                                     language="json"
+                                    ariaLabel={t("JSON result editor")}
                                     height={200}
                                     readOnly
                                 />
                             ) : (
                                 <div style={{ textAlign: "center", padding: 20, color: "#8c8c8c" }}>
-                                    {error ? "Fix the error to see results" : "Enter a JSONPath expression to see results"}
+                                    {t(error ? "Fix the error to see results" : "Enter JSON and a query expression to see results")}
                                 </div>
                             )}
                         </Card>
@@ -188,23 +173,26 @@ export default function JsonPathTesterPage() {
                 </Col>
 
                 <Col xs={24} lg={8}>
-                    <Card title="Example Expressions" style={{ marginBottom: 16 }}>
+                    <Card title={t("Example Expressions")} style={{ marginBottom: 16 }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            {EXAMPLES.map((example, i) => (
-                                <div
+                            {examples.map((example, i) => (
+                                <button
+                                    type="button"
                                     key={i}
+                                    aria-pressed={path === example.path}
                                     style={{
                                         padding: "8px 12px",
                                         background: "rgba(114, 46, 209, 0.05)",
                                         borderRadius: 6,
                                         cursor: "pointer",
                                         border: path === example.path ? "1px solid #722ed1" : "1px solid transparent",
+                                        color: "inherit", textAlign: "start",
                                     }}
                                     onClick={() => loadExample(example.path)}
                                 >
-                                    <Text code style={{ fontSize: 12, display: "block" }}>{example.path}</Text>
-                                    <Text type="secondary" style={{ fontSize: 11 }}>{example.desc}</Text>
-                                </div>
+                                    <Text code dir="ltr" style={{ fontSize: 12, display: "block", overflowWrap: "anywhere" }}>{example.path}</Text>
+                                    <Text type="secondary" style={{ fontSize: 11 }}>{t(example.desc)}</Text>
+                                </button>
                             ))}
                         </div>
                     </Card>
@@ -213,7 +201,7 @@ export default function JsonPathTesterPage() {
                         title={
                             <Space>
                                 <InfoCircleOutlined />
-                                <span>Syntax Reference</span>
+                                <span>{t("Syntax Reference")}</span>
                             </Space>
                         }
                     >
@@ -221,16 +209,16 @@ export default function JsonPathTesterPage() {
                             size="small"
                             pagination={false}
                             showHeader={false}
-                            dataSource={SYNTAX_REFERENCE.map((s, i) => ({ ...s, key: i }))}
+                            dataSource={(engine === "jsonpath" ? SYNTAX_REFERENCE : [{ symbol: "foo.bar", desc: "Select a nested property" }, { symbol: "[]", desc: "Project array values" }, { symbol: "[?condition]", desc: "Filter an array" }, { symbol: "|", desc: "Pipe to another expression" }, { symbol: "length(@)", desc: "Count values" }, { symbol: "`10`", desc: "JSON literal" }]).map((s, i) => ({ ...s, key: i }))}
                             columns={[
                                 {
                                     dataIndex: "symbol",
                                     width: 80,
-                                    render: (text) => <Text code>{text}</Text>,
+                                    render: (text) => <Text code dir="ltr">{text}</Text>,
                                 },
                                 {
                                     dataIndex: "desc",
-                                    render: (text) => <Text type="secondary" style={{ fontSize: 12 }}>{text}</Text>,
+                                    render: (text) => <Text type="secondary" style={{ fontSize: 12 }}>{t(text)}</Text>,
                                 },
                             ]}
                         />

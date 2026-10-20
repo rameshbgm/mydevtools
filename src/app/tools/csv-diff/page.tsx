@@ -1,7 +1,9 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
+
 import React, { useMemo, useState } from "react";
-import { Card, Typography, Input, Row, Col, Select, Tag, Empty, Space, App } from "antd";
+import { Button, Card, Typography, Input, Row, Col, Select, Tag, Empty, Space, App } from "antd";
 import { FileExcelOutlined, CopyOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -89,6 +91,8 @@ function diffCsv(left: ParsedCsv, right: ParsedCsv, keyCol: number): DiffRow[] {
     });
 }
 
+const STATUS_LABEL: Record<RowStatus, string> = { added: "Added", removed: "Removed", modified: "Modified", unchanged: "Unchanged" };
+
 const STATUS_COLOR: Record<RowStatus, string> = {
     added: "#52c41a",
     removed: "#f5222d",
@@ -110,6 +114,7 @@ interface ShareState { leftText: string; rightText: string; keyCol: number; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "csv-diff", version: 1 };
 
 export default function CsvDiffPage() {
+    const { t, language } = useLanguage();
     const { message } = App.useApp();
     const [leftText, setLeftText] = useState(SAMPLE_LEFT);
     const [rightText, setRightText] = useState(SAMPLE_RIGHT);
@@ -148,13 +153,13 @@ export default function CsvDiffPage() {
             }
         });
         await copyToClipboard(lines.join("\n"));
-        message.success("Report copied");
+        message.success(t("Report copied"));
     };
 
     return (
         <ToolPageLayout
-            title="CSV Diff"
-            description="Row-keyed CSV comparison with column-level change highlighting"
+            title={t("CSV Diff")}
+            description={t("Row-keyed CSV comparison with column-level change highlighting")}
             icon={<FileExcelOutlined style={{ fontSize: 24, color: "#fa8c16" }} />}
             color="#fa8c16"
             learnMore={{
@@ -183,22 +188,26 @@ export default function CsvDiffPage() {
 
             <Row gutter={[16, 16]}>
                 <Col xs={24} md={12}>
-                    <Card size="small" title={<><Text strong>Left</Text> <Tag style={{ marginLeft: 8 }}>{parsedLeft.rows.length} rows</Tag></>}>
+                    <Card size="small" title={<><Text strong>{t("Left")}</Text> <Tag style={{ marginInlineStart: 8 }}>{t("Rows: {count}", { count: parsedLeft.rows.length.toLocaleString(language) })}</Tag></>}>
                         <TextArea
-                            value={leftText}
+                            dir="ltr"
+                            styles={{ textarea: { direction: "ltr", textAlign: "left" } }}
+                            aria-label={t("Original CSV")} value={leftText}
                             onChange={(e) => setLeftText(e.target.value)}
-                            placeholder="Paste CSV here…"
+                            placeholder={t("Paste CSV here…")}
                             autoSize={{ minRows: 8, maxRows: 16 }}
                             style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }}
                         />
                     </Card>
                 </Col>
                 <Col xs={24} md={12}>
-                    <Card size="small" title={<><Text strong>Right</Text> <Tag style={{ marginLeft: 8 }}>{parsedRight.rows.length} rows</Tag></>}>
+                    <Card size="small" title={<><Text strong>{t("Right")}</Text> <Tag style={{ marginInlineStart: 8 }}>{t("Rows: {count}", { count: parsedRight.rows.length.toLocaleString(language) })}</Tag></>}>
                         <TextArea
-                            value={rightText}
+                            dir="ltr"
+                            styles={{ textarea: { direction: "ltr", textAlign: "left" } }}
+                            aria-label={t("Modified CSV")} value={rightText}
                             onChange={(e) => setRightText(e.target.value)}
-                            placeholder="Paste CSV here…"
+                            placeholder={t("Paste CSV here…")}
                             autoSize={{ minRows: 8, maxRows: 16 }}
                             style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }}
                         />
@@ -209,34 +218,36 @@ export default function CsvDiffPage() {
             <Card style={{ marginTop: 16 }}>
                 <Space wrap size="middle" style={{ width: "100%", justifyContent: "space-between" }}>
                     <Space wrap>
-                        <Text type="secondary">Key column:</Text>
+                        <Text type="secondary">{t("Key column:")}</Text>
                         <Select
                             value={keyCol}
                             onChange={setKeyCol}
-                            style={{ minWidth: 180 }}
+                            aria-label={t("Key column")}
+                            styles={{ input: { direction: "ltr", textAlign: "left" }, itemContent: { direction: "ltr", textAlign: "left" } }}
+                            style={{ minWidth: 180, maxWidth: "100%", direction: "ltr" }}
                             disabled={!headers.length}
-                            options={headers.map((h, i) => ({ value: i, label: `${i}: ${h || "(empty)"}` }))}
+                            options={headers.map((h, i) => ({ value: i, label: `${i}: ${h || t("(empty)")}` }))}
                         />
                     </Space>
                     <Space wrap>
                         {(Object.keys(counts) as RowStatus[]).map((s) => (
-                            <Tag key={s} color={STATUS_COLOR[s]}>{s}: {counts[s]}</Tag>
+                            <Tag key={s} color={STATUS_COLOR[s]}>{t(STATUS_LABEL[s])}: {counts[s].toLocaleString(language)}</Tag>
                         ))}
-                        <a onClick={copyReport}><CopyOutlined /> Copy report</a>
+                        <Button type="link" icon={<CopyOutlined />} onClick={copyReport}>{t("Copy report")}</Button>
                         <ShareButton schema={SHARE_SCHEMA} getState={() => ({ leftText, rightText, keyCol })} size="middle" />
                     </Space>
                 </Space>
             </Card>
 
-            <Card style={{ marginTop: 16 }} title="Diff">
+            <Card style={{ marginTop: 16 }} title={t("Diff")}>
                 {diff.length === 0 ? (
-                    <Empty description="Paste CSV in both panels to see a diff" />
+                    <Empty description={t("Paste CSV in both panels to see a diff")} />
                 ) : (
                     <div style={{ overflowX: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-geist-mono)", fontSize: 13 }}>
+                        <table dir="ltr" style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-geist-mono)", fontSize: 13 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ textAlign: "left", padding: "8px 6px", borderBottom: "1px solid rgba(0,0,0,0.1)" }}>Status</th>
+                                    <th style={{ textAlign: "left", padding: "8px 6px", borderBottom: "1px solid rgba(0,0,0,0.1)" }}>{t("Status")}</th>
                                     {headers.map((h, i) => (
                                         <th key={i} style={{ textAlign: "left", padding: "8px 6px", borderBottom: "1px solid rgba(0,0,0,0.1)" }}>{h || `col${i}`}</th>
                                     ))}
@@ -248,7 +259,7 @@ export default function CsvDiffPage() {
                                     return (
                                         <tr key={idx} style={{ background: idx % 2 ? "rgba(0,0,0,0.02)" : "transparent" }}>
                                             <td style={{ padding: "6px 6px", verticalAlign: "top" }}>
-                                                <Tag color={STATUS_COLOR[d.status]}>{d.status}</Tag>
+                                                <Tag color={STATUS_COLOR[d.status]}>{t(STATUS_LABEL[d.status])}</Tag>
                                             </td>
                                             {headers.map((_, i) => {
                                                 const changed = d.changedCols?.has(i);

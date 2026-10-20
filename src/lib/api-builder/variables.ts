@@ -38,7 +38,7 @@ function builtin(name: string): string | null {
 
 export function buildVariableMap(env: Environment | null): Record<string, string> {
     if (!env) return {};
-    const out: Record<string, string> = {};
+    const out: Record<string, string> = Object.create(null);
     for (const v of env.variables) {
         if (v.enabled && v.key) out[v.key] = v.value;
     }
@@ -69,5 +69,6 @@ export function substituteAll(values: string[], vars: Record<string, string>): {
 
 /** Has any `{{...}}` placeholder, resolved or otherwise. */
 export function hasVariableSyntax(s: string): boolean {
+    VAR_PATTERN.lastIndex = 0;
     return VAR_PATTERN.test(s);
 }

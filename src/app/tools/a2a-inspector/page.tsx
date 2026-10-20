@@ -1,5 +1,8 @@
 "use client";
+import { useLanguage } from "@/components/LanguageProvider";
+import { projectStorage } from "@/lib/project-storage";
 
+import { A2A_METHODS, a2aPart, a2aMessage, a2aEndpoint, normalizeA2aResult, A2aStreamAccumulator, type A2aVersion } from "@/lib/a2a-protocol";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
     Card, Input, Button, Typography, Row, Col, Space, Tabs, Tag,
@@ -16,6 +19,7 @@ import {
 } from "@ant-design/icons";
 import { messageService as message } from "@/lib/messageService";
 import { useAppStore } from "@/lib/store";
+import { SseDataParser } from "@/lib/sse";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import SslConfigSection, { DEFAULT_SSL_CONFIG, buildSslProxyFields, type SslConfig } from "@/components/SslConfigSection";
@@ -110,7 +114,7 @@ interface AuthConfig {
     oauth2: { accessToken: string; tokenType: string };
 }
 
-type ProtocolVersion = "current" | "legacy";
+type ProtocolVersion = A2aVersion;
 type ConnectionMode = "direct" | "direct-strict" | "via-server-proxy";
 
 interface DiagnosticStep {
@@ -147,8 +151,13 @@ const PROTOCOL_INFO: Record<ProtocolVersion, {
     streamMethod: string;
     partKey: "kind" | "type";    // current uses "kind", legacy uses "type"
 }> = {
-    current: {
-        label: "Current spec (message/*)",
+    "1.0": {
+        label: "A2A 1.0 · JSON-RPC",
+        description: "SendMessage / SendStreamingMessage; member-based parts and versioned supportedInterfaces.",
+        cardPath: "/.well-known/agent-card.json", sendMethod: "SendMessage", streamMethod: "SendStreamingMessage", partKey: "kind",
+    },
+    "0.3": {
+        label: "A2A 0.3 · previous version",
         description: "Uses message/send + message/stream. Card at /.well-known/agent-card.json. Parts use 'kind'.",
         cardPath: "/.well-known/agent-card.json",
         sendMethod: "message/send",
@@ -192,7 +201,12 @@ function buildAuthHeader(auth: AuthConfig): Record<string, string> {
             return auth.bearer.token ? { Authorization: `Bearer ${auth.bearer.token}` } : {};
         case "basic":
             if (!auth.basic.username && !auth.basic.password) return {};
-            return { Authorization: `Basic ${btoa(`${auth.basic.username}:${auth.basic.password}`)}` };
+            if (auth.basic.username.includes(":")) throw new Error("Basic username must not contain a colon.");
+            if (/[\x00-\x1f\x7f]/.test(auth.basic.username + auth.basic.password)) throw new Error("Basic credentials must not contain control characters.");
+            const credentialBytes = new TextEncoder().encode(`${auth.basic.username.normalize("NFC")}:${auth.basic.password.normalize("NFC")}`);
+            let credentialBinary = "";
+            for (const byte of credentialBytes) credentialBinary += String.fromCharCode(byte);
+            return { Authorization: `Basic ${btoa(credentialBinary)}` };
         case "apiKey":
             return auth.apiKey.in === "header" && auth.apiKey.value
                 ? { [auth.apiKey.name]: auth.apiKey.value } : {};
@@ -240,9 +254,16 @@ function checkCompliance(card: AgentCard, version: ProtocolVersion): ComplianceC
         ? { field: "name", status: "ok", note: "Present" }
         : { field: "name", status: "error", note: "Required field missing" });
 
-    checks.push(card.url?.startsWith("http")
-        ? { field: "url", status: "ok", note: card.url }
-        : { field: "url", status: "error", note: "Must be a valid HTTP/HTTPS URL" });
+    if (version === "1.0") {
+        const interfaces = Array.isArray(card.supportedInterfaces) ? card.supportedInterfaces as Array<Record<string, unknown>> : [];
+        checks.push(interfaces.some((entry) => entry.protocolBinding === "JSONRPC" && String(entry.protocolVersion).startsWith("1.0") && typeof entry.url === "string")
+            ? { field: "supportedInterfaces", status: "ok", note: "A2A 1.0 JSONRPC interface declared" }
+            : { field: "supportedInterfaces", status: "error", note: "A2A 1.0 requires an interface; this inspector exercises JSONRPC only" });
+    } else {
+        checks.push(card.url?.startsWith("http")
+            ? { field: "url", status: "ok", note: card.url }
+            : { field: "url", status: "error", note: "Must be a valid HTTP/HTTPS URL" });
+    }
 
     checks.push(card.version
         ? { field: "version", status: "ok", note: card.version }
@@ -274,7 +295,7 @@ function checkCompliance(card: AgentCard, version: ProtocolVersion): ComplianceC
         ? { field: "defaultOutputModes", status: "ok", note: card.defaultOutputModes.join(", ") }
         : { field: "defaultOutputModes", status: "warn", note: "Not declared" });
 
-    if (version === "current") {
+    if (version !== "legacy") {
         checks.push(card.securitySchemes
             ? { field: "securitySchemes", status: "ok", note: `${Object.keys(card.securitySchemes).length} declared` }
             : { field: "securitySchemes", status: "warn", note: "No auth schemes declared — agent may be open" });
@@ -286,11 +307,16 @@ function checkCompliance(card: AgentCard, version: ProtocolVersion): ComplianceC
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function A2aInspectorPage() {
+    const { t } = useLanguage();
+    const translateRef = useRef(t);
+    useEffect(() => { translateRef.current = t; }, [t]);
+    const notice = (source: string, values?: Record<string, string | number>) => translateRef.current(source, values);
+
     const { darkMode } = useAppStore();
 
     // Connection
     const [agentUrl, setAgentUrl] = useState("http://localhost:10000");
-    const [protocolVersion, setProtocolVersion] = useState<ProtocolVersion>("current");
+    const [protocolVersion, setProtocolVersion] = useState<ProtocolVersion>("1.0");
     const [auth, setAuth] = useState<AuthConfig>(DEFAULT_AUTH);
     const [customHeaders, setCustomHeaders] = useState<CustomHeader[]>([]);
     const [headerMode, setHeaderMode] = useState<"form" | "json">("form");
@@ -344,11 +370,11 @@ export default function A2aInspectorPage() {
     // Persistence — load on mount
     useEffect(() => {
         try {
-            const raw = localStorage.getItem(STORAGE_KEY);
+            const raw = projectStorage.getItem(STORAGE_KEY);
             if (raw) {
                 const saved = JSON.parse(raw);
                 if (saved.agentUrl) setAgentUrl(saved.agentUrl);
-                if (saved.protocolVersion) setProtocolVersion(saved.protocolVersion);
+                if (["1.0", "0.3", "legacy", "current"].includes(saved.protocolVersion)) setProtocolVersion(saved.protocolVersion === "current" ? "0.3" : saved.protocolVersion);
                 if (saved.auth) setAuth({ ...DEFAULT_AUTH, ...saved.auth });
                 if (Array.isArray(saved.customHeaders)) {
                     setCustomHeaders(saved.customHeaders.map((h: Record<string, unknown>) => ({
@@ -370,7 +396,7 @@ export default function A2aInspectorPage() {
     // Persistence — save on change
     useEffect(() => {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            projectStorage.setItem(STORAGE_KEY, JSON.stringify({
                 agentUrl, protocolVersion, auth, customHeaders, sslConfig, connectionMode, requestTimeoutMs,
             }));
         } catch { /* ignore */ }
@@ -402,6 +428,7 @@ export default function A2aInspectorPage() {
     function buildRequestHeaders(extra: Record<string, string> = {}): Record<string, string> {
         return {
             "Content-Type": "application/json",
+            ...(protocolVersion !== "legacy" ? { "A2A-Version": protocolVersion } : {}),
             "Accept": "application/json, text/event-stream",
             ...customHeadersToObject(customHeaders),
             ...buildAuthHeader(auth),
@@ -418,7 +445,7 @@ export default function A2aInspectorPage() {
 
     function shouldUseProxy(): boolean {
         if (connectionMode === "via-server-proxy") return true;
-        if (sslConfig.sslVerify) return true;
+        if (!sslConfig.sslVerify) return true;
         if (sslConfig.sslCaCert.trim() || sslConfig.sslClientCert.trim() || sslConfig.sslClientKey.trim()) return true;
         return false;
     }
@@ -487,7 +514,7 @@ export default function A2aInspectorPage() {
         const body = { jsonrpc: "2.0", id, method, params };
         pushDebug({ direction: "out", method, payload: body });
 
-        const url = applyAuthToUrl(baseUrl + "/", auth);
+        const url = applyAuthToUrl(a2aEndpoint(agentCard, protocolVersion, baseUrl), auth);
         const headers = buildRequestHeaders();
         const useProxy = shouldUseProxy();
 
@@ -514,7 +541,7 @@ export default function A2aInspectorPage() {
                 catch { throw new Error(`Non-JSON response: ${(proxy.body as string)?.slice?.(0, 200)}`); }
             } else {
                 try {
-                    const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+                    const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(requestTimeoutMs) });
                     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
                     resJson = await parseJsonResponse<typeof resJson>(res, "Agent endpoint");
                 } catch (err) {
@@ -565,7 +592,7 @@ export default function A2aInspectorPage() {
         const body = { jsonrpc: "2.0", id, method, params };
         pushDebug({ direction: "out", method, payload: body });
 
-        const url = applyAuthToUrl(baseUrl + "/", auth);
+        const url = applyAuthToUrl(a2aEndpoint(agentCard, protocolVersion, baseUrl), auth);
         const headers = { ...buildRequestHeaders(), "Accept": "text/event-stream" };
         const useProxy = shouldUseProxy();
 
@@ -601,22 +628,13 @@ export default function A2aInspectorPage() {
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = "";
+        const parser = new SseDataParser();
 
         try {
             while (true) {
                 const { value, done } = await reader.read();
                 if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-
-                // SSE framing: events separated by blank line; data: prefix on each line
-                let idx;
-                while ((idx = buffer.indexOf("\n\n")) !== -1) {
-                    const block = buffer.slice(0, idx);
-                    buffer = buffer.slice(idx + 2);
-                    const dataLines = block.split("\n").filter(l => l.startsWith("data:")).map(l => l.slice(5).trim());
-                    if (dataLines.length === 0) continue;
-                    const dataStr = dataLines.join("\n");
+                for (const dataStr of parser.push(decoder.decode(value, { stream: true }))) {
                     if (dataStr === "[DONE]") return;
                     try {
                         const parsed = JSON.parse(dataStr);
@@ -743,7 +761,7 @@ export default function A2aInspectorPage() {
     };
 
     const fetchAgentCard = async () => {
-        if (!agentUrl.trim()) { message.warning("Enter an agent URL"); return; }
+        if (!agentUrl.trim()) { message.warning(notice("Enter an agent URL")); return; }
         setLoadingCard(true);
         setCardError("");
         setAgentCard(null);
@@ -757,27 +775,25 @@ export default function A2aInspectorPage() {
         try {
             const result = await httpGet(cardUrl) as { data: AgentCard; usedProxy: boolean; status: number; corsFallback?: boolean };
             const { data: json, usedProxy, corsFallback } = result;
-            setAgentCard(json);
+            setAgentCard({ ...json, url: a2aEndpoint(json, protocolVersion, baseUrl) });
             setCardJson(JSON.stringify(json, null, 2));
             setCompliance(checkCompliance(json, protocolVersion));
             pushDebug({ direction: "in", method: "agent card", payload: json });
             message.success(
-                corsFallback ? "Agent card loaded — direct fetch was blocked by CORS, retried via /api/proxy"
-                    : usedProxy ? "Agent card loaded via server proxy"
-                        : "Agent card loaded"
+                corsFallback ? notice("Agent card loaded — direct fetch was blocked by CORS, retried via /api/proxy") : usedProxy ? notice("Agent card loaded via server proxy") : notice("Agent card loaded")
             );
         } catch (err) {
             // If current spec failed at /.well-known/agent-card.json, try legacy path silently
-            if (protocolVersion === "current") {
+            if (protocolVersion === "0.3") {
                 try {
                     const fallback = baseUrl + "/.well-known/agent.json";
                     pushDebug({ direction: "out", method: `GET /.well-known/agent.json (fallback)`, payload: { url: fallback } });
                     const { data: json } = await httpGet(fallback) as { data: AgentCard; usedProxy: boolean; status: number };
-                    setAgentCard(json);
+                    setAgentCard({ ...json, url: a2aEndpoint(json, protocolVersion, baseUrl) });
                     setCardJson(JSON.stringify(json, null, 2));
                     setCompliance(checkCompliance(json, protocolVersion));
                     pushDebug({ direction: "in", method: "agent card (legacy path)", payload: json });
-                    message.warning("Agent card found at legacy path /.well-known/agent.json — consider switching protocol to 'Legacy draft'");
+                    message.warning(notice("Agent card found at legacy path /.well-known/agent.json — consider switching protocol to 'Legacy draft'"));
                     setLoadingCard(false);
                     return;
                 } catch { /* fall through to original error */ }
@@ -785,7 +801,7 @@ export default function A2aInspectorPage() {
             const msg = err instanceof Error ? err.message : String(err);
             setCardError(msg);
             pushDebug({ direction: "in", method: "agent card", payload: { error: msg }, error: true });
-            message.error("Failed to load agent card: " + msg);
+            message.error(notice("Failed to load agent card: {value1}", { value1: msg }));
         } finally {
             setLoadingCard(false);
         }
@@ -794,26 +810,11 @@ export default function A2aInspectorPage() {
     // ── Send chat ─────────────────────────────────────────────────────
 
     function buildA2aMessage(text: string, contextId: string | null): unknown {
-        const partKey = protocolInfo.partKey;
-        const part = { [partKey]: "text", text };
-        const messageId = genUuid();
-        if (protocolVersion === "current") {
-            return {
-                role: "user",
-                parts: [part],
-                messageId,
-                ...(contextId ? { contextId } : {}),
-            };
-        }
-        // Legacy: tasks/send takes a top-level params with id + message
-        return {
-            role: "user",
-            parts: [part],
-        };
+        return a2aMessage(protocolVersion, text, genUuid(), contextId);
     }
 
     function extractAgentText(result: unknown): { text: string; taskId?: string; contextId?: string } {
-        const r = result as Record<string, unknown> | undefined;
+        const r = normalizeA2aResult(result);
         if (!r) return { text: "(empty response)" };
 
         // Result might be a Task or a Message
@@ -839,7 +840,7 @@ export default function A2aInspectorPage() {
         }
 
         const text = parts
-            .filter(p => (p.kind === "text" || p.type === "text") && typeof p.text === "string")
+            .filter(p => typeof p.text === "string")
             .map(p => p.text as string)
             .join("\n");
 
@@ -853,51 +854,8 @@ export default function A2aInspectorPage() {
     // Streaming events arrive frequently as small deltas. Treat status.message.parts
     // as an incremental delta to APPEND, and artifact parts as the final canonical
     // text to REPLACE with — otherwise the inspector would duplicate the message.
-    function extractStreamEvent(data: unknown): {
-        deltaText: string;
-        finalText: string | null;
-        state: string | undefined;
-        taskId: string | undefined;
-        contextId: string | undefined;
-    } {
-        const r = data as Record<string, unknown> | undefined;
-        if (!r) return { deltaText: "", finalText: null, state: undefined, taskId: undefined, contextId: undefined };
-
-        const status = r.status as Record<string, unknown> | undefined;
-        const state = typeof status?.state === "string" ? status.state : undefined;
-
-        const collectText = (parts: unknown): string => Array.isArray(parts)
-            ? (parts as Array<Record<string, unknown>>)
-                .filter(p => (p.kind === "text" || p.type === "text") && typeof p.text === "string")
-                .map(p => p.text as string)
-                .join("")
-            : "";
-
-        // Delta = message parts on the in-flight status (or direct .parts for plain Message events).
-        const statusMsg = status?.message as Record<string, unknown> | undefined;
-        let deltaText = collectText(statusMsg?.parts);
-        if (!deltaText) deltaText = collectText(r.parts);
-
-        // Final = artifact parts joined; only emitted at the end of the task.
-        const artifacts = r.artifacts as Array<Record<string, unknown>> | undefined;
-        let finalText: string | null = null;
-        if (Array.isArray(artifacts) && artifacts.length > 0) {
-            const txt = artifacts
-                .flatMap(a => Array.isArray(a.parts) ? (a.parts as Array<Record<string, unknown>>) : [])
-                .filter(p => (p.kind === "text" || p.type === "text") && typeof p.text === "string")
-                .map(p => p.text as string)
-                .join("");
-            if (txt) finalText = txt;
-        }
-
-        return {
-            deltaText,
-            finalText,
-            state,
-            taskId: typeof r.id === "string" ? r.id : (typeof r.taskId === "string" ? r.taskId : undefined),
-            contextId: typeof r.contextId === "string" ? r.contextId : undefined,
-        };
-    }
+    const streamAccumulatorRef = useRef(new A2aStreamAccumulator());
+    function extractStreamEvent(data: unknown) { return streamAccumulatorRef.current.consume(data); }
 
     const sendChatMessage = async () => {
         if (!inputText.trim() || sending) return;
@@ -913,7 +871,7 @@ export default function A2aInspectorPage() {
 
         try {
             const agentMessage = buildA2aMessage(text, chatContextId);
-            const params = protocolVersion === "current"
+            const params = protocolVersion !== "legacy"
                 ? { message: agentMessage }
                 : { id: genUuid(), message: agentMessage };
 
@@ -941,7 +899,7 @@ export default function A2aInspectorPage() {
     const sendStreamingMessage = async () => {
         if (!streamInput.trim() || streaming) return;
         if (!agentCard?.capabilities?.streaming) {
-            message.warning("Agent has not declared streaming capability — try anyway?");
+            message.warning(notice("Agent has not declared streaming capability — try anyway?"));
         }
         const text = streamInput.trim();
         setStreamInput("");
@@ -959,10 +917,11 @@ export default function A2aInspectorPage() {
         const controller = new AbortController();
         streamAbortRef.current = controller;
         setStreaming(true);
+        streamAccumulatorRef.current = new A2aStreamAccumulator();
 
         try {
             const agentMessage = buildA2aMessage(text, chatContextId);
-            const params = protocolVersion === "current"
+            const params = protocolVersion !== "legacy"
                 ? { message: agentMessage }
                 : { id: genUuid(), message: agentMessage };
 
@@ -1024,26 +983,25 @@ export default function A2aInspectorPage() {
             // Skills are invoked via message/send with the skill name in the prompt or a structured part.
             // The A2A spec doesn't mandate a single skill-invocation shape, so we send the input as a text part
             // tagged with the skill id — agents that route by skill should match on the structured 'data' part.
-            const partKey = protocolInfo.partKey;
-            const dataPart = { [partKey]: "data", data: { skillId: skill.id, input: skillInput } };
-            const textPart = { [partKey]: "text", text: skillInput || `(invoke skill: ${skill.name})` };
+            const dataPart = a2aPart(protocolVersion, "data", { skillId: skill.id, input: skillInput });
+            const textPart = a2aPart(protocolVersion, "text", skillInput || `(invoke skill: ${skill.name})`);
 
             const agentMessage = {
-                role: "user",
+                role: protocolVersion === "1.0" ? "ROLE_USER" : "user",
                 parts: [textPart, dataPart],
-                ...(protocolVersion === "current" ? { messageId: genUuid() } : {}),
+                ...(protocolVersion !== "legacy" ? { messageId: genUuid() } : {}),
             };
-            const params = protocolVersion === "current"
+            const params = protocolVersion !== "legacy"
                 ? { message: agentMessage }
                 : { id: genUuid(), message: agentMessage };
 
             const result = await rpcCall(protocolInfo.sendMethod, params);
             setSkillResult(JSON.stringify(result, null, 2));
-            message.success(`Skill '${skill.name}' invoked`);
+            message.success(notice("Skill '{value1}' invoked", { value1: skill.name }));
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             setSkillResult("Error: " + msg);
-            message.error("Skill call failed: " + msg);
+            message.error(notice("Skill call failed: {value1}", { value1: msg }));
         } finally {
             setCallingSkill(false);
         }
@@ -1055,13 +1013,13 @@ export default function A2aInspectorPage() {
         if (!taskIdInput.trim()) return;
         setTaskBusy(true);
         try {
-            const result = await rpcCall("tasks/get", { id: taskIdInput.trim() });
+            const result = await rpcCall(A2A_METHODS[protocolVersion].get, { id: taskIdInput.trim() });
             setTaskResult(JSON.stringify(result, null, 2));
-            message.success("Task fetched");
+            message.success(notice("Task fetched"));
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             setTaskResult("Error: " + msg);
-            message.error("Failed to fetch task: " + msg);
+            message.error(notice("Failed to fetch task: {value1}", { value1: msg }));
         } finally { setTaskBusy(false); }
     };
 
@@ -1069,13 +1027,13 @@ export default function A2aInspectorPage() {
         if (!taskIdInput.trim()) return;
         setTaskBusy(true);
         try {
-            const result = await rpcCall("tasks/cancel", { id: taskIdInput.trim() });
+            const result = await rpcCall(A2A_METHODS[protocolVersion].cancel, { id: taskIdInput.trim() });
             setTaskResult(JSON.stringify(result, null, 2));
-            message.success("Cancellation requested");
+            message.success(notice("Cancellation requested"));
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             setTaskResult("Error: " + msg);
-            message.error("Failed to cancel task: " + msg);
+            message.error(notice("Failed to cancel task: {value1}", { value1: msg }));
         } finally { setTaskBusy(false); }
     };
 
@@ -1095,16 +1053,16 @@ export default function A2aInspectorPage() {
     // ────────────────────────────────────────────────────────────────────
     return (
         <ToolPageLayout
-            title="A2A Inspector"
-            description="Connect, discover, and test Agent-to-Agent (A2A) protocol agents"
+            title={t("A2A Inspector")}
+            description={t("Connect, discover, and test Agent-to-Agent (A2A) protocol agents")}
             icon={<RobotOutlined style={{ fontSize: 24, color: "#0891b2" }} />}
             color="#0891b2"
             learnMore={{
-                whatIs: "The Agent-to-Agent (A2A) Protocol is an open standard from Google for AI agents to communicate, delegate tasks, and collaborate across systems and vendors. Every A2A agent publishes an Agent Card — a JSON manifest at /.well-known/agent-card.json — that describes its identity, capabilities, skills, and authentication requirements. This inspector connects to any A2A-compatible agent, validates its card against the spec, and lets you exercise the full API: message/send (one-shot), message/stream (SSE), tasks/get (task lookup), and tasks/cancel.",
-                whyUse: "Building or integrating A2A agents requires verifying the card structure, exercising message flows, tracking multi-turn context IDs, and debugging raw JSON-RPC exchange. This inspector covers the full A2A surface — discovery, skill testing, streaming responses, task lifecycle management — with support for all auth schemes, mTLS, custom headers, and both the current spec and the legacy draft format.",
+                whatIs: "A2A is an open agent interoperability protocol. This inspector checks selected Agent Card fields and exercises the JSONRPC binding: A2A 1.0 SendMessage, SendStreamingMessage, GetTask and CancelTask. A2A 0.3 and older draft methods are explicitly selectable. REST, gRPC, push subscriptions, and full schema conformance are outside this inspector’s coverage.",
+                whyUse: "Building or integrating A2A agents requires verifying the card structure, exercising message flows, tracking multi-turn context IDs, and debugging raw JSON-RPC exchange. This inspector covers the JSON-RPC discovery, messaging and task surface — discovery, skill testing, streaming responses, task lifecycle management — with support for all auth schemes, mTLS, custom headers, and A2A 1.0 JSON-RPC, A2A 0.3 and the legacy draft format.",
                 howToUse: [
                     "Enter the agent's base URL (the root, not the card path — the inspector appends /.well-known/agent-card.json automatically)",
-                    "Choose the Protocol Version: 'Current (A2A v1)' uses message/send + message/stream and agent-card.json; 'Legacy Draft' uses tasks/send + tasks/get and agent.json — switch if you get a 404 on discovery",
+                    "Choose the Protocol Version: A2A 1.0 uses SendMessage and supportedInterfaces; A2A 0.3 uses message/send; Legacy Draft uses tasks/send and agent.json — switch if you get a 404 on discovery",
                     "Set the Connection Type: 'Direct (auto-fallback)' tries a browser fetch and retries via /api/proxy on CORS failure; 'Direct (strict)' surfaces errors; 'Via Server Proxy' always routes server-side — streaming is supported through /api/proxy-stream which pipes SSE events back chunk-by-chunk",
                     "Click Diagnose to test direct fetch, OPTIONS preflight, and proxy connectivity — it recommends the best Connection Type before you start",
                     "Open the Authentication panel to configure Bearer token, HTTP Basic, API Key, or OAuth 2.0 — values are applied to every request",
@@ -1118,7 +1076,7 @@ export default function A2aInspectorPage() {
                 ],
                 tips: [
                     "Streaming uses fetch + ReadableStream instead of EventSource so custom Authorization headers are honoured",
-                    "The 'current' spec uses /.well-known/agent-card.json and parts with 'kind: text'; the legacy draft uses /.well-known/agent.json and parts with 'type: text' — the inspector falls back to agent.json automatically and warns if it succeeds",
+                    "A2A 1.0 uses member-based parts such as {text: ...}, ROLE_USER and versioned supportedInterfaces. A2A 0.3 uses kind; the legacy draft uses type. Select the matching version explicitly.",
                     "Context IDs (contextId) persist across chat turns so the agent can maintain conversation state — visible in the Debug tab",
                     "SSL/TLS configuration (CA bundle, client cert, mTLS key) routes traffic through the server-side proxy; streaming continues to work via /api/proxy-stream which keeps a persistent SSE pipe between server and browser",
                     "CORS fallback (orange badge) means the browser direct fetch was blocked — add 'Access-Control-Allow-Origin: *' to the agent to eliminate the extra hop",
@@ -1143,15 +1101,20 @@ export default function A2aInspectorPage() {
                 onAccept={(p) => {
                     try {
                         const parsed = JSON.parse(p.data);
-                        if (!parsed || typeof parsed !== "object" || typeof parsed.name !== "string" || typeof parsed.url !== "string") {
-                            message.error("Payload doesn't look like an agent card (missing name/url)");
+                        if (!parsed || typeof parsed !== "object" || typeof parsed.name !== "string" || (typeof parsed.url !== "string" && !Array.isArray(parsed.supportedInterfaces))) {
+                            message.error(notice("Payload doesn't look like an agent card (missing name and endpoint)"));
                             return;
                         }
-                        setAgentCard(parsed);
-                        if (typeof parsed.url === "string") setAgentUrl(parsed.url.replace(/\/$/, "").replace(/\/(a2a)?$/, "") || parsed.url);
-                        message.success("Agent card loaded — skills and capabilities are populated below without fetching");
+                        const importedVersion = Array.isArray(parsed.supportedInterfaces) ? "1.0" : "0.3";
+                        const endpoint = importedVersion === "1.0" ? parsed.supportedInterfaces.find((entry: Record<string, unknown>) => entry.protocolBinding === "JSONRPC")?.url : parsed.url;
+                        if (typeof endpoint !== "string") throw new Error("No JSONRPC endpoint");
+                        setProtocolVersion(importedVersion);
+                        setAgentUrl(endpoint);
+                        setAgentCard({ ...parsed, url: a2aEndpoint(parsed, importedVersion, endpoint) });
+                        setCompliance(checkCompliance(parsed, importedVersion));
+                        message.success(notice("Agent card loaded — skills and capabilities are populated below without fetching"));
                     } catch {
-                        message.error("Payload isn't valid JSON");
+                        message.error(notice("Payload isn't valid JSON"));
                     }
                 }}
             />
@@ -1161,7 +1124,7 @@ export default function A2aInspectorPage() {
                 <Row gutter={[8, 8]} align="middle">
                     <Col xs={24} md={14}>
                         <Space.Compact style={{ width: "100%" }}>
-                            <Input
+                            <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                 value={agentUrl}
                                 onChange={e => setAgentUrl(e.target.value)}
                                 onPressEnter={fetchAgentCard}
@@ -1177,62 +1140,60 @@ export default function A2aInspectorPage() {
                                 icon={<ReloadOutlined />}
                                 style={{ background: "#0891b2", borderColor: "#0891b2" }}
                             >
-                                Discover
-                            </Button>
-                            <Tooltip title="Test connectivity: tries direct fetch, OPTIONS preflight, and the server proxy. Recommends a Connection Type based on the results.">
+                                {t("Discover")}</Button>
+                            <Tooltip title={t("Test connectivity: tries direct fetch, OPTIONS preflight, and the server proxy. Recommends a Connection Type based on the results.")}>
                                 <Button
                                     size="large"
                                     icon={<ExperimentOutlined />}
                                     onClick={handleDiagnose}
                                     loading={diagnosing}
                                 >
-                                    Diagnose
-                                </Button>
+                                    {t("Diagnose")}</Button>
                             </Tooltip>
                         </Space.Compact>
                     </Col>
                     <Col xs={24} md={10}>
                         <Space wrap>
-                            <Text type="secondary" style={{ fontSize: 12 }}>Protocol:</Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>{t("Protocol:")}</Text>
                             <Select
                                 size="small"
                                 value={protocolVersion}
                                 onChange={(v) => setProtocolVersion(v)}
                                 style={{ minWidth: 200 }}
                                 options={Object.entries(PROTOCOL_INFO).map(([k, v]) => ({
-                                    value: k, label: v.label,
+                                    value: k, label: t(v.label),
                                 }))}
                             />
-                            <Tooltip title={protocolInfo.description}>
+                            <Tooltip title={t(protocolInfo.description)}>
                                 <InfoCircleOutlined style={{ color: "#9a9a9a" }} />
                             </Tooltip>
-                            <Text type="secondary" style={{ fontSize: 12 }}>Connection:</Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>{t("Connection:")}</Text>
                             <Select
                                 size="small"
                                 value={connectionMode}
                                 onChange={(v) => setConnectionMode(v)}
                                 style={{ minWidth: 180 }}
                                 options={[
-                                    { value: "direct", label: "Direct (auto-fallback)" },
-                                    { value: "direct-strict", label: "Direct (strict)" },
-                                    { value: "via-server-proxy", label: "Via Server Proxy" },
+                                    { value: "direct", label: t("Direct (auto-fallback)") },
+                                    { value: "direct-strict", label: t("Direct (strict)") },
+                                    { value: "via-server-proxy", label: t("Via Server Proxy") },
                                 ]}
                             />
                             <Tooltip
                                 title={
                                     <div style={{ fontSize: 12 }}>
-                                        <div><b>Direct (auto-fallback):</b> browser → agent. Auto-retries via /api/proxy on CORS failure.</div>
-                                        <div style={{ marginTop: 4 }}><b>Direct (strict):</b> direct only — surfaces CORS errors instead of falling back.</div>
-                                        <div style={{ marginTop: 4 }}><b>Via Server Proxy:</b> always server-side. Bypasses browser CORS; required for SSL/TLS options. Streaming uses /api/proxy-stream and works the same as direct.</div>
+                                        <div><b>{t("Direct (auto-fallback):")}</b> {" "}{t("browser → agent. Auto-retries via /api/proxy on CORS failure.")}</div>
+                                        <div style={{ marginTop: 4 }}><b>{t("Direct (strict):")}</b> {" "}{t("direct only — surfaces CORS errors instead of falling back.")}</div>
+                                        <div style={{ marginTop: 4 }}><b>{t("Via Server Proxy:")}</b> {" "}{t("always server-side. Bypasses browser CORS; required for SSL/TLS options. Streaming uses /api/proxy-stream and works the same as direct.")}</div>
                                     </div>
                                 }
                             >
                                 <InfoCircleOutlined style={{ color: "#9a9a9a" }} />
                             </Tooltip>
-                            {agentCard && <Badge status="success" text="Connected" />}
+                            {agentCard && <Badge status="success" text={t("Card loaded")} />}
                             {corsFallbackUsed && (
-                                <Tooltip title="Direct fetch was blocked by CORS — auto-fell back to /api/proxy. Switch to 'Via Server Proxy' to skip the fallback hop.">
-                                    <Tag color="warning">CORS fallback</Tag>
+                                <Tooltip title={t("Direct fetch was blocked by CORS — auto-fell back to /api/proxy. Switch to 'Via Server Proxy' to skip the fallback hop.")}>
+                                    <Tag color="warning">{t("CORS fallback")}</Tag>
                                 </Tooltip>
                             )}
                         </Space>
@@ -1246,7 +1207,7 @@ export default function A2aInspectorPage() {
                         closable
                         onClose={() => setCardError("")}
                         style={{ marginTop: 8, whiteSpace: "pre-wrap" }}
-                        description={`Tried ${baseUrl + protocolInfo.cardPath}.`}
+                        description={t("Tried {value1}.", { value1: baseUrl + protocolInfo.cardPath })}
                     />
                 )}
                 {diagnosticResult && (
@@ -1257,10 +1218,10 @@ export default function A2aInspectorPage() {
                         style={{ marginTop: 8 }}
                         title={
                             <Space>
-                                <Text strong>Connection Diagnostic</Text>
+                                <Text strong>{t("Connection Diagnostic")}</Text>
                                 {diagnosticResult.crossOrigin
-                                    ? <Tag color="orange">cross-origin</Tag>
-                                    : <Tag color="green">same-origin</Tag>}
+                                    ? <Tag color="orange">{t("cross-origin")}</Tag>
+                                    : <Tag color="green">{t("same-origin")}</Tag>}
                             </Space>
                         }
                         description={
@@ -1271,7 +1232,7 @@ export default function A2aInspectorPage() {
                                             ? <CheckCircleOutlined style={{ color: "#22c55e", marginTop: 3 }} />
                                             : <CloseCircleOutlined style={{ color: "#ef4444", marginTop: 3 }} />}
                                         <div style={{ flex: 1 }}>
-                                            <Text strong style={{ fontSize: 12 }}>{step.name}</Text>
+                                            <Text strong style={{ fontSize: 12 }}>{t(step.name)}</Text>
                                             {step.duration !== undefined && (
                                                 <Text type="secondary" style={{ fontSize: 11, marginLeft: 6 }}>({step.duration}ms)</Text>
                                             )}
@@ -1281,7 +1242,7 @@ export default function A2aInspectorPage() {
                                 ))}
                                 <Divider style={{ margin: "6px 0" }} />
                                 <Text style={{ fontSize: 12 }}>
-                                    <Text strong>Recommendation: </Text>{diagnosticResult.recommendation}
+                                    <Text strong>{t("Recommendation:")}{" "}</Text>{t(diagnosticResult.recommendation)}
                                 </Text>
                             </Space>
                         }
@@ -1300,15 +1261,15 @@ export default function A2aInspectorPage() {
                         label: (
                             <Space>
                                 <SettingOutlinedIcon />
-                                <Text strong>Connection Settings</Text>
+                                <Text strong>{t("Connection Settings")}</Text>
                                 {auth.type !== "none" && <Tag color="blue">{auth.type}</Tag>}
                                 {customHeaders.filter(h => h.enabled && h.key.trim()).length > 0 && (
-                                    <Tag color="purple">{customHeaders.filter(h => h.enabled && h.key.trim()).length} header(s)</Tag>
+                                    <Tag color="purple">{customHeaders.filter(h => h.enabled && h.key.trim()).length} {" "}{t("header(s)")}</Tag>
                                 )}
-                                {(sslConfig.sslVerify || sslConfig.sslCaCert.trim() || sslConfig.sslClientCert.trim()) && (
+                                {(!sslConfig.sslVerify || sslConfig.sslCaCert.trim() || sslConfig.sslClientCert.trim()) && (
                                     <Tag color="orange" icon={<SafetyCertificateOutlined />}>SSL</Tag>
                                 )}
-                                {connectionMode !== "direct" && <Tag color="cyan">{connectionMode === "via-server-proxy" ? "Proxied" : "Strict"}</Tag>}
+                                {connectionMode !== "direct" && <Tag color="cyan">{connectionMode === "via-server-proxy" ? t("Proxied") : t("Strict")}</Tag>}
                             </Space>
                         ),
                         children: (
@@ -1317,12 +1278,12 @@ export default function A2aInspectorPage() {
                                 items={[
                                     {
                                         key: "auth",
-                                        label: <><KeyOutlined /> Authentication</>,
+                                        label: <><KeyOutlined /> {" "}{t("Authentication")}</>,
                                         children: <AuthPanel value={auth} onChange={setAuth} card={agentCard} />,
                                     },
                                     {
                                         key: "headers",
-                                        label: <><FileTextOutlined /> Headers ({customHeaders.filter(h => h.enabled && h.key.trim()).length})</>,
+                                        label: <><FileTextOutlined /> {" "}{t("Headers (")}{customHeaders.filter(h => h.enabled && h.key.trim()).length})</>,
                                         children: (
                                             <HeadersPanel
                                                 headers={customHeaders}
@@ -1348,8 +1309,8 @@ export default function A2aInspectorPage() {
                                                 <Alert
                                                     type="info"
                                                     showIcon
-                                                    title="SSL options auto-route through /api/proxy"
-                                                    description="When any SSL option is set, requests are sent server-side regardless of Connection Type. Streaming is still supported (chunks are piped back via /api/proxy-stream) with your SSL/TLS configuration applied server-side."
+                                                    title={t("SSL options auto-route through /api/proxy")}
+                                                    description={t("When any SSL option is set, requests are sent server-side regardless of Connection Type. Streaming is still supported (chunks are piped back via /api/proxy-stream) with your SSL/TLS configuration applied server-side.")}
                                                     style={{ fontSize: 12 }}
                                                 />
                                                 <SslConfigSection value={sslConfig} onChange={setSslConfig} compact />
@@ -1358,26 +1319,25 @@ export default function A2aInspectorPage() {
                                     },
                                     {
                                         key: "advanced",
-                                        label: <><SettingOutlinedIcon /> Advanced</>,
+                                        label: <><SettingOutlinedIcon /> {" "}{t("Advanced")}</>,
                                         children: (
                                             <Form layout="vertical" size="small">
-                                                <Form.Item label={`Request timeout: ${(requestTimeoutMs / 1000).toFixed(0)}s`}>
-                                                    <InputNumber
+                                                <Form.Item label={t("Request timeout: {value1}s", { value1: (requestTimeoutMs / 1000).toFixed(0) })}>
+                                                    <InputNumber styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                                         value={requestTimeoutMs}
                                                         onChange={v => setRequestTimeoutMs(v || 30000)}
                                                         min={1000} max={300000} step={1000}
                                                         style={{ width: 200 }}
                                                     />
                                                 </Form.Item>
-                                                <Form.Item label="Conversation context">
+                                                <Form.Item label={t("Conversation context")}>
                                                     <Space>
                                                         <Text type="secondary" style={{ fontSize: 12 }}>
-                                                            {chatContextId ? <>Active: <Text code style={{ fontSize: 11 }}>{chatContextId}</Text></> : "No context yet"}
+                                                            {chatContextId ? <>{t("Active:")}{" "}<Text dir="ltr" code style={{ fontSize: 11 }}>{chatContextId}</Text></> : t("No context yet")}
                                                         </Text>
                                                         {chatContextId && (
                                                             <Button size="small" onClick={() => setChatContextId(null)}>
-                                                                Reset context
-                                                            </Button>
+                                                                {t("Reset context")}</Button>
                                                         )}
                                                     </Space>
                                                 </Form.Item>
@@ -1401,8 +1361,7 @@ export default function A2aInspectorPage() {
                         label: (
                             <Space size={4}>
                                 <InfoCircleOutlined />
-                                Agent Card
-                                {agentCard && <Badge status="success" />}
+                                {t("Agent Card")}{agentCard && <Badge status="success" />}
                             </Space>
                         ),
                         children: agentCard ? (
@@ -1413,45 +1372,45 @@ export default function A2aInspectorPage() {
                                             <Paragraph type="secondary" style={{ fontSize: 13 }}>{agentCard.description}</Paragraph>
                                         )}
                                         <Descriptions size="small" column={1} bordered>
-                                            <Descriptions.Item label="URL">
-                                                <Text code copyable style={{ fontSize: 11 }}>{agentCard.url}</Text>
+                                            <Descriptions.Item label={t("URL")}>
+                                                <Text dir="ltr" code copyable style={{ fontSize: 11 }}>{agentCard.url}</Text>
                                             </Descriptions.Item>
                                             {agentCard.version && (
-                                                <Descriptions.Item label="Version"><Tag>{agentCard.version}</Tag></Descriptions.Item>
+                                                <Descriptions.Item label={t("Version")}><Tag>{agentCard.version}</Tag></Descriptions.Item>
                                             )}
                                             {agentCard.provider && (
-                                                <Descriptions.Item label="Provider">
+                                                <Descriptions.Item label={t("Provider")}>
                                                     {agentCard.provider.organization}
                                                 </Descriptions.Item>
                                             )}
                                             {agentCard.capabilities && (
-                                                <Descriptions.Item label="Capabilities">
+                                                <Descriptions.Item label={t("Capabilities")}>
                                                     <Space wrap>
-                                                        {agentCard.capabilities.streaming && <Tag color="blue">Streaming</Tag>}
-                                                        {agentCard.capabilities.pushNotifications && <Tag color="purple">Push</Tag>}
-                                                        {agentCard.capabilities.stateTransitionHistory && <Tag color="cyan">State History</Tag>}
+                                                        {agentCard.capabilities.streaming && <Tag color="blue">{t("Streaming")}</Tag>}
+                                                        {agentCard.capabilities.pushNotifications && <Tag color="purple">{t("Push")}</Tag>}
+                                                        {agentCard.capabilities.stateTransitionHistory && <Tag color="cyan">{t("State History")}</Tag>}
                                                     </Space>
                                                 </Descriptions.Item>
                                             )}
                                             {agentCard.defaultInputModes?.length && (
-                                                <Descriptions.Item label="Input Modes">
+                                                <Descriptions.Item label={t("Input Modes")}>
                                                     {agentCard.defaultInputModes.map(m => <Tag key={m}>{m}</Tag>)}
                                                 </Descriptions.Item>
                                             )}
                                             {agentCard.defaultOutputModes?.length && (
-                                                <Descriptions.Item label="Output Modes">
+                                                <Descriptions.Item label={t("Output Modes")}>
                                                     {agentCard.defaultOutputModes.map(m => <Tag key={m}>{m}</Tag>)}
                                                 </Descriptions.Item>
                                             )}
                                             {agentCard.securitySchemes && (
-                                                <Descriptions.Item label="Security">
+                                                <Descriptions.Item label={t("Security")}>
                                                     <Space orientation="vertical" size={4} style={{ width: "100%" }}>
                                                         {Object.entries(agentCard.securitySchemes).map(([name, scheme]) => (
                                                             <div key={name}>
                                                                 <Tag color="gold" icon={<LockOutlined />}>{name}</Tag>
                                                                 <Text type="secondary" style={{ fontSize: 11 }}>
                                                                     {scheme.type}{scheme.scheme ? ` (${scheme.scheme})` : ""}
-                                                                    {scheme.in ? ` in ${scheme.in}` : ""}
+                                                                    {scheme.in ? t(" in {value1}", { value1: scheme.in }) : ""}
                                                                     {scheme.name ? `: ${scheme.name}` : ""}
                                                                 </Text>
                                                             </div>
@@ -1463,7 +1422,7 @@ export default function A2aInspectorPage() {
 
                                         {agentCard.skills && agentCard.skills.length > 0 && (
                                             <>
-                                                <Divider style={{ margin: "12px 0" }}>Skills ({agentCard.skills.length})</Divider>
+                                                <Divider style={{ margin: "12px 0" }}>{t("Skills (")}{agentCard.skills.length})</Divider>
                                                 {agentCard.skills.map(skill => (
                                                     <Card key={skill.id} size="small" style={{ marginBottom: 8 }}>
                                                         <Space style={{ width: "100%", justifyContent: "space-between" }}>
@@ -1480,8 +1439,7 @@ export default function A2aInspectorPage() {
                                                                     setActiveTab("skills");
                                                                 }}
                                                             >
-                                                                Test
-                                                            </Button>
+                                                                {t("Test")}</Button>
                                                         </Space>
                                                         {skill.description && (
                                                             <Text style={{ fontSize: 11, display: "block", marginTop: 4 }}>{skill.description}</Text>
@@ -1504,10 +1462,9 @@ export default function A2aInspectorPage() {
                                         title={
                                             <Space>
                                                 <CheckCircleOutlined style={{ color: "#0891b2" }} />
-                                                Spec Compliance
-                                                <Tag color="success">{complianceSummary.ok} OK</Tag>
-                                                {complianceSummary.warn > 0 && <Tag color="warning">{complianceSummary.warn} Warn</Tag>}
-                                                {complianceSummary.error > 0 && <Tag color="error">{complianceSummary.error} Error</Tag>}
+                                                {t("Selected card checks")}<Tag color="success">{complianceSummary.ok} {" "}{t("OK")}</Tag>
+                                                {complianceSummary.warn > 0 && <Tag color="warning">{complianceSummary.warn} {" "}{t("Warn")}</Tag>}
+                                                {complianceSummary.error > 0 && <Tag color="error">{complianceSummary.error} {" "}{t("Error")}</Tag>}
                                             </Space>
                                         }
                                         style={{ marginBottom: 12 }}
@@ -1525,8 +1482,8 @@ export default function A2aInspectorPage() {
                                                         {check.status === "ok" && <CheckCircleOutlined style={{ color: "#22c55e", flexShrink: 0 }} />}
                                                         {check.status === "warn" && <WarningOutlined style={{ color: "#f59e0b", flexShrink: 0 }} />}
                                                         {check.status === "error" && <CloseCircleOutlined style={{ color: "#ef4444", flexShrink: 0 }} />}
-                                                        <Text code style={{ fontSize: 11, flexShrink: 0 }}>{check.field}</Text>
-                                                        <Text type="secondary" style={{ fontSize: 11, flex: 1 }}>{check.note}</Text>
+                                                        <Text dir="ltr" code style={{ fontSize: 11, flexShrink: 0 }}>{check.field}</Text>
+                                                        <Text type="secondary" style={{ fontSize: 11, flex: 1 }}>{/^\d+ skill\(s\) declared$/.test(check.note) ? t("{count} skill(s) declared", { count: check.note.split(" ")[0] }) : /^\d+ declared$/.test(check.note) ? t("{count} declared", { count: check.note.split(" ")[0] }) : t(check.note)}</Text>
                                                     </Space>
                                                 </div>
                                             ))}
@@ -1535,9 +1492,9 @@ export default function A2aInspectorPage() {
 
                                     <Card
                                         size="small"
-                                        title="Raw card JSON"
+                                        title={t("Raw card JSON")}
                                         extra={
-                                            <Button aria-label="Copy"
+                                            <Button aria-label={t("Copy")}
                                                 size="small"
                                                 icon={<CopyOutlined />}
                                                 onClick={() => copyToClipboard(cardJson)}
@@ -1553,9 +1510,7 @@ export default function A2aInspectorPage() {
                                 <Empty
                                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                                     description={
-                                        loadingCard
-                                            ? <Spin description="Loading agent card…" />
-                                            : "Enter an agent URL above and click 'Discover'"
+                                        loadingCard ? <Spin description={t("Loading agent card…")} /> : t("Enter an agent URL above and click 'Discover'")
                                     }
                                 />
                             </Card>
@@ -1568,18 +1523,17 @@ export default function A2aInspectorPage() {
                         label: (
                             <Space size={4}>
                                 <ExperimentOutlined />
-                                Skills
-                                {agentCard?.skills && <Badge count={agentCard.skills.length} size="small" color="#6366f1" />}
+                                {t("Skills")}{agentCard?.skills && <Badge count={agentCard.skills.length} size="small" color="#6366f1" />}
                             </Space>
                         ),
                         children: !agentCard ? (
-                            <Card><Empty description="Discover an agent card first" /></Card>
+                            <Card><Empty description={t("Discover an agent card first")} /></Card>
                         ) : !agentCard.skills?.length ? (
-                            <Card><Empty description="This agent declares no skills" /></Card>
+                            <Card><Empty description={t("This agent declares no skills")} /></Card>
                         ) : (
                             <Row gutter={[16, 16]}>
                                 <Col xs={24} lg={10}>
-                                    <Card size="small" title="Choose skill">
+                                    <Card size="small" title={t("Choose skill")}>
                                         <div>
                                             {agentCard.skills.map((skill) => {
                                                 const selected = skill.id === selectedSkillId;
@@ -1612,7 +1566,7 @@ export default function A2aInspectorPage() {
                                 <Col xs={24} lg={14}>
                                     <Card
                                         size="small"
-                                        title={selectedSkillId ? `Invoke: ${agentCard.skills.find(s => s.id === selectedSkillId)?.name}` : "Select a skill"}
+                                        title={selectedSkillId ? t("Invoke: {value1}", { value1: agentCard.skills.find(s => s.id === selectedSkillId)?.name ?? "—" }) : t("Select a skill")}
                                         extra={
                                             <Button
                                                 size="small"
@@ -1623,8 +1577,7 @@ export default function A2aInspectorPage() {
                                                 onClick={callSkill}
                                                 style={{ background: "#0891b2", borderColor: "#0891b2" }}
                                             >
-                                                Call
-                                            </Button>
+                                                {t("Call")}</Button>
                                         }
                                     >
                                         {selectedSkillId ? (
@@ -1633,7 +1586,7 @@ export default function A2aInspectorPage() {
                                                     const skill = agentCard.skills?.find(s => s.id === selectedSkillId);
                                                     return skill?.examples?.length ? (
                                                         <div>
-                                                            <Text type="secondary" style={{ fontSize: 11 }}>Examples:</Text>
+                                                            <Text type="secondary" style={{ fontSize: 11 }}>{t("Examples:")}</Text>
                                                             <Space wrap style={{ marginTop: 4 }}>
                                                                 {skill.examples.map((ex, i) => (
                                                                     <Button
@@ -1642,7 +1595,7 @@ export default function A2aInspectorPage() {
                                                                         onClick={() => setSkillInput(ex)}
                                                                         style={{ fontSize: 11 }}
                                                                     >
-                                                                        {ex.length > 30 ? ex.slice(0, 30) + "…" : ex}
+                                                                        {ex.length > 30 ? `${ex.slice(0, 30)}…` : ex}
                                                                     </Button>
                                                                 ))}
                                                             </Space>
@@ -1650,22 +1603,22 @@ export default function A2aInspectorPage() {
                                                     ) : null;
                                                 })()}
                                                 <div>
-                                                    <Text strong style={{ fontSize: 12 }}>Input</Text>
-                                                    <TextArea
+                                                    <Text strong style={{ fontSize: 12 }}>{t("Input")}</Text>
+                                                    <TextArea dir="ltr" style={{ direction: "ltr", textAlign: "left", fontSize: 16 }}
                                                         value={skillInput}
                                                         onChange={e => setSkillInput(e.target.value)}
                                                         rows={4}
-                                                        placeholder="Free-text input. The skill ID is also sent as a structured data part so agents that route by skill can match."
+                                                        placeholder={t("Free-text input. The skill ID is also sent as a structured data part so agents that route by skill can match.")}
                                                     />
                                                 </div>
                                                 {skillResult && (
                                                     <div>
-                                                        <Text strong style={{ fontSize: 12 }}>Result</Text>
+                                                        <Text strong style={{ fontSize: 12 }}>{t("Result")}</Text>
                                                         <CodeEditor value={skillResult} language="json" height={200} readOnly />
                                                     </div>
                                                 )}
                                             </Space>
-                                        ) : <Empty description="Select a skill on the left" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
+                                        ) : <Empty description={t("Select a skill on the left")} image={Empty.PRESENTED_IMAGE_SIMPLE} />}
                                     </Card>
                                 </Col>
                             </Row>
@@ -1678,8 +1631,7 @@ export default function A2aInspectorPage() {
                         label: (
                             <Space size={4}>
                                 <SendOutlined />
-                                Chat
-                                {chatMessages.length > 0 && <Badge count={chatMessages.filter(m => m.role === "agent").length} size="small" color="#0891b2" />}
+                                {t("Chat")}{chatMessages.length > 0 && <Badge count={chatMessages.filter(m => m.role === "agent").length} size="small" color="#0891b2" />}
                             </Space>
                         ),
                         children: (
@@ -1694,7 +1646,7 @@ export default function A2aInspectorPage() {
                                 bottomRef={chatBottomRef}
                                 darkMode={darkMode}
                                 contextId={chatContextId}
-                                title={`Chat (${protocolInfo.sendMethod})`}
+                                title={t("Chat ({value1})", { value1: protocolInfo.sendMethod })}
                             />
                         ),
                     },
@@ -1705,8 +1657,7 @@ export default function A2aInspectorPage() {
                         label: (
                             <Space size={4}>
                                 <ThunderboltOutlined />
-                                Streaming
-                                {streaming && <Badge status="processing" />}
+                                {t("Streaming")}{streaming && <Badge status="processing" />}
                             </Space>
                         ),
                         children: (
@@ -1722,7 +1673,7 @@ export default function A2aInspectorPage() {
                                 bottomRef={streamBottomRef}
                                 darkMode={darkMode}
                                 contextId={chatContextId}
-                                title={`Streaming (${protocolInfo.streamMethod})`}
+                                title={t("Streaming ({value1})", { value1: protocolInfo.streamMethod })}
                                 sendIcon={<ThunderboltOutlined />}
                                 streamingNotice={!agentCard?.capabilities?.streaming
                                     ? "Agent has not declared streaming capability — request may fail."
@@ -1734,18 +1685,18 @@ export default function A2aInspectorPage() {
                     // ── Tasks ─────────────────────────────────────────────
                     {
                         key: "tasks",
-                        label: <Space size={4}><FileTextOutlined />Tasks</Space>,
+                        label: <Space size={4}><FileTextOutlined />{t("Tasks")}</Space>,
                         children: (
-                            <Card size="small" title="Task lookup & cancel">
+                            <Card size="small" title={t("Task lookup & cancel")}>
                                 <Space orientation="vertical" size={12} style={{ width: "100%" }}>
                                     <Alert
                                         type="info"
                                         showIcon
-                                        title="Task IDs are returned by message/send (current spec) or from the chat tab's response"
+                                        title={t("Task IDs are returned by messaging responses or from the chat tab's response")}
                                         style={{ fontSize: 12 }}
                                     />
                                     <Space.Compact style={{ width: "100%" }}>
-                                        <Input
+                                        <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                             value={taskIdInput}
                                             onChange={e => setTaskIdInput(e.target.value)}
                                             placeholder="task-id-here"
@@ -1759,7 +1710,7 @@ export default function A2aInspectorPage() {
                                             disabled={!taskIdInput.trim()}
                                             style={{ background: "#0891b2", borderColor: "#0891b2" }}
                                         >
-                                            tasks/get
+                                            {A2A_METHODS[protocolVersion].get}
                                         </Button>
                                         <Button
                                             danger
@@ -1768,12 +1719,12 @@ export default function A2aInspectorPage() {
                                             loading={taskBusy}
                                             disabled={!taskIdInput.trim()}
                                         >
-                                            tasks/cancel
+                                            {A2A_METHODS[protocolVersion].cancel}
                                         </Button>
                                     </Space.Compact>
                                     {taskResult && (
                                         <div>
-                                            <Text strong style={{ fontSize: 12 }}>Result</Text>
+                                            <Text strong style={{ fontSize: 12 }}>{t("Result")}</Text>
                                             <CodeEditor value={taskResult} language="json" height={300} readOnly />
                                         </div>
                                     )}
@@ -1788,24 +1739,22 @@ export default function A2aInspectorPage() {
                         label: (
                             <Space size={4}>
                                 <BugOutlined />
-                                Debug
-                                {debugLog.length > 0 && <Badge count={debugLog.length} size="small" color="#6366f1" overflowCount={99} />}
+                                {t("Debug")}{debugLog.length > 0 && <Badge count={debugLog.length} size="small" color="#6366f1" overflowCount={99} />}
                             </Space>
                         ),
                         children: (
                             <Card
                                 size="small"
-                                title={<Space><BugOutlined style={{ color: "#6366f1" }} /> JSON-RPC 2.0 Messages</Space>}
+                                title={<Space><BugOutlined style={{ color: "#6366f1" }} /> {" "}{t("JSON-RPC 2.0 Messages")}</Space>}
                                 extra={
                                     debugLog.length > 0 && (
                                         <Button size="small" danger icon={<DeleteOutlined />} onClick={() => setDebugLog([])}>
-                                            Clear
-                                        </Button>
+                                            {t("Clear")}</Button>
                                     )
                                 }
                             >
                                 {debugLog.length === 0 ? (
-                                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No messages yet" />
+                                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("No messages yet")} />
                                 ) : (
                                     <div style={{ maxHeight: 560, overflowY: "auto" }}>
                                         {debugLog.map(entry => {
@@ -1825,22 +1774,22 @@ export default function A2aInspectorPage() {
                                                 >
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                                                         <Tag color={entry.direction === "out" ? "cyan" : "purple"} style={{ fontSize: 10, margin: 0 }}>
-                                                            {entry.direction === "out" ? "→ OUT" : "← IN"}
+                                                            {entry.direction === "out" ? t("→ OUT") : t("← IN")}
                                                         </Tag>
-                                                        <Text code style={{ fontSize: 11 }}>{entry.method}</Text>
-                                                        {entry.error && <Tag color="error" style={{ fontSize: 10 }}>Error</Tag>}
+                                                        <Text dir="ltr" code style={{ fontSize: 11 }}>{entry.method}</Text>
+                                                        {entry.error && <Tag color="error" style={{ fontSize: 10 }}>{t("Error")}</Tag>}
                                                         <Text type="secondary" style={{ fontSize: 10, marginLeft: "auto" }}>
                                                             {new Date(entry.ts).toLocaleTimeString()}
                                                         </Text>
-                                                        <Tooltip title="Copy">
-                                                            <Button aria-label="Copy"
+                                                        <Tooltip title={t("Copy")}>
+                                                            <Button aria-label={t("Copy")}
                                                                 size="small" type="text" icon={<CopyOutlined />}
                                                                 style={{ padding: "0 4px" }}
                                                                 onClick={() => copyToClipboard(payloadStr)}
                                                             />
                                                         </Tooltip>
                                                     </div>
-                                                    <pre style={{
+                                                    <pre dir="ltr" style={{
                                                         fontSize: 10, margin: 0, maxHeight: 200, overflow: "auto",
                                                         fontFamily: "var(--font-geist-mono), monospace",
                                                         whiteSpace: "pre-wrap", wordBreak: "break-all",
@@ -1865,6 +1814,7 @@ export default function A2aInspectorPage() {
 
 // Local icon shim — antd's SettingOutlined is verbose to import among the others
 function SettingOutlinedIcon() {
+
     return <ApiOutlined style={{ fontSize: 14 }} />;
 }
 
@@ -1875,6 +1825,8 @@ interface AuthPanelProps {
 }
 
 function AuthPanel({ value, onChange, card }: AuthPanelProps) {
+    const { t } = useLanguage();
+
     const securityHints = card?.securitySchemes
         ? Object.entries(card.securitySchemes).map(([name, scheme]) => `${name}: ${scheme.type}${scheme.scheme ? "/" + scheme.scheme : ""}`)
         : [];
@@ -1886,7 +1838,7 @@ function AuthPanel({ value, onChange, card }: AuthPanelProps) {
                     type="info"
                     showIcon
                     icon={<LockOutlined />}
-                    title="Agent declares the following security schemes"
+                    title={t("Agent declares the following security schemes")}
                     description={securityHints.join(" · ")}
                     style={{ fontSize: 12 }}
                 />
@@ -1897,17 +1849,17 @@ function AuthPanel({ value, onChange, card }: AuthPanelProps) {
                 optionType="button"
                 buttonStyle="solid"
             >
-                <Radio.Button value="none">None</Radio.Button>
+                <Radio.Button value="none">{t("None")}</Radio.Button>
                 <Radio.Button value="bearer">Bearer</Radio.Button>
-                <Radio.Button value="basic">Basic</Radio.Button>
-                <Radio.Button value="apiKey">API Key</Radio.Button>
+                <Radio.Button value="basic">{t("Basic (UTF-8)")}</Radio.Button>
+                <Radio.Button value="apiKey">{t("API Key")}</Radio.Button>
                 <Radio.Button value="oauth2">OAuth 2.0</Radio.Button>
             </Radio.Group>
 
             {value.type === "bearer" && (
                 <Form layout="vertical" size="small">
-                    <Form.Item label="Bearer token" tooltip="Sent as 'Authorization: Bearer <token>'">
-                        <Input.Password
+                    <Form.Item label={t("Bearer token")} tooltip={t("Sent as 'Authorization: Bearer <token>'")}>
+                        <Input.Password styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                             value={value.bearer.token}
                             onChange={e => onChange({ ...value, bearer: { token: e.target.value } })}
                             placeholder="eyJhbGciOi..."
@@ -1918,14 +1870,14 @@ function AuthPanel({ value, onChange, card }: AuthPanelProps) {
 
             {value.type === "basic" && (
                 <Form layout="vertical" size="small">
-                    <Form.Item label="Username">
-                        <Input
+                    <Form.Item label={t("Username")}>
+                        <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                             value={value.basic.username}
                             onChange={e => onChange({ ...value, basic: { ...value.basic, username: e.target.value } })}
                         />
                     </Form.Item>
-                    <Form.Item label="Password">
-                        <Input.Password
+                    <Form.Item label={t("Password")}>
+                        <Input.Password styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                             value={value.basic.password}
                             onChange={e => onChange({ ...value, basic: { ...value.basic, password: e.target.value } })}
                         />
@@ -1935,24 +1887,24 @@ function AuthPanel({ value, onChange, card }: AuthPanelProps) {
 
             {value.type === "apiKey" && (
                 <Form layout="vertical" size="small">
-                    <Form.Item label="Add to">
+                    <Form.Item label={t("Add to")}>
                         <Radio.Group
                             value={value.apiKey.in}
                             onChange={e => onChange({ ...value, apiKey: { ...value.apiKey, in: e.target.value } })}
                         >
-                            <Radio.Button value="header">Header</Radio.Button>
-                            <Radio.Button value="query">Query parameter</Radio.Button>
+                            <Radio.Button value="header">{t("Header")}</Radio.Button>
+                            <Radio.Button value="query">{t("Query parameter")}</Radio.Button>
                         </Radio.Group>
                     </Form.Item>
-                    <Form.Item label="Key name">
-                        <Input
+                    <Form.Item label={t("Key name")}>
+                        <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                             value={value.apiKey.name}
                             onChange={e => onChange({ ...value, apiKey: { ...value.apiKey, name: e.target.value } })}
                             placeholder="X-API-Key"
                         />
                     </Form.Item>
-                    <Form.Item label="Value">
-                        <Input.Password
+                    <Form.Item label={t("Value")}>
+                        <Input.Password styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                             value={value.apiKey.value}
                             onChange={e => onChange({ ...value, apiKey: { ...value.apiKey, value: e.target.value } })}
                         />
@@ -1965,19 +1917,19 @@ function AuthPanel({ value, onChange, card }: AuthPanelProps) {
                     <Alert
                         type="warning"
                         showIcon
-                        title="Browser-side OAuth 2.0 flows require server support."
-                        description="Paste a pre-obtained access token below — it will be sent as 'Authorization: <tokenType> <accessToken>'."
+                        title={t("Browser-side OAuth 2.0 flows require server support.")}
+                        description={t("Paste a pre-obtained access token below — it will be sent as 'Authorization: <tokenType> <accessToken>'.")}
                         style={{ marginBottom: 12, fontSize: 12 }}
                     />
-                    <Form.Item label="Token type">
-                        <Input
+                    <Form.Item label={t("Token type")}>
+                        <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                             value={value.oauth2.tokenType}
                             onChange={e => onChange({ ...value, oauth2: { ...value.oauth2, tokenType: e.target.value } })}
                             placeholder="Bearer"
                         />
                     </Form.Item>
-                    <Form.Item label="Access token">
-                        <Input.Password
+                    <Form.Item label={t("Access token")}>
+                        <Input.Password styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                             value={value.oauth2.accessToken}
                             onChange={e => onChange({ ...value, oauth2: { ...value.oauth2, accessToken: e.target.value } })}
                             placeholder="ya29.a0AfH6S..."
@@ -2001,6 +1953,8 @@ interface HeadersPanelProps {
 }
 
 function HeadersPanel({ headers, mode, json, onModeChange, onAdd, onUpdate, onRemove, onJsonChange }: HeadersPanelProps) {
+    const { t } = useLanguage();
+
     return (
         <Space orientation="vertical" size={12} style={{ width: "100%" }}>
             <Segmented
@@ -2008,49 +1962,47 @@ function HeadersPanel({ headers, mode, json, onModeChange, onAdd, onUpdate, onRe
                 value={mode}
                 onChange={(v) => onModeChange(v as "form" | "json")}
                 options={[
-                    { label: "Form", value: "form" },
+                    { label: t("Form"), value: "form" },
                     { label: "JSON", value: "json" },
                 ]}
             />
             {mode === "form" ? (
                 <>
                     {headers.length === 0 && (
-                        <Text type="secondary" style={{ fontSize: 12 }}>No custom headers configured.</Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>{t("No custom headers configured.")}</Text>
                     )}
                     {headers.map(h => (
                         <Space key={h.id} style={{ display: "flex", width: "100%" }}>
                             <Switch checked={h.enabled} onChange={(v) => onUpdate(h.id, { enabled: v })} size="small" />
-                            <Input
-                                placeholder="Header name"
+                            <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                                placeholder={t("Header name")}
                                 value={h.key}
                                 onChange={e => onUpdate(h.id, { key: e.target.value })}
                                 style={{ width: 200 }}
                             />
-                            <Input
-                                placeholder="Value"
+                            <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                                placeholder={t("Value")}
                                 value={h.value}
                                 onChange={e => onUpdate(h.id, { value: e.target.value })}
                                 style={{ flex: 1 }}
                             />
-                            <Button aria-label="Delete" type="text" danger icon={<DeleteOutlined />} onClick={() => onRemove(h.id)} />
+                            <Button aria-label={t("Delete")} type="text" danger icon={<DeleteOutlined />} onClick={() => onRemove(h.id)} />
                         </Space>
                     ))}
                     <Button type="dashed" icon={<PlusOutlined />} onClick={onAdd} block>
-                        Add header
-                    </Button>
+                        {t("Add header")}</Button>
                 </>
             ) : (
                 <>
-                    <TextArea
+                    <TextArea dir="ltr"
                         value={json}
                         onChange={e => onJsonChange(e.target.value)}
                         rows={6}
-                        style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: 12 }}
+                        style={{ direction: "ltr", textAlign: "left",  fontFamily: "var(--font-geist-mono), monospace", fontSize: 16 }}
                         placeholder={'{\n  "X-Custom-Header": "value"\n}'}
                     />
                     <Text type="secondary" style={{ fontSize: 11 }}>
-                        Valid JSON object — auto-syncs to form when parseable.
-                    </Text>
+                        {t("Valid JSON object — auto-syncs to form when parseable.")}</Text>
                 </>
             )}
         </Space>
@@ -2078,6 +2030,8 @@ function ChatPanel({
     messages, input, setInput, onSend, onClear, onStop, sending,
     agentCard, bottomRef, darkMode, contextId, title, sendIcon, streamingNotice,
 }: ChatPanelProps) {
+    const { t } = useLanguage();
+
     return (
         <Card
             title={
@@ -2085,24 +2039,23 @@ function ChatPanel({
                     <RobotOutlined style={{ color: "#0891b2" }} />
                     {title}
                     {agentCard && <Tag color="cyan">{agentCard.name}</Tag>}
-                    {!agentCard && <Tag color="default">No agent loaded</Tag>}
+                    {!agentCard && <Tag color="default">{t("No agent loaded")}</Tag>}
                     {contextId && <Tag color="purple" icon={<KeyOutlined />}>ctx</Tag>}
                 </Space>
             }
             extra={
                 messages.length > 0 && (
                     <Button size="small" danger icon={<DeleteOutlined />} onClick={onClear}>
-                        Clear
-                    </Button>
+                        {t("Clear")}</Button>
                 )
             }
         >
             {streamingNotice && (
-                <Alert type="warning" showIcon title={streamingNotice} style={{ marginBottom: 8, fontSize: 12 }} />
+                <Alert type="warning" showIcon title={t(streamingNotice)} style={{ marginBottom: 8, fontSize: 16 }} />
             )}
             <div style={{ height: 420, overflowY: "auto", padding: "8px 0", marginBottom: 12 }}>
                 {messages.length === 0 && (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={agentCard ? "Send a message to start" : "Discover an agent first"} />
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={agentCard ? t("Send a message to start") : t("Discover an agent first")} />
                 )}
                 {messages.map(msg => (
                     <div
@@ -2120,9 +2073,7 @@ function ChatPanel({
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 flexShrink: 0, marginTop: 2,
                             }}>
-                                {msg.role === "agent"
-                                    ? <RobotOutlined style={{ color: "#fff", fontSize: 14 }} />
-                                    : <InfoCircleOutlined style={{ color: "#fff", fontSize: 14 }} />}
+                                {msg.role === "agent" ? <RobotOutlined style={{ color: "#fff", fontSize: 14 }} /> : <InfoCircleOutlined style={{ color: "#fff", fontSize: 14 }} />}
                             </div>
                         )}
                         <div style={{
@@ -2149,7 +2100,7 @@ function ChatPanel({
                                 }}>
                                     {new Date(msg.ts).toLocaleTimeString()}
                                     {msg.taskId && ` · task: ${msg.taskId.slice(0, 8)}`}
-                                    {msg.streaming && " · streaming"}
+                                    {msg.streaming && ` · ${t("Streaming")}`}
                                 </Text>
                             </div>
                         </div>
@@ -2171,18 +2122,18 @@ function ChatPanel({
                             <RobotOutlined style={{ color: "#fff", fontSize: 14 }} />
                         </div>
                         <Spin size="small" />
-                        <Text type="secondary" style={{ fontSize: 12 }}>Agent is responding…</Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>{t("Agent is responding…")}</Text>
                     </div>
                 )}
                 <div ref={bottomRef} />
             </div>
 
             <Space.Compact style={{ width: "100%" }}>
-                <Input
+                <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onPressEnter={onSend}
-                    placeholder={agentCard ? `Message ${agentCard.name}…` : "Discover an agent first"}
+                    placeholder={agentCard ? t("Message {value1}…", { value1: agentCard.name }) : t("Discover an agent first")}
                     disabled={!agentCard || sending}
                     size="large"
                 />
@@ -2190,8 +2141,7 @@ function ChatPanel({
                     <Button
                         size="large" danger icon={<StopOutlined />} onClick={onStop}
                     >
-                        Stop
-                    </Button>
+                        {t("Stop")}</Button>
                 ) : (
                     <Button
                         size="large" type="primary"
@@ -2200,8 +2150,7 @@ function ChatPanel({
                         disabled={!agentCard || !input.trim() || sending}
                         style={{ background: "#0891b2", borderColor: "#0891b2" }}
                     >
-                        Send
-                    </Button>
+                        {t("Send")}</Button>
                 )}
             </Space.Compact>
         </Card>

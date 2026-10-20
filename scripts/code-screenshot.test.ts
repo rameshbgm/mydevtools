@@ -1,0 +1,18 @@
+import assert from "node:assert/strict";
+import { common,createLowlight } from "lowlight";
+import { codeTokensFromTree,layoutCodeLines,plainCodeLines,validateScreenshotCode } from "../src/lib/code-screenshot";
+const highlighter=createLowlight(common);
+for(const language of ['typescript','javascript','python','java','csharp','go','rust','kotlin','swift','ruby','php','bash','sql','json','yaml','xml','css','markdown'])assert.ok(highlighter.registered(language),language);
+const sample='// public example\nconst answer = "<script>alert(1)</script>";\nconsole.log(42);';
+const lines=codeTokensFromTree(highlighter.highlight("typescript",sample));
+assert.equal(lines.map((line)=>line.map((token)=>token.text).join("")).join("\n"),sample);
+assert.ok(lines[0].some((token)=>token.tone==="comment"));assert.ok(lines[1].some((token)=>token.tone==="keyword"));assert.ok(lines[1].some((token)=>token.tone==="string"));assert.ok(lines[2].some((token)=>token.tone==="number"));
+assert.equal(validateScreenshotCode("hello\r\nworld\r"),"hello\nworld\n");
+const wrapped=layoutCodeLines(plainCodeLines("ab\t12\nsecond"),(text)=>Array.from(text).length,4,true);
+assert.deepEqual(wrapped.map((line)=>line.tokens.map((token)=>token.text).join("")),["ab  ","12","seco","nd"]);
+assert.deepEqual(wrapped.map((line)=>[line.sourceLine,line.continuation]),[[1,false],[1,true],[2,false],[2,true]]);
+assert.throws(()=>layoutCodeLines(plainCodeLines("toolong"),(text)=>text.length,4,false),/Line 1/);
+const emoji=layoutCodeLines(plainCodeLines("👩‍💻X"),()=>1,1,true);assert.equal(emoji.length,2);assert.equal(emoji[0].tokens[0].text,"👩‍💻");
+assert.throws(()=>validateScreenshotCode(" "),/Enter code/);assert.throws(()=>validateScreenshotCode("a".repeat(20001)),/20,000/);assert.throws(()=>validateScreenshotCode("a\n".repeat(500)),/500/);assert.throws(()=>validateScreenshotCode("hello\u0000"),/control/);
+assert.throws(()=>layoutCodeLines(plainCodeLines("x".repeat(701)),()=>1,1,true),/700/);
+console.log("Real syntax token roles, exact source text, Unicode graphemes, tab stops, wrapping and source/image bounds fixtures passed.");

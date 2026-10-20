@@ -26,6 +26,7 @@ import {
     CalculatorOutlined,
     InfoCircleOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
 const { Text, Paragraph } = Typography;
@@ -89,13 +90,13 @@ function cidrToMask(cidr: number): string {
     return numberToIP(mask);
 }
 
-function maskToCidr(mask: string): number {
+function maskToCidr(mask: string): number | null {
     const octets = parseIPv4(mask);
-    if (!octets) return 0;
+    if (!octets) return null;
 
     const binary = octets.map(o => o.toString(2).padStart(8, "0")).join("");
-    const match = binary.match(/^1*/);
-    return match ? match[0].length : 0;
+    if (!/^1*0*$/.test(binary)) return null;
+    return binary.indexOf("0") === -1 ? 32 : binary.indexOf("0");
 }
 
 function ipToBinary(ip: string): string {
@@ -119,7 +120,7 @@ function getIPClass(ip: string): string {
 function calculateSubnet(ip: string, cidr: number): SubnetInfo {
     const octets = parseIPv4(ip);
 
-    if (!octets || cidr < 0 || cidr > 32) {
+    if (!octets || !Number.isInteger(cidr) || cidr < 0 || cidr > 32) {
         return {
             isValid: false,
             networkAddress: "",
@@ -201,6 +202,7 @@ const COMMON_SUBNETS = [
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function SubnetCalculatorPage() {
+    const { t } = useLanguage();
     const [inputIP, setInputIP] = useState("192.168.1.0");
     const [cidr, setCidr] = useState(24);
     const [inputMask, setInputMask] = useState("255.255.255.0");
@@ -209,7 +211,7 @@ export default function SubnetCalculatorPage() {
     const handleMaskChange = (mask: string) => {
         setInputMask(mask);
         const cidrValue = maskToCidr(mask);
-        if (cidrValue > 0) {
+        if (cidrValue !== null) {
             setCidr(cidrValue);
         }
     };
@@ -219,9 +221,9 @@ export default function SubnetCalculatorPage() {
         setInputMask(cidrToMask(value));
     };
 
-    const subnetInfo = useMemo(() => calculateSubnet(inputIP, cidr), [inputIP, cidr]);
+    const subnetInfo = useMemo(() => calculateSubnet(inputIP, inputMode === "mask" ? (maskToCidr(inputMask) ?? -1) : cidr), [inputIP, cidr, inputMode, inputMask]);
 
-    const handleCopy = (text: string, label: string) => copyToClipboard(text, `${label} copied!`);
+    const handleCopy = (text: string) => copyToClipboard(text, t("Copied!"));
 
     const handleCopyAll = () => {
         if (!subnetInfo.isValid) return;
@@ -236,54 +238,35 @@ Last Host: ${subnetInfo.lastHost}
 Total Hosts: ${subnetInfo.totalHosts.toLocaleString()}
 Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
 
-        copyToClipboard(text, "All subnet info copied!");
+        copyToClipboard(text, t("All subnet info copied!"));
     };
 
     const columns = [
-        { title: "CIDR", dataIndex: "cidr", key: "cidr", render: (c: number) => <Text code>/{c}</Text> },
-        { title: "Subnet Mask", dataIndex: "mask", key: "mask", render: (m: string) => <Text code>{m}</Text> },
-        { title: "Usable Hosts", dataIndex: "hosts", key: "hosts" },
-        { title: "Description", dataIndex: "description", key: "description" },
+        { title: "CIDR", dataIndex: "cidr", key: "cidr", render: (c: number) => <Text dir="ltr" code>/{c}</Text> },
+        { title: t("Subnet Mask"), dataIndex: "mask", key: "mask", render: (m: string) => <Text dir="ltr" code>{m}</Text> },
+        { title: t("Usable Hosts"), dataIndex: "hosts", key: "hosts" },
+        { title: t("Description"), dataIndex: "description", key: "description" },
         {
-            title: "Action",
+            title: t("Action"),
             key: "action",
             render: (_: unknown, record: { cidr: number }) => (
-                <Button size="small" onClick={() => handleCidrChange(record.cidr)}>Use</Button>
+                <Button size="small" onClick={() => handleCidrChange(record.cidr)}>{t("Use")}</Button>
             )
         },
     ];
 
     return (
         <ToolPageLayout
-            title="Subnet Calculator"
-            description="Calculate subnet masks, network ranges, CIDR notation, and available hosts"
+            title={t("Subnet Calculator")}
+            description={t("Calculate subnet masks, network ranges, CIDR notation, and available hosts")}
             icon={<ClusterOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
             color="#52c41a"
             learnMore={{
-                whatIs: "The Subnet Calculator is a networking tool that helps you divide IP networks into smaller subnetworks (subnets). It calculates network boundaries, broadcast addresses, usable host ranges, and converts between CIDR notation and traditional subnet masks. Subnetting is fundamental to network design, security isolation, and efficient IP address allocation.",
-                whyUse: "Network engineers and developers need to understand subnetting for configuring routers, firewalls, VPCs in cloud environments, and troubleshooting connectivity issues. This tool instantly shows you network ranges, helping you plan IP allocations, verify configurations, and understand network boundaries without manual binary calculations.",
-                howToUse: [
-                    "Enter an IP address from the network you want to analyze",
-                    "Select the CIDR prefix length (e.g., /24) or enter a subnet mask",
-                    "View the calculated network address, broadcast, and host range",
-                    "Use the slider to quickly explore different subnet sizes",
-                    "Copy individual values or all results for documentation",
-                    "Reference the common subnets table for standard configurations"
-                ],
-                tips: [
-                    "A /24 network (255.255.255.0) provides 254 usable addresses - perfect for small offices",
-                    "Use /30 or /31 for point-to-point links between routers",
-                    "The wildcard mask is the inverse of subnet mask - used in ACLs and OSPF",
-                    "Private networks typically use 10.0.0.0/8, 172.16.0.0/12, or 192.168.0.0/16",
-                    "Cloud providers (AWS, Azure, GCP) reserve 5 IPs per subnet for internal use"
-                ],
-                useCases: [
-                    "Planning VPC and subnet architecture in AWS/Azure/GCP",
-                    "Configuring firewall rules and access control lists",
-                    "Allocating IP ranges for different departments or environments",
-                    "Troubleshooting network connectivity and routing issues",
-                    "Studying for networking certifications (CCNA, CompTIA Network+)"
-                ]
+                whatIs: t("Calculate IPv4 network boundaries, subnet masks, broadcast addresses and usable host ranges locally."),
+                whyUse: t("Check IP allocation and firewall or router configuration without manual binary arithmetic."),
+                howToUse: [t("Enter an IPv4 address."), t("Choose a CIDR prefix from /0 to /32 or enter a contiguous subnet mask."), t("Inspect the host range, binary values and common subnet table. Copy values for documentation.")],
+                tips: [t("A /24 network has 254 usable host addresses. /31 point-to-point networks use both addresses; /32 identifies one host."), t("Wildcard masks invert subnet masks and are used in ACLs and OSPF.")],
+                useCases: [t("Plan subnets for routers, cloud networks and local environments.")],
             }}
         >
             <Row gutter={[16, 16]}>
@@ -293,35 +276,35 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                         title={
                             <Space>
                                 <CalculatorOutlined />
-                                <span>Subnet Input</span>
+                                <span>{t("Subnet Input")}</span>
                             </Space>
                         }
                         size="small"
                     >
                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                             <div>
-                                <Text strong style={{ display: "block", marginBottom: 8 }}>IP Address</Text>
-                                <Input
+                                <Text strong style={{ display: "block", marginBottom: 8 }}>{t("IP Address")}</Text>
+                                <Input dir="ltr" styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                     size="large"
-                                    placeholder="Enter IP address (e.g., 192.168.1.0)"
-                                    value={inputIP}
+                                    placeholder={t("Enter IP address (e.g., 192.168.1.0)")}
+                                    aria-label={t("IP Address")} value={inputIP}
                                     onChange={(e) => setInputIP(e.target.value)}
                                     prefix={<ClusterOutlined />}
                                 />
                             </div>
 
                             <div>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                                    <Text strong>Subnet</Text>
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                                    <Text strong>{t("Subnet")}</Text>
                                     <Select
-                                        value={inputMode}
+                                        aria-label={t("Subnet input mode")} value={inputMode}
                                         onChange={setInputMode}
                                         size="small"
-                                        style={{ width: 140 }}
+                                        style={{ width: "min(100%, 220px)", minWidth: 0 }}
                                         popupMatchSelectWidth={false}
                                     >
-                                        <Option value="cidr">CIDR Notation</Option>
-                                        <Option value="mask">Subnet Mask</Option>
+                                        <Option value="cidr">{t("CIDR Notation")}</Option>
+                                        <Option value="mask">{t("Subnet Mask")}</Option>
                                     </Select>
                                 </div>
 
@@ -330,7 +313,7 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                                         <Slider
                                             min={0}
                                             max={32}
-                                            value={cidr}
+                                            aria-label={t("CIDR prefix length")} value={cidr}
                                             onChange={handleCidrChange}
                                             marks={{
                                                 0: "/0",
@@ -343,21 +326,21 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                                         <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
                                             <Space.Compact>
                                                 <Button disabled style={{ pointerEvents: "none" }}>/</Button>
-                                                <InputNumber
+                                                <InputNumber styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }} dir="ltr" aria-label={t("CIDR prefix length")}
                                                     min={0}
                                                     max={32}
                                                     value={cidr}
-                                                    onChange={(v) => handleCidrChange(v || 24)}
-                                                    style={{ width: 80 }}
+                                                    onChange={(v) => handleCidrChange(v ?? 24)}
+                                                    style={{ width: 100, direction: "ltr", fontSize: 16 }}
                                                 />
                                             </Space.Compact>
                                         </div>
                                     </div>
                                 ) : (
-                                    <Input
+                                    <Input dir="ltr" styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                         size="large"
                                         placeholder="255.255.255.0"
-                                        value={inputMask}
+                                        aria-label={t("Subnet Mask")} value={inputMask}
                                         onChange={(e) => handleMaskChange(e.target.value)}
                                     />
                                 )}
@@ -366,22 +349,22 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                             {!subnetInfo.isValid && (
                                 <Alert
                                     type="error"
-                                    title="Invalid Input"
-                                    description="Please enter a valid IPv4 address and subnet."
+                                    title={t("Invalid Input")}
+                                    description={t("Please enter a valid IPv4 address and subnet.")}
                                 />
                             )}
                         </Space>
                     </Card>
 
                     {/* Common Subnets Reference */}
-                    <Card title="Common Subnet Sizes" size="small" style={{ marginTop: 16 }}>
+                    <Card title={t("Common Subnet Sizes")} size="small" style={{ marginTop: 16 }}>
                         <Table
-                            dataSource={COMMON_SUBNETS}
+                            dataSource={COMMON_SUBNETS.map((row) => ({ ...row, description: t(row.description) }))}
                             columns={columns}
                             pagination={false}
                             size="small"
                             rowKey="cidr"
-                            scroll={{ y: 300 }}
+                            scroll={{ x: 460, y: 300 }}
                         />
                     </Card>
                 </Col>
@@ -391,122 +374,121 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                     {subnetInfo.isValid && (
                         <>
                             <Card
-                                title="Subnet Information"
+                                title={t("Subnet Information")}
                                 size="small"
                                 extra={
                                     <Button icon={<CopyOutlined />} onClick={handleCopyAll}>
-                                        Copy All
-                                    </Button>
+                                        {t("Copy All")}</Button>
                                 }
                             >
                                 <Descriptions column={{ xs: 1, sm: 2 }} size="small" bordered>
-                                    <Descriptions.Item label="IP Address">
+                                    <Descriptions.Item label={t("IP Address")}>
                                         <Space>
                                             <Tag color="blue">{inputIP}/{cidr}</Tag>
-                                            <Button aria-label="Copy"
+                                            <Button aria-label={t("Copy")}
                                                 size="small"
                                                 icon={<CopyOutlined />}
-                                                onClick={() => handleCopy(`${inputIP}/${cidr}`, "CIDR")}
+                                                onClick={() => handleCopy(`${inputIP}/${cidr}`)}
                                             />
                                         </Space>
                                     </Descriptions.Item>
-                                    <Descriptions.Item label="IP Class">
-                                        <Tag color="purple">Class {subnetInfo.ipClass}</Tag>
+                                    <Descriptions.Item label={t("IP Class")}>
+                                        <Tag color="purple">{t("Class {value}", { value: t(subnetInfo.ipClass) })}</Tag>
                                     </Descriptions.Item>
-                                    <Descriptions.Item label="Network Address">
+                                    <Descriptions.Item label={t("Network Address")}>
                                         <Space>
-                                            <Text code>{subnetInfo.networkAddress}</Text>
-                                            <Button aria-label="Copy"
+                                            <Text dir="ltr" code>{subnetInfo.networkAddress}</Text>
+                                            <Button aria-label={t("Copy")}
                                                 size="small"
                                                 icon={<CopyOutlined />}
-                                                onClick={() => handleCopy(subnetInfo.networkAddress, "Network")}
+                                                onClick={() => handleCopy(subnetInfo.networkAddress)}
                                             />
                                         </Space>
                                     </Descriptions.Item>
-                                    <Descriptions.Item label="Broadcast Address">
+                                    <Descriptions.Item label={t("Broadcast Address")}>
                                         <Space>
-                                            <Text code>{subnetInfo.broadcastAddress}</Text>
-                                            <Button aria-label="Copy"
+                                            <Text dir="ltr" code>{subnetInfo.broadcastAddress}</Text>
+                                            <Button aria-label={t("Copy")}
                                                 size="small"
                                                 icon={<CopyOutlined />}
-                                                onClick={() => handleCopy(subnetInfo.broadcastAddress, "Broadcast")}
+                                                onClick={() => handleCopy(subnetInfo.broadcastAddress)}
                                             />
                                         </Space>
                                     </Descriptions.Item>
-                                    <Descriptions.Item label="Subnet Mask">
+                                    <Descriptions.Item label={t("Subnet Mask")}>
                                         <Space>
-                                            <Text code>{subnetInfo.subnetMask}</Text>
-                                            <Button aria-label="Copy"
+                                            <Text dir="ltr" code>{subnetInfo.subnetMask}</Text>
+                                            <Button aria-label={t("Copy")}
                                                 size="small"
                                                 icon={<CopyOutlined />}
-                                                onClick={() => handleCopy(subnetInfo.subnetMask, "Subnet mask")}
+                                                onClick={() => handleCopy(subnetInfo.subnetMask)}
                                             />
                                         </Space>
                                     </Descriptions.Item>
-                                    <Descriptions.Item label="Wildcard Mask">
+                                    <Descriptions.Item label={t("Wildcard Mask")}>
                                         <Space>
-                                            <Text code>{subnetInfo.wildcardMask}</Text>
-                                            <Tooltip title="Used in ACLs and OSPF">
+                                            <Text dir="ltr" code>{subnetInfo.wildcardMask}</Text>
+                                            <Tooltip title={t("Used in ACLs and OSPF")}>
                                                 <InfoCircleOutlined style={{ color: "#1890ff" }} />
                                             </Tooltip>
-                                            <Button aria-label="Copy"
+                                            <Button aria-label={t("Copy")}
                                                 size="small"
                                                 icon={<CopyOutlined />}
-                                                onClick={() => handleCopy(subnetInfo.wildcardMask, "Wildcard")}
+                                                onClick={() => handleCopy(subnetInfo.wildcardMask)}
                                             />
                                         </Space>
                                     </Descriptions.Item>
-                                    <Descriptions.Item label="First Usable Host">
+                                    <Descriptions.Item label={t("First Usable Host")}>
                                         <Space>
-                                            <Text code>{subnetInfo.firstHost}</Text>
-                                            <Button aria-label="Copy"
+                                            <Text dir="ltr" code>{subnetInfo.firstHost}</Text>
+                                            <Button aria-label={t("Copy")}
                                                 size="small"
                                                 icon={<CopyOutlined />}
-                                                onClick={() => handleCopy(subnetInfo.firstHost, "First host")}
+                                                onClick={() => handleCopy(subnetInfo.firstHost)}
                                             />
                                         </Space>
                                     </Descriptions.Item>
-                                    <Descriptions.Item label="Last Usable Host">
+                                    <Descriptions.Item label={t("Last Usable Host")}>
                                         <Space>
-                                            <Text code>{subnetInfo.lastHost}</Text>
-                                            <Button aria-label="Copy"
+                                            <Text dir="ltr" code>{subnetInfo.lastHost}</Text>
+                                            <Button aria-label={t("Copy")}
                                                 size="small"
                                                 icon={<CopyOutlined />}
-                                                onClick={() => handleCopy(subnetInfo.lastHost, "Last host")}
+                                                onClick={() => handleCopy(subnetInfo.lastHost)}
                                             />
                                         </Space>
                                     </Descriptions.Item>
-                                    <Descriptions.Item label="Total Addresses">
+                                    <Descriptions.Item label={t("Total Addresses")}>
                                         <Tag color="geekblue">{subnetInfo.totalHosts.toLocaleString()}</Tag>
                                     </Descriptions.Item>
-                                    <Descriptions.Item label="Usable Hosts">
+                                    <Descriptions.Item label={t("Usable Hosts")}>
                                         <Tag color="green">{subnetInfo.usableHosts.toLocaleString()}</Tag>
                                     </Descriptions.Item>
                                 </Descriptions>
                             </Card>
 
-                            <Card title="Binary Representation" size="small" style={{ marginTop: 16 }}>
+                            <Card title={t("Binary Representation")} size="small" style={{ marginTop: 16 }}>
                                 <Descriptions column={1} size="small">
-                                    <Descriptions.Item label="Network">
-                                        <Text code style={{ fontFamily: "monospace", fontSize: 12 }}>
+                                    <Descriptions.Item label={t("Network")}>
+                                        <Text dir="ltr" code style={{ fontFamily: "monospace", fontSize: 16 }}>
                                             {subnetInfo.binary.network}
                                         </Text>
                                     </Descriptions.Item>
-                                    <Descriptions.Item label="Subnet Mask">
-                                        <Text code style={{ fontFamily: "monospace", fontSize: 12 }}>
+                                    <Descriptions.Item label={t("Subnet Mask")}>
+                                        <Text dir="ltr" code style={{ fontFamily: "monospace", fontSize: 16 }}>
                                             {subnetInfo.binary.mask}
                                         </Text>
                                     </Descriptions.Item>
-                                    <Descriptions.Item label="Broadcast">
-                                        <Text code style={{ fontFamily: "monospace", fontSize: 12 }}>
+                                    <Descriptions.Item label={t("Broadcast")}>
+                                        <Text dir="ltr" code style={{ fontFamily: "monospace", fontSize: 16 }}>
                                             {subnetInfo.binary.broadcast}
                                         </Text>
                                     </Descriptions.Item>
                                 </Descriptions>
                                 <Divider style={{ margin: "12px 0" }} />
-                                <Paragraph type="secondary" style={{ fontSize: 12, margin: 0 }}>
-                                    Network bits: <Tag color="blue">{cidr}</Tag> |
-                                    Host bits: <Tag color="green">{32 - cidr}</Tag>
+                                <Paragraph type="secondary" style={{ fontSize: 16, margin: 0 }}>
+                                    {t("Network bits")}: <Tag color="blue">{cidr}</Tag> |
+                                    {t("Host bits")}: <Tag color="green">{32 - cidr}</Tag>
                                 </Paragraph>
                             </Card>
                         </>

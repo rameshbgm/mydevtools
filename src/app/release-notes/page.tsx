@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useLanguage } from "@/components/LanguageProvider";
 import { Typography, Badge, Breadcrumb, Collapse } from "antd";
 import {
     HomeOutlined,
@@ -15,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { RELEASE_NOTES, KIND_LABEL, KIND_COLORS, APP_VERSION } from "@/lib/release-notes";
 import { toolPathFromId } from "@/lib/category-routes";
+import { markReleaseSeen } from "@/lib/release-preference";
 import {
     toolsRegistry,
     getToolsByCategory,
@@ -27,6 +29,10 @@ import {
 const { Title, Text } = Typography;
 
 export default function ReleaseNotesPage() {
+    const { t, direction } = useLanguage();
+    useEffect(() => {
+        if (RELEASE_NOTES.some((release) => release.version === APP_VERSION)) markReleaseSeen(APP_VERSION);
+    }, []);
     const { darkMode, addRecentTool, setNavigating } = useAppStore();
     const router = useRouter();
     const allCategorized = useMemo(() => getToolsByCategory(), []);
@@ -47,7 +53,7 @@ export default function ReleaseNotesPage() {
     };
 
     return (
-        <div style={{ width: "100%" }}>
+        <div dir={direction} style={{ width: "100%" }}>
             {/* Breadcrumb */}
             <Breadcrumb
                 separator={<RightOutlined style={{ fontSize: 10, opacity: 0.5 }} />}
@@ -65,14 +71,14 @@ export default function ReleaseNotesPage() {
                                 }}
                             >
                                 <HomeOutlined style={{ fontSize: 14 }} />
-                                <span>Dashboard</span>
+                                <span>{t("Dashboard")}</span>
                             </Link>
                         ),
                     },
                     {
                         title: (
                             <span style={{ color: darkMode ? "#e5e5e5" : "#171717", fontWeight: 500 }}>
-                                Release Notes &amp; Catalog
+                                {t("Release Notes & Catalog")}
                             </span>
                         ),
                     },
@@ -122,10 +128,10 @@ export default function ReleaseNotesPage() {
                             fontSize: "clamp(18px, 3.2vw, 26px)",
                         }}
                     >
-                        Release Notes &amp; Catalog
+                        {t("Release Notes & Catalog")}
                     </Title>
                     <Text style={{ color: darkMode ? "#737373" : "#737373", fontSize: 13, marginTop: 2, display: "block" }}>
-                        V{APP_VERSION} · What&apos;s new, what&apos;s inside, and every tool at a glance
+                        <bdi dir="ltr">V{APP_VERSION}</bdi> · {t("What’s new, what’s inside, and every tool at a glance")}
                     </Text>
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -143,7 +149,7 @@ export default function ReleaseNotesPage() {
                             color: darkMode ? "#a78bfa" : "#4f46e5",
                         }}
                     >
-                        {RELEASE_NOTES.length} releases
+                        {t("{count} releases", { count: RELEASE_NOTES.length })}
                     </span>
                     <span
                         style={{
@@ -159,7 +165,7 @@ export default function ReleaseNotesPage() {
                             color: darkMode ? "#22d3ee" : "#0891b2",
                         }}
                     >
-                        {totalTools} tools
+                        {t("{count} tools", { count: totalTools })}
                     </span>
                 </div>
             </motion.div>
@@ -190,10 +196,10 @@ export default function ReleaseNotesPage() {
                 >
                     <HistoryOutlined style={{ fontSize: 17, color: darkMode ? "#a78bfa" : "#4f46e5" }} />
                     <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
-                        Release History
+                        {t("Release History")}
                     </Title>
-                    <Text type="secondary" style={{ fontSize: 12, marginLeft: "auto" }}>
-                        newest first · click a version to expand
+                    <Text type="secondary" style={{ fontSize: 12, marginInlineStart: "auto" }}>
+                        {t("newest first · click a version to expand")}
                     </Text>
                 </div>
 
@@ -219,6 +225,8 @@ export default function ReleaseNotesPage() {
                             },
                             label: (
                                 <div
+                                    id={`release-${release.version}`}
+                                    className="wb-release-anchor"
                                     style={{
                                         display: "flex",
                                         flexWrap: "wrap",
@@ -240,7 +248,7 @@ export default function ReleaseNotesPage() {
                                             letterSpacing: 0.4,
                                         }}
                                     >
-                                        V{release.version}
+                                        <bdi dir="ltr">V{release.version}</bdi>
                                     </span>
                                     <span
                                         style={{
@@ -255,7 +263,7 @@ export default function ReleaseNotesPage() {
                                             border: `1px solid ${borderC}`,
                                         }}
                                     >
-                                        {KIND_LABEL[release.kind]}
+                                        {t(KIND_LABEL[release.kind])}
                                     </span>
                                     <Text
                                         strong
@@ -264,13 +272,13 @@ export default function ReleaseNotesPage() {
                                             color: darkMode ? "#e5e5e5" : "#171717",
                                         }}
                                     >
-                                        {release.title}
+                                        {t(release.title)}
                                     </Text>
                                     <Text
                                         type="secondary"
-                                        style={{ fontSize: 12, marginLeft: "auto" }}
+                                        style={{ fontSize: 12, marginInlineStart: "auto" }}
                                     >
-                                        {release.date}
+                                        <bdi dir="ltr">{release.date}</bdi>
                                     </Text>
                                 </div>
                             ),
@@ -284,11 +292,11 @@ export default function ReleaseNotesPage() {
                                                 lineHeight: 1.65,
                                                 color: darkMode ? "#d4d4d4" : "#374151",
                                                 fontStyle: "italic",
-                                                paddingLeft: 12,
-                                                borderLeft: `3px solid ${darkMode ? "rgba(99,102,241,0.35)" : "rgba(79,70,229,0.25)"}`,
+                                                paddingInlineStart: 12,
+                                                borderInlineStart: `3px solid ${darkMode ? "rgba(99,102,241,0.35)" : "rgba(79,70,229,0.25)"}`,
                                             }}
                                         >
-                                            {release.summary}
+                                            {t(release.summary)}
                                         </p>
                                     )}
                                     <div
@@ -311,12 +319,12 @@ export default function ReleaseNotesPage() {
                                                         color: darkMode ? "#a78bfa" : "#4f46e5",
                                                     }}
                                                 >
-                                                    {section.label}
+                                                    {t(section.label)}
                                                 </Text>
                                                 <ul
                                                     style={{
                                                         margin: 0,
-                                                        paddingLeft: 20,
+                                                        paddingInlineStart: 20,
                                                         color: darkMode ? "#a3a3a3" : "#525252",
                                                         fontSize: 13,
                                                         lineHeight: 1.75,
@@ -327,7 +335,7 @@ export default function ReleaseNotesPage() {
                                                             key={b.slice(0, 40)}
                                                             style={{ marginBottom: 4 }}
                                                         >
-                                                            {b}
+                                                            {t(b)}
                                                         </li>
                                                     ))}
                                                 </ul>
@@ -349,7 +357,7 @@ export default function ReleaseNotesPage() {
                         color: darkMode ? "#737373" : "#a3a3a3",
                     }}
                 >
-                    Full commit history on{" "}
+                    {t("Full commit history on")}{" "}
                     <a
                         href="https://github.com/rameshbgm/mydevtools/commits/main"
                         target="_blank"
@@ -381,10 +389,10 @@ export default function ReleaseNotesPage() {
                         style={{ fontSize: 20, color: darkMode ? "#22d3ee" : "#0891b2" }}
                     />
                     <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
-                        What&apos;s Inside — Full Catalog
+                        {t("What’s Inside — Full Catalog")}
                     </Title>
                     <Badge
-                        count={`${totalTools} tools across ${allCategorized.size} categories`}
+                        count={t("{tools} tools across {categories} categories", { tools: totalTools, categories: allCategorized.size })}
                         style={{
                             backgroundColor: darkMode
                                 ? "rgba(52,211,153,0.15)"
@@ -405,9 +413,7 @@ export default function ReleaseNotesPage() {
                         color: darkMode ? "#a3a3a3" : "#4b5563",
                     }}
                 >
-                    Every tool below runs <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>entirely in your browser</strong> — paste
-                    tokens, certs, passwords, or payloads without any data leaving your machine. Click any tool
-                    to open it instantly.
+                    {t("Tools process locally by default.")} <strong style={{ color: darkMode ? "#e5e5e5" : "#111827" }}>{t("Network tools disclose their connection before sending requests.")}</strong> {t("Review each tool’s data boundary before entering sensitive information. Click a tool to open it.")}
                 </p>
 
                 {/* Highlight examples */}
@@ -425,10 +431,10 @@ export default function ReleaseNotesPage() {
                 >
                     {[
                         { emoji: "🔑", text: "Decode a JWT — see claims, expiry, and signature details locally" },
-                        { emoji: "🔒", text: "Inspect a TLS cert — domain never sent to any third party" },
+                        { emoji: "🔒", text: "Inspect a pasted certificate locally, or explicitly fetch a live certificate" },
                         { emoji: "🔐", text: "Test a bcrypt hash — your plaintext stays in your tab" },
-                        { emoji: "📡", text: "Build an API request with a local CORS proxy — headers stay private" },
-                        { emoji: "📝", text: "Format a 10 MB JSON file — no upload, no timeout, no size limit" },
+                        { emoji: "📡", text: "Build an API request — choose direct browser access or the disclosed proxy" },
+                        { emoji: "📝", text: "Format JSON locally — practical limits depend on your browser and device" },
                     ].map(({ emoji, text }) => (
                         <span
                             key={text}
@@ -444,7 +450,7 @@ export default function ReleaseNotesPage() {
                             }}
                         >
                             <span>{emoji}</span>
-                            {text}
+                            {t(text)}
                         </span>
                     ))}
                 </div>
@@ -511,7 +517,7 @@ export default function ReleaseNotesPage() {
                                                     color: darkMode ? "#e5e5e5" : "#111827",
                                                 }}
                                             >
-                                                {category}
+                                                {t(category)}
                                             </Text>
                                             <span
                                                 style={{
@@ -524,7 +530,7 @@ export default function ReleaseNotesPage() {
                                                     letterSpacing: 0.3,
                                                 }}
                                             >
-                                                {tools.length} tools
+                                                {t("{count} tools", { count: tools.length })}
                                             </span>
                                         </div>
                                         {catDesc && (
@@ -536,7 +542,7 @@ export default function ReleaseNotesPage() {
                                                     marginTop: 1,
                                                 }}
                                             >
-                                                {catDesc}
+                                                {t(catDesc)}
                                             </Text>
                                         )}
                                     </div>
@@ -560,8 +566,10 @@ export default function ReleaseNotesPage() {
                                             tabIndex={0}
                                             onClick={() => navigateToTool(tool.id)}
                                             onKeyDown={(e) => {
-                                                if (e.key === "Enter" || e.key === " ")
+                                                if (e.key === "Enter" || e.key === " ") {
+                                                    e.preventDefault();
                                                     navigateToTool(tool.id);
+                                                }
                                             }}
                                             onMouseEnter={(e) => {
                                                 (
@@ -615,7 +623,7 @@ export default function ReleaseNotesPage() {
                                                         gap: 5,
                                                     }}
                                                 >
-                                                    {tool.name}
+                                                    {t(tool.name)}
                                                     <ArrowRightOutlined
                                                         style={{
                                                             fontSize: 10,
@@ -635,7 +643,7 @@ export default function ReleaseNotesPage() {
                                                         textOverflow: "ellipsis",
                                                     }}
                                                 >
-                                                    {tool.description}
+                                                    {t(tool.description)}
                                                 </div>
                                             </div>
                                         </div>
@@ -654,14 +662,14 @@ export default function ReleaseNotesPage() {
                         color: darkMode ? "#555" : "#bbb",
                     }}
                 >
-                    {toolsRegistry.length} tools · all client-side · no account required ·{" "}
+                    {t("{count} tools · local processing by default · no account required", { count: toolsRegistry.length })} ·{" "}
                     <a
                         href="https://github.com/rameshbgm/mydevtools"
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ color: darkMode ? "#a78bfa" : "#4f46e5" }}
                     >
-                        open source
+                        {t("open source")}
                     </a>
                 </p>
             </motion.div>

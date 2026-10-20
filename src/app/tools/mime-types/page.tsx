@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Card, Input, Typography, Row, Col, Table, Tag, Space, Button } from "antd";
 import { OrderedListOutlined, SearchOutlined, CopyOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
 
@@ -25,9 +26,10 @@ const MIME_TYPES: MimeType[] = [
     { type: "text/markdown", extensions: [".md", ".markdown"], category: "Text" },
     { type: "text/calendar", extensions: [".ics"], category: "Text" },
     { type: "text/event-stream", extensions: [], category: "Text" },
-    { type: "text/yaml", extensions: [".yaml", ".yml"], category: "Text" },
 
     // Application
+    { type: "application/octet-stream", extensions: [".bin"], category: "Application" },
+    { type: "application/vnd.ms-fontobject", extensions: [".eot"], category: "Font" },
     { type: "application/json", extensions: [".json"], category: "Application" },
     { type: "application/ld+json", extensions: [".jsonld"], category: "Application" },
     { type: "application/problem+json", extensions: [], category: "Application" },
@@ -45,7 +47,6 @@ const MIME_TYPES: MimeType[] = [
     { type: "application/x-tar", extensions: [".tar"], category: "Application" },
     { type: "application/x-rar-compressed", extensions: [".rar"], category: "Application" },
     { type: "application/x-7z-compressed", extensions: [".7z"], category: "Application" },
-    { type: "application/octet-stream", extensions: [".bin"], category: "Application" },
     { type: "application/x-www-form-urlencoded", extensions: [], category: "Application" },
     { type: "application/javascript", extensions: [".js"], category: "Application" },
     { type: "application/typescript", extensions: [".ts"], category: "Application" },
@@ -100,7 +101,6 @@ const MIME_TYPES: MimeType[] = [
     { type: "font/woff2", extensions: [".woff2"], category: "Font" },
     { type: "font/ttf", extensions: [".ttf"], category: "Font" },
     { type: "font/otf", extensions: [".otf"], category: "Font" },
-    { type: "font/eot", extensions: [".eot"], category: "Font" },
 
     // Multipart
     { type: "multipart/form-data", extensions: [], category: "Multipart" },
@@ -119,6 +119,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function MimeTypesPage() {
+    const { t } = useLanguage();
     const [search, setSearch] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -137,44 +138,47 @@ export default function MimeTypesPage() {
         return Array.from(cats);
     }, []);
 
-    const copyType = (type: string) => copyToClipboard(type, "MIME type copied!");
+    const copyType = (type: string) => copyToClipboard(type, t("MIME type copied!"));
 
     return (
         <ToolPageLayout
-            title="MIME Types Reference"
-            description="Searchable list of MIME types with file extensions"
+            title={t("MIME Types Reference")}
+            description={t("Search a curated MIME reference by type or extension")}
             icon={<OrderedListOutlined style={{ fontSize: 24, color: "#13c2c2" }} />}
             color="#13c2c2"
             learnMore={{
-                whatIs: "MIME (Multipurpose Internet Mail Extensions) types are standardized labels that identify file formats on the internet. They're used in HTTP headers, email attachments, and file uploads to tell software how to handle content.",
-                whyUse: "Setting correct MIME types is essential for web servers, APIs, and file uploads. Incorrect types can cause browsers to download instead of display, or applications to reject valid files.",
+                whatIs: t("MIME types identify a representation's format in HTTP and email. This curated list includes common labels and extension hints; it is not the complete IANA registry."),
+                whyUse: t("Setting correct MIME types is essential for web servers, APIs, and file uploads. Incorrect types can cause browsers to download instead of display, or applications to reject valid files."),
                 howToUse: [
-                    "Search by MIME type (e.g., 'application/json')",
-                    "Search by file extension (e.g., '.pdf')",
-                    "Filter by category (image, audio, video, etc.)",
-                    "Copy MIME types for use in code or configs"
+                    t("Search by MIME type (e.g., 'application/json')"),
+                    t("Search by file extension (e.g., '.pdf')"),
+                    t("Filter by category (image, audio, video, etc.)"),
+                    t("Copy MIME types for use in code or configs")
                 ],
                 tips: [
-                    "application/octet-stream is the generic binary type",
-                    "text/plain is for any unformatted text",
-                    "Use image/svg+xml for SVG (not image/svg)",
-                    "JSON uses application/json, not text/json"
+                    t("application/octet-stream is the generic binary type"),
+                    t("text/plain is for any unformatted text"),
+                    t("Use image/svg+xml for SVG (not image/svg)"),
+                    t("JSON uses application/json; YAML uses application/yaml (RFC 9512).")
                 ],
                 useCases: [
-                    "Configuring web server Content-Type headers",
-                    "Setting up file upload validation",
-                    "Debugging content type issues in APIs",
-                    "Email attachment handling"
+                    t("Configuring web server Content-Type headers"),
+                    t("Setting up file upload validation"),
+                    t("Debugging content type issues in APIs"),
+                    t("Email attachment handling")
                 ]
             }}
         >
+            <p>{t("Extensions are hints, not content validation. Confirm production media types against the IANA registry.")}</p>
             <Row gutter={[24, 24]}>
                 <Col xs={24}>
                     <Card>
                         <Space orientation="vertical" style={{ width: "100%" }}>
                             <Input
                                 size="large"
-                                placeholder="Search by MIME type or file extension..."
+                                aria-label={t("Search MIME types")}
+                                style={{ fontSize: 16 }}
+                                placeholder={t("Search by MIME type or file extension...")}
                                 prefix={<SearchOutlined />}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
@@ -186,7 +190,7 @@ export default function MimeTypesPage() {
                                     color={!selectedCategory ? "blue" : undefined}
                                     onClick={() => setSelectedCategory(null)}
                                 >
-                                    All ({MIME_TYPES.length})
+                                    {t("All ({count})", { count: MIME_TYPES.length })}
                                 </Tag>
                                 {categories.map((cat) => (
                                     <Tag
@@ -195,7 +199,7 @@ export default function MimeTypesPage() {
                                         color={selectedCategory === cat ? CATEGORY_COLORS[cat] : undefined}
                                         onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
                                     >
-                                        {cat} ({MIME_TYPES.filter((mt) => mt.category === cat).length})
+                                        {t(cat)} ({MIME_TYPES.filter((mt) => mt.category === cat).length})
                                     </Tag>
                                 ))}
                             </Space>
@@ -207,17 +211,17 @@ export default function MimeTypesPage() {
                     <Card>
                         <Table
                             size="small"
-                            pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => `${total} MIME types` }}
+                            pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => t("{count} MIME types", { count: total }) }}
                             dataSource={filteredTypes.map((mt, i) => ({ ...mt, key: i }))}
                             columns={[
                                 {
-                                    title: "MIME Type",
+                                    title: t("MIME Type"),
                                     dataIndex: "type",
                                     sorter: (a, b) => a.type.localeCompare(b.type),
                                     render: (type) => (
                                         <Space>
                                             <Text code style={{ fontSize: 12 }}>{type}</Text>
-                                            <Button aria-label="Copy"
+                                            <Button aria-label={t("Copy")}
                                                 size="small"
                                                 type="text"
                                                 icon={<CopyOutlined />}
@@ -227,7 +231,7 @@ export default function MimeTypesPage() {
                                     ),
                                 },
                                 {
-                                    title: "Extensions",
+                                    title: t("Extensions"),
                                     dataIndex: "extensions",
                                     render: (exts: string[]) => (
                                         <Space wrap size={4}>
@@ -238,12 +242,12 @@ export default function MimeTypesPage() {
                                     ),
                                 },
                                 {
-                                    title: "Category",
+                                    title: t("Category"),
                                     dataIndex: "category",
-                                    filters: categories.map((c) => ({ text: c, value: c })),
+                                    filters: categories.map((c) => ({ text: t(c), value: c })),
                                     onFilter: (value, record) => record.category === value,
                                     render: (cat) => (
-                                        <Tag color={CATEGORY_COLORS[cat]}>{cat}</Tag>
+                                        <Tag color={CATEGORY_COLORS[cat]}>{t(cat)}</Tag>
                                     ),
                                 },
                             ]}

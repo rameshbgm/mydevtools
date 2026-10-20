@@ -1,8 +1,10 @@
 "use client";
+import { useLanguage } from "@/components/LanguageProvider";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Button, Card, App, Upload, Spin } from "antd";
+import { isRecord, parseStructuredData } from "@/lib/structured-data";
+import { Button, Card, App, Upload, Spin, Alert } from "antd";
 import { ApiOutlined, UploadOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
@@ -120,11 +122,14 @@ const SAMPLE_SPEC = `{
 }`;
 
 function SwaggerViewer({ spec, onBack }: { spec: string; onBack: () => void }) {
+    const { t } = useLanguage();
+
     // Parse the spec once; pass the parsed object directly to swagger-ui-react.
-    // Using `spec` (not `url`) prop keeps everything offline — no fetch.
+    // The source is parsed locally. Swagger UI may fetch external $refs or send Try-it-out requests.
     const parsedSpec = useMemo(() => {
         try {
-            return JSON.parse(spec);
+            const parsed = parseStructuredData(spec);
+            return isRecord(parsed) ? parsed : null;
         } catch {
             return null;
         }
@@ -132,11 +137,12 @@ function SwaggerViewer({ spec, onBack }: { spec: string; onBack: () => void }) {
 
     return (
         <>
-            <Button style={{ marginBottom: 16 }} onClick={onBack}>← Back to Editor</Button>
+            <Button style={{ marginBottom: 16 }} onClick={onBack}>{t("← Back to Editor")}</Button>
+            <p>{t("Swagger UI keeps its own interface language. External $refs and Try-it-out can send network requests.")}</p>
             <Card styles={{ body: { padding: 0, overflow: "hidden", borderRadius: 8 } }}>
                 <div style={{ padding: 8 }}>
                     {parsedSpec ? (
-                        <SwaggerUI
+                        <div dir="ltr"><SwaggerUI
                             spec={parsedSpec}
                             tryItOutEnabled
                             displayRequestDuration
@@ -146,9 +152,9 @@ function SwaggerViewer({ spec, onBack }: { spec: string; onBack: () => void }) {
                             filter
                             deepLinking
                             supportedSubmitMethods={["get", "post", "put", "delete", "patch", "head", "options", "trace"]}
-                        />
+                        /></div>
                     ) : (
-                        <div style={{ padding: 40, textAlign: "center" }}>Invalid spec</div>
+                        <div style={{ padding: 40, textAlign: "center" }}>{t("Invalid spec")}</div>
                     )}
                 </div>
             </Card>
@@ -157,23 +163,31 @@ function SwaggerViewer({ spec, onBack }: { spec: string; onBack: () => void }) {
 }
 
 export default function SwaggerPage() {
+    const { t } = useLanguage();
+    const translateRef = useRef(t);
+    useEffect(() => { translateRef.current = t; }, [t]);
+    const notice = (source: string, values?: Record<string, string | number>) => translateRef.current(source, values);
+
   const { message } = App.useApp();
   const [spec, setSpec] = useState(SAMPLE_SPEC);
   const [mode, setMode] = useState<"edit" | "view">("edit");
+  const [validationError, setValidationError] = useState("");
 
   const handleView = () => {
     try {
-      JSON.parse(spec);
+      if (!isRecord(parseStructuredData(spec))) throw new Error("OpenAPI document must be an object.");
+      setValidationError("");
       setMode("view");
-    } catch {
-      message.error("Invalid JSON/OpenAPI spec");
+    } catch (error) {
+      setValidationError(error instanceof Error ? error.message : String(error));
+      message.error(notice("Invalid JSON/YAML OpenAPI document"));
     }
   };
 
   return (
     <ToolPageLayout
-      title="Swagger / OpenAPI Viewer"
-      description="Paste or upload an OpenAPI spec and get interactive docs"
+      title={t("Swagger / OpenAPI Viewer")}
+      description={t("Paste or upload an OpenAPI spec and get interactive docs")}
       icon={<ApiOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
       color="#52c41a"
       learnMore={{
@@ -206,22 +220,24 @@ export default function SwaggerPage() {
     >
       {mode === "edit" ? (
         <>
+          {validationError && <Alert type="error" showIcon title={t("Invalid JSON/YAML OpenAPI document")} description={<pre dir="ltr" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{validationError}</pre>} style={{ marginBottom: 16 }} />}
           <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
-            <Button type="primary" onClick={handleView}>Render Docs</Button>
+            <Button type="primary" onClick={handleView}>{t("Render Docs")}</Button>
             <Upload
               accept=".json,.yaml,.yml"
               showUploadList={false}
               beforeUpload={async (file) => {
                 const text = await file.text();
                 setSpec(text);
+                setValidationError("");
                 return false;
               }}
             >
-              <Button icon={<UploadOutlined />}>Upload Spec</Button>
+              <Button icon={<UploadOutlined />}>{t("Upload Spec")}</Button>
             </Upload>
           </div>
-          <Card size="small" title="OpenAPI / Swagger Spec (JSON)" styles={{ body: { padding: 0 } }}>
-            <CodeEditor value={spec} onChange={setSpec} language="json" height="550px" />
+          <Card size="small" title={t("OpenAPI / Swagger Spec (JSON or YAML)")} styles={{ body: { padding: 0 } }}>
+            <CodeEditor value={spec} onChange={(value) => { setSpec(value); setValidationError(""); }} language="json" height="550px" />
           </Card>
         </>
       ) : (

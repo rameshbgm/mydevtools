@@ -1,0 +1,201 @@
+{
+  "objective": "Implement every product-review recommendation, refresh dependencies, update release notes, improve measured performance, verify behavior and a clean production build; do not commit or push.",
+  "started": "2026-10-18",
+  "requirements": [
+    {
+      "id": "validation",
+      "requirement": "Full JSON Schema dialect validation; OpenAPI schema-aware compatibility and explicit coverage",
+      "status": "complete",
+      "evidence": [
+        "Ajv dialect/unknown-rule/reference regression tests pass. Production browser worker rejects 5 under oneOf, accepts 10 and reports missing references without a validity claim. OpenAPI selected request/response constraints and references tested; coverage is explicit."
+      ]
+    },
+    {
+      "id": "privacy",
+      "requirement": "Accurate landing/catalog/SEO boundaries, no API caching, credential-redacted exports",
+      "status": "complete",
+      "evidence": [
+        "Data-boundary labels and accurate privacy copy added. Redaction regressions and browser preview passed; API responses use no-store, private. API/auth/RSC service-worker exclusions passed. Redaction remains best effort."
+      ]
+    },
+    {
+      "id": "pwa",
+      "requirement": "Single valid manifest, offline verification and update behavior",
+      "status": "complete",
+      "evidence": [
+        "Single manifest and icons return 200. Browser update/reload passed. With the localhost origin stopped, a visited Trace Context tool reloaded and computed results. Cache cloning and visited-asset coverage fixed; uncached/network features still need connectivity."
+      ]
+    },
+    {
+      "id": "accessibility",
+      "requirement": "Canonical native links, keyboard navigation, accessible states and responsive themes",
+      "status": "complete",
+      "evidence": [
+        "Native canonical links, keyboard command navigation, lazy bookmarks and accessible names verified. Light/dark desktop and 390 px mobile layouts inspected without horizontal overflow. Final Lighthouse accessibility score 100 on desktop and simulated mobile."
+      ]
+    },
+    {
+      "id": "protocols",
+      "requirement": "MCP 2026-07-28 modern plus legacy lifecycle and A2A 1.0 plus labeled older versions with fixtures",
+      "status": "complete",
+      "evidence": [
+        "Current/legacy MCP fixtures, A2A 1.0/0.3 request and result adapters, streaming artifacts and CRLF framing pass. Real browser MCP discovery + tools/call and A2A one-shot/streaming succeeded against a localhost fixture."
+      ]
+    },
+    {
+      "id": "references",
+      "requirement": "Current verified LLM metadata and tokenization scope, UUIDv7, OAuth/JWT BCP, IANA HTTP names/registrations, OpenAPI 3.2.1 and RFC dates",
+      "status": "complete",
+      "evidence": [
+        "Selected October model families and pricing updated from official sources; historical rows marked unverified. API counts are opt-in/direct with page-memory keys; mock response/contract tests pass. Added RFC 9700/8725, corrected RFC 9457 date, IANA 413/418/422 and temporary 104, UUIDv7."
+      ]
+    },
+    {
+      "id": "workflows",
+      "requirement": "Saved local executable workflows with fixture/settings support using existing tools",
+      "status": "complete",
+      "evidence": [
+        "Production browser decoded Base64, extracted JSONPath, saved/pinned a public fixture and reran the same output after reload."
+      ]
+    },
+    {
+      "id": "smart-paste",
+      "requirement": "Explicit local paste detection and task-oriented search",
+      "status": "complete",
+      "evidence": [
+        "Unit detection regressions pass; explicit browser paste suggested JSON tools. Catalog and lazy command search find task aliases."
+      ]
+    },
+    {
+      "id": "redaction",
+      "requirement": "HAR/log redactor with preview and export",
+      "status": "complete",
+      "evidence": [
+        "JSON/HAR/log credential and custom-field regressions pass; production preview redacts Authorization header and custom email."
+      ]
+    },
+    {
+      "id": "webhooks",
+      "requirement": "Local webhook signature debugger preserving exact request body",
+      "status": "complete",
+      "evidence": [
+        "Four signature schemes, timestamp tolerance and exact body tests pass; browser guide fixture verifies and one-space tamper fails. UTF-8 file reader preserves BOM and rejects invalid UTF-8."
+      ]
+    },
+    {
+      "id": "uuid",
+      "requirement": "UUIDv4/v7 generation, version and timestamp inspection",
+      "status": "complete",
+      "evidence": [
+        "v4/v7, ordering, timestamps, limits tested; browser generated v7 IDs and decoded the current millisecond timestamp."
+      ]
+    },
+    {
+      "id": "traces",
+      "requirement": "Trace-context parsing and generation",
+      "status": "complete",
+      "evidence": [
+        "Traceparent/tracestate unit fixtures pass; browser returns sampled IDs and rejects a zero trace ID."
+      ]
+    },
+    {
+      "id": "guides",
+      "requirement": "Runnable problem-solving guides linked to tools",
+      "status": "complete",
+      "evidence": [
+        "Five public debugging guides added with runnable JWT, signature, A2A and schema fixtures, expected results and primary links. Signed fixture passed in browser and failed after one-space modification."
+      ]
+    },
+    {
+      "id": "maintenance",
+      "requirement": "Shared provenance/version/freshness records and reviewed update-check automation",
+      "status": "complete",
+      "evidence": [
+        "Shared source/version/review records render on tools. Weekly read-only CI monitor uploads reports without auto-changing data. All 14 official URLs returned HTTP 200 in the live checker."
+      ]
+    },
+    {
+      "id": "workspace",
+      "requirement": "Compact returning-user workspace, pinned/recent workflows, opt-in safe draft restoration",
+      "status": "complete",
+      "evidence": [
+        "Compact preference persists; pinned workflow appears on the homepage. Production browser saved, pinned, reloaded and reran a Base64-to-JSONPath workflow. Task aliases and explicit smart paste verified. Draft persistence remains opt-in."
+      ]
+    },
+    {
+      "id": "self-host",
+      "requirement": "Reproducible container-based private deployment",
+      "status": "complete",
+      "evidence": [
+        "Final multi-stage Node 24 image built; nonroot app user, healthy healthcheck, homepage/icon/manifest 200. Managed proxy returns explicit 503 when disabled. Disposable verification container stopped after checks."
+      ]
+    },
+    {
+      "id": "performance",
+      "requirement": "Address screenshot TBT/LCP/CLS causes; measure production before and after",
+      "status": "complete",
+      "evidence": [
+        "Final HTML 207391 bytes (46.4% reduction), referenced initial JS 1450396 bytes (5.3% reduction), gzip sum 466601 bytes (5.4% reduction). Lighthouse 13.5 desktop 99/mobile 82; TBT 0/57 ms, CLS 0/0, LCP 0.93/4.92 s. Local lab results are not directly comparable to hosted screenshots. Mobile LCP remains follow-up work."
+      ]
+    },
+    {
+      "id": "dependencies",
+      "requirement": "Query latest stable versions, update manifests/lockfile, verify compatible behavior",
+      "status": "complete",
+      "evidence": [
+        "Registry-compatible upgrades locked, including Next 16.4.2 and React 19.3.1. Fresh npm ci, Node 24 Docker build, all 11 suites and typecheck passed. Lint has 0 errors/207 warnings. Audit has 10 remaining upstream advisories (6 high/4 moderate); affected node-forge RSA verification replaced with regression-tested Web Crypto. No blind breaking downgrades."
+      ]
+    },
+    {
+      "id": "release-notes",
+      "requirement": "Accurate versioned release notes for all implemented work",
+      "status": "complete",
+      "evidence": [
+        "Version 1.6.0 notes and README describe implemented behavior, network/privacy limits, offline scope, sources, self-hosting and remaining advisories."
+      ]
+    },
+    {
+      "id": "verification",
+      "requirement": "Meaningful regressions, runtime/browser checks, clean production build; no commit/push",
+      "status": "complete",
+      "evidence": [
+        "Clean .next production build passed with 143 prerendered pages. All 11 suites and typecheck passed. 139 public paths returned 200; canonical redirect and API private-target/no-store behavior verified. Real production browser protocol, schema, workflow, signature, PWA/offline, responsive/theme and navigation checks passed. No commit or push performed."
+      ]
+    },
+    {
+      "id": "competitor-followup",
+      "requirement": "After implementation, research https://mydevtools.tech/tools and list missing tools/functionality with descriptions only; do not automatically implement those competitor gaps.",
+      "status": "complete",
+      "evidence": [
+        "Compared current repository tool implementations against mydevtools.tech catalog, feature pages, changelog and public repository on 19 October 2026. Missing tools and extensions are listed with descriptions in the final response only; no competitor gaps implemented. Competitor desktop capabilities are advertised/source-reviewed, not independently runtime-tested."
+      ]
+    }
+  ],
+  "baseline": {
+    "screenshots": {
+      "performance": 33,
+      "tbtMs": 4180,
+      "lcpSeconds": 2.6,
+      "cls": 0.268,
+      "fcpSeconds": 0.5
+    },
+    "localProduction": {
+      "htmlBytes": 387241,
+      "initialJsBytes": 1532271,
+      "gzipJsBytes": 493207
+    },
+    "build": "Passed existing production build, 138 static pages"
+  },
+  "currentProcesses": {},
+  "nextWork": [],
+  "completed": "2026-10-19",
+  "validationReport": "docs/product-upgrade-validation.md",
+  "remainingLimits": [
+    "Local Lighthouse scores are not directly comparable to the supplied hosted mydevtools.in screenshots.",
+    "Mobile simulated LCP remains approximately 4.9 seconds.",
+    "Provider token endpoints verified with request/response fixtures; live authenticated provider calls were not made.",
+    "Protocol and contract inspectors have explicit coverage limits and are not full conformance suites.",
+    "Historical model rows are labeled unverified; selected current records have individual review dates.",
+    "Upstream dependency advisories remain; the affected node-forge RSA verifier is bypassed in favor of Web Crypto."
+  ]
+}

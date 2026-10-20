@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Button, Card, Typography, Input, Row, Col, Switch, Slider, Space, Tag, App } from "antd";
 import { ScissorOutlined, CopyOutlined, DownloadOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { optimizeSvg, DEFAULT_OPTS, type OptimizeOptions } from "./optimize";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -41,6 +42,7 @@ const SAMPLE_SVG = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 </svg>`;
 
 export default function SvgOptimizerPage() {
+    const { t } = useLanguage();
     const { message } = App.useApp();
     const [mounted, setMounted] = useState(false);
     const [input, setInput] = useState(SAMPLE_SVG);
@@ -56,19 +58,19 @@ export default function SvgOptimizerPage() {
 
     const copyOutput = async () => {
         await copyToClipboard(output);
-        message.success("Optimised SVG copied");
+        message.success(t("Optimised SVG copied"));
     };
 
     const downloadOutput = () => downloadText(output, "optimized.svg", "image/svg+xml");
 
     return (
         <ToolPageLayout
-            title="SVG Optimizer"
-            description="Strip editor metadata, collapse whitespace, round numeric precision — shrink SVG markup safely"
+            title={t("SVG Optimizer")}
+            description={t("Strip editor metadata, collapse whitespace, round numeric precision — shrink SVG markup safely")}
             icon={<ScissorOutlined style={{ fontSize: 24, color: "#38bdf8" }} />}
             color="#38bdf8"
             learnMore={{
-                whatIs: "SVG files exported from design tools carry a lot of editor metadata, redundant attributes, generous decimal precision, and pretty-printing whitespace. SVG Optimizer rewrites the markup with safe transformations that don't change rendered output.",
+                whatIs: "SVG files exported from design tools carry a lot of editor metadata, redundant attributes, generous decimal precision, and pretty-printing whitespace. SVG Optimizer rewrites markup with configurable transformations. Compare the result visually; numeric rounding and metadata removal can affect the image.",
                 whyUse: "A typical exported SVG is 5–10× larger than its rendered information requires. Trimming it improves page load, reduces bundle size, and (importantly) makes diffs readable when SVGs are committed to git.",
                 howToUse: [
                     "Paste your SVG markup on the left",
@@ -79,7 +81,7 @@ export default function SvgOptimizerPage() {
                 tips: [
                     "Higher decimal places preserve fidelity but cost bytes — 2–3 is usually invisible",
                     "Editor metadata stripping removes inkscape/sodipodi/sketch attributes that no browser uses",
-                    "If the rendered preview changes, lower the precision — that's almost always the cause",
+                    "If the preview changes, increase decimal places or disable the relevant transformation and compare again.",
                 ],
                 useCases: [
                     "Shrinking SVG assets shipped to production",
@@ -91,36 +93,36 @@ export default function SvgOptimizerPage() {
         >
             <Row gutter={[16, 16]}>
                 <Col xs={24} lg={16}>
-                    <Card size="small" title={<><Text strong>Input</Text> <Tag style={{ marginLeft: 8 }}>{formatBytes(inSize)}</Tag></>}>
-                        <TextArea
+                    <Card size="small" title={<><Text strong>{t("Input")}</Text> <Tag style={{ marginLeft: 8 }}>{formatBytes(inSize)}</Tag></>}>
+                        <TextArea aria-label={t("Input SVG markup")}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             autoSize={{ minRows: 10, maxRows: 16 }}
-                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
+                            dir="ltr" style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16, textAlign: "left" }}
                         />
                     </Card>
 
                     <Card size="small" style={{ marginTop: 16 }} title={
                         <Space>
-                            <Text strong>Output</Text>
+                            <Text strong>{t("Output")}</Text>
                             <Tag color="green">{formatBytes(outSize)}</Tag>
                             <Tag color="blue">−{savings.toFixed(1)}%</Tag>
-                            <Button type="text" size="small" icon={<CopyOutlined />} onClick={copyOutput}>Copy</Button>
-                            <Button type="text" size="small" icon={<DownloadOutlined />} onClick={downloadOutput}>Download</Button>
+                            <Button type="text" size="small" icon={<CopyOutlined />} onClick={copyOutput}>{t("Copy")}</Button>
+                            <Button type="text" size="small" icon={<DownloadOutlined />} onClick={downloadOutput}>{t("Download")}</Button>
                         </Space>
                     }>
-                        <TextArea
+                        <TextArea aria-label={t("Optimized SVG markup")}
                             value={output}
                             readOnly
                             autoSize={{ minRows: 10, maxRows: 16 }}
-                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
+                            dir="ltr" style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16, textAlign: "left" }}
                         />
                     </Card>
                 </Col>
 
                 <Col xs={24} lg={8}>
                     {mounted && (
-                        <Card size="small" title="Options">
+                        <Card size="small" title={t("Options")}>
                             <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
                                 {([
                                     ["stripComments", "Strip comments"],
@@ -131,15 +133,15 @@ export default function SvgOptimizerPage() {
                                     ["roundNumbers", "Round numeric precision"],
                                 ] as [keyof OptimizeOptions, string][]).map(([k, label]) => (
                                     <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        <Text>{label}</Text>
-                                        <Switch
+                                        <Text>{t(label)}</Text>
+                                        <Switch aria-label={t(label)}
                                             checked={opts[k] as boolean}
                                             onChange={(v) => setOpts((s) => ({ ...s, [k]: v }))}
                                         />
                                     </div>
                                 ))}
                                 <div>
-                                    <Text>Decimal places: <Tag>{opts.decimalPlaces}</Tag></Text>
+                                    <Text>{t("Decimal places:")}<Tag>{opts.decimalPlaces}</Tag></Text>
                                     <Slider
                                         min={0}
                                         max={6}
@@ -152,12 +154,10 @@ export default function SvgOptimizerPage() {
                         </Card>
                     )}
 
-                    <Card size="small" title="Preview" style={{ marginTop: 16 }}>
-                        <Paragraph type="secondary" style={{ fontSize: 12 }}>
-                            Rendered from the optimised output. Both panels should look identical.
-                        </Paragraph>
+                    <Card size="small" title={t("Preview")} style={{ marginTop: 16 }}>
+                        <Paragraph type="secondary" style={{ fontSize: 12 }}>{t("Rendered from the optimized output. Compare it with the original.")}</Paragraph>
                         <iframe
-                            title="Optimized SVG preview"
+                            title={t("Optimized SVG preview")}
                             sandbox=""
                             referrerPolicy="no-referrer"
                             srcDoc={output}

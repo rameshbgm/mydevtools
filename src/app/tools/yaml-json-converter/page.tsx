@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
+
 import React, { useState, useMemo } from "react";
 import { Card, Row, Col, Button, Space, Alert, Segmented } from "antd";
 import { SwapOutlined, CopyOutlined, ClearOutlined } from "@ant-design/icons";
@@ -77,6 +79,7 @@ interface ShareState { mode: "yaml-to-json" | "json-to-yaml"; yamlInput: string;
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "yaml-json-converter", version: 1 };
 
 export default function YamlJsonConverterPage() {
+    const { t } = useLanguage();
     const [mode, setMode] = useState<"yaml-to-json" | "json-to-yaml">("yaml-to-json");
     const [yamlInput, setYamlInput] = useState(SAMPLE_YAML);
     const [jsonInput, setJsonInput] = useState(SAMPLE_JSON);
@@ -105,7 +108,7 @@ export default function YamlJsonConverterPage() {
         }
     }, [input, mode]);
 
-    const copyOutput = () => copyToClipboard(output, `${mode === "yaml-to-json" ? "JSON" : "YAML"} copied!`);
+    const copyOutput = () => copyToClipboard(output, t(mode === "yaml-to-json" ? "JSON copied!" : "YAML copied!"));
 
     const swapContent = () => {
         if (output && !conversionError) {
@@ -126,8 +129,8 @@ export default function YamlJsonConverterPage() {
 
     return (
         <ToolPageLayout
-            title="YAML ↔ JSON Converter"
-            description="Convert between YAML and JSON formats"
+            title={t("YAML ↔ JSON Converter")}
+            description={t("Convert between YAML and JSON formats")}
             icon={<SwapOutlined style={{ fontSize: 24, color: "#cb171e" }} />}
             color="#cb171e"
             learnMore={{
@@ -169,14 +172,14 @@ export default function YamlJsonConverterPage() {
                             value={mode}
                             onChange={(v) => setMode(v as "yaml-to-json" | "json-to-yaml")}
                             options={[
-                                { value: "yaml-to-json", label: "YAML → JSON" },
-                                { value: "json-to-yaml", label: "JSON → YAML" },
+                                { value: "yaml-to-json", label: t("YAML → JSON") },
+                                { value: "json-to-yaml", label: t("JSON → YAML") },
                             ]}
                             size="large"
                         />
                         {output && !conversionError && (
                             <Button icon={<SwapOutlined />} onClick={swapContent}>
-                                Swap
+                                {t("Swap")}
                             </Button>
                         )}
                         <ShareButton schema={SHARE_SCHEMA} getState={() => ({ mode, yamlInput, jsonInput })} size="middle" />
@@ -186,10 +189,10 @@ export default function YamlJsonConverterPage() {
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title={mode === "yaml-to-json" ? "YAML Input" : "JSON Input"}
+                        title={t(mode === "yaml-to-json" ? "YAML Input" : "JSON Input")}
                         extra={
                             <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
-                                Clear
+                                {t("Clear")}
                             </Button>
                         }
                     >
@@ -204,17 +207,17 @@ export default function YamlJsonConverterPage() {
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title={mode === "yaml-to-json" ? "JSON Output" : "YAML Output"}
+                        title={t(mode === "yaml-to-json" ? "JSON Output" : "YAML Output")}
                         extra={
                             output && (
                                 <Button size="small" icon={<CopyOutlined />} onClick={copyOutput}>
-                                    Copy
+                                    {t("Copy")}
                                 </Button>
                             )
                         }
                     >
                         {conversionError ? (
-                            <Alert type="error" title={conversionError} showIcon style={{ marginBottom: 16 }} />
+                            <Alert type="error" title={t("Conversion failed. Check the input and options, then try again.")} description={<bdi dir="ltr">{conversionError}</bdi>} showIcon style={{ marginBottom: 16 }} />
                         ) : null}
                         <CodeEditor
                             value={output}

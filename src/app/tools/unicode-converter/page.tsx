@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, Segmented, Table, Tabs } from "antd";
+import { Card, Input, Typography, Row, Col, Button, Space, Segmented, Table, Alert } from "antd";
 import { TranslationOutlined, CopyOutlined, SwapOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { copyToClipboard } from "@/lib/clipboard";
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 const { TextArea } = Input;
 
 type ConversionType = "escape" | "codepoints" | "utf8hex" | "utf16";
@@ -24,9 +25,11 @@ function textToUnicodeEscape(text: string): string {
 }
 
 function unicodeEscapeToText(escaped: string): string {
-    return escaped
-        .replace(/\\u\{([0-9a-fA-F]+)\}/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
-        .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    // One pass preserves escape-like text introduced by a decoded backslash.
+    return escaped.replace(/\\u(?:\{([0-9a-fA-F]+)\}|([0-9a-fA-F]{4}))/g,
+        (_, codePoint: string | undefined, codeUnit: string | undefined) => codePoint !== undefined
+            ? String.fromCodePoint(parseInt(codePoint, 16))
+            : String.fromCharCode(parseInt(codeUnit!, 16)));
 }
 
 function textToCodePoints(text: string): string {
@@ -64,12 +67,11 @@ function utf8HexToText(hex: string): string {
 }
 
 function textToUtf16(text: string): string {
-    return Array.from(text)
-        .map((char) => {
-            const code = char.charCodeAt(0);
-            return code.toString(16).toUpperCase().padStart(4, "0");
-        })
-        .join(" ");
+    // UTF-16 represents supplementary characters with two code units. Iterate
+    // the original units rather than the string's Unicode code-point iterator.
+    return Array.from({ length: text.length }, (_, index) =>
+        text.charCodeAt(index).toString(16).toUpperCase().padStart(4, "0")
+    ).join(" ");
 }
 
 function utf16ToText(hex: string): string {
@@ -81,14 +83,15 @@ function utf16ToText(hex: string): string {
 }
 
 export default function UnicodeConverterPage() {
+    const { t } = useLanguage();
     const [input, setInput] = useState("Hello, World! 🌍");
     const [mode, setMode] = useState<"encode" | "decode">("encode");
     const [conversionType, setConversionType] = useState<ConversionType>("escape");
 
-    const output = useMemo(() => {
-        if (!input) return "";
+    const conversion = useMemo(() => {
+        const convert = () => {
+            if (!input) return "";
 
-        try {
             if (mode === "encode") {
                 switch (conversionType) {
                     case "escape": return textToUnicodeEscape(input);
@@ -104,11 +107,12 @@ export default function UnicodeConverterPage() {
                     case "utf16": return utf16ToText(input);
                 }
             }
-        } catch (e) {
-            return "Error: Invalid input format";
-        }
-        return "";
+            return "";
+        };
+        try { return { output: convert(), error: null }; }
+        catch (error) { return { output: "", error: error instanceof Error ? error.message : "" }; }
     }, [input, mode, conversionType]);
+    const { output, error } = conversion;
 
     const charAnalysis = useMemo(() => {
         if (!input || mode !== "encode") return [];
@@ -124,7 +128,7 @@ export default function UnicodeConverterPage() {
         }));
     }, [input, mode]);
 
-    const copyOutput = () => copyToClipboard(output, "Copied to clipboard!");
+    const copyOutput = () => copyToClipboard(output, t("Copied to clipboard!"));
 
     const swapContent = () => {
         setInput(output);
@@ -133,8 +137,8 @@ export default function UnicodeConverterPage() {
 
     return (
         <ToolPageLayout
-            title="Unicode Converter"
-            description="Convert text to/from Unicode escape sequences, code points, and UTF-8 hex"
+            title={t("Unicode Converter")}
+            description={t("Convert text to/from Unicode escape sequences, code points, and UTF-8 hex")}
             icon={<TranslationOutlined style={{ fontSize: 24, color: "#13c2c2" }} />}
             color="#13c2c2"
             learnMore={{
@@ -160,6 +164,7 @@ export default function UnicodeConverterPage() {
                 ]
             }}
         >
+            {error !== null && <Alert type="error" showIcon title={t("Invalid Unicode input. Check the selected format and code point range, then try again.")} description={error && <pre dir="ltr" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{error}</pre>} style={{ marginBottom: 16 }} />}
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card>
@@ -168,49 +173,53 @@ export default function UnicodeConverterPage() {
                                 value={mode}
                                 onChange={(v) => setMode(v as "encode" | "decode")}
                                 options={[
-                                    { value: "encode", label: "Text → Unicode" },
-                                    { value: "decode", label: "Unicode → Text" },
+                                    { value: "encode", label: t("Text → Unicode") },
+                                    { value: "decode", label: t("Unicode → Text") },
                                 ]}
                             />
                             <Segmented
                                 value={conversionType}
                                 onChange={(v) => setConversionType(v as ConversionType)}
                                 options={[
-                                    { value: "escape", label: "\\uXXXX" },
-                                    { value: "codepoints", label: "U+XXXX" },
-                                    { value: "utf8hex", label: "UTF-8 Hex" },
-                                    { value: "utf16", label: "UTF-16" },
+                                    { value: "escape", label: t("\\uXXXX") },
+                                    { value: "codepoints", label: t("U+XXXX") },
+                                    { value: "utf8hex", label: t("UTF-8 Hex") },
+                                    { value: "utf16", label: t("UTF-16") },
                                 ]}
                             />
                             <Button icon={<SwapOutlined />} onClick={swapContent}>
-                                Swap
-                            </Button>
+                                {t("Swap")}
+                                </Button>
                         </Space>
 
                         <Row gutter={16}>
-                            <Col span={12}>
+                            <Col xs={24} md={12}>
                                 <Text strong style={{ display: "block", marginBottom: 8 }}>
-                                    {mode === "encode" ? "Plain Text" : "Unicode Format"}
+                                    {mode === "encode" ? t("Plain Text") : t("Unicode Format")}
                                 </Text>
                                 <TextArea
+                                    dir={mode === "encode" ? "auto" : "ltr"}
+                                    aria-label={t("Input")}
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     placeholder={mode === "encode"
-                                        ? "Enter text to convert..."
-                                        : "Enter Unicode to decode..."}
+                                        ? t("Enter text to convert...")
+                                        : t("Enter Unicode to decode...")}
                                     rows={8}
                                 />
                             </Col>
-                            <Col span={12}>
+                            <Col xs={24} md={12}>
                                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                                     <Text strong>
-                                        {mode === "encode" ? "Unicode Format" : "Plain Text"}
+                                        {mode === "encode" ? t("Unicode Format") : t("Plain Text")}
                                     </Text>
                                     <Button size="small" icon={<CopyOutlined />} onClick={copyOutput}>
-                                        Copy
-                                    </Button>
+                                        {t("Copy")}
+                                        </Button>
                                 </div>
                                 <TextArea
+                                    dir={mode === "encode" ? "ltr" : "auto"}
+                                    aria-label={t("Output")}
                                     value={output}
                                     readOnly
                                     rows={8}
@@ -221,7 +230,7 @@ export default function UnicodeConverterPage() {
                     </Card>
 
                     {mode === "encode" && charAnalysis.length > 0 && charAnalysis.length < 50 && (
-                        <Card title="Character Analysis" style={{ marginTop: 16 }}>
+                        <Card title={t("Character Analysis")} style={{ marginTop: 16 }}>
                             <Table
                                 size="small"
                                 pagination={false}
@@ -229,27 +238,27 @@ export default function UnicodeConverterPage() {
                                 dataSource={charAnalysis}
                                 columns={[
                                     {
-                                        title: "Char",
+                                        title: t("Char"),
                                         dataIndex: "char",
                                         width: 60,
-                                        render: (text) => <Text code style={{ fontSize: 16 }}>{text}</Text>
+                                        render: (text) => <Text code dir="ltr" style={{ fontSize: 16 }}>{text}</Text>
                                     },
                                     {
-                                        title: "Code Point",
+                                        title: t("Code Point"),
                                         dataIndex: "hex",
                                         width: 100,
-                                        render: (text) => <Text code>{text}</Text>
+                                        render: (text) => <Text code dir="ltr">{text}</Text>
                                     },
                                     {
-                                        title: "Escape",
+                                        title: t("Escape"),
                                         dataIndex: "escape",
                                         width: 120,
-                                        render: (text) => <Text code style={{ fontSize: 11 }}>{text}</Text>
+                                        render: (text) => <Text code dir="ltr" style={{ fontSize: 11 }}>{text}</Text>
                                     },
                                     {
-                                        title: "Name",
+                                        title: t("Name"),
                                         dataIndex: "name",
-                                        render: (text) => <Text type="secondary" style={{ fontSize: 11 }}>{text}</Text>
+                                        render: (text) => <Text type="secondary" style={{ fontSize: 11 }}>{t(text)}</Text>
                                     },
                                 ]}
                             />
@@ -258,36 +267,36 @@ export default function UnicodeConverterPage() {
                 </Col>
 
                 <Col xs={24} lg={8}>
-                    <Card title="Format Reference">
+                    <Card title={t("Format Reference")}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                             <div style={{ padding: 12, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
-                                <Text strong>\\uXXXX (Escape)</Text>
+                                <Text strong>{t("\\\\uXXXX (Escape)")}</Text>
                                 <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
-                                    JavaScript/JSON Unicode escape. E.g., \u0041 = A
-                                </Text>
+                                    {t("JavaScript/JSON Unicode escape. E.g., \\u0041 = A")}
+                                    </Text>
                             </div>
                             <div style={{ padding: 12, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
-                                <Text strong>U+XXXX (Code Points)</Text>
+                                <Text strong>{t("U+XXXX (Code Points)")}</Text>
                                 <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
-                                    Standard Unicode notation. E.g., U+0041 = A
-                                </Text>
+                                    {t("Standard Unicode notation. E.g., U+0041 = A")}
+                                    </Text>
                             </div>
                             <div style={{ padding: 12, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
-                                <Text strong>UTF-8 Hex</Text>
+                                <Text strong>{t("UTF-8 Hex")}</Text>
                                 <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
-                                    Raw UTF-8 bytes in hexadecimal. E.g., 41 = A
-                                </Text>
+                                    {t("Raw UTF-8 bytes in hexadecimal. E.g., 41 = A")}
+                                    </Text>
                             </div>
                             <div style={{ padding: 12, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
-                                <Text strong>UTF-16</Text>
+                                <Text strong>{t("UTF-16")}</Text>
                                 <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
-                                    UTF-16 code units. E.g., 0041 = A
-                                </Text>
+                                    {t("UTF-16 code units. E.g., 0041 = A")}
+                                    </Text>
                             </div>
                         </div>
                     </Card>
 
-                    <Card title="Quick Examples" style={{ marginTop: 16 }}>
+                    <Card title={t("Quick Examples")} style={{ marginTop: 16 }}>
                         <Space wrap>
                             {["Hello", "你好", "🌍🚀", "→↓←↑", "α β γ δ"].map((ex) => (
                                 <Button

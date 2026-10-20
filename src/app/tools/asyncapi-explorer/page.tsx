@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage } from "@/components/LanguageProvider";
 
 import { useMemo, useState } from "react";
 import { Alert, Card, Col, Descriptions, Input, Row, Space, Tag, Typography } from "antd";
@@ -31,6 +32,8 @@ components:
       name: OrderCreated`;
 
 export default function AsyncApiExplorerPage() {
+    const { t } = useLanguage();
+
     const [document, setDocument] = useState(SAMPLE);
     const result = useMemo(() => {
         try { return { summary: inspectAsyncApi(parseStructuredData(document)), error: null }; }
@@ -38,8 +41,8 @@ export default function AsyncApiExplorerPage() {
     }, [document]);
     return (
         <ToolPageLayout
-            title="AsyncAPI Explorer"
-            description="Inspect message-driven API contracts for channels, operations, servers, and messages"
+            title={t("AsyncAPI Explorer")}
+            description={t("Inspect message-driven API contracts for channels, operations, servers, and messages")}
             icon={<ApartmentOutlined style={{ fontSize: 24, color: "#722ed1" }} />}
             color="#722ed1"
             learnMore={{
@@ -51,8 +54,8 @@ export default function AsyncApiExplorerPage() {
             }}
         >
             <Row gutter={[16, 16]}>
-                <Col xs={24} lg={14}><Card title="AsyncAPI document"><TextArea aria-label="AsyncAPI JSON or YAML document" value={document} onChange={(event) => setDocument(event.target.value)} autoSize={{ minRows: 24, maxRows: 40 }} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }} /></Card></Col>
-                <Col xs={24} lg={10}><Card title="Document summary">{result.error ? <Alert type="error" showIcon title="Invalid document" description={result.error} /> : result.summary && <Space orientation="vertical" size="middle" style={{ width: "100%" }}><Descriptions bordered size="small" column={1} styles={{ label: { width: 130 } }}><Descriptions.Item label="Title">{result.summary.title}</Descriptions.Item><Descriptions.Item label="AsyncAPI"><Tag color="purple">{result.summary.version}</Tag></Descriptions.Item><Descriptions.Item label="Channels">{result.summary.channels}</Descriptions.Item><Descriptions.Item label="Operations">{result.summary.operations}</Descriptions.Item><Descriptions.Item label="Servers">{result.summary.servers}</Descriptions.Item><Descriptions.Item label="Messages">{result.summary.messages}</Descriptions.Item></Descriptions>{result.summary.issues.length === 0 ? <Alert type="success" showIcon title="Core document fields are present" /> : result.summary.issues.map((issue) => <Alert key={issue} type="warning" showIcon title={issue} />)}<Text type="secondary">Your document is parsed in this browser only.</Text></Space>}</Card></Col>
+                <Col xs={24} lg={14}><Card title={t("AsyncAPI document")}><TextArea dir="ltr" aria-label={t("AsyncAPI JSON or YAML document")} value={document} onChange={(event) => setDocument(event.target.value)} autoSize={{ minRows: 24, maxRows: 40 }} style={{ direction: "ltr", textAlign: "left",  fontFamily: "var(--font-geist-mono)", fontSize: 16 }} /></Card></Col>
+                <Col xs={24} lg={10}><Card title={t("Document summary")}>{result.error ? <Alert type="error" showIcon title={t("Invalid document")} description={result.error} /> : result.summary && <Space orientation="vertical" size="middle" style={{ width: "100%" }}><Descriptions bordered size="small" column={1} styles={{ label: { width: 130 } }}><Descriptions.Item label={t("Title")}>{result.summary.title}</Descriptions.Item><Descriptions.Item label="AsyncAPI"><Tag color="purple">{result.summary.version}</Tag></Descriptions.Item><Descriptions.Item label={t("Channels")}>{result.summary.channels}</Descriptions.Item><Descriptions.Item label={t("Operations")}>{result.summary.operations}</Descriptions.Item><Descriptions.Item label={t("Servers")}>{result.summary.servers}</Descriptions.Item><Descriptions.Item label={t("Messages")}>{result.summary.messages}</Descriptions.Item></Descriptions>{result.summary.issues.length === 0 ? <Alert type="success" showIcon title={t("Core document fields are present")} /> : result.summary.issues.map((issue) => <Alert key={issue} type="warning" showIcon title={t(issue)} />)}<Text type="secondary">{t("Your document is parsed in this browser only.")}</Text></Space>}</Card></Col>
             </Row>
         </ToolPageLayout>
     );

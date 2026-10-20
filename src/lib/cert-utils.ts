@@ -624,7 +624,7 @@ function derEcdsaToRaw(sig: Uint8Array, namedCurve: string): Uint8Array {
     return result;
 }
 
-/** Verify a certificate's signature using Web Crypto (supports ECDSA and Ed25519). */
+/** Verify a certificate's signature using Web Crypto (supports RSA PKCS#1 v1.5, ECDSA and Ed25519). */
 async function verifyWithWebCrypto(
     child: ParsedCertificate,
     parent: ParsedCertificate
@@ -652,6 +652,15 @@ async function verifyWithWebCrypto(
     const parentAlgParts  = (parentSpki.value[0] as forge.asn1.Asn1).value as forge.asn1.Asn1[];
     const parentPkAlgOid  = forge.asn1.derToOid(parentAlgParts[0].value as string);
 
+    // Do not use node-forge RSA verification: GHSA-86w9-cpqp-85rv has no patched release.
+    if (parentPkAlgOid === "1.2.840.113549.1.1.1") {
+        const hashes: Record<string, string> = { "1.2.840.113549.1.1.5": "SHA-1", "1.2.840.113549.1.1.11": "SHA-256", "1.2.840.113549.1.1.12": "SHA-384", "1.2.840.113549.1.1.13": "SHA-512" };
+        const hash = hashes[sigAlgOid];
+        if (!hash) throw new Error(`Unsupported RSA signature algorithm ${sigAlgOid}; validity is not determined.`);
+        const pubKey = await crypto.subtle.importKey("spki", parentSpkiDer, { name: "RSASSA-PKCS1-v1_5", hash }, false, ["verify"]);
+        return crypto.subtle.verify("RSASSA-PKCS1-v1_5", pubKey, sigBytes, tbsCertBytes);
+    }
+
     // ECDSA
     if (parentPkAlgOid === "1.2.840.10045.2.1") {
         const curveOid = forge.asn1.derToOid(parentAlgParts[1].value as string);
@@ -665,8 +674,9 @@ async function verifyWithWebCrypto(
             "1.2.840.10045.4.3.3": "SHA-384",
             "1.2.840.10045.4.3.4": "SHA-512",
         };
-        const namedCurve = CURVE_MAP[curveOid] ?? "P-256";
-        const hash       = HASH_MAP[sigAlgOid]  ?? "SHA-256";
+        const namedCurve = CURVE_MAP[curveOid];
+        const hash = HASH_MAP[sigAlgOid];
+        if (!namedCurve || !hash) throw new Error("Unsupported ECDSA curve or hash; validity is not determined.");
 
         const pubKey = await crypto.subtle.importKey(
             "spki", parentSpkiDer, { name: "ECDSA", namedCurve }, false, ["verify"]
@@ -686,18 +696,8 @@ async function verifyWithWebCrypto(
     throw new Error(`Unsupported public key algorithm OID: ${parentPkAlgOid}`);
 }
 
-/** Verify child is signed by parent — tries forge (RSA) then Web Crypto (ECDSA/Ed25519). */
+/** Verify signatures with the platform implementation, including strict RSA padding/digest checks. */
 async function verifySignature(child: ParsedCertificate, parent: ParsedCertificate): Promise<boolean> {
-    if (child.raw && parent.raw) {
-        try {
-            return parent.raw.verify(child.raw);
-        } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
-            if (!msg.includes("OID is not RSA") && !msg.includes("Cannot read public key")) {
-                throw e;
-            }
-        }
-    }
     return verifyWithWebCrypto(child, parent);
 }
 

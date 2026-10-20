@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, Alert, Table, Tag, Select } from "antd";
 import { NodeIndexOutlined, CopyOutlined, ClearOutlined, PlayCircleOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -117,6 +118,7 @@ function evaluateXPath(xml: string, xpath: string): XPathResult {
 }
 
 export default function XPathTesterPage() {
+    const { t, direction } = useLanguage();
     const [xml, setXml] = useState(SAMPLE_XML);
     const [xpath, setXpath] = useState("//book/title");
 
@@ -124,13 +126,13 @@ export default function XPathTesterPage() {
 
     const copyResults = () => {
         const text = result.results.map((r) => r.value).join("\n");
-        copyToClipboard(text, "Results copied!");
+        copyToClipboard(text, t("Results copied!"));
     };
 
     return (
         <ToolPageLayout
-            title="XPath Tester"
-            description="Test and evaluate XPath expressions against XML"
+            title={t("XPath Tester")}
+            description={t("Test and evaluate XPath expressions against XML")}
             icon={<NodeIndexOutlined style={{ fontSize: 24, color: "#722ed1" }} />}
             color="#722ed1"
             learnMore={{
@@ -156,17 +158,16 @@ export default function XPathTesterPage() {
                 ]
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row dir={direction} gutter={[24, 24]}>
                 <Col xs={24} lg={14}>
                     <Card
-                        title="XML Document"
+                        title={t("XML Document")}
                         extra={
-                            <Button size="small" icon={<ClearOutlined />} onClick={() => setXml("")}>
-                                Clear
-                            </Button>
+                            <Button size="small" icon={<ClearOutlined />} onClick={() => setXml("")}>{t("Clear")}</Button>
                         }
                     >
                         <CodeEditor
+                            ariaLabel={t("XML input editor")}
                             value={xml}
                             onChange={(val) => setXml(val || "")}
                             language="xml"
@@ -174,13 +175,14 @@ export default function XPathTesterPage() {
                         />
                     </Card>
 
-                    <Card title="XPath Expression" style={{ marginTop: 16 }}>
+                    <Card title={t("XPath Expression")} style={{ marginTop: 16 }}>
                         <Space.Compact style={{ width: "100%" }}>
                             <Input
                                 size="large"
                                 value={xpath}
                                 onChange={(e) => setXpath(e.target.value)}
-                                placeholder="Enter XPath expression..."
+                                placeholder={t("Enter XPath expression...")}
+                                aria-label={t("XPath expression")} dir="ltr"
                                 prefix={<NodeIndexOutlined />}
                             />
                         </Space.Compact>
@@ -189,23 +191,21 @@ export default function XPathTesterPage() {
                     <Card
                         title={
                             <Space>
-                                <span>Results</span>
-                                {result.success && <Tag color="purple">{result.count} match{result.count !== 1 ? "es" : ""}</Tag>}
+                                <span>{t("Results")}</span>
+                                {result.success && <Tag color="purple">{t("Matches ({count})", { count: result.count })}</Tag>}
                             </Space>
                         }
                         style={{ marginTop: 16 }}
                         extra={
                             result.results.length > 0 && (
-                                <Button size="small" icon={<CopyOutlined />} onClick={copyResults}>
-                                    Copy
-                                </Button>
+                                <Button size="small" icon={<CopyOutlined />} onClick={copyResults}>{t("Copy")}</Button>
                             )
                         }
                     >
                         {!result.success ? (
-                            <Alert type="error" title={result.error} showIcon />
+                            <Alert type="error" title={t("XPath evaluation failed")} description={<pre dir="ltr" style={{ whiteSpace: "pre-wrap", margin: 0 }}>{result.error}</pre>} showIcon />
                         ) : result.results.length === 0 ? (
-                            <Alert type="info" title="No matches found" showIcon />
+                            <Alert type="info" title={t("No matches found")} showIcon />
                         ) : (
                             <Table
                                 size="small"
@@ -218,16 +218,16 @@ export default function XPathTesterPage() {
                                         render: (_, __, index) => index + 1,
                                     },
                                     {
-                                        title: "Type",
+                                        title: t("Type"),
                                         dataIndex: "type",
                                         width: 100,
-                                        render: (type) => <Tag>{type}</Tag>,
+                                        render: (type) => <Tag>{t(type)}</Tag>,
                                     },
                                     {
-                                        title: "Value",
+                                        title: t("Value"),
                                         dataIndex: "value",
                                         render: (value) => (
-                                            <Text code style={{ fontSize: 11, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                                            <Text code dir="ltr" style={{ fontSize: 11, whiteSpace: "pre-wrap", wordBreak: "break-all", unicodeBidi: "isolate" }}>
                                                 {value.length > 200 ? value.substring(0, 200) + "..." : value}
                                             </Text>
                                         ),
@@ -239,46 +239,48 @@ export default function XPathTesterPage() {
                 </Col>
 
                 <Col xs={24} lg={10}>
-                    <Card title="XPath Examples">
+                    <Card title={t("XPath Examples")}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             {XPATH_EXAMPLES.map((ex, i) => (
-                                <div
+                                <button type="button"
                                     key={i}
                                     style={{
                                         padding: "8px 12px",
+                                        textAlign: "start", width: "100%", color: "inherit", font: "inherit",
                                         background: xpath === ex.xpath ? "rgba(114, 46, 209, 0.1)" : "rgba(0,0,0,0.02)",
                                         borderRadius: 6,
                                         cursor: "pointer",
                                         border: xpath === ex.xpath ? "1px solid #722ed1" : "1px solid transparent",
                                     }}
+                                    aria-pressed={xpath === ex.xpath}
                                     onClick={() => setXpath(ex.xpath)}
                                 >
-                                    <Text code style={{ fontSize: 12 }}>{ex.xpath}</Text>
-                                    <Text type="secondary" style={{ display: "block", fontSize: 11 }}>{ex.desc}</Text>
-                                </div>
+                                    <Text code style={{ fontSize: 12 }} dir="ltr">{ex.xpath}</Text>
+                                    <Text type="secondary" style={{ display: "block", fontSize: 11 }}>{t(ex.desc)}</Text>
+                                </button>
                             ))}
                         </div>
                     </Card>
 
-                    <Card title="XPath Syntax" style={{ marginTop: 16 }}>
+                    <Card title={t("XPath Syntax")} style={{ marginTop: 16 }}>
                         <Table
                             size="small"
                             pagination={false}
                             showHeader={false}
                             dataSource={[
-                                { expr: "/", desc: "Root node" },
-                                { expr: "//", desc: "Any descendant" },
-                                { expr: ".", desc: "Current node" },
-                                { expr: "..", desc: "Parent node" },
-                                { expr: "@", desc: "Attribute" },
-                                { expr: "*", desc: "Any element" },
-                                { expr: "[@attr]", desc: "Has attribute" },
-                                { expr: "[n]", desc: "nth element" },
-                                { expr: "text()", desc: "Text content" },
+                                { expr: "/", desc: t("Root node") },
+                                { expr: "//", desc: t("Any descendant") },
+                                { expr: ".", desc: t("Current node") },
+                                { expr: "..", desc: t("Parent node") },
+                                { expr: "@", desc: t("Attribute") },
+                                { expr: "*", desc: t("Any element") },
+                                { expr: "[@attr]", desc: t("Has attribute") },
+                                { expr: "[n]", desc: t("nth element") },
+                                { expr: "text()", desc: t("Text content") },
                             ].map((r, i) => ({ ...r, key: i }))}
                             columns={[
-                                { dataIndex: "expr", width: 80, render: (t) => <Text code>{t}</Text> },
-                                { dataIndex: "desc", render: (t) => <Text type="secondary" style={{ fontSize: 12 }}>{t}</Text> },
+                                { dataIndex: "expr", width: 80, render: (t) => <Text code dir="ltr">{t}</Text> },
+                                { dataIndex: "desc", render: (description) => <Text type="secondary" style={{ fontSize: 12 }}>{description}</Text> },
                             ]}
                         />
                     </Card>

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { toolsRegistry } from "@/lib/tools-registry";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const SAFETY_TIMEOUT_MS = 60_000;
 const MIN_VISIBLE_MS = 250;
@@ -27,6 +28,7 @@ function pickMessage(): string {
 }
 
 export default function NavigationLoader() {
+    const { t } = useLanguage();
     const pathname = usePathname();
     const { darkMode, isNavigating, setNavigating, navTargetId } = useAppStore();
     const [message, setMessage] = useState(LOADING_MESSAGES[0]);
@@ -111,7 +113,7 @@ export default function NavigationLoader() {
                     transition={{ duration: 0.18 }}
                     role="status"
                     aria-live="polite"
-                    aria-label="Loading tool"
+                    aria-label={t("Loading tool")}
                     className="wb-navload-backdrop"
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -179,8 +181,8 @@ export default function NavigationLoader() {
                             </motion.div>
                         </div>
                         <div style={{ textAlign: "center" }}>
-                            <div className="wb-navload-title">{targetTool ? targetTool.name : "Loading"}</div>
-                            <div className="wb-navload-sub">{message}</div>
+                            <div className="wb-navload-title">{t(targetTool ? targetTool.name : "Loading")}</div>
+                            <div className="wb-navload-sub">{t(message)}</div>
                         </div>
                         <div
                             style={{

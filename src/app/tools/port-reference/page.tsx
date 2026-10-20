@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import {
+    Button,
     Card,
     Input,
     Typography,
@@ -13,17 +14,19 @@ import {
     Select,
     Descriptions,
     Badge,
-    Tabs,
     Alert,
 } from "antd";
 import {
     GlobalOutlined,
     SearchOutlined,
-    InfoCircleOutlined,
+    CopyOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
+import { copyToClipboard } from "@/lib/clipboard";
+import { referenceNetworkMatches } from "@/lib/i18n/reference-network";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 const { Option } = Select;
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -63,16 +66,16 @@ const PORT_DATABASE: PortInfo[] = [
     { port: 179, protocol: "TCP", service: "BGP", description: "Border Gateway Protocol - internet routing", category: "Network Infrastructure" },
     { port: 194, protocol: "TCP", service: "IRC", description: "Internet Relay Chat", category: "Communication" },
     { port: 389, protocol: "TCP/UDP", service: "LDAP", description: "Lightweight Directory Access Protocol", category: "Directory Services" },
-    { port: 443, protocol: "TCP", service: "HTTPS", description: "HTTP Secure - encrypted web traffic (TLS/SSL)", category: "Web", security: "secure" },
+    { port: 443, protocol: "TCP/UDP", service: "HTTPS", description: "HTTP over TLS; HTTP/3 uses QUIC over UDP on port 443", category: "Web", security: "secure" },
     { port: 445, protocol: "TCP", service: "SMB", description: "Server Message Block - Windows file sharing", category: "Windows Networking" },
-    { port: 465, protocol: "TCP", service: "SMTPS", description: "SMTP over SSL (deprecated, use 587)", category: "Email", security: "secure" },
+    { port: 465, protocol: "TCP", service: "SMTPS", description: "Message submission with implicit TLS (RFC 8314)", category: "Email", security: "secure" },
     { port: 514, protocol: "UDP", service: "Syslog", description: "System logging protocol", category: "Logging" },
     { port: 515, protocol: "TCP", service: "LPD", description: "Line Printer Daemon - printing", category: "Printing" },
     { port: 587, protocol: "TCP", service: "SMTP-Submit", description: "Email message submission (STARTTLS)", category: "Email", security: "secure" },
-    { port: 636, protocol: "TCP", service: "LDAPS", description: "LDAP over SSL", category: "Directory Services", security: "secure" },
-    { port: 993, protocol: "TCP", service: "IMAPS", description: "IMAP over SSL", category: "Email", security: "secure" },
+    { port: 636, protocol: "TCP", service: "LDAPS", description: "LDAP over TLS", category: "Directory Services", security: "secure" },
+    { port: 993, protocol: "TCP", service: "IMAPS", description: "IMAP over TLS", category: "Email", security: "secure" },
     { port: 853, protocol: "TCP", service: "DoT", description: "DNS-over-TLS (RFC 7858)", category: "Network Infrastructure", security: "secure" },
-    { port: 995, protocol: "TCP", service: "POP3S", description: "POP3 over SSL", category: "Email", security: "secure" },
+    { port: 995, protocol: "TCP", service: "POP3S", description: "POP3 over TLS", category: "Email", security: "secure" },
 
     // Registered Ports (1024-49151)
     { port: 1080, protocol: "TCP", service: "SOCKS", description: "SOCKS proxy protocol", category: "Proxy" },
@@ -102,7 +105,7 @@ const PORT_DATABASE: PortInfo[] = [
     { port: 6443, protocol: "TCP", service: "Kubernetes API", description: "Kubernetes API server", category: "Container Orchestration", security: "secure" },
     { port: 6660, protocol: "TCP", service: "IRC", description: "IRC (alternative)", category: "Communication" },
     { port: 6667, protocol: "TCP", service: "IRC", description: "IRC (common)", category: "Communication" },
-    { port: 6697, protocol: "TCP", service: "IRC-SSL", description: "IRC over SSL", category: "Communication", security: "secure" },
+    { port: 6697, protocol: "TCP", service: "IRC-SSL", description: "IRC over TLS", category: "Communication", security: "secure" },
     { port: 7000, protocol: "TCP", service: "Cassandra", description: "Apache Cassandra inter-node", category: "Database" },
     { port: 7001, protocol: "TCP", service: "WebLogic", description: "Oracle WebLogic Server", category: "Application Server" },
     { port: 8000, protocol: "TCP", service: "HTTP Alt", description: "Alternative HTTP (Python SimpleHTTPServer, Django)", category: "Development" },
@@ -159,6 +162,7 @@ const CATEGORIES = [...new Set(PORT_DATABASE.map(p => p.category))].sort();
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function PortReferencePage() {
+    const { t } = useLanguage();
     const [searchQuery, setSearchQuery] = useState("");
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [protocolFilter, setProtocolFilter] = useState<string>("all");
@@ -169,11 +173,7 @@ export default function PortReferencePage() {
         return PORT_DATABASE.filter(port => {
             // Text search
             if (searchQuery) {
-                const query = searchQuery.toLowerCase();
-                const matchesText =
-                    port.service.toLowerCase().includes(query) ||
-                    port.description.toLowerCase().includes(query) ||
-                    port.port.toString().includes(query);
+                const matchesText = referenceNetworkMatches(searchQuery, port.service, port.description, port.category, port.port.toString());
                 if (!matchesText) return false;
             }
 
@@ -193,23 +193,23 @@ export default function PortReferencePage() {
         });
     }, [searchQuery, categoryFilter, protocolFilter, securityFilter]);
 
-    const lookedUpPort = useMemo(() => {
-        const num = parseInt(portLookup, 10);
-        if (isNaN(num)) return null;
-        return PORT_DATABASE.find(p => p.port === num);
-    }, [portLookup]);
+    const portValue = portLookup.trim();
+    const isValidLookup = /^\d+$/.test(portValue) && Number(portValue) >= 0 && Number(portValue) <= 65535;
+    const lookedUpPorts = useMemo(() => isValidLookup ? PORT_DATABASE.filter(port => port.port === Number(portValue)) : [], [isValidLookup, portValue]);
+
+    const portCopy = (port: number) => <Space><Text code strong dir="ltr">{port}</Text><Button size="small" type="text" aria-label={t("Copy {value}", { value: port })} icon={<CopyOutlined />} onClick={() => copyToClipboard(String(port))} /></Space>;
 
     const columns = [
         {
-            title: "Port",
+            title: t("Port"),
             dataIndex: "port",
             key: "port",
             width: 80,
             sorter: (a: PortInfo, b: PortInfo) => a.port - b.port,
-            render: (port: number) => <Text code strong>{port}</Text>
+            render: (port: number) => portCopy(port)
         },
         {
-            title: "Protocol",
+            title: t("Protocol"),
             dataIndex: "protocol",
             key: "protocol",
             width: 100,
@@ -218,7 +218,7 @@ export default function PortReferencePage() {
             )
         },
         {
-            title: "Service",
+            title: t("Service"),
             dataIndex: "service",
             key: "service",
             width: 140,
@@ -235,97 +235,78 @@ export default function PortReferencePage() {
             )
         },
         {
-            title: "Description",
+            title: t("Description"),
             dataIndex: "description",
-            key: "description"
+            key: "description",
+            render: (description: string) => t(description)
         },
         {
-            title: "Category",
+            title: t("Category"),
             dataIndex: "category",
             key: "category",
             width: 160,
-            render: (category: string) => <Tag>{category}</Tag>
+            render: (category: string) => <Tag>{t(category)}</Tag>
         },
     ];
 
     return (
         <ToolPageLayout
-            title="Port Number Reference"
-            description="Comprehensive reference of common network ports, protocols, and services"
+            title={t("Port Number Reference")}
+            description={t("Local reference of selected common ports, protocols and service conventions")}
             icon={<GlobalOutlined style={{ fontSize: 24, color: "#13c2c2" }} />}
             color="#13c2c2"
             learnMore={{
-                whatIs: "The Port Number Reference is a comprehensive database of TCP and UDP network ports used by common services and applications. Ports are 16-bit numbers (0-65535) that identify specific processes or services on a networked computer. This reference covers well-known ports (0-1023), registered ports (1024-49151), and common application-specific ports.",
-                whyUse: "Understanding port numbers is essential for network security, firewall configuration, and troubleshooting connectivity issues. This reference helps you quickly identify what service uses a particular port, whether it's secure or insecure, and what category of application it belongs to. It's invaluable for security audits, penetration testing, and network administration.",
-                howToUse: [
-                    "Use Quick Lookup to find a specific port number instantly",
-                    "Search by service name, port number, or description",
-                    "Filter by category (Database, Web, Email, etc.)",
-                    "Filter by protocol (TCP, UDP, or both)",
-                    "Filter by security status to identify insecure protocols",
-                    "Click column headers to sort the results"
-                ],
-                tips: [
-                    "Ports below 1024 are 'privileged' and require root/admin on Unix systems",
-                    "HTTP (80) should redirect to HTTPS (443) - avoid plain HTTP in production",
-                    "Development ports (3000, 5000, 8080) should be blocked in firewalls",
-                    "Some ports have both TCP and UDP versions (like DNS on 53)",
-                    "Ephemeral/dynamic ports (49152-65535) are used for client connections"
-                ],
-                useCases: [
-                    "Configuring firewall rules and security groups",
-                    "Troubleshooting network connectivity issues",
-                    "Security audits and penetration testing",
-                    "Understanding application network requirements",
-                    "Learning networking fundamentals for certifications"
-                ]
+                whatIs: t("A curated local list of common port conventions, not the full IANA registry or a live network scan. A port can host several services, and services can use other ports."),
+                howToUse: [t("Enter a whole port number from 0 to 65535 for all listed matches. Search service names, descriptions or numbers; combine category, protocol and security-hint filters. Copy buttons copy raw port numbers.")],
+                tips: [t("Port numbers and security hints do not prove which service or encryption is actually running. Confirm the server configuration and IANA registration before using a port in firewall rules.")],
             }}
         >
             <Row gutter={[16, 16]}>
                 {/* Quick Lookup */}
                 <Col xs={24}>
-                    <Card title="Quick Port Lookup" size="small">
+                    <Card title={t("Quick Port Lookup")} size="small">
                         <Row gutter={16} align="middle">
                             <Col xs={24} md={8}>
                                 <Input
                                     size="large"
-                                    placeholder="Enter port number (e.g., 443)"
+                                    placeholder={t("Enter port number (e.g., 443)")}
                                     value={portLookup}
                                     onChange={(e) => setPortLookup(e.target.value)}
                                     prefix={<SearchOutlined />}
-                                    type="number"
+                                    inputMode="numeric"
+                                    aria-label={t("Quick Port Lookup")} dir="ltr" style={{ fontSize: 16 }}
                                 />
                             </Col>
                             <Col xs={24} md={16}>
-                                {lookedUpPort ? (
-                                    <Descriptions size="small" column={{ xs: 1, sm: 2, md: 4 }}>
-                                        <Descriptions.Item label="Port">
-                                            <Text code strong>{lookedUpPort.port}</Text>
+                                {lookedUpPorts.length ? lookedUpPorts.map(lookedUpPort => (
+                                    <Descriptions key={`${lookedUpPort.port}-${lookedUpPort.protocol}-${lookedUpPort.service}`} size="small" column={{ xs: 1, sm: 2, md: 4 }}>
+                                        <Descriptions.Item label={t("Port")}>
+                                            {portCopy(lookedUpPort.port)}
                                         </Descriptions.Item>
-                                        <Descriptions.Item label="Protocol">
+                                        <Descriptions.Item label={t("Protocol")}>
                                             <Tag color={lookedUpPort.protocol.includes("UDP") ? "orange" : "blue"}>
                                                 {lookedUpPort.protocol}
                                             </Tag>
                                         </Descriptions.Item>
-                                        <Descriptions.Item label="Service">
+                                        <Descriptions.Item label={t("Service")}>
                                             <Space>
                                                 <Text strong>{lookedUpPort.service}</Text>
-                                                {lookedUpPort.security === "secure" && <Tag color="success">Secure</Tag>}
-                                                {lookedUpPort.security === "insecure" && <Tag color="error">Insecure</Tag>}
+                                                {lookedUpPort.security === "secure" && <Tag color="success">{t("Secure")}</Tag>}
+                                                {lookedUpPort.security === "insecure" && <Tag color="error">{t("Insecure")}</Tag>}
                                             </Space>
                                         </Descriptions.Item>
-                                        <Descriptions.Item label="Category">
-                                            <Tag>{lookedUpPort.category}</Tag>
+                                        <Descriptions.Item label={t("Category")}>
+                                            <Tag>{t(lookedUpPort.category)}</Tag>
                                         </Descriptions.Item>
-                                        <Descriptions.Item label="Description" span={4}>
-                                            {lookedUpPort.description}
+                                        <Descriptions.Item label={t("Description")} span={4}>
+                                            {t(lookedUpPort.description)}
                                         </Descriptions.Item>
                                     </Descriptions>
-                                ) : portLookup ? (
+                                )) : portLookup ? (
                                     <Alert
                                         type="info"
-                                        title={`Port ${portLookup} is not in our database`}
-                                        description="This might be an ephemeral port (49152-65535), a custom application port, or an unregistered port."
+                                        title={isValidLookup ? t("No listed service for port {port}", { port: Number(portValue) }) : t("Enter a whole port number from 0 to 65535.")}
+                                        description={t("This is a local reference. It does not check whether a port is open or registered.")}
                                     />
                                 ) : null}
                             </Col>
@@ -338,8 +319,8 @@ export default function PortReferencePage() {
                     <Card size="small">
                         <Row gutter={[16, 16]} align="middle">
                             <Col xs={24} md={8}>
-                                <Input
-                                    placeholder="Search ports, services, descriptions..."
+                                <Input aria-label={t("Search reference")} dir="auto" style={{ fontSize: 16 }}
+                                    placeholder={t("Search ports, services, descriptions...")}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     prefix={<SearchOutlined />}
@@ -347,44 +328,44 @@ export default function PortReferencePage() {
                                 />
                             </Col>
                             <Col xs={12} md={5}>
-                                <Select
+                                <Select aria-label={t("Category")}
                                     value={categoryFilter}
                                     onChange={setCategoryFilter}
                                     style={{ width: "100%" }}
-                                    placeholder="Category"
+                                    placeholder={t("Category")}
                                 >
-                                    <Option value="all">All Categories</Option>
+                                    <Option value="all">{t("All Categories")}</Option>
                                     {CATEGORIES.map(cat => (
-                                        <Option key={cat} value={cat}>{cat}</Option>
+                                        <Option key={cat} value={cat}>{t(cat)}</Option>
                                     ))}
                                 </Select>
                             </Col>
                             <Col xs={12} md={4}>
-                                <Select
+                                <Select aria-label={t("Protocol")}
                                     value={protocolFilter}
                                     onChange={setProtocolFilter}
                                     style={{ width: "100%" }}
-                                    placeholder="Protocol"
+                                    placeholder={t("Protocol")}
                                 >
-                                    <Option value="all">All Protocols</Option>
+                                    <Option value="all">{t("All Protocols")}</Option>
                                     <Option value="TCP">TCP</Option>
                                     <Option value="UDP">UDP</Option>
                                 </Select>
                             </Col>
                             <Col xs={12} md={4}>
-                                <Select
+                                <Select aria-label={t("Security")}
                                     value={securityFilter}
                                     onChange={setSecurityFilter}
                                     style={{ width: "100%" }}
-                                    placeholder="Security"
+                                    placeholder={t("Security")}
                                 >
-                                    <Option value="all">All</Option>
-                                    <Option value="secure">🔒 Secure Only</Option>
-                                    <Option value="insecure">⚠️ Insecure Only</Option>
+                                    <Option value="all">{t("All")}</Option>
+                                    <Option value="secure">{t("🔒 Secure Only")}</Option>
+                                    <Option value="insecure">{t("⚠️ Insecure Only")}</Option>
                                 </Select>
                             </Col>
                             <Col xs={12} md={3}>
-                                <Text type="secondary">{filteredPorts.length} ports</Text>
+                                <Text type="secondary">{t("{count} ports", { count: filteredPorts.length })}</Text>
                             </Col>
                         </Row>
                     </Card>
@@ -396,8 +377,8 @@ export default function PortReferencePage() {
                         <Table
                             dataSource={filteredPorts}
                             columns={columns}
-                            rowKey="port"
-                            pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => `${total} ports` }}
+                            rowKey={record => `${record.port}-${record.protocol}-${record.service}`}
+                            pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => t("{count} ports", { count: total }) }}
                             size="small"
                             scroll={{ x: 800 }}
                         />
@@ -406,24 +387,24 @@ export default function PortReferencePage() {
 
                 {/* Port Ranges Info */}
                 <Col xs={24}>
-                    <Card title="Port Number Ranges" size="small">
+                    <Card title={t("Port Number Ranges")} size="small">
                         <Descriptions column={{ xs: 1, sm: 3 }} size="small" bordered>
-                            <Descriptions.Item label="Well-Known Ports">
+                            <Descriptions.Item label={t("Well-Known Ports")}>
                                 <Space orientation="vertical">
                                     <Text code>0 - 1023</Text>
-                                    <Text type="secondary">System/root ports. Require elevated privileges.</Text>
+                                    <Text type="secondary">{t("System ports; binding restrictions depend on the operating system and configuration.")}</Text>
                                 </Space>
                             </Descriptions.Item>
-                            <Descriptions.Item label="Registered Ports">
+                            <Descriptions.Item label={t("Registered Ports")}>
                                 <Space orientation="vertical">
                                     <Text code>1024 - 49151</Text>
-                                    <Text type="secondary">User/application ports. IANA registered services.</Text>
+                                    <Text type="secondary">{t("User ports; consult IANA for individual registrations.")}</Text>
                                 </Space>
                             </Descriptions.Item>
-                            <Descriptions.Item label="Dynamic/Ephemeral">
+                            <Descriptions.Item label={t("Dynamic/Ephemeral")}>
                                 <Space orientation="vertical">
                                     <Text code>49152 - 65535</Text>
-                                    <Text type="secondary">Private/temporary ports. Client-side connections.</Text>
+                                    <Text type="secondary">{t("Dynamic/private ports; IANA does not assign these to services.")}</Text>
                                 </Space>
                             </Descriptions.Item>
                         </Descriptions>

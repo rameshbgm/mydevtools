@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Button, Space, Card, Segmented, Select, App, Input, Typography } from "antd";
 import { CopyOutlined, ClearOutlined, NumberOutlined, SwapOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
 const { TextArea } = Input;
@@ -48,6 +49,7 @@ function hexToText(hex: string): string {
 }
 
 export default function HexConverterPage() {
+    const { t } = useLanguage();
     const { message } = App.useApp();
     const [mode, setMode] = useState<Mode>("Encode");
     const [format, setFormat] = useState<Format>("lowercase");
@@ -67,7 +69,7 @@ export default function HexConverterPage() {
             }
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : "Conversion error";
-            message.error(msg);
+            message.error(`${t("Unable to convert hex. Check that each byte has two hex digits, then try again.")}\n${msg}`);
             setOutput("");
         }
     };
@@ -85,8 +87,8 @@ export default function HexConverterPage() {
 
     return (
         <ToolPageLayout
-            title="Hex Encoder / Decoder"
-            description="Convert text to hexadecimal and back (UTF-8)"
+            title={t("Hex Encoder / Decoder")}
+            description={t("Convert text to hexadecimal and back (UTF-8)")}
             icon={<NumberOutlined style={{ fontSize: 24, color: "#fa8c16" }} />}
             color="#fa8c16"
             learnMore={{
@@ -113,7 +115,7 @@ export default function HexConverterPage() {
         >
             <Space style={{ marginBottom: 16 }} wrap>
                 <Segmented<Mode>
-                    options={["Encode", "Decode"]}
+                    options={[{ value: "Encode", label: t("Encode") }, { value: "Decode", label: t("Decode") }]}
                     value={mode}
                     onChange={(v) => setMode(v)}
                     size="large"
@@ -122,43 +124,47 @@ export default function HexConverterPage() {
                     <Select
                         value={format}
                         onChange={setFormat}
-                        style={{ width: 180 }}
+                        style={{ minWidth: 180, maxWidth: "100%" }}
                         options={[
-                            { value: "lowercase", label: "lowercase (48656c6c6f)" },
-                            { value: "UPPERCASE", label: "UPPERCASE (48656C6C6F)" },
-                            { value: "spaced", label: "Spaced (48 65 6c 6c 6f)" },
-                            { value: "0xPrefix", label: "0x prefix (0x48 0x65)" },
-                            { value: "\\xPrefix", label: "\\x prefix (\\x48\\x65)" },
+                            { value: "lowercase", label: t("lowercase (48656c6c6f)") },
+                            { value: "UPPERCASE", label: t("UPPERCASE (48656C6C6F)") },
+                            { value: "spaced", label: t("Spaced (48 65 6c 6c 6f)") },
+                            { value: "0xPrefix", label: t("0x prefix (0x48 0x65)") },
+                            { value: "\\xPrefix", label: t("\\x prefix (\\x48\\x65)") },
                         ]}
                     />
                 )}
-                <Button icon={<SwapOutlined />} onClick={swap}>Swap</Button>
-                <Button icon={<CopyOutlined />} disabled={!output} onClick={() => copyToClipboard(output)}>Copy</Button>
-                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); }}>Clear</Button>
+                <Button icon={<SwapOutlined />} onClick={swap}>{t("Swap")}</Button>
+                <Button icon={<CopyOutlined />} disabled={!output} onClick={() => copyToClipboard(output)}>{t("Copy")}</Button>
+                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); }}>{t("Clear")}</Button>
             </Space>
 
             <div className="tool-split-pane" style={{ gap: 16 }}>
-                <Card size="small" title={mode === "Encode" ? "Text Input" : "Hex Input"}>
+                <Card size="small" title={mode === "Encode" ? t("Text Input") : t("Hex Input")}>
                     <TextArea
+                        dir={mode === "Encode" ? "auto" : "ltr"}
                         rows={14}
+                        aria-label={t("Input")}
                         value={input}
                         onChange={(e) => { setInput(e.target.value); run(mode, e.target.value, format); }}
-                        placeholder={mode === "Encode" ? "Enter text to encode" : "Enter hex string to decode"}
+                        placeholder={mode === "Encode" ? t("Enter text to encode") : t("Enter hex string to decode")}
                         style={{ fontFamily: "var(--font-geist-mono)", fontSize: 14 }}
                     />
                 </Card>
-                <Card size="small" title={mode === "Encode" ? "Hex Output" : "Text Output"}>
+                <Card size="small" title={mode === "Encode" ? t("Hex Output") : t("Text Output")}>
                     <TextArea
+                        dir={mode === "Encode" ? "ltr" : "auto"}
                         rows={14}
+                        aria-label={t("Output")}
                         value={output}
                         readOnly
-                        placeholder="Output will appear here"
+                        placeholder={t("Output will appear here")}
                         style={{ fontFamily: "var(--font-geist-mono)", fontSize: 14 }}
                     />
                     {mode === "Encode" && output && (
                         <Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
-                            {input.length} chars → {output.replace(/[^0-9a-fA-F]/g, "").length / 2} bytes
-                        </Text>
+                            {t("{characters} chars → {bytes} bytes", { characters: input.length, bytes: output.replace(/[^0-9a-fA-F]/g, "").length / 2 })}
+                            </Text>
                     )}
                 </Card>
             </div>

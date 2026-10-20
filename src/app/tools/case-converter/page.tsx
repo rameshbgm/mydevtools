@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Button, Card, Space, Typography, Row, Col, Input, Select, App } from "antd";
-import { FontSizeOutlined, CopyOutlined, SwapOutlined } from "@ant-design/icons";
+import React, { useState, useMemo } from "react";
+import { Button, Card, Space, Typography, Row, Col, Input, Select } from "antd";
+import { FontSizeOutlined, CopyOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import SendToButton from "@/components/SendToButton";
 import ShareButton from "@/components/ShareButton";
@@ -11,7 +12,7 @@ import ToolBridgeBanner from "@/components/ToolBridgeBanner";
 import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
 const { TextArea } = Input;
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 type CaseType = "camelCase" | "PascalCase" | "snake_case" | "SCREAMING_SNAKE_CASE" | "kebab-case" | "TRAIN-CASE" | "dot.case" | "Title Case" | "Sentence case" | "lowercase" | "UPPERCASE" | "path/case";
 
@@ -84,16 +85,16 @@ interface ShareState { input: string; targetCase: CaseType; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "case-converter", version: 1 };
 
 export default function CaseConverterPage() {
-    const { message } = App.useApp();
+    const { t } = useLanguage();
     const [input, setInput] = useState("hello_world_example");
     const [targetCase, setTargetCase] = useState<CaseType>("camelCase");
 
-    const conversions = CASE_OPTIONS.map((opt) => ({
+    const conversions = useMemo(() => CASE_OPTIONS.map((opt) => ({
         ...opt,
         result: convertCase(input.split("\n")[0], opt.value),
-    }));
+    })), [input]);
 
-    const mainOutput = processMultiLine(input, targetCase);
+    const mainOutput = useMemo(() => processMultiLine(input, targetCase), [input, targetCase]);
 
     useShareableState(SHARE_SCHEMA, (s) => {
         setInput(s.input);
@@ -102,31 +103,19 @@ export default function CaseConverterPage() {
 
     return (
         <ToolPageLayout
-            title="String Case Converter"
-            description="Convert text between different case formats"
+            title={t("String Case Converter")}
+            description={t("Convert text between different case formats")}
             icon={<FontSizeOutlined style={{ fontSize: 24, color: "#722ed1" }} />}
             color="#722ed1"
             learnMore={{
-                whatIs: "A case converter transforms text between naming conventions: camelCase, PascalCase, snake_case, kebab-case, CONSTANT_CASE, and more. These conventions are used in programming for variables, files, and identifiers.",
-                whyUse: "Different languages and contexts require different naming conventions. This tool quickly converts between formats, saving time when adapting code between languages or following style guides.",
+                whatIs: "Convert text between programming naming conventions.",
+                whyUse: "Prepare variable names, API fields and file names consistently.",
                 howToUse: [
-                    "Paste or type your text in the input field",
-                    "Select the target case format",
-                    "View all case conversions at once",
-                    "Copy the format you need"
+                    "Enter text, choose a case format, then copy the result.",
                 ],
                 tips: [
-                    "camelCase: JavaScript variables, functions",
-                    "PascalCase: Classes, React components",
-                    "snake_case: Python, Ruby, databases",
-                    "kebab-case: CSS classes, URLs, file names"
+                    "Each line is converted separately. Technical case names remain unchanged.",
                 ],
-                useCases: [
-                    "Converting API field names between conventions",
-                    "Renaming variables when porting code",
-                    "Generating consistent file names",
-                    "Following project naming conventions"
-                ]
             }}
         >
             <ToolBridgeBanner accepts={["text"]} onAccept={(p) => setInput(p.data)} />
@@ -138,27 +127,26 @@ export default function CaseConverterPage() {
 
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
-                    <Card title="Input">
-                        <TextArea
+                    <Card title={t("Input")}>
+                        <TextArea aria-label={t("Input text")} dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder="Enter text to convert... (supports multiple lines)"
+                            placeholder={t("Enter text to convert... (supports multiple lines)")}
                             rows={6}
-                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 14 }}
+                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16 }}
                         />
                         <div style={{ marginTop: 16 }}>
                             <Text type="secondary">
-                                Supports: camelCase, PascalCase, snake_case, kebab-case, spaces, and more
-                            </Text>
+                                {t("Supports: camelCase, PascalCase, snake_case, kebab-case, spaces, and more")}</Text>
                         </div>
                     </Card>
 
-                    <Card title="Convert To" style={{ marginTop: 16 }}>
+                    <Card title={t("Convert To")} style={{ marginTop: 16 }}>
                         <Space orientation="vertical" style={{ width: "100%" }}>
-                            <Select
+                            <Select aria-label={t("Convert To")} direction="ltr"
                                 value={targetCase}
                                 onChange={setTargetCase}
-                                options={CASE_OPTIONS}
+                                options={CASE_OPTIONS.map(option => ({ ...option, label: ["Title Case", "Sentence case", "lowercase", "UPPERCASE"].includes(option.value) ? t(option.label) : option.label }))}
                                 style={{ width: "100%" }}
                                 size="large"
                             />
@@ -181,14 +169,13 @@ export default function CaseConverterPage() {
                                 onClick={() => copyToClipboard(mainOutput)}
                                 block
                             >
-                                Copy Result
-                            </Button>
+                                {t("Copy Result")}</Button>
                         </Space>
                     </Card>
                 </Col>
 
                 <Col xs={24} lg={12}>
-                    <Card title="All Conversions">
+                    <Card title={t("All Conversions")}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                             {conversions.map((c) => (
                                 <div
@@ -207,18 +194,18 @@ export default function CaseConverterPage() {
                                     onClick={() => setTargetCase(c.value)}
                                 >
                                     <div>
-                                        <Text strong style={{ display: "block" }}>{c.label}</Text>
+                                        <Text strong style={{ display: "block" }}>{["Title Case", "Sentence case", "lowercase", "UPPERCASE"].includes(c.value) ? t(c.label) : c.label}</Text>
                                         <Text
                                             style={{
                                                 fontFamily: "var(--font-geist-mono)",
-                                                fontSize: 13,
+                                                fontSize: 16,
                                                 wordBreak: "break-all",
                                             }}
                                         >
                                             {c.result}
                                         </Text>
                                     </div>
-                                    <Button aria-label="Copy"
+                                    <Button aria-label={t("Copy")}
                                         size="small"
                                         type="text"
                                         icon={<CopyOutlined />}

@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
 import { Button, Card, Input, Space, Typography, Tag, Table, Switch } from "antd";
 import { CheckCircleOutlined, CloseCircleOutlined, ClearOutlined, MailOutlined } from "@ant-design/icons";
+import EmailMxDiagnostic from "@/components/EmailMxDiagnostic";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
 const { TextArea } = Input;
@@ -99,6 +101,7 @@ function validateEmail(raw: string): ValidationResult {
 }
 
 export default function EmailValidatorPage() {
+    const { t } = useLanguage();
     const [single, setSingle] = useState("user@example.com");
     const [bulk, setBulk] = useState("alice@example.com\nbob@mailinator.com\nadmin@company.io\nbroken@\n");
     const [allowDisposable, setAllowDisposable] = useState(true);
@@ -126,86 +129,90 @@ export default function EmailValidatorPage() {
 
     return (
         <ToolPageLayout
-            title="Email Validator"
-            description="Validate email addresses with RFC syntax, disposable and role detection"
+            title={t("Email Validator")}
+            description={t("Check email syntax, common disposable/role patterns and optional public DNS mail records")}
             icon={<MailOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
             color="#1677ff"
             learnMore={{
                 whatIs:
-                    "An email validator checks whether an email address is well-formed according to RFC 5322 syntax rules and flags issues like disposable temp-mail domains, role-based accounts (admin@, info@), excessive length, and malformed local parts.",
+                    t("This practical ASCII email check validates common unquoted address syntax and flags issues like disposable temp-mail domains, role-based accounts (admin@, info@), excessive length, and malformed local parts."),
                 whyUse:
-                    "Catch typos and bad submissions before they hit your database. Filter out disposable signups, identify role accounts that won't accept marketing mail, and clean bulk lists before importing into your CRM or mailing platform.",
+                    t("Catch typos and bad submissions before they hit your database. Filter out disposable signups, identify role accounts that won't accept marketing mail, and clean bulk lists before importing into your CRM or mailing platform."),
                 howToUse: [
-                    "Paste a single email address into the top field for instant validation",
-                    "Or paste many addresses (one per line) into the Bulk Validate panel",
-                    "Toggle Disposable and Role filters to control what counts as valid",
+                    t("Paste a single email address into the top field for instant validation"),
+                    t("Or paste many addresses (one per line) into the Bulk Validate panel"),
+                    t("Toggle Disposable and Role filters to control what counts as valid"),
                 ],
                 tips: [
-                    "RFC 5322 allows surprising characters — apostrophes, plus signs, dots",
-                    "Disposable lookups use a built-in list of common temp-mail domains",
-                    "DNS / MX-record validation isn't possible in browser (no SMTP)",
+                    t("This checker accepts common unquoted ASCII local parts; quoted addresses, comments and internationalized local parts need a fuller email parser."),
+                    t("Disposable lookups use a built-in list of common temp-mail domains"),
+                    t("Use the optional DNS-over-HTTPS check below to inspect MX records; mailbox verification still requires a mail-delivery workflow."),
                 ],
                 useCases: [
-                    "Cleaning email lists before bulk send",
-                    "Pre-validating signup forms client-side",
-                    "Auditing CRM exports for bad addresses",
+                    t("Cleaning email lists before bulk send"),
+                    t("Pre-validating signup forms client-side"),
+                    t("Auditing CRM exports for bad addresses"),
                 ],
             }}
         >
-            <Card title="Single Email" style={{ marginBottom: 16 }}>
+            <Card title={t("Single Email")} style={{ marginBottom: 16 }}>
                 <Space.Compact style={{ width: "100%" }}>
                     <Input
+                        dir="ltr"
+                        aria-label={t("Single Email")}
                         size="large"
                         prefix={<MailOutlined />}
-                        placeholder="Enter email address"
+                        placeholder={t("Enter email address")}
                         value={single}
                         onChange={(e) => setSingle(e.target.value)}
                     />
-                    <Button size="large" icon={<ClearOutlined />} onClick={() => setSingle("")}>Clear</Button>
+                    <Button size="large" icon={<ClearOutlined />} onClick={() => setSingle("")}>{t("Clear")}</Button>
                 </Space.Compact>
                 <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 12 }}>
                     <Tag
                         icon={singleResult.syntaxValid ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
                         color={singleResult.syntaxValid ? "success" : "error"}
                     >
-                        {singleResult.syntaxValid ? "Valid syntax" : "Invalid"}
+                        {t(singleResult.syntaxValid ? "Valid syntax" : "Invalid")}
                     </Tag>
-                    {singleResult.isDisposable && <Tag color="warning">Disposable</Tag>}
-                    {singleResult.isRole && <Tag color="purple">Role account</Tag>}
-                    {singleResult.domain && <Tag>Domain: {singleResult.domain}</Tag>}
-                    {singleResult.localPart && <Tag>Local: {singleResult.localPart}</Tag>}
+                    {singleResult.isDisposable && <Tag color="warning">{t("Disposable")}</Tag>}
+                    {singleResult.isRole && <Tag color="purple">{t("Role account")}</Tag>}
+                    {singleResult.domain && <Tag>{t("Domain:")} <bdi dir="ltr">{singleResult.domain}</bdi></Tag>}
+                    {singleResult.localPart && <Tag>{t("Local:")} <bdi dir="ltr">{singleResult.localPart}</bdi></Tag>}
                 </div>
                 {singleResult.issues.length > 0 && (
-                    <ul style={{ marginTop: 12, color: "#a3a3a3", fontSize: 13 }}>
+                    <ul style={{ marginTop: 12, color: "var(--wb-text-body)", fontSize: 13 }}>
                         {singleResult.issues.map((i, idx) => (
-                            <li key={idx}>{i}</li>
+                            <li key={idx}>{t(i)}</li>
                         ))}
                     </ul>
                 )}
             </Card>
 
             <Card
-                title="Bulk Validate"
+                title={t("Bulk Validate")}
                 extra={
                     <Space>
-                        <Text style={{ fontSize: 12 }}>Allow disposable</Text>
-                        <Switch checked={allowDisposable} onChange={setAllowDisposable} size="small" />
-                        <Text style={{ fontSize: 12 }}>Allow role</Text>
-                        <Switch checked={allowRole} onChange={setAllowRole} size="small" />
+                        <Text style={{ fontSize: 12 }}>{t("Allow disposable")}</Text>
+                        <Switch aria-label={t("Allow disposable")} checked={allowDisposable} onChange={setAllowDisposable} size="small" />
+                        <Text style={{ fontSize: 12 }}>{t("Allow role")}</Text>
+                        <Switch aria-label={t("Allow role")} checked={allowRole} onChange={setAllowRole} size="small" />
                     </Space>
                 }
             >
                 <TextArea
+                    dir="ltr"
+                    aria-label={t("Bulk Validate")}
                     rows={8}
-                    placeholder="One email per line"
+                    placeholder={t("One email per line")}
                     value={bulk}
                     onChange={(e) => setBulk(e.target.value)}
                     style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }}
                 />
                 <div style={{ marginTop: 12, marginBottom: 16, display: "flex", gap: 8 }}>
-                    <Tag color="default">Total: {summary.total}</Tag>
-                    <Tag color="success">Valid: {summary.valid}</Tag>
-                    <Tag color="error">Invalid: {summary.invalid}</Tag>
+                    <Tag color="default">{t("Total: {count}", { count: summary.total })}</Tag>
+                    <Tag color="success">{t("Valid: {count}", { count: summary.valid })}</Tag>
+                    <Tag color="error">{t("Invalid: {count}", { count: summary.invalid })}</Tag>
                 </div>
                 <Table
                     size="small"
@@ -213,29 +220,29 @@ export default function EmailValidatorPage() {
                     rowKey={(r, idx) => `${idx}-${r.email}`}
                     pagination={{ pageSize: 10 }}
                     columns={[
-                        { title: "Email", dataIndex: "email", key: "email", ellipsis: true },
+                        { title: t("Email"), dataIndex: "email", key: "email", ellipsis: true, render: (value: string) => <bdi dir="ltr">{value}</bdi> },
                         {
-                            title: "Status",
+                            title: t("Status"),
                             key: "status",
                             render: (_, r: ValidationResult) => {
                                 const blocked =
                                     !r.syntaxValid ||
                                     (!allowDisposable && r.isDisposable) ||
                                     (!allowRole && r.isRole);
-                                return blocked ? <Tag color="error">Invalid</Tag> : <Tag color="success">Valid</Tag>;
+                                return blocked ? <Tag color="error">{t("Invalid")}</Tag> : <Tag color="success">{t("Valid")}</Tag>;
                             },
                         },
                         {
-                            title: "Flags",
+                            title: t("Flags"),
                             key: "flags",
                             render: (_, r: ValidationResult) => (
                                 <Space size={4} wrap>
-                                    {r.isDisposable && <Tag color="warning">disposable</Tag>}
-                                    {r.isRole && <Tag color="purple">role</Tag>}
+                                    {r.isDisposable && <Tag color="warning">{t("disposable")}</Tag>}
+                                    {r.isRole && <Tag color="purple">{t("role")}</Tag>}
                                     {r.issues
                                         .filter((i) => i !== "Disposable domain" && i !== "Role-based account")
                                         .map((i, ix) => (
-                                            <Tag key={ix} color="error">{i}</Tag>
+                                            <Tag key={ix} color="error">{t(i)}</Tag>
                                         ))}
                                 </Space>
                             ),
@@ -243,6 +250,7 @@ export default function EmailValidatorPage() {
                     ]}
                 />
             </Card>
+            <EmailMxDiagnostic domain={singleResult.syntaxValid ? singleResult.domain : ""} />
         </ToolPageLayout>
     );
 }

@@ -1,8 +1,12 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
+
+import { useSearchParams } from "next/navigation";
+import React, { useState, useMemo, Suspense } from "react";
 import { Card, Input, Typography, Row, Col, Button, Space, Alert, Switch, Select, Segmented } from "antd";
 import { FileExcelOutlined, CopyOutlined, ClearOutlined, SwapOutlined } from "@ant-design/icons";
+import SpreadsheetConverter from "@/components/SpreadsheetConverter";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -116,8 +120,14 @@ interface ShareState {
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "csv-to-json", version: 1 };
 
 export default function CsvConverterPage() {
+    return <Suspense fallback={null}><CsvConverter /></Suspense>;
+}
+
+function CsvConverter() {
+    const searchParams = useSearchParams();
+    const { t } = useLanguage();
     const [input, setInput] = useState(SAMPLE_CSV);
-    const [outputFormat, setOutputFormat] = useState<"json" | "xml">("json");
+    const [outputFormat, setOutputFormat] = useState<"json" | "xml">(() => searchParams.get("format") === "xml" ? "xml" : "json");
     const [hasHeader, setHasHeader] = useState(true);
     const [delimiter, setDelimiter] = useState(",");
     const [arrayFormat, setArrayFormat] = useState(false);
@@ -153,12 +163,12 @@ export default function CsvConverterPage() {
         }
     }, [input, outputFormat, hasHeader, delimiter, arrayFormat, rootElement, rowElement]);
 
-    const copyOutput = () => copyToClipboard(output, `${outputFormat.toUpperCase()} copied!`);
+    const copyOutput = () => copyToClipboard(output, t(outputFormat === "json" ? "JSON copied!" : "XML copied!"));
 
     return (
         <ToolPageLayout
-            title="CSV Converter"
-            description="Convert CSV data to JSON or XML format"
+            title={t("CSV Converter")}
+            description={t("Convert CSV data to JSON or XML format")}
             icon={<FileExcelOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
             color="#52c41a"
             learnMore={{
@@ -197,8 +207,8 @@ export default function CsvConverterPage() {
                         value={outputFormat}
                         onChange={(v) => setOutputFormat(v as "json" | "xml")}
                         options={[
-                            { value: "json", label: "CSV → JSON" },
-                            { value: "xml", label: "CSV → XML" },
+                            { value: "json", label: t("CSV → JSON") },
+                            { value: "xml", label: t("CSV → XML") },
                         ]}
                         block
                         size="large"
@@ -207,10 +217,10 @@ export default function CsvConverterPage() {
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title="CSV Input"
+                        title={t("CSV Input")}
                         extra={
                             <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
-                                Clear
+                                {t("Clear")}
                             </Button>
                         }
                     >
@@ -225,17 +235,17 @@ export default function CsvConverterPage() {
 
                 <Col xs={24} lg={12}>
                     <Card
-                        title={`${outputFormat.toUpperCase()} Output`}
+                        title={t(outputFormat === "json" ? "JSON Output" : "XML Output")}
                         extra={
                             output && (
                                 <Button size="small" icon={<CopyOutlined />} onClick={copyOutput}>
-                                    Copy
+                                    {t("Copy")}
                                 </Button>
                             )
                         }
                     >
                         {conversionError ? (
-                            <Alert type="error" title={conversionError} showIcon style={{ marginBottom: 16 }} />
+                            <Alert type="error" title={t("Conversion failed. Check the input and options, then try again.")} description={<bdi dir="ltr">{conversionError}</bdi>} showIcon style={{ marginBottom: 16 }} />
                         ) : null}
                         <CodeEditor
                             value={output}
@@ -247,52 +257,61 @@ export default function CsvConverterPage() {
                 </Col>
 
                 <Col xs={24}>
-                    <Card title="Conversion Options">
+                    <Card title={t("Conversion Options")}>
                         <Space wrap size="large">
                             <div>
-                                <Text style={{ display: "block", marginBottom: 4 }}>Delimiter</Text>
+                                <Text style={{ display: "block", marginBottom: 4 }}>{t("Delimiter")}</Text>
                                 <Select
+                                    direction="ltr"
+                                    styles={{ input: { direction: "ltr", textAlign: "left" }, itemContent: { direction: "ltr", textAlign: "left" } }}
+                                    aria-label={t("Delimiter")}
                                     value={delimiter}
                                     onChange={setDelimiter}
-                                    style={{ width: 120 }}
+                                    style={{ minWidth: 120 }}
                                     options={[
-                                        { value: ",", label: "Comma (,)" },
-                                        { value: ";", label: "Semicolon (;)" },
-                                        { value: "\t", label: "Tab" },
-                                        { value: "|", label: "Pipe (|)" },
+                                        { value: ",", label: t("Comma (,)") },
+                                        { value: ";", label: t("Semicolon (;)") },
+                                        { value: "\t", label: t("Tab") },
+                                        { value: "|", label: t("Pipe (|)") },
                                     ]}
                                 />
                             </div>
                             <div style={{ paddingTop: 22 }}>
                                 <Space>
-                                    <Switch checked={hasHeader} onChange={setHasHeader} />
-                                    <Text>First Row is Header</Text>
+                                    <Switch aria-label={t("First Row is Header")} checked={hasHeader} onChange={setHasHeader} />
+                                    <Text>{t("First Row is Header")}</Text>
                                 </Space>
                             </div>
                             {outputFormat === "json" && (
                                 <div style={{ paddingTop: 22 }}>
                                     <Space>
-                                        <Switch checked={arrayFormat} onChange={setArrayFormat} />
-                                        <Text>Array Format (no objects)</Text>
+                                        <Switch aria-label={t("Array Format (no objects)")} checked={arrayFormat} onChange={setArrayFormat} />
+                                        <Text>{t("Array Format (no objects)")}</Text>
                                     </Space>
                                 </div>
                             )}
                             {outputFormat === "xml" && (
                                 <>
                                     <div>
-                                        <Text style={{ display: "block", marginBottom: 4 }}>Root Element</Text>
+                                        <Text style={{ display: "block", marginBottom: 4 }}>{t("Root Element")}</Text>
                                         <Input
+                                            dir="ltr"
+                                            styles={{ input: { direction: "ltr", textAlign: "left" } }}
+                                            aria-label={t("Root Element")}
                                             value={rootElement}
                                             onChange={(e) => setRootElement(e.target.value)}
-                                            style={{ width: 120 }}
+                                            style={{ minWidth: 120 }}
                                         />
                                     </div>
                                     <div>
-                                        <Text style={{ display: "block", marginBottom: 4 }}>Row Element</Text>
+                                        <Text style={{ display: "block", marginBottom: 4 }}>{t("Row Element")}</Text>
                                         <Input
+                                            dir="ltr"
+                                            styles={{ input: { direction: "ltr", textAlign: "left" } }}
+                                            aria-label={t("Row Element")}
                                             value={rowElement}
                                             onChange={(e) => setRowElement(e.target.value)}
-                                            style={{ width: 120 }}
+                                            style={{ minWidth: 120 }}
                                         />
                                     </div>
                                 </>
@@ -301,6 +320,7 @@ export default function CsvConverterPage() {
                     </Card>
                 </Col>
             </Row>
+            <SpreadsheetConverter />
         </ToolPageLayout>
     );
 }

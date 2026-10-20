@@ -1,35 +1,26 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Input, Typography, Card, Button, Space, Select, Tabs, message, Collapse, Tag, InputNumber, Divider } from "antd";
+import { Input, Typography, Card, Button, Space, Select, message, Collapse, Tag, Divider } from "antd";
 import {
     KeyOutlined,
     CopyOutlined,
     ReloadOutlined,
     DownloadOutlined,
 } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
-import { useAppStore } from "@/lib/store";
 import { showErrorModal } from "@/lib/errorModal";
 import { downloadText } from "@/lib/download";
 import { copyToClipboard } from "@/lib/clipboard";
+import { generateJwk, symmetricJwkSizes } from "@/lib/jwk-tools";
 
 const { TextArea } = Input;
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 type KeyType = "RSA" | "EC" | "oct";
 type ECCurve = "P-256" | "P-384" | "P-521";
 type KeyUse = "sig" | "enc";
-
-interface JWK {
-    kty: string;
-    use?: string;
-    key_ops?: string[];
-    alg?: string;
-    kid?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [key: string]: any;
-}
 
 const KEY_TYPES: { value: KeyType; label: string; description: string }[] = [
     { value: "RSA", label: "RSA", description: "RSA key pair for signing (RS256) or encryption (RSA-OAEP)" },
@@ -45,10 +36,9 @@ const EC_CURVES: { value: ECCurve; label: string; algorithm: string }[] = [
 
 const RSA_KEY_SIZES = [2048, 3072, 4096];
 
-const SYMMETRIC_KEY_SIZES = [128, 192, 256, 384, 512];
 
 export default function JWKGeneratorPage() {
-    const { darkMode } = useAppStore();
+    const { t } = useLanguage();
 
     // Generation state
     const [keyType, setKeyType] = useState<KeyType>("RSA");
@@ -64,115 +54,27 @@ export default function JWKGeneratorPage() {
     const [jwkSet, setJwkSet] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
 
-    const base64UrlEncode = (buffer: ArrayBuffer): string => {
-        return btoa(String.fromCharCode(...new Uint8Array(buffer)))
-            .replace(/\+/g, "-")
-            .replace(/\//g, "_")
-            .replace(/=+$/, "");
-    };
-
-    const generateKeyId = (): string => {
-        const bytes = crypto.getRandomValues(new Uint8Array(16));
-        return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
-    };
-
     const handleGenerate = useCallback(async () => {
         setIsGenerating(true);
+        setPublicJwk(""); setPrivateJwk(""); setJwkSet("");
         try {
-            const kid = keyId || generateKeyId();
-            let publicKey: JWK | null = null;
-            let privateKeyJwk: JWK | null = null;
-
-            if (keyType === "RSA") {
-                const keyPair = await crypto.subtle.generateKey(
-                    {
-                        name: keyUse === "sig" ? "RSASSA-PKCS1-v1_5" : "RSA-OAEP",
-                        modulusLength: rsaKeySize,
-                        publicExponent: new Uint8Array([1, 0, 1]),
-                        hash: rsaKeySize === 2048 ? "SHA-256" : rsaKeySize === 3072 ? "SHA-384" : "SHA-512",
-                    },
-                    true,
-                    keyUse === "sig" ? ["sign", "verify"] : ["encrypt", "decrypt"]
-                );
-
-                const pubJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
-                const privJwk = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
-
-                const alg = keyUse === "sig"
-                    ? (rsaKeySize === 2048 ? "RS256" : rsaKeySize === 3072 ? "RS384" : "RS512")
-                    : (rsaKeySize === 2048 ? "RSA-OAEP" : rsaKeySize === 3072 ? "RSA-OAEP-384" : "RSA-OAEP-512");
-
-                publicKey = { kty: pubJwk.kty || "RSA", ...pubJwk, kid, use: keyUse, alg };
-                privateKeyJwk = { kty: privJwk.kty || "RSA", ...privJwk, kid, use: keyUse, alg };
-
-            } else if (keyType === "EC") {
-                const keyPair = await crypto.subtle.generateKey(
-                    {
-                        name: "ECDSA",
-                        namedCurve: ecCurve,
-                    },
-                    true,
-                    ["sign", "verify"]
-                );
-
-                const pubJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
-                const privJwk = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
-
-                const alg = ecCurve === "P-256" ? "ES256" : ecCurve === "P-384" ? "ES384" : "ES512";
-
-                publicKey = { kty: pubJwk.kty || "EC", ...pubJwk, kid, use: "sig", alg };
-                privateKeyJwk = { kty: privJwk.kty || "EC", ...privJwk, kid, use: "sig", alg };
-
-            } else {
-                // Symmetric key
-                const key = crypto.getRandomValues(new Uint8Array(symmetricKeySize / 8));
-                const k = base64UrlEncode(key.buffer);
-
-                const alg = keyUse === "sig"
-                    ? (symmetricKeySize === 256 ? "HS256" : symmetricKeySize === 384 ? "HS384" : "HS512")
-                    : (symmetricKeySize === 128 ? "A128KW" : symmetricKeySize === 192 ? "A192KW" : "A256KW");
-
-                const symJwk: JWK = {
-                    kty: "oct",
-                    k,
-                    kid,
-                    use: keyUse,
-                    alg,
-                    key_ops: keyUse === "sig" ? ["sign", "verify"] : ["wrapKey", "unwrapKey"],
-                };
-
-                privateKeyJwk = symJwk;
-                publicKey = null; // No public key for symmetric
-            }
-
-            setPrivateJwk(JSON.stringify(privateKeyJwk, null, 2));
-            setPublicJwk(publicKey ? JSON.stringify(publicKey, null, 2) : "");
-
-            // Create JWK Set
-            const jwks = {
-                keys: publicKey ? [publicKey] : [privateKeyJwk],
-            };
-            setJwkSet(JSON.stringify(jwks, null, 2));
-
-            message.success("JWK generated successfully!");
+            const result = await generateJwk({ keyType, keyUse, rsaKeySize, ecCurve, symmetricKeySize, keyId });
+            setPrivateJwk(JSON.stringify(result.privateKey, null, 2));
+            setPublicJwk(result.publicKey ? JSON.stringify(result.publicKey, null, 2) : "");
+            setJwkSet(JSON.stringify(result.jwks, null, 2));
+            message.success(t("JWK generated successfully!"));
         } catch (error) {
-            console.error("JWK generation error:", error);
             showErrorModal({
-                title: "JWK generation failed",
-                error,
-                context: `Tried to generate a ${keyType} JWK${
-                    keyType === "RSA" ? ` (${rsaKeySize}-bit)` : keyType === "EC" ? ` (${ecCurve})` : ` (${symmetricKeySize}-bit symmetric)`
-                }.`,
+                title: t("JWK generation failed"), error,
+                context: t("Could not generate a {type} JWK with size or curve {size}.", { type: keyType, size: keyType === "RSA" ? rsaKeySize : keyType === "EC" ? ecCurve : symmetricKeySize }),
                 recommendations: [
-                    "Use a standard size: RSA 2048 / 3072 / 4096, EC P-256 / P-384 / P-521.",
-                    "Symmetric keys should be 128, 192, or 256 bits — anything else is rejected by Web Crypto.",
-                    "If your browser blocks an algorithm, generate the key with `openssl` and import the JWK from a tool like `jose` CLI.",
+                    t("Check the selected key type, use, size and curve, then try again."),
+                    t("Keep private and symmetric keys secret, including any JWKS that contains them."),
+                    t("If your browser blocks the algorithm, use a compatible local key-generation tool."),
                 ],
             });
-        } finally {
-            setIsGenerating(false);
-        }
-    }, [keyType, keyUse, rsaKeySize, ecCurve, symmetricKeySize, keyId]);
+        } finally { setIsGenerating(false); }
+    }, [keyType, keyUse, rsaKeySize, ecCurve, symmetricKeySize, keyId, t]);
 
     const downloadJwk = (content: string, filename: string) => downloadText(content, filename, "application/json");
 
@@ -181,21 +83,19 @@ export default function JWKGeneratorPage() {
             key: "public",
             label: (
                 <Space>
-                    <Text strong>Public Key (JWK)</Text>
-                    <Tag color="green">Safe to share</Tag>
+                    <Text strong>{t("Public Key (JWK)")}</Text>
+                    <Tag color="green">{t("Safe to share")}</Tag>
                 </Space>
             ),
             children: (
                 <div>
                     <div style={{ marginBottom: 8, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                        <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(publicJwk, "Public JWK copied!")}>
-                            Copy
-                        </Button>
+                        <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(publicJwk, t("Public JWK copied!"))}>
+                            {t("Copy")}</Button>
                         <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadJwk(publicJwk, "public-key.jwk")}>
-                            Download
-                        </Button>
+                            {t("Download")}</Button>
                     </div>
-                    <TextArea
+                    <TextArea aria-label={t("Public Key (JWK)")} dir="ltr" styles={{ textarea: { direction: "ltr" } }}
                         value={publicJwk}
                         readOnly
                         rows={12}
@@ -208,21 +108,19 @@ export default function JWKGeneratorPage() {
             key: "private",
             label: (
                 <Space>
-                    <Text strong>{keyType === "oct" ? "Symmetric Key (JWK)" : "Private Key (JWK)"}</Text>
-                    <Tag color="red">Keep secret!</Tag>
+                    <Text strong>{t(keyType === "oct" ? "Symmetric Key (JWK)" : "Private Key (JWK)")}</Text>
+                    <Tag color="red">{t("Keep secret!")}</Tag>
                 </Space>
             ),
             children: (
                 <div>
                     <div style={{ marginBottom: 8, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                        <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(privateJwk, "Private JWK copied!")}>
-                            Copy
-                        </Button>
+                        <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(privateJwk, t("Private JWK copied!"))}>
+                            {t("Copy")}</Button>
                         <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadJwk(privateJwk, "private-key.jwk")}>
-                            Download
-                        </Button>
+                            {t("Download")}</Button>
                     </div>
-                    <TextArea
+                    <TextArea aria-label={t("Private or symmetric JWK")} dir="ltr" styles={{ textarea: { direction: "ltr" } }}
                         value={privateJwk}
                         readOnly
                         rows={keyType === "RSA" ? 20 : 12}
@@ -235,21 +133,19 @@ export default function JWKGeneratorPage() {
             key: "jwks",
             label: (
                 <Space>
-                    <Text strong>JWK Set (JWKS)</Text>
-                    <Tag color="blue">For .well-known/jwks.json</Tag>
+                    <Text strong>{t("JWK Set (JWKS)")}</Text>
+                    <Tag color={keyType === "oct" ? "red" : "blue"}>{t(keyType === "oct" ? "Contains a secret key — do not publish" : "For .well-known/jwks.json")}</Tag>
                 </Space>
             ),
             children: (
                 <div>
                     <div style={{ marginBottom: 8, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                        <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(jwkSet, "JWK Set copied!")}>
-                            Copy
-                        </Button>
+                        <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(jwkSet, t("JWK Set copied!"))}>
+                            {t("Copy")}</Button>
                         <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadJwk(jwkSet, "jwks.json")}>
-                            Download
-                        </Button>
+                            {t("Download")}</Button>
                     </div>
-                    <TextArea
+                    <TextArea aria-label={t("JWK Set (JWKS)")} dir="ltr" styles={{ textarea: { direction: "ltr" } }}
                         value={jwkSet}
                         readOnly
                         rows={15}
@@ -262,13 +158,13 @@ export default function JWKGeneratorPage() {
 
     return (
         <ToolPageLayout
-            title="JWK Generator"
-            description="Generate JSON Web Keys for RSA, EC, and symmetric algorithms"
+            title={t("JWK Generator")}
+            description={t("Generate JSON Web Keys for RSA, EC, and symmetric algorithms")}
             icon={<KeyOutlined style={{ fontSize: 24 }} />}
             color="#fa8c16"
             learnMore={{
                 whatIs: "JSON Web Key (JWK) is a standard (RFC 7517) for representing cryptographic keys using JSON. JWKs can represent RSA, Elliptic Curve (EC), and symmetric keys in a portable, standardized format.",
-                whyUse: "JWKs are essential for JWT/JWS/JWE operations. They enable secure key exchange, are used in OAuth 2.0 / OpenID Connect for token validation, and can be published as JWKS (JWK Sets) at .well-known endpoints.",
+                whyUse: "JWKs support JWT/JWS/JWE operations and OAuth 2.0 / OpenID Connect token validation. Publish only public keys as JWKS at .well-known endpoints; never publish private or symmetric keys.",
                 howToUse: [
                     "Select a key type: RSA for broad compatibility, EC for smaller keys, or symmetric for shared secrets",
                     "Choose the key use: 'sig' for signing (JWS) or 'enc' for encryption (JWE)",
@@ -281,14 +177,14 @@ export default function JWKGeneratorPage() {
                     "RSA 2048-bit is minimum for production; 3072+ bits for long-term security",
                     "P-256 (ES256) offers equivalent security to RSA 3072 with much smaller keys",
                     "Always keep private keys secret - only share public keys",
-                    "Use the JWKS format for publishing keys at .well-known/jwks.json",
+                    "Use the JWKS format for publishing public keys at .well-known/jwks.json",
                     "Include 'kid' (key ID) to support key rotation",
                 ],
                 useCases: [
                     "Generating signing keys for JWT authentication",
                     "Creating key pairs for OAuth 2.0 / OpenID Connect providers",
                     "Setting up encryption keys for JWE",
-                    "Publishing keys for token validation endpoints",
+                    "Publishing public keys for token validation endpoints",
                     "Key generation for API authentication",
                 ],
             }}
@@ -297,48 +193,52 @@ export default function JWKGeneratorPage() {
                 <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                         <div style={{ flex: 1, minWidth: 200 }}>
-                            <Text strong style={{ display: "block", marginBottom: 8 }}>Key Type</Text>
-                            <Select
+                            <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Key Type")}</Text>
+                            <Select aria-label={t("Key Type")}
                                 value={keyType}
                                 onChange={(v) => {
                                     setKeyType(v);
-                                    if (v === "EC") setKeyUse("sig"); // EC only supports signing
+                                    if (v === "EC") {
+                                        setKeyUse("sig"); // EC only supports signing.
+                                        if (!symmetricJwkSizes("sig").includes(symmetricKeySize)) setSymmetricKeySize(256);
+                                    }
+                                    if (v === "oct" && !symmetricJwkSizes(keyUse).includes(symmetricKeySize)) setSymmetricKeySize(256);
                                 }}
                                 style={{ width: "100%" }}
-                                options={KEY_TYPES.map(t => ({
-                                    value: t.value,
-                                    label: t.label,
+                                options={KEY_TYPES.map(option => ({
+                                    value: option.value,
+                                    label: t(option.label),
                                 }))}
                             />
                             <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: "block" }}>
-                                {KEY_TYPES.find(t => t.value === keyType)?.description}
+                                {t(KEY_TYPES.find(option => option.value === keyType)?.description ?? "")}
                             </Text>
                         </div>
 
                         <div style={{ flex: 1, minWidth: 200 }}>
-                            <Text strong style={{ display: "block", marginBottom: 8 }}>Key Use</Text>
-                            <Select
+                            <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Key Use")}</Text>
+                            <Select aria-label={t("Key Use")}
                                 value={keyUse}
-                                onChange={setKeyUse}
+                                onChange={(use) => { setKeyUse(use); if (!symmetricJwkSizes(use).includes(symmetricKeySize)) setSymmetricKeySize(256); }}
                                 style={{ width: "100%" }}
                                 disabled={keyType === "EC"} // EC only for signing
                                 options={[
-                                    { value: "sig", label: "Signature (sig)" },
-                                    { value: "enc", label: "Encryption (enc)" },
+                                    { value: "sig", label: t("Signature (sig)") },
+                                    { value: "enc", label: t("Encryption (enc)") },
                                 ]}
                             />
                         </div>
 
                         {keyType === "RSA" && (
                             <div style={{ flex: 1, minWidth: 200 }}>
-                                <Text strong style={{ display: "block", marginBottom: 8 }}>Key Size (bits)</Text>
-                                <Select
-                                    value={rsaKeySize}
+                                <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Key Size (bits)")}</Text>
+                                <Select aria-label={t("Key Size (bits)")}
+                                value={rsaKeySize}
                                     onChange={setRsaKeySize}
                                     style={{ width: "100%" }}
                                     options={RSA_KEY_SIZES.map(s => ({
                                         value: s,
-                                        label: `${s} bits`,
+                                        label: t("{size} bits", { size: s }),
                                     }))}
                                 />
                             </div>
@@ -346,9 +246,9 @@ export default function JWKGeneratorPage() {
 
                         {keyType === "EC" && (
                             <div style={{ flex: 1, minWidth: 200 }}>
-                                <Text strong style={{ display: "block", marginBottom: 8 }}>Curve</Text>
-                                <Select
-                                    value={ecCurve}
+                                <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Curve")}</Text>
+                                <Select aria-label={t("Curve")}
+                                value={ecCurve}
                                     onChange={setEcCurve}
                                     style={{ width: "100%" }}
                                     options={EC_CURVES.map(c => ({
@@ -361,14 +261,14 @@ export default function JWKGeneratorPage() {
 
                         {keyType === "oct" && (
                             <div style={{ flex: 1, minWidth: 200 }}>
-                                <Text strong style={{ display: "block", marginBottom: 8 }}>Key Size (bits)</Text>
-                                <Select
-                                    value={symmetricKeySize}
+                                <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Key Size (bits)")}</Text>
+                                <Select aria-label={t("Key Size (bits)")}
+                                value={symmetricKeySize}
                                     onChange={setSymmetricKeySize}
                                     style={{ width: "100%" }}
-                                    options={SYMMETRIC_KEY_SIZES.map(s => ({
+                                    options={symmetricJwkSizes(keyUse).map(s => ({
                                         value: s,
-                                        label: `${s} bits`,
+                                        label: t("{size} bits", { size: s }),
                                     }))}
                                 />
                             </div>
@@ -376,11 +276,11 @@ export default function JWKGeneratorPage() {
                     </div>
 
                     <div>
-                        <Text strong style={{ display: "block", marginBottom: 8 }}>Key ID (kid) - Optional</Text>
-                        <Input
+                        <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Key ID (kid) - Optional")}</Text>
+                        <Input aria-label={t("Key ID (kid) - Optional")} dir="ltr" styles={{ input: { direction: "ltr" } }}
                             value={keyId}
                             onChange={(e) => setKeyId(e.target.value)}
-                            placeholder="Auto-generated if empty"
+                            placeholder={t("Auto-generated if empty")}
                             style={{ fontFamily: "monospace" }}
                         />
                     </div>
@@ -393,8 +293,7 @@ export default function JWKGeneratorPage() {
                         size="large"
                         block
                     >
-                        Generate JWK
-                    </Button>
+                        {t("Generate JWK")}</Button>
 
                     {(publicJwk || privateJwk) && (
                         <>

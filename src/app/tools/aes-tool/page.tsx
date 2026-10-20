@@ -1,50 +1,48 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button, Card, Space, Input, Segmented, Select, App, Typography } from "antd";
+import React, { useState, useRef, useEffect } from "react";
+import { Button, Card, Space, Input, Segmented, Alert, App, Typography } from "antd";
 import { CopyOutlined, ClearOutlined, SafetyOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
 import ToolPageLayout from "@/components/ToolPageLayout";
-import CryptoJS from "crypto-js";
+import { useLanguage } from "@/components/LanguageProvider";
+import { CRYPTO_UTILITY_HELP } from "@/lib/i18n/crypto-utilities";
+import { encryptLegacyAesText, decryptLegacyAesText } from "@/lib/aes-text";
 
 const { TextArea } = Input;
 const { Text } = Typography;
 
 type Mode = "Encrypt" | "Decrypt";
-type KeySize = 128 | 192 | 256;
 
 export default function AesToolPage() {
+    const { t } = useLanguage();
+    const latestT = useRef(t);
+    useEffect(() => { latestT.current = t; }, [t]);
     const { message } = App.useApp();
     const [mode, setMode] = useState<Mode>("Encrypt");
-    const [keySize, setKeySize] = useState<KeySize>(256);
     const [passphrase, setPassphrase] = useState("");
     const [input, setInput] = useState("Hello, mydevtools!");
     const [output, setOutput] = useState("");
 
     const run = () => {
+        setOutput("");
         if (!passphrase) {
-            message.warning("Enter a passphrase");
+            message.warning(latestT.current("Enter a passphrase"));
             return;
         }
         if (!input) {
-            message.warning("Enter text");
+            message.warning(latestT.current("Enter text"));
             return;
         }
         try {
-            if (mode === "Encrypt") {
-                const cfg = { keySize: keySize / 32 };
-                const encrypted = CryptoJS.AES.encrypt(input, passphrase, cfg).toString();
-                setOutput(encrypted);
-            } else {
-                const cfg = { keySize: keySize / 32 };
-                const decrypted = CryptoJS.AES.decrypt(input, passphrase, cfg);
-                const text = decrypted.toString(CryptoJS.enc.Utf8);
-                if (!text) throw new Error("Decryption failed — wrong passphrase or corrupted ciphertext");
-                setOutput(text);
-            }
+            setOutput(mode === "Encrypt"
+                ? encryptLegacyAesText(input, passphrase)
+                : decryptLegacyAesText(input, passphrase));
+            if (mode === "Decrypt") message.success(latestT.current("Decryption completed"));
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : "Operation failed";
-            message.error(msg);
+            message.error(mode === "Decrypt"
+                ? latestT.current("Decryption failed — wrong passphrase or corrupted ciphertext")
+                : e instanceof Error ? latestT.current("Crypto operation failed: {detail}", { detail: e.message }) : latestT.current("Operation failed"));
             setOutput("");
         }
     };
@@ -58,83 +56,69 @@ export default function AesToolPage() {
 
     return (
         <ToolPageLayout
-            title="AES Encrypt & Decrypt"
-            description="Symmetric AES encryption with passphrase (CBC + PBKDF2)"
+            title={t("AES Encrypt & Decrypt")}
+            description={t("Encrypt and decrypt text with CryptoJS AES passphrases")}
             icon={<SafetyOutlined style={{ fontSize: 24, color: "#13c2c2" }} />}
             color="#13c2c2"
-            learnMore={{
-                whatIs:
-                    "AES (Advanced Encryption Standard) is a symmetric block cipher used worldwide for encrypting data at rest and in transit. This tool uses crypto-js OpenSSL-compatible AES with passphrase-derived keys (PBKDF2), CBC mode, and a random salt + IV.",
-                whyUse:
-                    "Quickly encrypt or decrypt small text payloads — config secrets, debug data, ciphertext from CLI tools — without installing OpenSSL. Output is OpenSSL-compatible (Salted__... base64).",
-                howToUse: [
-                    "Choose Encrypt or Decrypt",
-                    "Pick a key size (128, 192, 256 bits)",
-                    "Enter a passphrase — same passphrase needed to decrypt",
-                    "Paste text or ciphertext",
-                ],
-                tips: [
-                    "Always use AES-256 unless you have a specific reason not to",
-                    "Each encryption produces different ciphertext (random salt+IV)",
-                    "Compatible with `openssl enc -aes-256-cbc -base64`",
-                ],
-                useCases: [
-                    "Quick encryption of debug logs and config secrets",
-                    "Round-tripping ciphertext from OpenSSL CLI",
-                    "Teaching / learning AES symmetric crypto",
-                ],
-            }}
+            learnMore={CRYPTO_UTILITY_HELP["aes-tool"]}
         >
             <Space style={{ marginBottom: 16 }} wrap>
                 <Segmented<Mode>
-                    options={["Encrypt", "Decrypt"]}
+                    aria-label={t("Operation")}
+                    options={[{ value: "Encrypt", label: t("Encrypt") }, { value: "Decrypt", label: t("Decrypt") }]}
                     value={mode}
-                    onChange={(v) => setMode(v)}
+                    onChange={(v) => { setMode(v); setOutput(""); }}
                     size="large"
                 />
-                <Select
-                    value={keySize}
-                    onChange={(v) => setKeySize(v as KeySize)}
-                    style={{ width: 130 }}
-                    options={[
-                        { value: 128, label: "AES-128" },
-                        { value: 192, label: "AES-192" },
-                        { value: 256, label: "AES-256" },
-                    ]}
-                />
-                <Button type="primary" icon={<SafetyOutlined />} onClick={run}>{mode}</Button>
-                <Button onClick={swap} disabled={!output}>Use Output as Input</Button>
-                <Button icon={<CopyOutlined />} disabled={!output} onClick={() => copyToClipboard(output)}>Copy</Button>
-                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setPassphrase(""); }}>Clear</Button>
+                <Text><bdi dir="ltr">AES-256-CBC</bdi>{": "}{t("Fixed compatibility format")}</Text>
+                <Button type="primary" icon={<SafetyOutlined />} onClick={run}>{t(mode)}</Button>
+                <Button onClick={swap} disabled={!output}>{t("Use Output as Input")}</Button>
+                <Button icon={<CopyOutlined />} disabled={!output} onClick={() => copyToClipboard(output)}>{t("Copy")}</Button>
+                <Button icon={<ClearOutlined />} onClick={() => { setInput(""); setOutput(""); setPassphrase(""); }}>{t("Clear")}</Button>
             </Space>
 
+            <Alert
+                type="warning"
+                showIcon
+                title={t("Legacy compatibility only")}
+                description={t("No authentication tag: a successful decryption does not prove the passphrase or ciphertext is correct. Use for existing CryptoJS data and compatibility checks.")}
+                style={{ marginBottom: 16 }}
+            />
+
             <Card style={{ marginBottom: 16 }}>
-                <Text strong style={{ display: "block", marginBottom: 8 }}>Passphrase</Text>
+                <Text strong style={{ display: "block", marginBottom: 8 }}>{t("Passphrase")}</Text>
                 <Input.Password
+                    aria-label={t("Passphrase")}
+                    dir="ltr"
+                    styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                     size="large"
                     value={passphrase}
-                    onChange={(e) => setPassphrase(e.target.value)}
-                    placeholder="Enter passphrase used for key derivation"
+                    onChange={(e) => { setPassphrase(e.target.value); setOutput(""); }}
+                    placeholder={t("Enter passphrase used for key derivation")}
                 />
             </Card>
 
             <div className="tool-split-pane" style={{ gap: 16 }}>
-                <Card size="small" title={mode === "Encrypt" ? "Plaintext" : "Ciphertext (Base64)"}>
+                <Card size="small" title={t(mode === "Encrypt" ? "Plaintext" : "Ciphertext (Base64)")}>
                     <TextArea
                         rows={14}
+                        aria-label={t(mode === "Encrypt" ? "Plaintext" : "Ciphertext (Base64)")}
+                        dir={mode === "Encrypt" ? "auto" : "ltr"}
                         value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder={mode === "Encrypt" ? "Text to encrypt" : "U2FsdGVkX1+..."}
-                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }}
+                        onChange={(e) => { setInput(e.target.value); setOutput(""); }}
+                        placeholder={mode === "Encrypt" ? t("Text to encrypt") : "U2FsdGVkX1+..."}
+                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16, direction: mode === "Decrypt" ? "ltr" : undefined, textAlign: mode === "Decrypt" ? "left" : undefined }}
                     />
                 </Card>
-                <Card size="small" title={mode === "Encrypt" ? "Ciphertext (Base64)" : "Plaintext"}>
+                <Card size="small" title={t(mode === "Encrypt" ? "Ciphertext (Base64)" : "Plaintext")}>
                     <TextArea
                         rows={14}
+                        aria-label={t(mode === "Encrypt" ? "Ciphertext (Base64)" : "Plaintext")}
+                        dir={mode === "Encrypt" ? "ltr" : "auto"}
                         value={output}
                         readOnly
-                        placeholder="Output will appear here"
-                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }}
+                        placeholder={t("Output will appear here")}
+                        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16, direction: mode === "Encrypt" ? "ltr" : undefined, textAlign: mode === "Encrypt" ? "left" : undefined }}
                     />
                 </Card>
             </div>

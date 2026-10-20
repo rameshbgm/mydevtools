@@ -1,15 +1,16 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Card, Input, Typography, Row, Col, Button, Space, Alert, Tag, Collapse } from "antd";
-import { CheckCircleOutlined, CloseCircleOutlined, ClearOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { Card, Typography, Row, Col, Button, Space, Alert, Tag, Collapse } from "antd";
+import { CheckCircleOutlined, CloseCircleOutlined, ClearOutlined } from "@ant-design/icons";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { CodeEditor } from "@/components/CodeEditor";
 import ShareButton from "@/components/ShareButton";
 import ToolBridgeBanner from "@/components/ToolBridgeBanner";
 import { useShareableState, type ShareSchema } from "@/lib/shareable-state";
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 const SAMPLE_JSON = `{
   "name": "John Doe",
@@ -82,6 +83,7 @@ interface ShareState { input: string; }
 const SHARE_SCHEMA: ShareSchema<ShareState> = { toolId: "json-validator", version: 1 };
 
 export default function JsonValidatorPage() {
+    const { t } = useLanguage();
     const [input, setInput] = useState(SAMPLE_JSON);
 
     const result = useMemo(() => validateJSON(input), [input]);
@@ -91,8 +93,8 @@ export default function JsonValidatorPage() {
 
     return (
         <ToolPageLayout
-            title="JSON Validator"
-            description="Validate JSON syntax with detailed error messages"
+            title={t("JSON Validator")}
+            description={t("Validate JSON syntax with detailed error messages")}
             icon={<CheckCircleOutlined style={{ fontSize: 24, color: "#52c41a" }} />}
             color="#52c41a"
             learnMore={{
@@ -123,17 +125,18 @@ export default function JsonValidatorPage() {
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card
-                        title="JSON Input"
+                        title={t("JSON Input")}
                         extra={
                             <Space>
                                 <Button size="small" icon={<ClearOutlined />} onClick={() => setInput("")}>
-                                    Clear
+                                    {t("Clear")}
                                 </Button>
                                 <ShareButton schema={SHARE_SCHEMA} getState={() => ({ input })} size="small" />
                             </Space>
                         }
                     >
                         <CodeEditor
+                            ariaLabel={t("JSON input editor")}
                             value={input}
                             onChange={(val) => setInput(val || "")}
                             language="json"
@@ -141,22 +144,22 @@ export default function JsonValidatorPage() {
                         />
                     </Card>
 
-                    <Card title="Validation Result" style={{ marginTop: 16 }}>
+                    <Card title={t("Validation Result")} style={{ marginTop: 16 }}>
                         {result.valid ? (
                             <Alert
                                 type="success"
                                 showIcon
                                 icon={<CheckCircleOutlined />}
-                                title="Valid JSON"
+                                title={t("Valid JSON")}
                                 description={
                                     <Space orientation="vertical">
-                                        <Text>The JSON is well-formed and valid.</Text>
+                                        <Text>{t("The JSON is well-formed and valid.")}</Text>
                                         {stats && (
                                             <Space wrap>
-                                                <Tag color="green">Type: {stats.type}</Tag>
-                                                {stats.keys !== undefined && <Tag color="blue">Keys: {stats.keys}</Tag>}
-                                                {stats.length !== undefined && <Tag color="blue">Length: {stats.length}</Tag>}
-                                                <Tag color="purple">Depth: {stats.depth}</Tag>
+                                                <Tag color="green">{t("Type: {type}", { type: t(stats.type) })}</Tag>
+                                                {stats.keys !== undefined && <Tag color="blue">{t("Keys: {count}", { count: stats.keys })}</Tag>}
+                                                {stats.length !== undefined && <Tag color="blue">{t("Length: {count}", { count: stats.length })}</Tag>}
+                                                <Tag color="purple">{t("Depth: {count}", { count: stats.depth })}</Tag>
                                             </Space>
                                         )}
                                     </Space>
@@ -167,14 +170,12 @@ export default function JsonValidatorPage() {
                                 type="error"
                                 showIcon
                                 icon={<CloseCircleOutlined />}
-                                title="Invalid JSON"
+                                title={t("Invalid JSON")}
                                 description={
                                     <Space orientation="vertical">
-                                        <Text>{result.error}</Text>
+                                        {input.trim() ? <><Text>{t("Invalid JSON. Check the syntax and try again.")}</Text><pre dir="ltr" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", margin: 0 }}>{result.error}</pre></> : <Text>{t("Input is empty")}</Text>}
                                         {result.line && (
-                                            <Text type="secondary">
-                                                Line {result.line}, Column {result.column}
-                                            </Text>
+                                            <Text type="secondary">{t("Line {line}, Column {column}", { line: result.line, column: result.column ?? 1 })}</Text>
                                         )}
                                     </Space>
                                 }
@@ -184,47 +185,47 @@ export default function JsonValidatorPage() {
                 </Col>
 
                 <Col xs={24} lg={8}>
-                    <Card title="Common JSON Errors">
+                    <Card title={t("Common JSON Errors")}>
                         <Collapse
                             ghost
                             items={[
                                 {
                                     key: "1",
-                                    label: "Trailing commas",
-                                    children: <Text type="secondary">JSON doesn't allow trailing commas after the last item in arrays or objects.</Text>,
+                                    label: t("Trailing commas"),
+                                    children: <Text type="secondary">{t("JSON doesn't allow trailing commas after the last item in arrays or objects.")}</Text>,
                                 },
                                 {
                                     key: "2",
-                                    label: "Single quotes",
-                                    children: <Text type="secondary">JSON requires double quotes for strings, not single quotes.</Text>,
+                                    label: t("Single quotes"),
+                                    children: <Text type="secondary">{t("JSON requires double quotes for strings, not single quotes.")}</Text>,
                                 },
                                 {
                                     key: "3",
-                                    label: "Unquoted keys",
-                                    children: <Text type="secondary">Object keys must be enclosed in double quotes.</Text>,
+                                    label: t("Unquoted keys"),
+                                    children: <Text type="secondary">{t("Object keys must be enclosed in double quotes.")}</Text>,
                                 },
                                 {
                                     key: "4",
-                                    label: "Comments",
-                                    children: <Text type="secondary">JSON doesn't support comments. Use JSONC or JSON5 for comments.</Text>,
+                                    label: t("Comments"),
+                                    children: <Text type="secondary">{t("JSON doesn't support comments. Use JSONC or JSON5 for comments.")}</Text>,
                                 },
                                 {
                                     key: "5",
-                                    label: "Special values",
-                                    children: <Text type="secondary">undefined, NaN, and Infinity are not valid JSON values.</Text>,
+                                    label: t("Special values"),
+                                    children: <Text type="secondary">{t("undefined, NaN, and Infinity are not valid JSON values.")}</Text>,
                                 },
                             ]}
                         />
                     </Card>
 
-                    <Card title="JSON Quick Reference" style={{ marginTop: 16 }}>
-                        <ul style={{ paddingLeft: 20, margin: 0 }}>
-                            <li>Strings must use double quotes</li>
-                            <li>Numbers can be integers or floats</li>
-                            <li>Booleans: true or false (lowercase)</li>
-                            <li>Null value: null (lowercase)</li>
-                            <li>Arrays: [item1, item2, ...]</li>
-                            <li>Objects: {"{"}"key": value{"}"}</li>
+                    <Card title={t("JSON Quick Reference")} style={{ marginTop: 16 }}>
+                        <ul style={{ paddingInlineStart: 20, margin: 0 }}>
+                            <li>{t("Strings must use double quotes")}</li>
+                            <li>{t("Numbers can be integers or floats")}</li>
+                            <li>{t("Booleans: true or false (lowercase)")}</li>
+                            <li>{t("Null value: null (lowercase)")}</li>
+                            <li>{t("Arrays: [item1, item2, ...]")}</li>
+                            <li>{t("Objects: {example}", { example: '{"key": value}' })}</li>
                         </ul>
                     </Card>
                 </Col>

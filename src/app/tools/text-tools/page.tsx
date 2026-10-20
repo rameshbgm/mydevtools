@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Button, Card, Space, Typography, Row, Col, Input, Segmented, App, Checkbox, Statistic } from "antd";
-import { ScissorOutlined, CopyOutlined, SortAscendingOutlined, SortDescendingOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Button, Card, Space, Typography, Row, Col, Input, Statistic } from "antd";
+import { ScissorOutlined, CopyOutlined } from "@ant-design/icons";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useLanguage } from "@/components/LanguageProvider";
 import ToolPageLayout from "@/components/ToolPageLayout";
 
 const { TextArea } = Input;
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 type Operation = "sort-asc" | "sort-desc" | "unique" | "reverse" | "shuffle" | "trim" | "remove-empty" | "remove-duplicates" | "lowercase" | "uppercase" | "title-case" | "prefix" | "suffix" | "number-lines" | "join-lines";
 
@@ -83,7 +84,7 @@ function processText(text: string, operation: Operation, prefix: string = "", su
 }
 
 export default function TextToolsPage() {
-    const { message } = App.useApp();
+    const { t } = useLanguage();
     const [input, setInput] = useState(`apple
 banana
 cherry
@@ -124,31 +125,19 @@ banana`);
 
     return (
         <ToolPageLayout
-            title="Text Manipulation Tools"
-            description="Sort, filter, transform and manipulate text"
+            title={t("Text Manipulation Tools")}
+            description={t("Sort, filter, transform and manipulate text")}
             icon={<ScissorOutlined style={{ fontSize: 24, color: "#eb2f96" }} />}
             color="#eb2f96"
             learnMore={{
-                whatIs: "A comprehensive text manipulation toolkit for sorting lines, removing duplicates, filtering by pattern, adding line numbers, reversing order, and various other transformations.",
-                whyUse: "Text processing is common in data cleaning, log analysis, and content preparation. These tools handle tasks that would otherwise require scripts or complex editor commands.",
+                whatIs: "Sort, trim, deduplicate, reverse and transform text lines locally.",
+                whyUse: "Clean lists and prepare text without writing a script.",
                 howToUse: [
-                    "Paste your text in the input area",
-                    "View live statistics (lines, words, characters)",
-                    "Choose transformation tools from the buttons",
-                    "Copy the transformed output"
+                    "Enter one item per line and choose an operation. Use the output as input to combine operations.",
                 ],
                 tips: [
-                    "Sort alphabetically or by line length",
-                    "Use 'Unique' to remove duplicate lines",
-                    "Trim removes leading/trailing whitespace",
-                    "Chain multiple transformations for complex tasks"
+                    "Prefix, suffix and separator text are used exactly as entered.",
                 ],
-                useCases: [
-                    "Cleaning up lists and removing duplicates",
-                    "Sorting and organizing data files",
-                    "Preparing content for import/export",
-                    "Analyzing text statistics"
-                ]
             }}
         >
             <Row gutter={[24, 24]}>
@@ -157,19 +146,19 @@ banana`);
                     <Card size="small">
                         <Row gutter={16}>
                             <Col xs={12} sm={8} md={4}>
-                                <Statistic title="Lines" value={stats.lines} />
+                                <Statistic title={t("Lines")} value={stats.lines} />
                             </Col>
                             <Col xs={12} sm={8} md={4}>
-                                <Statistic title="Words" value={stats.words} />
+                                <Statistic title={t("Words")} value={stats.words} />
                             </Col>
                             <Col xs={12} sm={8} md={4}>
-                                <Statistic title="Characters" value={stats.characters} />
+                                <Statistic title={t("Characters")} value={stats.characters} />
                             </Col>
                             <Col xs={12} sm={8} md={4}>
-                                <Statistic title="Unique Lines" value={stats.uniqueLines} />
+                                <Statistic title={t("Unique Lines")} value={stats.uniqueLines} />
                             </Col>
                             <Col xs={12} sm={8} md={4}>
-                                <Statistic title="Duplicates" value={stats.duplicateLines} styles={{ content: { color: stats.duplicateLines > 0 ? "#f5222d" : undefined } }} />
+                                <Statistic title={t("Duplicates")} value={stats.duplicateLines} styles={{ content: { color: stats.duplicateLines > 0 ? "#f5222d" : undefined } }} />
                             </Col>
                         </Row>
                     </Card>
@@ -179,42 +168,42 @@ banana`);
                     <Row gutter={[16, 16]}>
                         <Col xs={24} md={12}>
                             <Card
-                                title="Input"
+                                title={t("Input")}
                                 size="small"
                                 extra={
-                                    <Button size="small" onClick={() => setInput("")}>Clear</Button>
+                                    <Button size="small" onClick={() => setInput("")}>{t("Clear")}</Button>
                                 }
                             >
-                                <TextArea
+                                <TextArea dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                                    aria-label={t("Input text")}
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     rows={16}
-                                    placeholder="Enter text, one item per line..."
-                                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }}
+                                    placeholder={t("Enter text, one item per line...")}
+                                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16 }}
                                 />
                             </Card>
                         </Col>
                         <Col xs={24} md={12}>
                             <Card
-                                title="Output"
+                                title={t("Output")}
                                 size="small"
                                 extra={
                                     <Space>
                                         <Button size="small" onClick={applyToInput} disabled={!output}>
-                                            Use as Input
-                                        </Button>
+                                            {t("Use as Input")}</Button>
                                         <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(output)} disabled={!output}>
-                                            Copy
-                                        </Button>
+                                            {t("Copy")}</Button>
                                     </Space>
                                 }
                             >
-                                <TextArea
+                                <TextArea dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                                    aria-label={t("Output text")}
                                     value={output}
                                     readOnly
                                     rows={16}
-                                    placeholder="Result will appear here..."
-                                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 13 }}
+                                    placeholder={t("Result will appear here...")}
+                                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16 }}
                                 />
                             </Card>
                         </Col>
@@ -222,85 +211,85 @@ banana`);
                 </Col>
 
                 <Col xs={24} lg={10}>
-                    <Card title="Operations">
+                    <Card title={t("Operations")}>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                             {OPERATIONS.map((op) => (
                                 <Button
                                     key={op.key}
                                     onClick={() => applyOperation(op.key)}
-                                    title={op.desc}
+                                    title={t(op.desc)}
                                 >
-                                    {op.label}
+                                    {t(op.label)}
                                 </Button>
                             ))}
                         </div>
                     </Card>
 
-                    <Card title="Prefix / Suffix" style={{ marginTop: 16 }}>
+                    <Card title={t("Prefix / Suffix")} style={{ marginTop: 16 }}>
                         <Space orientation="vertical" style={{ width: "100%" }}>
                             <div>
-                                <Text strong style={{ display: "block", marginBottom: 4 }}>Prefix</Text>
+                                <Text strong style={{ display: "block", marginBottom: 4 }}>{t("Prefix")}</Text>
                                 <Space.Compact style={{ width: "100%" }}>
-                                    <Input
+                                    <Input dir="ltr" styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                                        aria-label={t("Prefix")}
                                         value={prefix}
                                         onChange={(e) => setPrefix(e.target.value)}
                                         placeholder="e.g., - "
                                     />
-                                    <Button onClick={() => applyOperation("prefix")}>Apply</Button>
+                                    <Button onClick={() => applyOperation("prefix")}>{t("Apply")}</Button>
                                 </Space.Compact>
                             </div>
                             <div>
-                                <Text strong style={{ display: "block", marginBottom: 4 }}>Suffix</Text>
+                                <Text strong style={{ display: "block", marginBottom: 4 }}>{t("Suffix")}</Text>
                                 <Space.Compact style={{ width: "100%" }}>
-                                    <Input
+                                    <Input dir="ltr" styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                                        aria-label={t("Suffix")}
                                         value={suffix}
                                         onChange={(e) => setSuffix(e.target.value)}
                                         placeholder="e.g., ;"
                                     />
-                                    <Button onClick={() => applyOperation("suffix")}>Apply</Button>
+                                    <Button onClick={() => applyOperation("suffix")}>{t("Apply")}</Button>
                                 </Space.Compact>
                             </div>
                         </Space>
                     </Card>
 
-                    <Card title="Join Lines" style={{ marginTop: 16 }}>
+                    <Card title={t("Join Lines")} style={{ marginTop: 16 }}>
                         <Space>
-                            <Input
+                            <Input dir="ltr" styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
+                                aria-label={t("Separator")}
                                 value={joinSeparator}
                                 onChange={(e) => setJoinSeparator(e.target.value)}
-                                placeholder="Separator"
+                                placeholder={t("Separator")}
                                 style={{ width: 120 }}
                             />
-                            <Button onClick={() => applyOperation("join-lines")}>Join</Button>
+                            <Button onClick={() => applyOperation("join-lines")}>{t("Join")}</Button>
                         </Space>
                         <div style={{ marginTop: 8 }}>
                             <Space wrap size={4}>
-                                <Button size="small" type="text" onClick={() => setJoinSeparator(", ")}>comma</Button>
-                                <Button size="small" type="text" onClick={() => setJoinSeparator(" ")}>space</Button>
-                                <Button size="small" type="text" onClick={() => setJoinSeparator("; ")}>semicolon</Button>
-                                <Button size="small" type="text" onClick={() => setJoinSeparator(" | ")}>pipe</Button>
-                                <Button size="small" type="text" onClick={() => setJoinSeparator("\t")}>tab</Button>
+                                <Button size="small" type="text" onClick={() => setJoinSeparator(", ")}>{t("comma")}</Button>
+                                <Button size="small" type="text" onClick={() => setJoinSeparator(" ")}>{t("space")}</Button>
+                                <Button size="small" type="text" onClick={() => setJoinSeparator("; ")}>{t("semicolon")}</Button>
+                                <Button size="small" type="text" onClick={() => setJoinSeparator(" | ")}>{t("pipe")}</Button>
+                                <Button size="small" type="text" onClick={() => setJoinSeparator("\t")}>{t("tab")}</Button>
                             </Space>
                         </div>
                     </Card>
 
-                    <Card title="Quick Actions" style={{ marginTop: 16 }}>
+                    <Card title={t("Quick Actions")} style={{ marginTop: 16 }}>
                         <Space wrap>
                             <Button onClick={() => {
                                 setOutput(processText(processText(input, "trim"), "remove-empty"));
                             }}>
-                                Clean Text
-                            </Button>
+                                {t("Clean Text")}</Button>
                             <Button onClick={() => {
                                 setOutput(processText(processText(input, "trim"), "sort-asc"));
                             }}>
-                                Sort & Trim
-                            </Button>
+                                {t("Sort & Trim")}</Button>
                             <Button onClick={() => {
                                 setOutput(processText(processText(processText(input, "trim"), "remove-empty"), "unique"));
                             }}>
-                                Unique & Clean
-                            </Button>
+                                {t("Unique & Clean")}</Button>
                         </Space>
                     </Card>
                 </Col>

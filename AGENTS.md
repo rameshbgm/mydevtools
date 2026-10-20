@@ -3,6 +3,9 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 
+<!-- END:nextjs-agent-rules -->
+
+
 ## Styling split
 
 - **Landing hero / marketing**: `LandingMarketing.tsx` plus `landing-*` rules in `src/app/globals.css`.
@@ -13,4 +16,3 @@ Do not regress **light/dark readability** when changing colours; preserve existi
 ## Routing
 
 Canonical tool URLs look like **`/[categorySlug]/[toolId]`** (proxy in **`src/proxy.ts`** rewrites internally to **`/tools/[toolId]`**). Prefer **`toolPath`** / **`toolPathFromId`** from **`src/lib/category-routes.ts`** for links.
-<!-- END:nextjs-agent-rules -->
