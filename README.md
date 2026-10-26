@@ -364,6 +364,11 @@ Built with [Next.js](https://nextjs.org), [Ant Design](https://ant.design), [Mon
 
 Made with 💜 by [Ramesh Maharaddi](https://www.linkedin.com/in/rameshbgm/).
 
+### Contributors
+
+- [Ramesh Maharaddi](https://github.com/rameshbgm) — creator and maintainer.
+- [OpenAI Codex](https://developers.openai.com/codex/) — AI assistance with the Signal interface redesign and validation.
+
 
 Crypto compatibility checks include `npm run test:jwe-crypto`, `npm run test:jws-jwk`, `npm run test:aes-text` and the portable `npm run test:x509-generation`. Optional `npm run test:ssh-keys:integration` requires an installed `ssh-keygen`; `npm run test:x509-generation:integration` requires OpenSSL and includes larger RSA keys. Both commands create and clean up their own temporary fixture keys. They do not use personal keys.
 

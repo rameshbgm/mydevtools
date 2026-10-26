@@ -1,3 +1,4 @@
+import { SIGNAL_TRANSLATIONS } from "./signal";
 import { AUTHORED_DIAGNOSTIC_TRANSLATIONS } from "./authored-diagnostics";
 import { RELEASE_HISTORY_TRANSLATIONS } from "./release-history";
 import { CATALOG_DESCRIPTION_TRANSLATIONS } from "./catalog-descriptions";
@@ -70,6 +71,7 @@ export function validLanguage(value: unknown): Language {
 // Columns: Hindi, Spanish, French, German, Japanese, Simplified Chinese, Arabic.
 // Source strings remain the fallback, including diagnostic details from parsers.
 export const SHARED_TRANSLATIONS: Record<string, TranslationColumns> = {
+    ...SIGNAL_TRANSLATIONS,
     ...AUTHORED_DIAGNOSTIC_TRANSLATIONS,
     ...RELEASE_HISTORY_TRANSLATIONS,
     ...CATALOG_DESCRIPTION_TRANSLATIONS,

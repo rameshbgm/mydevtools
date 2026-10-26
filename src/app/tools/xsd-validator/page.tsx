@@ -626,7 +626,7 @@ export default function XsdValidatorPage() {
                                                         <WarningOutlined style={{ color: "#faad14" }} />
                                                     )}
                                                     {err.severity === "info" && (
-                                                        <InfoCircleOutlined style={{ color: "#1890ff" }} />
+                                                        <InfoCircleOutlined style={{ color: "var(--wb-accent)" }} />
                                                     )}
                                                     <div>
                                                         {err.line > 0 && (

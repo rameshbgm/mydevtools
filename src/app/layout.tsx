@@ -215,7 +215,7 @@ export default function RootLayout({
     return (
         <html
             lang="en"
-            data-workspace-mode="focused"
+            data-workspace-mode="full"
             className={`${geistSans.variable} ${geistMono.variable} ${landingDisplay.variable} h-full antialiased`}
             suppressHydrationWarning
         >
@@ -225,7 +225,7 @@ export default function RootLayout({
                 <link rel="describedby" href="/agents.json" type="application/json" title="Machine-readable tool catalog" />
                 <script dangerouslySetInnerHTML={{ __html: "try{var l=localStorage.getItem('mydevtools-language');l=['en','hi','es','fr','de','ja','zh','ar'].includes(l)?l:'en';document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr'}catch{}" }} />
                 <script dangerouslySetInnerHTML={{ __html: `try{document.documentElement.dataset.releaseSeen=localStorage.getItem(${JSON.stringify(SEEN_RELEASE_KEY)})===${JSON.stringify(APP_VERSION)}?'true':'false'}catch{}` }} />
-                <script dangerouslySetInnerHTML={{ __html: "try{document.documentElement.dataset.workspaceMode=localStorage.getItem('mydevtools-workspace-mode')==='full'?'full':'focused';var p=JSON.parse(localStorage.getItem('devtools-hub-storage')||'{}');var d=p.state?.darkMode===true;document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light'}catch{}" }} />
+                <script dangerouslySetInnerHTML={{ __html: "try{document.documentElement.dataset.workspaceMode=localStorage.getItem('mydevtools-workspace-mode')==='focused'?'focused':'full';var p=JSON.parse(localStorage.getItem('devtools-hub-storage')||'{}');var d=p.state?.darkMode===true;document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light'}catch{}" }} />
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{ __html: JSON.stringify(SITE_STRUCTURED_DATA) }}

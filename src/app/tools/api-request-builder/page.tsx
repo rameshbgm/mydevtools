@@ -1108,7 +1108,7 @@ System.out.println(response.body());`;
                         </Space>
 
                         {/* URL Bar */}
-                        <Space.Compact style={{ width: "100%", marginBottom: 16 }}>
+                        <Space.Compact className="signal-request-bar" style={{ width: "100%", marginBottom: 16 }}>
                             <Select value={method} onChange={setMethod} aria-label={t("HTTP method")} style={{ minWidth: 120 }} size="large">
                                 {HTTP_METHODS.map((m) => (
                                     <Select.Option key={m.value} value={m.value}>
@@ -1140,7 +1140,7 @@ System.out.println(response.body());`;
 
                         {/* Live URL preview after substitution */}
                         {url && (
-                            <div style={{ marginBottom: 12, padding: "6px 10px", background: "rgba(0,0,0,0.03)", borderRadius: 4, fontSize: 11, fontFamily: "var(--font-geist-mono)", wordBreak: "break-all" }}>
+                            <div style={{ marginBottom: 12, padding: "6px 10px", background: "var(--signal-inset)", borderRadius: 4, fontSize: 11, fontFamily: "var(--font-geist-mono)", wordBreak: "break-all" }}>
                                 <Text type="secondary" style={{ fontSize: 11 }}>→ </Text>
                                 <Text dir="ltr" style={{ fontSize: 11 }}>{buildUrl()}</Text>
                             </div>
@@ -1559,12 +1559,12 @@ System.out.println(response.body());`;
                                                     <iframe
                                                         srcDoc={response}
                                                         sandbox=""
-                                                        style={{ width: "100%", height: 320, border: "1px solid rgba(0,0,0,0.1)", borderRadius: 4, background: "#fff" }}
+                                                        style={{ width: "100%", height: 320, border: "1px solid var(--wb-card-border)", borderRadius: 4, background: "var(--wb-card-bg)" }}
                                                         title={t("HTML preview")}
                                                     />
                                                 ) : responseKind === "image" && responseDataUrl ? (
                                                     // eslint-disable-next-line @next/next/no-img-element
-                                                    <img src={responseDataUrl} alt={t("response")} style={{ maxWidth: "100%", maxHeight: 320, display: "block", margin: "0 auto", background: "rgba(0,0,0,0.04)", borderRadius: 4 }} />
+                                                    <img src={responseDataUrl} alt={t("response")} style={{ maxWidth: "100%", maxHeight: 320, display: "block", margin: "0 auto", background: "var(--signal-inset)", borderRadius: 4 }} />
                                                 ) : (
                                                     <Empty description={t("No special preview for {type}", { type: responseHeaders["content-type"] || t("this content type") })} />
                                                 )}

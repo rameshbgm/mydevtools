@@ -84,7 +84,7 @@ export default function DnsLookupPage() {
         <ToolPageLayout
             title={t("DNS Lookup")}
             description={t("Resolve A, AAAA, CNAME, MX, TXT, NS, SOA records via DNS-over-HTTPS")}
-            icon={<GlobalOutlined style={{ fontSize: 24, color: "#1890ff" }} />}
+            icon={<GlobalOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#1890ff"
             learnMore={{
                 whatIs: t("Query public DNS-over-HTTPS resolvers directly from your browser. The selected resolver receives the hostname and record types."),
@@ -140,7 +140,7 @@ export default function DnsLookupPage() {
                                     ) : (
                                         <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 16 }}>
                                             {r.Answer.map((a, i) => (
-                                                <div key={i} style={{ padding: "4px 0", borderBottom: i < r.Answer!.length - 1 ? "1px solid rgba(0,0,0,0.06)" : undefined }}>
+                                                <div key={i} style={{ padding: "4px 0", borderBottom: i < r.Answer!.length - 1 ? "var(--wb-card-border)" : undefined }}>
                                                     <div dir="ltr" style={{ direction: "ltr", textAlign: "left", wordBreak: "break-all" }}>{a.data}</div>
                                                     <Text type="secondary" style={{ fontSize: 11 }}>TTL {a.TTL}s</Text>
                                                 </div>

@@ -174,7 +174,7 @@ export default function TypingTestPage() {
         <ToolPageLayout
             title={t("Typing Speed Test")}
             description={t("Measure your typing speed in WPM with real-time accuracy tracking")}
-            icon={<FontSizeOutlined style={{ fontSize: 24, color: "#06b6d4" }} />}
+            icon={<FontSizeOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#06b6d4"
             learnMore={{
                 whatIs: t("Practice typing with fixed English passages. WPM is correct characters divided by five and by elapsed minutes; accuracy compares your current text with the passage."),
@@ -235,8 +235,8 @@ export default function TypingTestPage() {
                                 lineHeight: 1.9,
                                 letterSpacing: "0.03em",
                                 padding: "16px",
-                                background: darkMode ? "#141414" : "#f8fafc",
-                                borderRadius: 8,
+                                background: darkMode ? "var(--wb-card-bg)" : "var(--wb-card-bg)",
+                                borderRadius: 6,
                                 marginBottom: 16,
                                 minHeight: 110,
                                 userSelect: "none",
@@ -319,7 +319,7 @@ export default function TypingTestPage() {
                                     textAlign: "center",
                                 }}>
                                     <TrophyOutlined style={{ fontSize: 28, color: "#f59e0b", marginBottom: 8 }} />
-                                    <div style={{ fontSize: 48, fontWeight: 900, color: "#06b6d4", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+                                    <div style={{ fontSize: 48, fontWeight: 900, color: "var(--wb-accent)", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
                                         {results[0].wpm}
                                         <span style={{ fontSize: 18, fontWeight: 600, color: muted, marginLeft: 4 }}>{t("WPM")}</span>
                                     </div>
@@ -336,7 +336,7 @@ export default function TypingTestPage() {
                                         type="primary"
                                         icon={<ReloadOutlined />}
                                         onClick={() => reset()}
-                                        style={{ marginTop: 16, background: "#06b6d4", borderColor: "#06b6d4" }}
+                                        style={{ marginTop: 16, background: "var(--wb-accent-soft)", borderColor: "var(--wb-accent)" }}
                                     >
                                         {t("Try Again")}</Button>
                                 </Card>
@@ -362,7 +362,7 @@ export default function TypingTestPage() {
                                     opacity: 1 - i * 0.12,
                                 }}>
                                     <div style={{
-                                        fontSize: 20, fontWeight: 800, color: "#06b6d4",
+                                        fontSize: 20, fontWeight: 800, color: "var(--wb-accent)",
                                         minWidth: 44, fontVariantNumeric: "tabular-nums",
                                     }}>
                                         {r.wpm}

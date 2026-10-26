@@ -150,7 +150,7 @@ export default function XmlFormatterPage() {
                                     </Text>
                                 </div>
                                 {!validState.valid && (
-                                    <><Text type="danger" role="alert">{t("Invalid XML. Check matching tags and syntax, then try again.")}</Text><pre dir="ltr" style={{ marginTop: 16, fontSize: 12, textAlign: "left", background: "#1a1a1a", padding: 16, borderRadius: 8, whiteSpace: "pre-wrap", color: "#f5222d" }}>
+                                    <><Text type="danger" role="alert">{t("Invalid XML. Check matching tags and syntax, then try again.")}</Text><pre dir="ltr" style={{ marginTop: 16, fontSize: 12, textAlign: "left", background: "var(--wb-card-bg)", padding: 16, borderRadius: 6, whiteSpace: "pre-wrap", color: "#f5222d" }}>
                                         {validState.error}
                                     </pre></>
                                 )}

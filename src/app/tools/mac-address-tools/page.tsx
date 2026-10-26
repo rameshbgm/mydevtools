@@ -1113,7 +1113,7 @@ export default function MACAddressToolsPage() {
                                                         style={{
                                                             maxHeight: 400,
                                                             overflow: "auto",
-                                                            background: darkMode ? "#141414" : "#f5f5f5",
+                                                            background: darkMode ? "var(--wb-card-bg)" : "var(--signal-inset)",
                                                             padding: 12,
                                                             borderRadius: 6,
                                                             fontFamily: "monospace",

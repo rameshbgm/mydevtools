@@ -473,7 +473,7 @@ export default function ImageResizerPage() {
                                     <img
                                         src={original.blobUrl}
                                         alt={original.file.name}
-                                        style={{ width: "100%", display: "block", borderRadius: 4, background: "rgba(0,0,0,0.04)" }}
+                                        style={{ width: "100%", display: "block", borderRadius: 4, background: "var(--signal-inset)" }}
                                     />
                                 </Card>
                             </Col>
@@ -502,7 +502,7 @@ export default function ImageResizerPage() {
                                         <img
                                             src={resized.url}
                                             alt={t("resized")}
-                                            style={{ width: "100%", display: "block", borderRadius: 4, background: "rgba(0,0,0,0.04)" }}
+                                            style={{ width: "100%", display: "block", borderRadius: 4, background: "var(--signal-inset)" }}
                                         />
                                     ) : (
                                         <Empty description={working ? t("Resizing…") : t("Adjust the dimensions")} />

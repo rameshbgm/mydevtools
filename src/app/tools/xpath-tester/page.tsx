@@ -247,7 +247,7 @@ export default function XPathTesterPage() {
                                     style={{
                                         padding: "8px 12px",
                                         textAlign: "start", width: "100%", color: "inherit", font: "inherit",
-                                        background: xpath === ex.xpath ? "rgba(114, 46, 209, 0.1)" : "rgba(0,0,0,0.02)",
+                                        background: xpath === ex.xpath ? "rgba(114, 46, 209, 0.1)" : "var(--signal-inset)",
                                         borderRadius: 6,
                                         cursor: "pointer",
                                         border: xpath === ex.xpath ? "1px solid #722ed1" : "1px solid transparent",

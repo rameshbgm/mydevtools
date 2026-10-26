@@ -40,7 +40,7 @@ function CardFace({ card, onCopy }: Readonly<{ card: GeneratedCard; onCopy: (v: 
                 position: "relative",
                 aspectRatio: "1.586 / 1",
                 minHeight: 200,
-                borderRadius: 16,
+                borderRadius: 6,
                 padding: 22,
                 color: "#fff",
                 display: "flex",
@@ -58,7 +58,7 @@ function CardFace({ card, onCopy }: Readonly<{ card: GeneratedCard; onCopy: (v: 
                     position: "absolute",
                     inset: 0,
                     background:
-                        "radial-gradient(circle at 82% 12%, rgba(255,255,255,0.28), transparent 45%), radial-gradient(circle at 10% 95%, rgba(255,255,255,0.14), transparent 40%)",
+                        "var(--wb-card-bg)",
                     pointerEvents: "none",
                 }}
             />
@@ -71,7 +71,7 @@ function CardFace({ card, onCopy }: Readonly<{ card: GeneratedCard; onCopy: (v: 
                         width: 42,
                         height: 32,
                         borderRadius: 6,
-                        background: "linear-gradient(135deg, #f6d365 0%, #d4af37 55%, #b8860b 100%)",
+                        background: "var(--wb-card-bg)",
                         boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
                     }}
                 />

@@ -425,7 +425,7 @@ export default function RagSearchPage() {
 
     const stepIcon = (state: StepState) => {
         if (state === "done") return <CheckCircleFilled style={{ color: "#52c41a" }} />;
-        if (state === "active") return <LoadingOutlined style={{ color: "#1677ff" }} />;
+        if (state === "active") return <LoadingOutlined style={{ color: "var(--wb-accent)" }} />;
         return <ClockCircleOutlined style={{ color: "#bfbfbf" }} />;
     };
 

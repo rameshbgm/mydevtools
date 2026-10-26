@@ -106,7 +106,7 @@ export default function JsonToTypescriptPage() {
         <ToolPageLayout
             title={t("JSON to TypeScript")}
             description={t("Convert JSON to TypeScript interfaces")}
-            icon={<CodeOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
+            icon={<CodeOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#1677ff"
             learnMore={{
                 whatIs: "Infer TypeScript interfaces and array unions from a JSON sample.",
@@ -131,7 +131,7 @@ export default function JsonToTypescriptPage() {
             </Space>
 
             {error && (
-                <div style={{ marginBottom: 16, padding: "8px 12px", background: "rgba(255,77,79,0.1)", borderRadius: 8 }}>
+                <div style={{ marginBottom: 16, padding: "8px 12px", background: "rgba(255,77,79,0.1)", borderRadius: 6 }}>
                     <Text type="danger">{t("Check the JSON input and root interface name.")}</Text>
                     <pre dir="ltr" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{t(error)}</pre>
                 </div>

@@ -105,7 +105,7 @@ export default function CorsTesterPage() {
         <ToolPageLayout
             title={t("CORS Tester")}
             description={t("Send requests from your browser and see exactly how CORS responds")}
-            icon={<BugOutlined style={{ fontSize: 24, color: "#22d3ee" }} />}
+            icon={<BugOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#22d3ee"
             learnMore={{
                 whatIs: t("Send a real browser request and inspect the response permitted by browser CORS rules."),

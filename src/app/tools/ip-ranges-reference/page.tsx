@@ -467,7 +467,7 @@ export default function IPRangesReferencePage() {
                                     label: (
                                         <Space>
                                             <GlobalOutlined />
-                                            {t("IPv4 Ranges")}<Badge count={IPV4_RANGES.length} style={{ backgroundColor: "#1890ff" }} />
+                                            {t("IPv4 Ranges")}<Badge count={IPV4_RANGES.length} style={{ backgroundColor: "var(--wb-accent-soft)" }} />
                                         </Space>
                                     ),
                                 },

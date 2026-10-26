@@ -178,7 +178,7 @@ export default function StopwatchPage() {
         <ToolPageLayout
             title={t("Stopwatch")}
             description={t("High-precision stopwatch with lap splits")}
-            icon={<ClockCircleOutlined style={{ fontSize: 24, color: "#6366f1" }} />}
+            icon={<ClockCircleOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#6366f1"
             learnMore={{
                 whatIs: t("A browser stopwatch with lap and cumulative split times, displayed to hundredths of a second. Browser scheduling affects display updates."),
@@ -194,7 +194,7 @@ export default function StopwatchPage() {
             <Row gutter={[20, 20]}>
                 {/* Main display */}
                 <Col xs={24} lg={14}>
-                    <Card style={{ textAlign: "center", background: "var(--wb-card-solid-bg)", border: "1px solid var(--wb-card-border)", borderRadius: 16 }}>
+                    <Card style={{ textAlign: "center", background: "var(--wb-card-solid-bg)", border: "1px solid var(--wb-card-border)", borderRadius: 6 }}>
                         {/* Action buttons at top */}
                         <Space size="middle" style={{ marginBottom: 24 }}>
                             <Button
@@ -202,7 +202,7 @@ export default function StopwatchPage() {
                                 size="large"
                                 icon={running ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
                                 onClick={handleStartPause}
-                                style={{ background: running ? "#f59e0b" : "#6366f1", borderColor: running ? "#f59e0b" : "#6366f1", minWidth: 130, fontWeight: 600 }}
+                                style={{ background: running ? "#f59e0b" : "var(--wb-accent-soft)", borderColor: running ? "#f59e0b" : "var(--wb-accent)", minWidth: 130, fontWeight: 600 }}
                             >
                                 {running ? t("Pause") : elapsed > 0 ? t("Resume") : t("Start")}
                             </Button>
@@ -254,7 +254,7 @@ export default function StopwatchPage() {
                                     </div>
                                 )}
                                 {laps.length > 0 && (
-                                    <Text style={{ color: darkMode ? "#737373" : "#9a9a9a", fontSize: 12, display: "block", marginTop: 4 }}>
+                                    <Text style={{ color: darkMode ? "var(--wb-text-body)" : "#9a9a9a", fontSize: 12, display: "block", marginTop: 4 }}>
                                         {t("Lap {number}", { number: laps.length + 1 })}
                                     </Text>
                                 )}
@@ -310,7 +310,7 @@ export default function StopwatchPage() {
                             size="small"
                             title={
                                 <Space>
-                                    <FlagOutlined style={{ color: "#6366f1" }} />
+                                    <FlagOutlined style={{ color: "var(--wb-accent)" }} />
                                     <span>{t("Lap Records")}</span>
                                     <Tag>{laps.length}</Tag>
                                 </Space>

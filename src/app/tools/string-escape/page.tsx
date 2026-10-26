@@ -206,7 +206,7 @@ export default function StringEscapePage() {
                                     value={output}
                                     readOnly
                                     rows={10}
-                                    style={{ background: "rgba(235, 47, 150, 0.05)" }}
+                                    style={{ background: "var(--signal-inset)" }}
                                 />
                             </Col>
                         </Row>
@@ -221,7 +221,7 @@ export default function StringEscapePage() {
                                     key={key}
                                     style={{
                                         padding: "8px 12px",
-                                        background: escapeType === key ? `${info.color}10` : "rgba(0,0,0,0.02)",
+                                        background: escapeType === key ? `${info.color}10` : "var(--signal-inset)",
                                         borderRadius: 6,
                                         cursor: "pointer",
                                         border: escapeType === key ? `1px solid ${info.color}` : "1px solid transparent",

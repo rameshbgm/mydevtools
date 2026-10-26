@@ -92,7 +92,7 @@ export default function WebsocketTesterPage() {
         <ToolPageLayout
             title={t("WebSocket Tester")}
             description={t("Connect to ws:// and wss:// endpoints, send messages, watch frames stream in")}
-            icon={<DisconnectOutlined style={{ fontSize: 24, color: "#06b6d4" }} />}
+            icon={<DisconnectOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#06b6d4"
             learnMore={{
                 whatIs: t("Open a browser WebSocket connection, send text frames and inspect received messages with timestamps."),
@@ -167,7 +167,7 @@ export default function WebsocketTesterPage() {
                                             display: "flex",
                                             gap: 8,
                                             padding: "6px 10px",
-                                            background: f.direction === "system" ? "rgba(0,0,0,0.02)" : "rgba(0,0,0,0.03)",
+                                            background: f.direction === "system" ? "var(--signal-inset)" : "var(--signal-inset)",
                                             borderInlineStart: `1px solid ${DIRECTION_COLOR[f.direction]}`,
                                             borderRadius: 4,
                                         }}

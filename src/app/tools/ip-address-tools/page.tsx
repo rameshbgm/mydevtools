@@ -615,7 +615,7 @@ export default function IPAddressToolsPage() {
         <ToolPageLayout
             title={t("IP Address Tools")}
             description={t("Comprehensive IPv4/IPv6 analyzer, converter, and subnet calculator")}
-            icon={<GlobalOutlined style={{ fontSize: 24, color: "#1890ff" }} />}
+            icon={<GlobalOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#1890ff"
             learnMore={{
                 whatIs: t("Inspect IPv4 and IPv6 addresses, representations and subnet ranges locally."),

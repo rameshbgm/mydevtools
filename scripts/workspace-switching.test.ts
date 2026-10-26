@@ -154,9 +154,9 @@ assert.equal(local.getItem(projectKey("mydevtools-tool-tabs-active-v1", alpha.id
 assert.equal(local.getItem("mydevtools-tool-tabs-v1"), JSON.stringify([{ id: "personal-tab", tool: "json-formatter" }]), "Personal tabs survive workspace tab mutations");
 
 // Execute the real first-paint script, including unavailable browser storage:
-// compact is the default, and an explicit full-view preference still wins.
+// Signal opens on the full introduction; explicit compact/full preferences still win.
 const layoutSource = readFileSync("src/app/layout.tsx", "utf8");
-assert.match(layoutSource, /data-workspace-mode="focused"/);
+assert.match(layoutSource, /data-workspace-mode="full"/);
 const layout = ts.createSourceFile("layout.tsx", layoutSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 let bootstrap = "";
 function findBootstrap(node: ts.Node) {
@@ -167,13 +167,13 @@ findBootstrap(layout);
 assert.ok(bootstrap);
 for (const choice of [null, "focused", "full", "invalid", "storage-denied"]) {
     let dark = false;
-    const root = { dataset: { workspaceMode: "focused" }, classList: { toggle: (_name: string, enabled: boolean) => { dark = enabled; } }, style: { colorScheme: "light" } };
+    const root = { dataset: { workspaceMode: "full" }, classList: { toggle: (_name: string, enabled: boolean) => { dark = enabled; } }, style: { colorScheme: "light" } };
     runInNewContext(bootstrap, { document: { documentElement: root }, localStorage: { getItem: (key: string) => {
         if (choice === "storage-denied") throw new Error("Fixture storage denied");
         return key === "mydevtools-workspace-mode" ? choice : '{"state":{"darkMode":true}}';
     } } });
-    assert.equal(root.dataset.workspaceMode, choice === "full" ? "full" : "focused", String(choice));
-    if (choice !== "storage-denied") { assert.equal(dark, true); assert.equal(root.style.colorScheme, "dark", "The compact default preserves the saved theme"); }
+    assert.equal(root.dataset.workspaceMode, choice === "focused" ? "focused" : "full", String(choice));
+    if (choice !== "storage-denied") { assert.equal(dark, true); assert.equal(root.style.colorScheme, "dark", "The Signal default preserves the saved theme"); }
 }
 
-console.log("Workspace switching: per-workspace screen/tab restoration, saved-data isolation, safe navigation, handoff cleanup, write failures and compact first-paint defaults with saved-view/theme preservation passed.");
+console.log("Workspace switching: per-workspace screen/tab restoration, saved-data isolation, safe navigation, handoff cleanup, write failures and full introduction defaults with saved-view/theme preservation passed.");

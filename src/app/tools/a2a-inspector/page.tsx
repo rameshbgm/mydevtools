@@ -1055,7 +1055,7 @@ export default function A2aInspectorPage() {
         <ToolPageLayout
             title={t("A2A Inspector")}
             description={t("Connect, discover, and test Agent-to-Agent (A2A) protocol agents")}
-            icon={<RobotOutlined style={{ fontSize: 24, color: "#0891b2" }} />}
+            icon={<RobotOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#0891b2"
             learnMore={{
                 whatIs: "A2A is an open agent interoperability protocol. This inspector checks selected Agent Card fields and exercises the JSONRPC binding: A2A 1.0 SendMessage, SendStreamingMessage, GetTask and CancelTask. A2A 0.3 and older draft methods are explicitly selectable. REST, gRPC, push subscriptions, and full schema conformance are outside this inspector’s coverage.",
@@ -1119,86 +1119,14 @@ export default function A2aInspectorPage() {
                 }}
             />
 
-            {/* URL bar + protocol */}
-            <Card size="small" style={{ marginBottom: 12 }}>
-                <Row gutter={[8, 8]} align="middle">
-                    <Col xs={24} md={14}>
-                        <Space.Compact style={{ width: "100%" }}>
-                            <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
-                                value={agentUrl}
-                                onChange={e => setAgentUrl(e.target.value)}
-                                onPressEnter={fetchAgentCard}
-                                placeholder="http://localhost:10000"
-                                prefix={<LinkOutlined style={{ color: "#0891b2" }} />}
-                                size="large"
-                            />
-                            <Button
-                                size="large"
-                                type="primary"
-                                onClick={fetchAgentCard}
-                                loading={loadingCard}
-                                icon={<ReloadOutlined />}
-                                style={{ background: "#0891b2", borderColor: "#0891b2" }}
-                            >
-                                {t("Discover")}</Button>
-                            <Tooltip title={t("Test connectivity: tries direct fetch, OPTIONS preflight, and the server proxy. Recommends a Connection Type based on the results.")}>
-                                <Button
-                                    size="large"
-                                    icon={<ExperimentOutlined />}
-                                    onClick={handleDiagnose}
-                                    loading={diagnosing}
-                                >
-                                    {t("Diagnose")}</Button>
-                            </Tooltip>
-                        </Space.Compact>
-                    </Col>
-                    <Col xs={24} md={10}>
-                        <Space wrap>
-                            <Text type="secondary" style={{ fontSize: 12 }}>{t("Protocol:")}</Text>
-                            <Select
-                                size="small"
-                                value={protocolVersion}
-                                onChange={(v) => setProtocolVersion(v)}
-                                style={{ minWidth: 200 }}
-                                options={Object.entries(PROTOCOL_INFO).map(([k, v]) => ({
-                                    value: k, label: t(v.label),
-                                }))}
-                            />
-                            <Tooltip title={t(protocolInfo.description)}>
-                                <InfoCircleOutlined style={{ color: "#9a9a9a" }} />
-                            </Tooltip>
-                            <Text type="secondary" style={{ fontSize: 12 }}>{t("Connection:")}</Text>
-                            <Select
-                                size="small"
-                                value={connectionMode}
-                                onChange={(v) => setConnectionMode(v)}
-                                style={{ minWidth: 180 }}
-                                options={[
-                                    { value: "direct", label: t("Direct (auto-fallback)") },
-                                    { value: "direct-strict", label: t("Direct (strict)") },
-                                    { value: "via-server-proxy", label: t("Via Server Proxy") },
-                                ]}
-                            />
-                            <Tooltip
-                                title={
-                                    <div style={{ fontSize: 12 }}>
-                                        <div><b>{t("Direct (auto-fallback):")}</b> {" "}{t("browser → agent. Auto-retries via /api/proxy on CORS failure.")}</div>
-                                        <div style={{ marginTop: 4 }}><b>{t("Direct (strict):")}</b> {" "}{t("direct only — surfaces CORS errors instead of falling back.")}</div>
-                                        <div style={{ marginTop: 4 }}><b>{t("Via Server Proxy:")}</b> {" "}{t("always server-side. Bypasses browser CORS; required for SSL/TLS options. Streaming uses /api/proxy-stream and works the same as direct.")}</div>
-                                    </div>
-                                }
-                            >
-                                <InfoCircleOutlined style={{ color: "#9a9a9a" }} />
-                            </Tooltip>
-                            {agentCard && <Badge status="success" text={t("Card loaded")} />}
-                            {corsFallbackUsed && (
-                                <Tooltip title={t("Direct fetch was blocked by CORS — auto-fell back to /api/proxy. Switch to 'Via Server Proxy' to skip the fallback hop.")}>
-                                    <Tag color="warning">{t("CORS fallback")}</Tag>
-                                </Tooltip>
-                            )}
-                        </Space>
-                    </Col>
-                </Row>
+            {/* Connection fields share one labeled grid and one action row. */}
+            <Card size="small" className="signal-connection-card" style={{ marginBottom: 20 }}>
+                <div className="signal-connection-grid">
+                    <div className="signal-field signal-endpoint-field"><label htmlFor="a2a-agent-endpoint">{t("Agent URL (A2A endpoint)")}</label><Input id="a2a-agent-endpoint" dir="ltr" value={agentUrl} onChange={e => setAgentUrl(e.target.value)} onPressEnter={fetchAgentCard} placeholder="http://localhost:10000" prefix={<LinkOutlined />} /></div>
+                    <div className="signal-field"><label htmlFor="a2a-protocol">{t("Protocol:")} <Tooltip title={t(protocolInfo.description)}><InfoCircleOutlined /></Tooltip></label><Select id="a2a-protocol" aria-label={t("Protocol:")} value={protocolVersion} onChange={v => setProtocolVersion(v)} options={Object.entries(PROTOCOL_INFO).map(([k,v]) => ({ value: k, label: t(v.label) }))} /></div>
+                    <div className="signal-field"><label htmlFor="a2a-connection-mode">{t("Connection:")} <Tooltip title={<div><div><b>{t("Direct (auto-fallback):")}</b> {t("browser → agent. Auto-retries via /api/proxy on CORS failure.")}</div><div><b>{t("Direct (strict):")}</b> {t("direct only — surfaces CORS errors instead of falling back.")}</div><div><b>{t("Via Server Proxy:")}</b> {t("always server-side. Bypasses browser CORS; required for SSL/TLS options. Streaming uses /api/proxy-stream and works the same as direct.")}</div></div>}><InfoCircleOutlined /></Tooltip></label><Select id="a2a-connection-mode" aria-label={t("Connection:")} value={connectionMode} onChange={v => setConnectionMode(v)} options={[{ value: "direct", label: t("Direct (auto-fallback)") }, { value: "direct-strict", label: t("Direct (strict)") }, { value: "via-server-proxy", label: t("Via Server Proxy") }]} /></div>
+                </div>
+                <div className="signal-form-actions"><Button type="primary" onClick={fetchAgentCard} loading={loadingCard} icon={<ReloadOutlined />}>{t("Discover")}</Button><Tooltip title={t("Test connectivity: tries direct fetch, OPTIONS preflight, and the server proxy. Recommends a Connection Type based on the results.")}><Button icon={<ExperimentOutlined />} onClick={handleDiagnose} loading={diagnosing}>{t("Diagnose")}</Button></Tooltip>{agentCard && <Badge status="success" text={t("Card loaded")} />}{corsFallbackUsed && <Tag color="warning">{t("CORS fallback")}</Tag>}</div>
                 {cardError && (
                     <Alert
                         type="error"
@@ -1367,7 +1295,7 @@ export default function A2aInspectorPage() {
                         children: agentCard ? (
                             <Row gutter={[16, 16]}>
                                 <Col xs={24} lg={12}>
-                                    <Card size="small" title={<><RobotOutlined style={{ color: "#0891b2" }} /> {agentCard.name}</>}>
+                                    <Card size="small" title={<><RobotOutlined style={{ color: "var(--wb-accent)" }} /> {agentCard.name}</>}>
                                         {agentCard.description && (
                                             <Paragraph type="secondary" style={{ fontSize: 13 }}>{agentCard.description}</Paragraph>
                                         )}
@@ -1461,7 +1389,7 @@ export default function A2aInspectorPage() {
                                         size="small"
                                         title={
                                             <Space>
-                                                <CheckCircleOutlined style={{ color: "#0891b2" }} />
+                                                <CheckCircleOutlined style={{ color: "var(--wb-accent)" }} />
                                                 {t("Selected card checks")}<Tag color="success">{complianceSummary.ok} {" "}{t("OK")}</Tag>
                                                 {complianceSummary.warn > 0 && <Tag color="warning">{complianceSummary.warn} {" "}{t("Warn")}</Tag>}
                                                 {complianceSummary.error > 0 && <Tag color="error">{complianceSummary.error} {" "}{t("Error")}</Tag>}
@@ -1544,9 +1472,9 @@ export default function A2aInspectorPage() {
                                                         style={{
                                                             cursor: "pointer",
                                                             padding: 8,
-                                                            border: `1px solid ${selected ? "#0891b2" : "transparent"}`,
+                                                            border: `1px solid ${selected ? "var(--wb-accent)" : "transparent"}`,
                                                             borderRadius: 6,
-                                                            background: selected ? (darkMode ? "rgba(8,145,178,0.12)" : "rgba(8,145,178,0.05)") : undefined,
+                                                            background: selected ? (darkMode ? "var(--wb-accent-soft)" : "var(--wb-accent-soft)") : undefined,
                                                             marginBottom: 4,
                                                         }}
                                                     >
@@ -1575,7 +1503,7 @@ export default function A2aInspectorPage() {
                                                 disabled={!selectedSkillId || callingSkill}
                                                 loading={callingSkill}
                                                 onClick={callSkill}
-                                                style={{ background: "#0891b2", borderColor: "#0891b2" }}
+                                                style={{ background: "var(--wb-accent-soft)", borderColor: "var(--wb-accent)" }}
                                             >
                                                 {t("Call")}</Button>
                                         }
@@ -1708,7 +1636,7 @@ export default function A2aInspectorPage() {
                                             onClick={fetchTask}
                                             loading={taskBusy}
                                             disabled={!taskIdInput.trim()}
-                                            style={{ background: "#0891b2", borderColor: "#0891b2" }}
+                                            style={{ background: "var(--wb-accent-soft)", borderColor: "var(--wb-accent)" }}
                                         >
                                             {A2A_METHODS[protocolVersion].get}
                                         </Button>
@@ -1745,7 +1673,7 @@ export default function A2aInspectorPage() {
                         children: (
                             <Card
                                 size="small"
-                                title={<Space><BugOutlined style={{ color: "#6366f1" }} /> {" "}{t("JSON-RPC 2.0 Messages")}</Space>}
+                                title={<Space><BugOutlined style={{ color: "var(--wb-accent)" }} /> {" "}{t("JSON-RPC 2.0 Messages")}</Space>}
                                 extra={
                                     debugLog.length > 0 && (
                                         <Button size="small" danger icon={<DeleteOutlined />} onClick={() => setDebugLog([])}>
@@ -1764,12 +1692,12 @@ export default function A2aInspectorPage() {
                                                     key={entry.id}
                                                     style={{
                                                         marginBottom: 8, padding: 10, borderRadius: 6,
-                                                        border: `1px solid ${entry.error ? "rgba(239,68,68,0.3)" : entry.direction === "out" ? "rgba(8,145,178,0.3)" : "rgba(99,102,241,0.3)"}`,
+                                                        border: `1px solid ${entry.error ? "rgba(239,68,68,0.3)" : entry.direction === "out" ? "var(--wb-card-border)" : "var(--wb-card-border)"}`,
                                                         background: entry.error
                                                             ? (darkMode ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.05)")
                                                             : entry.direction === "out"
-                                                                ? (darkMode ? "rgba(8,145,178,0.08)" : "rgba(8,145,178,0.05)")
-                                                                : (darkMode ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.05)"),
+                                                                ? (darkMode ? "var(--wb-accent-soft)" : "var(--wb-accent-soft)")
+                                                                : (darkMode ? "var(--wb-accent-soft)" : "var(--wb-accent-soft)"),
                                                     }}
                                                 >
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -2036,7 +1964,7 @@ function ChatPanel({
         <Card
             title={
                 <Space>
-                    <RobotOutlined style={{ color: "#0891b2" }} />
+                    <RobotOutlined style={{ color: "var(--wb-accent)" }} />
                     {title}
                     {agentCard && <Tag color="cyan">{agentCard.name}</Tag>}
                     {!agentCard && <Tag color="default">{t("No agent loaded")}</Tag>}
@@ -2069,7 +1997,7 @@ function ChatPanel({
                         {msg.role !== "user" && (
                             <div style={{
                                 width: 28, height: 28, borderRadius: "50%",
-                                background: msg.error ? "#ef4444" : "#0891b2",
+                                background: msg.error ? "#ef4444" : "var(--wb-accent-soft)",
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 flexShrink: 0, marginTop: 2,
                             }}>
@@ -2080,7 +2008,7 @@ function ChatPanel({
                             maxWidth: "72%", padding: "8px 12px",
                             borderRadius: msg.role === "user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
                             background: msg.role === "user"
-                                ? "#0891b2"
+                                ? "var(--wb-accent-soft)"
                                 : msg.error
                                     ? (darkMode ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.1)")
                                     : "var(--wb-card-solid-bg)",
@@ -2107,7 +2035,7 @@ function ChatPanel({
                         {msg.role === "user" && (
                             <div style={{
                                 width: 28, height: 28, borderRadius: "50%",
-                                background: "#6366f1",
+                                background: "var(--wb-accent-soft)",
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 flexShrink: 0, marginTop: 2,
                             }}>
@@ -2118,7 +2046,7 @@ function ChatPanel({
                 ))}
                 {sending && !messages.some(m => m.streaming) && (
                     <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "4px 0" }}>
-                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#0891b2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--wb-accent-soft)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <RobotOutlined style={{ color: "#fff", fontSize: 14 }} />
                         </div>
                         <Spin size="small" />
@@ -2148,7 +2076,7 @@ function ChatPanel({
                         icon={sending ? <ReloadOutlined spin /> : (sendIcon ?? <SendOutlined />)}
                         onClick={onSend}
                         disabled={!agentCard || !input.trim() || sending}
-                        style={{ background: "#0891b2", borderColor: "#0891b2" }}
+                        style={{ background: "var(--wb-accent-soft)", borderColor: "var(--wb-accent)" }}
                     >
                         {t("Send")}</Button>
                 )}

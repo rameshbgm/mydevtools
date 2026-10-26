@@ -223,7 +223,7 @@ export default function UnicodeConverterPage() {
                                     value={output}
                                     readOnly
                                     rows={8}
-                                    style={{ background: "rgba(19, 194, 194, 0.05)" }}
+                                    style={{ background: "var(--signal-inset)" }}
                                 />
                             </Col>
                         </Row>
@@ -269,25 +269,25 @@ export default function UnicodeConverterPage() {
                 <Col xs={24} lg={8}>
                     <Card title={t("Format Reference")}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                            <div style={{ padding: 12, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
+                            <div style={{ padding: 12, background: "var(--signal-inset)", borderRadius: 6 }}>
                                 <Text strong>{t("\\\\uXXXX (Escape)")}</Text>
                                 <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
                                     {t("JavaScript/JSON Unicode escape. E.g., \\u0041 = A")}
                                     </Text>
                             </div>
-                            <div style={{ padding: 12, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
+                            <div style={{ padding: 12, background: "var(--signal-inset)", borderRadius: 6 }}>
                                 <Text strong>{t("U+XXXX (Code Points)")}</Text>
                                 <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
                                     {t("Standard Unicode notation. E.g., U+0041 = A")}
                                     </Text>
                             </div>
-                            <div style={{ padding: 12, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
+                            <div style={{ padding: 12, background: "var(--signal-inset)", borderRadius: 6 }}>
                                 <Text strong>{t("UTF-8 Hex")}</Text>
                                 <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
                                     {t("Raw UTF-8 bytes in hexadecimal. E.g., 41 = A")}
                                     </Text>
                             </div>
-                            <div style={{ padding: 12, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
+                            <div style={{ padding: 12, background: "var(--signal-inset)", borderRadius: 6 }}>
                                 <Text strong>{t("UTF-16")}</Text>
                                 <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
                                     {t("UTF-16 code units. E.g., 0041 = A")}

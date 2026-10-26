@@ -796,7 +796,7 @@ export default function McpInspectorPage() {
         <ToolPageLayout
             title={t("MCP Inspector")}
             description={t("Test and inspect Model Context Protocol servers")}
-            icon={<ThunderboltOutlined style={{ fontSize: 24, color: "#6366f1" }} />}
+            icon={<ThunderboltOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#6366f1"
             learnMore={{
                 whatIs: "The MCP Inspector is a fully configurable client for the Model Context Protocol (MCP) — the open standard for connecting AI assistants to external tools and data sources. It connects to any MCP server over SSE or HTTP, lists all available tools, lets you call them interactively with auto-scaffolded arguments, and shows raw JSON-RPC 2.0 responses. For stdio-based servers it generates the exact CLI command to paste into your terminal. stdio config generates the equivalent CLI command.",
@@ -1001,7 +1001,7 @@ export default function McpInspectorPage() {
                                                     onClick={handleConnect}
                                                     loading={connecting}
                                                     disabled={connected}
-                                                    style={{ background: "#6366f1", borderColor: "#6366f1", flex: 1 }}
+                                                    style={{ background: "var(--wb-accent-soft)", borderColor: "var(--wb-accent)", flex: 1 }}
                                                 >
                                                     {config.transport === "stdio" ? t("Generate CLI Command") : connecting ? t("Connecting…") : t("Connect")}
                                                 </Button>
@@ -1375,7 +1375,7 @@ export default function McpInspectorPage() {
                                         size="small"
                                         title={
                                             <Space>
-                                                <ApiOutlined style={{ color: "#6366f1" }} />
+                                                <ApiOutlined style={{ color: "var(--wb-accent)" }} />
                                                 <Text>{t("Available Tools")}</Text>
                                                 {tools.length > 0 && <Tag>{tools.length}</Tag>}
                                             </Space>
@@ -1397,10 +1397,10 @@ export default function McpInspectorPage() {
                                                             borderRadius: 6,
                                                             marginBottom: 4,
                                                             background: selectedTool?.name === tool.name
-                                                                ? (darkMode ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.1)")
+                                                                ? (darkMode ? "var(--wb-accent-soft)" : "var(--wb-accent-soft)")
                                                                 : "transparent",
                                                             border: selectedTool?.name === tool.name
-                                                                ? "1px solid rgba(99,102,241,0.4)"
+                                                                ? "1px solid var(--wb-card-border)"
                                                                 : "1px solid transparent",
                                                         }}
                                                     >
@@ -1424,7 +1424,7 @@ export default function McpInspectorPage() {
                                                 size="small"
                                                 title={
                                                     <Space>
-                                                        <ThunderboltOutlined style={{ color: "#6366f1" }} />
+                                                        <ThunderboltOutlined style={{ color: "var(--wb-accent)" }} />
                                                         <Text dir="ltr" code>{selectedTool.name}</Text>
                                                     </Space>
                                                 }
@@ -1436,7 +1436,7 @@ export default function McpInspectorPage() {
                                                         onClick={handleCall}
                                                         loading={calling}
                                                         disabled={!connected}
-                                                        style={{ background: "#6366f1", borderColor: "#6366f1" }}
+                                                        style={{ background: "var(--wb-accent-soft)", borderColor: "var(--wb-accent)" }}
                                                     >
                                                         {t("Call")}</Button>
                                                 }
@@ -1527,7 +1527,7 @@ export default function McpInspectorPage() {
                             <Card
                                 title={
                                     <Space>
-                                        <HistoryOutlined style={{ color: "#6366f1" }} />
+                                        <HistoryOutlined style={{ color: "var(--wb-accent)" }} />
                                         {t("Call History")}</Space>
                                 }
                                 extra={

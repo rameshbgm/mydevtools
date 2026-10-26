@@ -429,7 +429,7 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                                         <Space>
                                             <Text dir="ltr" code>{subnetInfo.wildcardMask}</Text>
                                             <Tooltip title={t("Used in ACLs and OSPF")}>
-                                                <InfoCircleOutlined style={{ color: "#1890ff" }} />
+                                                <InfoCircleOutlined style={{ color: "var(--wb-accent)" }} />
                                             </Tooltip>
                                             <Button aria-label={t("Copy")}
                                                 size="small"

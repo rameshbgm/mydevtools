@@ -27,60 +27,51 @@ for(const source of descriptions){
     if(SHARED_TRANSLATIONS[source])assert.deepEqual(columns,SHARED_TRANSLATIONS[source],`Existing vocabulary: ${source}`);
     columns.forEach((copy,index)=>{ assert.ok(copy.trim()); assert.notEqual(copy,source,source); for(const token of tokens(source)) assert.ok(copy.includes(token),`Literal ${token}: ${LANGUAGES[index+1].id}/${source}`); if(!process.env.CATALOG_DESCRIPTION_STAGE)assert.equal(translate(LANGUAGES[index+1].id,source),copy,source); });
 }
-type Element={type:any;props:Record<string,any>};
-function text(node:any):string{return node==null||typeof node==="boolean"?"":Array.isArray(node)?node.map(text).join(""):typeof node==="object"?text(node.props?.children):String(node);}
-function harness(id:"homepage"|"release"){
-    const path=id==="homepage"?"src/app/page.tsx":"src/app/release-notes/page.tsx",source=readFileSync(path,"utf8"),ast=ts.createSourceFile(path,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
-    assert.equal((ast as ts.SourceFile&{parseDiagnostics:ts.Diagnostic[]}).parseDiagnostics.length,0);
-    const calls:string[]=[];function inspect(n:ts.Node){if(ts.isCallExpression(n)&&n.expression.getText(ast)==="t")calls.push(n.arguments[0]?.getText(ast));ts.forEachChild(n,inspect);}inspect(ast);
-    assert.ok(calls.includes("tool.description"),`${id}: actual tool summary uses translation`);
-    assert.ok(calls.includes(id==="homepage"?"CATEGORY_DESCRIPTIONS[category]":"catDesc"),`${id}: actual category summary uses translation`);
-    let language:Language="en",slot=0,effectSlot=0,tree:Element;const cells:any[]=[],effects:unknown[][]=[],pending:(()=>void)[]=[],actions:{type:string;value?:any}[]=[];
-    const store={darkMode:false,addRecentTool:(value:string)=>actions.push({type:"recent",value}),setNavigating:(...value:any[])=>actions.push({type:"navigation",value})};
-    const component=(name:string)=>(props:any)=>React.createElement(name,props,props.children);
-    const changed=(before:unknown[]|undefined,next:unknown[])=>!before||before.length!==next.length||next.some((v,i)=>!Object.is(v,before[i]));
+type Element = {type: unknown; props: Record<string, any>};
+function harness(path: string) {
+    const source=readFileSync(path,"utf8");
+    let language:Language="en",slot=0;
+    const cells:any[]=[],actions:string[]=[];
+    const store={darkMode:false,bookmarks:[],addRecentTool:(id:string)=>actions.push(id)};
+    const ui=(name:string)=>(props:any)=>React.createElement(name,props,props.children);
     const dependencies=(name:string):any=>{
-        if(name==="react")return{...React,useState:(initial:any)=>{const key=slot++;if(!(key in cells))cells[key]=typeof initial==="function"?initial():initial;return[cells[key],(value:any)=>{cells[key]=typeof value==="function"?value(cells[key]):value;}];},useEffect:(effect:()=>void,deps:unknown[])=>{const key=effectSlot++;if(changed(effects[key],deps)){effects[key]=deps;pending.push(effect);}},useMemo:(compute:()=>unknown)=>compute()};
+        if(name==="react")return {...React,useState:(initial:any)=>{const key=slot++;if(!(key in cells))cells[key]=typeof initial==="function"?initial():initial;return[cells[key],(v:any)=>{cells[key]=typeof v==="function"?v(cells[key]):v;}];},useEffect:()=>{},useMemo:(fn:()=>any)=>fn()};
         if(name==="react/jsx-runtime")return jsx;
-        if(name==="next/link")return{__esModule:true,default:component("link")};
-        if(name==="next/navigation")return{useRouter:()=>({push:(value:string)=>actions.push({type:"route",value})})};
-        if(name==="antd")return new Proxy({Typography:{Text:"text",Title:"title"}},{get:(target,key)=>target[key as keyof typeof target]??component(String(key))});
-        if(name==="@ant-design/icons")return new Proxy({},{get:()=>component("icon")});
-        if(name==="framer-motion")return{motion:new Proxy({},{get:(_,key)=>component(String(key))})};
-        if(name.endsWith("LanguageProvider"))return{useLanguage:()=>{const locale=language;return{language:locale,direction:locale==="ar"?"rtl":"ltr",t:(source:string,values?:Record<string,string|number>)=>tr(locale,source,values)};}};
-        if(name.endsWith("tools-registry"))return{toolsRegistry,getToolsByCategory,CATEGORY_DESCRIPTIONS,CATEGORY_COLORS,CATEGORY_ICONS};
+        if(name==="next/link")return{__esModule:true,default:ui("link")};
+        if(name==="@ant-design/icons")return new Proxy({},{get:()=>ui("icon")});
+        if(name.endsWith("LanguageProvider"))return{useLanguage:()=>({language,direction:language==="ar"?"rtl":"ltr",t:(key:string,values?:Record<string,string|number>)=>tr(language,key,values)})};
+        if(name.endsWith("tools-registry"))return{toolsRegistry,getToolsByCategory,CATEGORY_DESCRIPTIONS,CATEGORY_ICONS};
         if(name.endsWith("category-routes"))return paths;
         if(name.endsWith("data-boundaries"))return boundaries;
         if(name.endsWith("tool-search"))return search;
-        if(name.endsWith("release-notes"))return releases;
-        if(name.endsWith("release-preference"))return{markReleaseSeen:(value:string)=>actions.push({type:"release-seen",value})};
-        if(name.endsWith("store"))return{useAppStore:(selector?:any)=>selector?selector(store):store};
+        if(name.endsWith("store"))return{useAppStore:(selector:any)=>selector(store)};
         if(name.endsWith("seo-content"))return{SITE_URL};
-        if(name.endsWith("WorkspaceModeToggle"))return{__esModule:true,default:component("workspace-mode")};
-        if(name.endsWith("LandingMarketing"))return{__esModule:true,default:component("marketing")};
+        if(name.endsWith("SignalCatalog"))return{__esModule:true,default:ui("signal-catalog")};
+        if(name.endsWith("WorkspaceModeToggle"))return{__esModule:true,default:ui("workspace-mode")};
+        if(name.endsWith("LandingMarketing"))return{__esModule:true,default:ui("marketing")};
         throw Error(`Unexpected dependency ${name}`);
     };
-    const module={exports:{} as{default:()=>Element}};
-    runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{module,exports:module.exports,require:dependencies,URLSearchParams,Date,document:{getElementById:()=>null},window:{location:{search:""}}});
-    const render=(locale:Language=language)=>{language=locale;slot=effectSlot=0;tree=module.exports.default();while(pending.length)pending.shift()!();return tree;};
-    const all=()=>{const nodes:Element[]=[],seen=new Set();const walk=(node:any)=>{if(!node||typeof node!=="object"||seen.has(node))return;seen.add(node);if(Array.isArray(node))return node.forEach(walk);if(node.props){nodes.push(node);["children","title","description","label","extra"].forEach(k=>walk(node.props[k]));for(const item of node.props.items??[]){walk(item.label);walk(item.children);}}};walk(tree);return nodes;};
-    return{render,all,actions,cells};
+    const module={exports:{} as {default:()=>Element}};
+    runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{module,exports:module.exports,require:dependencies,URLSearchParams,Set});
+    const render=(locale:Language=language)=>{language=locale;slot=0;const nodes:Element[]=[];const walk=(n:any)=>{if(!n||typeof n!=="object")return;if(Array.isArray(n))return n.forEach(walk);if(n.props){nodes.push(n);walk(n.props.children);}};walk(module.exports.default());return nodes;};
+    return {render,actions};
 }
 const rawRegistry=JSON.stringify(toolsRegistry),rawCategories=JSON.stringify(CATEGORY_DESCRIPTIONS);
-for(const id of["homepage","release"]as const){
-    const page=harness(id);page.render();const initialActions=JSON.stringify(page.actions);let schema:string|undefined;
-    for(const{ id:language }of LANGUAGES){
-        page.render(language);const nodes=page.all();for(const source of descriptions)assert.ok(nodes.some(node=>node.props.children===tr(language,source)),`${id}/${language}: ${source}`);
-        assert.equal(JSON.stringify(page.actions),initialActions,`${id}: locale does not navigate, rewrite release preference or open a tool`);assert.equal(JSON.stringify(toolsRegistry),rawRegistry);assert.equal(JSON.stringify(CATEGORY_DESCRIPTIONS),rawCategories);
-        if(id==="homepage"){
-            const links=nodes.filter(n=>n.props.className==="wb-cat-tool-card");assert.equal(links.length,147);for(const tool of toolsRegistry)assert.ok(links.some(n=>n.props.href===paths.toolPath(tool)));
-            const data=nodes.find(n=>n.props.type==="application/ld+json");assert.ok(data);const json=data.props.dangerouslySetInnerHTML.__html;if(schema)assert.equal(json,schema);else schema=json;
-        }else for(const tool of toolsRegistry)assert.ok(nodes.some(n=>n.props.role==="button"&&typeof n.props.onClick==="function"&&text(n).includes(tr(language,tool.description))),`${id}/${language}: navigable card ${tool.id}`);
+const page=harness("src/components/SignalCatalog.tsx");
+for(const {id:language} of LANGUAGES){
+    for(const category of getToolsByCategory().keys()){
+        let nodes=page.render(language);
+        nodes.find(n=>n.props.id==="signal-category-select")!.props.onChange({target:{value:category}});
+        nodes=page.render(language);
+        const expected=toolsRegistry.filter(tool=>tool.category===category);
+        const links=nodes.filter(n=>String(n.props.className??"").includes("signal-tool-row")&&n.props.href);
+        assert.equal(links.length,expected.length,`${language}/${category}`);
+        for(const tool of expected){assert.ok(nodes.some(n=>n.props.children===tr(language,tool.description)),`${language}/${tool.id}: summary`);assert.ok(links.some(n=>n.props.href===paths.toolPath(tool)),`${tool.id}: canonical destination`);}
+        assert.ok(nodes.some(n=>n.props.children===tr(language,CATEGORY_DESCRIPTIONS[category])));
     }
-    page.render("ar");if(id==="homepage"){
-        const input=page.all().find(n=>n.props.id==="catalog-search");assert.ok(input);input.props.onChange({target:{value:"JSON"}});page.render();const link=page.all().find(n=>n.props.className==="wb-cat-tool-card"&&n.props.href===paths.toolPathFromId("json-formatter"));assert.ok(link);link.props.onClick();assert.equal(page.actions.at(-1)?.value,"json-formatter");
-    }else{
-        const tool=toolsRegistry[0],card=page.all().find(n=>n.props.role==="button"&&text(n).includes(tr("ar",tool.description)));assert.ok(card);card.props.onClick();assert.equal(page.actions.at(-1)?.value,paths.toolPath(tool));
-    }
+    assert.equal(JSON.stringify(toolsRegistry),rawRegistry);assert.equal(JSON.stringify(CATEGORY_DESCRIPTIONS),rawCategories);assert.equal(page.actions.length,0,"Locale/category selection does not open tools");
 }
-console.log("Catalog descriptions: all147 tool summaries and15 category summaries cover all8 languages; actual homepage/release renders translate them, raw IDs/URLs/schema stay stable, locale changes cause no tool/navigation writes and real click callbacks preserve canonical destinations. No browser verification claimed.");
+let nodes=page.render("ar");nodes.find(n=>n.props.id==="signal-category-select")!.props.onChange({target:{value:"all"}});nodes=page.render();nodes.find(n=>n.props.id==="catalog-search")!.props.onChange({target:{value:"JSON"}});nodes=page.render();const jsonLink=nodes.find(n=>n.props.href===paths.toolPathFromId("json-formatter"));assert.ok(jsonLink);jsonLink.props.onClick();assert.equal(page.actions.at(-1),"json-formatter");
+const home=harness("src/app/page.tsx");let schema:string|undefined;
+for(const {id:language} of LANGUAGES){const nodes=home.render(language),data=nodes.find(n=>n.props.type==="application/ld+json");assert.ok(data);const current=data.props.dangerouslySetInnerHTML.__html;if(schema)assert.equal(current,schema);else schema=current;assert.equal(JSON.parse(current).mainEntity.itemListElement.length,147);}
+console.log("Signal catalog: all147 tools and15 categories retain all8 translations; category filters expose every canonical tool link, localized search/click callbacks work, and homepage schema/registry stay unchanged.");

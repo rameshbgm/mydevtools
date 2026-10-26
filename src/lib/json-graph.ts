@@ -94,8 +94,8 @@ export function graphArrayTable(value: unknown): { columns: string[]; rows: unkn
 }
 export interface JsonGraphPalette { background: string; node: string; border: string; text: string; muted: string; edge: string; accent: string }
 export const JSON_GRAPH_PALETTES: Record<"light" | "dark", JsonGraphPalette> = {
-    light: { background: "#f8fafc", node: "#ffffff", border: "#94a3b8", text: "#0f172a", muted: "#475569", edge: "#64748b", accent: "#0e7490" },
-    dark: { background: "#09090b", node: "#18181b", border: "#71717a", text: "#fafafa", muted: "#a1a1aa", edge: "#71717a", accent: "#22d3ee" },
+    light: { background: "#e5ebf2", node: "#ffffff", border: "#7c8fa8", text: "#17283d", muted: "#53677d", edge: "#53677d", accent: "#2458d3" },
+    dark: { background: "#101a26", node: "#172535", border: "#617994", text: "#e8f0fc", muted: "#a8bad0", edge: "#a8bad0", accent: "#9bbaff" },
 };
 function xml(value: string): string {
     return value.replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu, "�").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]!);

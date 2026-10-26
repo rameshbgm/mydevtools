@@ -162,11 +162,11 @@ export default function SvgOptimizerPage() {
                             referrerPolicy="no-referrer"
                             srcDoc={output}
                             style={{
-                                background: "repeating-conic-gradient(rgba(0,0,0,0.04) 0% 25%, transparent 0% 50%) 50% / 16px 16px",
+                                background: "var(--wb-card-bg)",
                                 width: "100%",
                                 minHeight: 160,
                                 border: 0,
-                                borderRadius: 8,
+                                borderRadius: 6,
                             }}
                         />
                     </Card>

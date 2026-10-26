@@ -147,7 +147,7 @@ export default function WebhookReceiverPage() {
         <ToolPageLayout
             title={t("Webhook Receiver")}
             description={t("Generate a unique URL and capture inbound HTTP requests in real time")}
-            icon={<InboxOutlined style={{ fontSize: 24, color: "#0891b2" }} />}
+            icon={<InboxOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#0891b2"
             learnMore={{
                 whatIs: t("Capture inbound HTTP requests at a session URL served by this deployment."),
@@ -233,7 +233,7 @@ export default function WebhookReceiverPage() {
                                                             <CopyOutlined /> {t("copy")}
                                                         </a>
                                                     </Space>
-                                                    <pre style={{ margin: 0, fontFamily: "var(--font-geist-mono)", fontSize: 11, whiteSpace: "pre-wrap", wordBreak: "break-all", background: "rgba(0,0,0,0.03)", padding: 8, borderRadius: 4 }}>
+                                                    <pre style={{ margin: 0, fontFamily: "var(--font-geist-mono)", fontSize: 11, whiteSpace: "pre-wrap", wordBreak: "break-all", background: "var(--signal-inset)", padding: 8, borderRadius: 4 }}>
                                                         {r.bodyText}
                                                     </pre>
                                                 </div>

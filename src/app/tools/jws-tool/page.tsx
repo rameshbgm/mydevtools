@@ -268,7 +268,7 @@ export default function JWSToolPage() {
                                         <pre dir="ltr" style={{
                                             marginTop: 8,
                                             padding: 12,
-                                            background: darkMode ? "#1f1f1f" : "#f5f5f5",
+                                            background: darkMode ? "var(--signal-inset)" : "var(--signal-inset)",
                                             borderRadius: 6,
                                             overflow: "auto"
                                         }}>

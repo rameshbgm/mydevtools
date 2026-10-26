@@ -229,7 +229,7 @@ export default function HtmlEntitiesPage() {
                                     value={output}
                                     readOnly
                                     rows={10}
-                                    style={{ background: "rgba(250, 84, 28, 0.05)" }}
+                                    style={{ background: "var(--signal-inset)" }}
                                 />
                             </Col>
                         </Row>

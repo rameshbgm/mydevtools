@@ -230,7 +230,7 @@ export default function ToonConverterPage() {
         <ToolPageLayout
             title={t("TOON Converter")}
             description={t("Convert JSON or XML to TOON (Token-Oriented Object Notation) and back — compare compact structured text with local token counts")}
-            icon={<CompressOutlined style={{ fontSize: 24, color: "#7c3aed" }} />}
+            icon={<CompressOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#7c3aed"
             learnMore={{
                 "whatIs": "Converts JSON or an XML object mapping to a supported TOON subset and back. Local o200k_base counts compare encoded text; savings depend on the data.",
@@ -352,7 +352,7 @@ export default function ToonConverterPage() {
                     {t("Tabular arrays share one field header instead of repeating the same keys for every row.")}</Paragraph>
                 <Row gutter={[12, 12]}>
                     <Col xs={24} md={12}>
-                        <Card size="small" type="inner" title={t("JSON")} style={{ background: "rgba(0,0,0,0.02)" }}>
+                        <Card size="small" type="inner" title={t("JSON")} style={{ background: "var(--signal-inset)" }}>
                             <pre style={{ margin: 0, fontFamily: "var(--font-geist-mono)", fontSize: 11 }}>{`[
   {"id":1,"name":"Ada","role":"admin"},
   {"id":2,"name":"Bob","role":"user"},
@@ -361,7 +361,7 @@ export default function ToonConverterPage() {
                         </Card>
                     </Col>
                     <Col xs={24} md={12}>
-                        <Card size="small" type="inner" title={t("TOON")} style={{ background: "rgba(124,58,237,0.04)" }}>
+                        <Card size="small" type="inner" title={t("TOON")} style={{ background: "var(--signal-inset)" }}>
                             <pre style={{ margin: 0, fontFamily: "var(--font-geist-mono)", fontSize: 11 }}>{`data[3]{id,name,role}:
   1,Ada,admin
   2,Bob,user

@@ -152,7 +152,7 @@ keytool -importkeystore -srckeystore ${shellArgument(`${alias}.p12`)} -srcstoret
                 title={t("Step 3: Convert to JKS with keytool")}
                 extra={<Button size="small" icon={<CopyOutlined />} onClick={() => { copyToClipboard(keytoolCmd, t("Command copied")); message.success(t("Copied")); }}>{t("Copy")}</Button>}
             >
-                <pre dir="ltr" style={{ background: "rgba(0,0,0,0.04)", padding: 12, borderRadius: 6, fontSize: 12, overflowX: "auto" }}>{keytoolCmd}</pre>
+                <pre dir="ltr" style={{ background: "var(--signal-inset)", padding: 12, borderRadius: 6, fontSize: 12, overflowX: "auto" }}>{keytoolCmd}</pre>
                 <Tag color="warning">{t("Requires Java JDK with keytool installed")}</Tag><Paragraph>{t("Commands use POSIX shell quoting and interactive password prompts. Review them before running in a compatible terminal; this page never executes them.")}</Paragraph>
             </Card>
         </Space>
@@ -223,7 +223,7 @@ function CommandsTab() {
                     title={t(c.title)}
                     extra={<Button size="small" icon={<CopyOutlined />} onClick={() => { copyToClipboard(c.cmd, t("Command copied")); message.success(t("Copied")); }}>{t("Copy")}</Button>}
                 >
-                    <pre dir="ltr" style={{ background: "rgba(0,0,0,0.04)", padding: 10, borderRadius: 6, fontSize: 12, overflowX: "auto", margin: 0 }}>{c.cmd}</pre>
+                    <pre dir="ltr" style={{ background: "var(--signal-inset)", padding: 10, borderRadius: 6, fontSize: 12, overflowX: "auto", margin: 0 }}>{c.cmd}</pre>
                     {c.note && <Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0, fontSize: 12 }}>{t(c.note)}</Paragraph>}
                 </Card>
             ))}

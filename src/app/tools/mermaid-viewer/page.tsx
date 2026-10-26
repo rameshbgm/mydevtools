@@ -156,8 +156,8 @@ export default function MermaidViewerPage() {
                 >
                     {previewSvg ? (
                         <div style={{
-                            background: theme === "dark" ? "#1e1e1e" : "#ffffff",
-                            borderRadius: 8,
+                            background: theme === "dark" ? "#1e1e1e" : "var(--wb-card-bg)",
+                            borderRadius: 6,
                             padding: 24,
                             overflow: "auto",
                             maxHeight: 600,
@@ -167,7 +167,7 @@ export default function MermaidViewerPage() {
                                 sandbox=""
                                 referrerPolicy="no-referrer"
                                 srcDoc={previewSvg}
-                                style={{ width: "100%", minHeight: 500, border: 0, background: theme === "dark" ? "#1e1e1e" : "#ffffff" }}
+                                style={{ width: "100%", minHeight: 500, border: 0, background: theme === "dark" ? "#1e1e1e" : "var(--wb-card-bg)" }}
                             />
                         </div>
                     ) : error ? (

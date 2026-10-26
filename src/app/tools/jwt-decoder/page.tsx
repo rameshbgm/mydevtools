@@ -401,14 +401,14 @@ export default function JwtDecoderPage() {
                                             }
                                         >
                                             <Text dir="ltr" code style={{ fontSize: 12, wordBreak: "break-all", display: "block", direction: "ltr" }}>
-                                                <span style={{ color: "#1677ff" }}>
+                                                <span style={{ color: "var(--wb-accent)" }}>
                                                     {modifiedToken.split(".")[0]}
                                                 </span>
-                                                <span style={{ color: "#666" }}>.</span>
+                                                <span style={{ color: "var(--wb-text-body)" }}>.</span>
                                                 <span style={{ color: "#52c41a" }}>
                                                     {modifiedToken.split(".")[1]}
                                                 </span>
-                                                <span style={{ color: "#666" }}>.</span>
+                                                <span style={{ color: "var(--wb-text-body)" }}>.</span>
                                                 <span style={{ color: "#f5222d", textDecoration: "line-through", opacity: 0.6 }}>
                                                     {modifiedToken.split(".")[2]}
                                                 </span>
