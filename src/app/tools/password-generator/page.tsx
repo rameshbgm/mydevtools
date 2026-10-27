@@ -105,15 +105,15 @@ export default function PasswordGeneratorPage() {
                 ]
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={14}>
                     <Card>
                         {/* Generated Password Display */}
                         <div
                             style={{
                                 padding: "24px",
-                                background: "linear-gradient(135deg, rgba(82, 196, 26, 0.1), rgba(82, 196, 26, 0.05))",
-                                borderRadius: 12,
+                                background: "var(--wb-card-bg)",
+                                borderRadius: 6,
                                 marginBottom: 24,
                                 textAlign: "center",
                             }}
@@ -137,7 +137,7 @@ export default function PasswordGeneratorPage() {
                                 <Text>{t("Password Strength")}</Text>
                                 <Text style={{ color: strength.color, fontWeight: 600 }}>{t(strength.label)}</Text>
                             </div>
-                            <div style={{ height: 8, background: "#f0f0f0", borderRadius: 4, overflow: "hidden" }}>
+                            <div style={{ height: 8, background: "var(--wb-card-bg)", borderRadius: 4, overflow: "hidden" }}>
                                 <div
                                     style={{
                                         width: `${(strength.score / 7) * 100}%`,

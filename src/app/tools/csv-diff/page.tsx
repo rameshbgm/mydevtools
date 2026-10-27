@@ -186,7 +186,7 @@ export default function CsvDiffPage() {
         >
             <ToolBridgeBanner accepts={["csv", "text"]} onAccept={(p) => setLeftText(p.data)} />
 
-            <Row gutter={[16, 16]}>
+            <Row className="signal-working-panes" gutter={[16, 16]}>
                 <Col xs={24} md={12}>
                     <Card size="small" title={<><Text strong>{t("Left")}</Text> <Tag style={{ marginInlineStart: 8 }}>{t("Rows: {count}", { count: parsedLeft.rows.length.toLocaleString(language) })}</Tag></>}>
                         <TextArea
@@ -247,9 +247,9 @@ export default function CsvDiffPage() {
                         <table dir="ltr" style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-geist-mono)", fontSize: 13 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ textAlign: "left", padding: "8px 6px", borderBottom: "1px solid rgba(0,0,0,0.1)" }}>{t("Status")}</th>
+                                    <th style={{ textAlign: "left", padding: "8px 6px", borderBottom: "1px solid var(--wb-card-border)" }}>{t("Status")}</th>
                                     {headers.map((h, i) => (
-                                        <th key={i} style={{ textAlign: "left", padding: "8px 6px", borderBottom: "1px solid rgba(0,0,0,0.1)" }}>{h || `col${i}`}</th>
+                                        <th key={i} style={{ textAlign: "left", padding: "8px 6px", borderBottom: "1px solid var(--wb-card-border)" }}>{h || `col${i}`}</th>
                                     ))}
                                 </tr>
                             </thead>
@@ -257,7 +257,7 @@ export default function CsvDiffPage() {
                                 {diff.map((d, idx) => {
                                     const row = d.status === "removed" ? d.left! : d.status === "added" ? d.right! : d.right!;
                                     return (
-                                        <tr key={idx} style={{ background: idx % 2 ? "rgba(0,0,0,0.02)" : "transparent" }}>
+                                        <tr key={idx} style={{ background: idx % 2 ? "var(--signal-inset)" : "transparent" }}>
                                             <td style={{ padding: "6px 6px", verticalAlign: "top" }}>
                                                 <Tag color={STATUS_COLOR[d.status]}>{t(STATUS_LABEL[d.status])}</Tag>
                                             </td>

@@ -115,7 +115,7 @@ export default function BCryptToolPage() {
                                                     fontSize: 13,
                                                     wordBreak: "break-all",
                                                     padding: 12,
-                                                    background: "rgba(0,0,0,0.04)",
+                                                    background: "var(--signal-inset)",
                                                     borderRadius: 6,
                                                 }}
                                             >

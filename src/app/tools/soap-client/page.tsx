@@ -420,7 +420,7 @@ export default function SoapClientPage() {
                 tips: [t("Templates contain example credentials only. Replace them before sending and review all destinations."), t("Copy cURL for a POSIX shell. Custom headers are preserved; history lasts only while this page stays open.")],
             }}
         >
-            <Row gutter={[16, 16]}>
+            <Row className="signal-working-panes" gutter={[16, 16]}>
                 {/* Request Configuration */}
                 <Col xs={24}>
                     <Card size="small">
@@ -533,7 +533,7 @@ export default function SoapClientPage() {
                                     key: "headers",
                                     label: t("Headers ({count})", { count: headers.filter(h => h.enabled).length }),
                                     children: (
-                                        <div>
+                                        <div className="signal-kv-list">
                                             <div style={{ marginBottom: 12 }}>
                                                 <Segmented
                                                     size="small"
@@ -548,7 +548,7 @@ export default function SoapClientPage() {
                                             {headerMode === "form" ? (
                                                 <>
                                                     {headers.map((header, index) => (
-                                                        <Space key={index} style={{ display: "flex", marginBottom: 8 }}>
+                                                        <Space className="signal-kv-row signal-kv-row-fields" key={index} style={{ display: "flex", marginBottom: 8 }}>
                                                             <Input
                                                                 placeholder={t("Header name")}
                                                                 value={header.key}

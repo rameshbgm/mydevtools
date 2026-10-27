@@ -193,7 +193,7 @@ export default function StickyNotesPage() {
                                     style={{
                                         background: note.color,
                                         border: `1px solid ${colorInfo.border}`,
-                                        borderRadius: 8,
+                                        borderRadius: 6,
                                         padding: "12px 14px 10px",
                                         position: "relative",
                                         boxShadow: note.pinned
@@ -360,7 +360,7 @@ export default function StickyNotesPage() {
                                                     e.stopPropagation();
                                                     patch(note.id, { pinned: !note.pinned });
                                                 }}
-                                                style={{ color: note.pinned ? "#dc2626" : "#6b7280" }}
+                                                style={{ color: note.pinned ? "#dc2626" : "var(--wb-text-body)" }}
                                             />
                                         </Tooltip>
 

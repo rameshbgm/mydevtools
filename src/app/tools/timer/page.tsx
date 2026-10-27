@@ -201,7 +201,7 @@ export default function TimerPage() {
                 tips: [t("Background tabs and device sleep can delay the completion chime. Browser audio policies may block sound. Reloading clears the timer.")],
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={14}>
                     <AnimatePresence mode="wait">
                         {isComplete ? (
@@ -215,13 +215,13 @@ export default function TimerPage() {
                                     ],
                                 }}
                                 transition={{ repeat: Infinity, duration: 2 }}
-                                style={{ borderRadius: 16 }}
+                                style={{ borderRadius: 6 }}
                             >
                                 <Card
                                     style={{
                                         background: cardBg,
                                         border: `2px solid #10b981`,
-                                        borderRadius: 16,
+                                        borderRadius: 6,
                                         textAlign: "center",
                                     }}
                                 >
@@ -265,9 +265,9 @@ export default function TimerPage() {
                                             icon={<ReloadOutlined />}
                                             onClick={handleReset}
                                             style={{
-                                                background: "#10b981",
-                                                borderColor: "#10b981",
-                                                color: "#fff",
+                                                background: "var(--wb-accent)",
+                                                borderColor: "var(--wb-accent)",
+                                                color: "var(--signal-action-ink)",
                                                 fontWeight: 600,
                                                 height: 44,
                                                 paddingInline: 32,
@@ -283,7 +283,7 @@ export default function TimerPage() {
                                     style={{
                                         background: cardBg,
                                         border: `1px solid ${cardBorder}`,
-                                        borderRadius: 16,
+                                        borderRadius: 6,
                                         textAlign: "center",
                                     }}
                                 >
@@ -330,9 +330,9 @@ export default function TimerPage() {
                                                         onClick={handleStart}
                                                         disabled={remainingSeconds === 0}
                                                         style={{
-                                                            background: "#6366f1",
-                                                            borderColor: "#6366f1",
-                                                            color: "#fff",
+                                                            background: "var(--wb-accent)",
+                                                            borderColor: "var(--wb-accent)",
+                                                            color: "var(--signal-action-ink)",
                                                             fontWeight: 600,
                                                             height: 44,
                                                             paddingInline: 28,
@@ -346,9 +346,9 @@ export default function TimerPage() {
                                                     icon={<PauseCircleOutlined />}
                                                     onClick={handlePause}
                                                     style={{
-                                                        background: "#f59e0b",
-                                                        borderColor: "#f59e0b",
-                                                        color: "#fff",
+                                                        background: "var(--wb-accent-soft)",
+                                                        borderColor: "var(--wb-accent)",
+                                                        color: "var(--wb-accent)",
                                                         fontWeight: 600,
                                                         height: 44,
                                                         paddingInline: 28,
@@ -388,7 +388,7 @@ export default function TimerPage() {
                             style={{
                                 background: cardBg,
                                 border: `1px solid ${cardBorder}`,
-                                borderRadius: 12,
+                                borderRadius: 6,
                             }}
                             styles={{ body: { paddingTop: 12 } }}
                         >
@@ -399,10 +399,10 @@ export default function TimerPage() {
                                         size="small"
                                         onClick={() => applyPreset(p.seconds)}
                                         style={{
-                                            borderColor: totalSeconds === p.seconds ? "#6366f1" : cardBorder,
-                                            color: totalSeconds === p.seconds ? "#6366f1" : secondaryColor,
+                                            borderColor: totalSeconds === p.seconds ? "var(--wb-accent)" : cardBorder,
+                                            color: totalSeconds === p.seconds ? "var(--wb-accent)" : secondaryColor,
                                             background: totalSeconds === p.seconds
-                                                ? darkMode ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.08)"
+                                                ? darkMode ? "var(--wb-accent-soft)" : "var(--wb-accent-soft)"
                                                 : "transparent",
                                             fontWeight: totalSeconds === p.seconds ? 600 : 400,
                                         }}
@@ -420,7 +420,7 @@ export default function TimerPage() {
                             style={{
                                 background: cardBg,
                                 border: `1px solid ${cardBorder}`,
-                                borderRadius: 12,
+                                borderRadius: 6,
                             }}
                             styles={{ body: { paddingTop: 12 } }}
                         >
@@ -466,8 +466,8 @@ export default function TimerPage() {
                                     block
                                     onClick={applyCustomDuration}
                                     style={{
-                                        borderColor: "#6366f1",
-                                        color: "#6366f1",
+                                        borderColor: "var(--wb-accent)",
+                                        color: "var(--wb-accent)",
                                         background: "transparent",
                                         fontWeight: 500,
                                     }}
@@ -483,7 +483,7 @@ export default function TimerPage() {
                             style={{
                                 background: cardBg,
                                 border: `1px solid ${cardBorder}`,
-                                borderRadius: 12,
+                                borderRadius: 6,
                             }}
                             styles={{ body: { paddingTop: 12 } }}
                         >
@@ -506,15 +506,15 @@ export default function TimerPage() {
                             >
                                 <Card
                                     style={{
-                                        background: darkMode ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.06)",
-                                        border: `1px solid rgba(99,102,241,0.3)`,
-                                        borderRadius: 12,
+                                        background: darkMode ? "var(--wb-accent-soft)" : "var(--wb-accent-soft)",
+                                        border: "1px solid var(--wb-card-border)",
+                                        borderRadius: 6,
                                     }}
                                     styles={{ body: { padding: "12px 16px" } }}
                                 >
                                     <Space>
-                                        <SoundOutlined style={{ color: "#6366f1" }} />
-                                        <Text style={{ color: "#6366f1", fontSize: 13 }}>
+                                        <SoundOutlined style={{ color: "var(--wb-accent)" }} />
+                                        <Text style={{ color: "var(--wb-accent)", fontSize: 13 }}>
                                             {t("Timer running — audio chime plays on completion")}</Text>
                                     </Space>
                                 </Card>

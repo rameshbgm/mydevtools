@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId, useMemo } from "react";
+import React, { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { Typography, Breadcrumb, Collapse, Card, Tag } from "antd";
 import {
@@ -15,7 +15,6 @@ import {
     ThunderboltOutlined,
 } from "@ant-design/icons";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { getToolIdFromPublicPath, dashboardCategoryHashId, toolPath } from "@/lib/category-routes";
 import { toolsRegistry } from "@/lib/tools-registry";
 import { SEO_CONTENT } from "@/lib/seo-content";
@@ -27,41 +26,6 @@ import { BOUNDARY_LABELS, dataBoundaryForTool } from "@/lib/data-boundaries";
 import { useLanguage } from "./LanguageProvider";
 
 const { Title, Text, Paragraph } = Typography;
-
-function ToolHeroAccentSvg(props: Readonly<{ className?: string }>) {
-    const raw = useId();
-    const gid = raw.replace(/:/g, "");
-    const gradId = `tool-hero-sheen-${gid}`;
-    return (
-        <svg
-            className={props.className}
-            viewBox="0 0 400 140"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden
-        >
-            <defs>
-                <linearGradient id={gradId} x1="0" y1="0" x2="400" y2="0" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="currentColor" stopOpacity="0.5" />
-                    <stop offset="0.35" stopColor="currentColor" stopOpacity="0.12" />
-                    <stop offset="0.7" stopColor="currentColor" stopOpacity="0.35" />
-                    <stop offset="1" stopColor="currentColor" stopOpacity="0.08" />
-                </linearGradient>
-            </defs>
-            <path
-                d="M0 96C72 72 120 118 188 104c68-14 132-92 212-74v110H0V96z"
-                fill={`url(#${gradId})`}
-            />
-            <path
-                d="M0 118c88-38 146 22 230 10 52-8 108-62 170-54v66H0v-22z"
-                fill="currentColor"
-                fillOpacity="0.08"
-            />
-            <circle cx="312" cy="38" r="6" fill="currentColor" fillOpacity="0.35" />
-            <circle cx="332" cy="52" r="3.5" fill="currentColor" fillOpacity="0.5" />
-        </svg>
-    );
-}
 
 interface ToolPageLayoutProps {
     title: string;
@@ -89,7 +53,6 @@ export default function ToolPageLayout({
     title,
     description,
     icon,
-    color,
     children,
     alpha,
     learnMore: suppliedLearnMore,
@@ -154,50 +117,41 @@ export default function ToolPageLayout({
     }, [category, title, t]);
 
     return (
-        <motion.div
-            className="wb-tool-shell"
-            initial={false}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+        <div
+            className="wb-tool-shell" data-signal-tool={toolId ?? title}
             style={{ width: "100%" }}
         >
             <Breadcrumb
                 className="wb-tool-breadcrumb"
                 separator={<RightOutlined style={{ fontSize: 10, opacity: 0.5 }} />}
-                style={{ marginBottom: 22 }}
+                style={{ marginBottom: 12 }}
                 items={breadcrumbItems}
             />
 
-            <motion.div
+            <div
                 className="wb-tool-hero"
-                initial={false}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1, duration: 0.32 }}
                 style={
                     {
-                        marginBottom: 26,
-                        "--hero-accent": color,
+                        marginBottom: 18,
+                        "--hero-accent": "var(--wb-accent)",
                     } as React.CSSProperties
                 }
             >
-                <ToolHeroAccentSvg className="wb-tool-hero-svg" />
                 <div className="wb-tool-hero-layout">
-                    <motion.div
-                        whileHover={{ scale: 1.05, rotate: 4 }}
-                        transition={{ type: "spring", stiffness: 380, damping: 18 }}
+                    <div
                         className="wb-tool-hero-icon"
                     >
                         {icon}
-                    </motion.div>
+                    </div>
                     <div className="wb-tool-hero-titles">
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <Title
                                 level={1}
                                 style={{
                                     margin: 0,
-                                    fontWeight: 800,
+                                    fontWeight: 600,
                                     letterSpacing: "-0.03em",
-                                    fontSize: "clamp(18px, 3.8vw, 26px)",
+                                    fontSize: 26,
                                     lineHeight: 1.18,
                                     color: "var(--wb-text-heading)",
                                 }}
@@ -218,7 +172,7 @@ export default function ToolPageLayout({
                         <Text
                             style={{
                                 color: "var(--wb-text-body)",
-                                fontSize: "clamp(13px, 1.7vw, 15px)",
+                                fontSize: 14,
                                 marginTop: 6,
                                 display: "block",
                                 lineHeight: 1.45,
@@ -228,16 +182,15 @@ export default function ToolPageLayout({
                         </Text>
                     </div>
                 </div>
-            </motion.div>
+            </div>
 
             {networkNotice && <ServerProxyNotice {...networkNotice} />}
 
+            {children}
+
             {learnMore && (
-                <motion.div
-                    initial={false}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15, duration: 0.3 }}
-                    style={{ marginBottom: 24 }}
+                <div
+                    style={{ marginTop: 28, marginBottom: 16 }}
                 >
                     <Collapse
                         ghost
@@ -248,7 +201,7 @@ export default function ToolPageLayout({
                                 key: "learn-more",
                                 label: (
                                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                        <InfoCircleOutlined style={{ color, fontSize: 16 }} />
+                                        <InfoCircleOutlined style={{ color: "var(--wb-accent)", fontSize: 16 }} />
                                         <Text strong style={{ fontSize: 14 }}>{t("Learn More About This Tool")}</Text>
                                     </div>
                                 ),
@@ -353,17 +306,10 @@ export default function ToolPageLayout({
                             },
                         ]}
                     />
-                </motion.div>
+                </div>
             )}
 
-            <motion.div
-                initial={false}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.3 }}
-            >
-                <ReferenceProvenance toolId={toolId} />
-            {children}
-            </motion.div>
+            <ReferenceProvenance toolId={toolId} />
 
             {faq && faq.length > 0 && (
                 <div style={{ marginTop: 32 }}>
@@ -392,7 +338,7 @@ export default function ToolPageLayout({
                             <Link key={tool.id} href={toolPath(tool)}>
                                 <Card size="small" hoverable style={{ minWidth: 160 }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                        <tool.icon style={{ fontSize: 16, color: tool.color }} />
+                                        <tool.icon style={{ fontSize: 16, color: "var(--wb-accent)" }} />
                                         <Text strong style={{ fontSize: 13 }}>{t(tool.name)}</Text>
                                     </div>
                                 </Card>
@@ -401,6 +347,6 @@ export default function ToolPageLayout({
                     </div>
                 </div>
             )}
-        </motion.div>
+        </div>
     );
 }

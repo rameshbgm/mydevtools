@@ -125,7 +125,7 @@ export default function CaseConverterPage() {
                 <SendToButton data={mainOutput} kind="text" sourceToolId="case-converter" size="middle" />
             </Space>
 
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card title={t("Input")}>
                         <TextArea aria-label={t("Input text")} dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
@@ -154,7 +154,7 @@ export default function CaseConverterPage() {
                                 style={{
                                     padding: 16,
                                     background: "rgba(114, 46, 209, 0.1)",
-                                    borderRadius: 8,
+                                    borderRadius: 6,
                                     fontFamily: "var(--font-geist-mono)",
                                     fontSize: 16,
                                     wordBreak: "break-all",
@@ -185,9 +185,9 @@ export default function CaseConverterPage() {
                                         justifyContent: "space-between",
                                         alignItems: "center",
                                         padding: "12px 16px",
-                                        background: targetCase === c.value ? "rgba(114, 46, 209, 0.1)" : "rgba(0,0,0,0.02)",
-                                        borderRadius: 8,
-                                        border: targetCase === c.value ? "1px solid rgba(114, 46, 209, 0.3)" : "1px solid transparent",
+                                        background: targetCase === c.value ? "rgba(114, 46, 209, 0.1)" : "var(--signal-inset)",
+                                        borderRadius: 6,
+                                        border: targetCase === c.value ? "1px solid var(--wb-card-border)" : "1px solid transparent",
                                         cursor: "pointer",
                                         transition: "all 0.2s",
                                     }}

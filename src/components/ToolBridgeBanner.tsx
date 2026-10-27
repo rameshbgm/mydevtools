@@ -3,8 +3,7 @@
 import { useLanguage } from "./LanguageProvider";
 import React, { useEffect, useState } from "react";
 import { Alert, Button, Space, Tag } from "antd";
-import { clearBridge, consumeFromBridge, type ToolPayload, type ToolPayloadKind } from "@/lib/tool-bridge";
-import { guideExamplePayload } from "@/lib/guide-examples";
+import { consumeFromBridge, type ToolPayload, type ToolPayloadKind } from "@/lib/tool-bridge";
 
 interface Props {
     /** Which kinds this tool can usefully consume. */
@@ -30,29 +29,24 @@ export default function ToolBridgeBanner({ accepts, onAccept, autoApply = true }
         let timer: ReturnType<typeof setTimeout> | undefined;
         // Child effects run before their parent's mount effects. Apply after
         // defaults and saved settings have initialized, so they cannot replace
-        // the imported example or its decoded result. StrictMode cleanup also
+        // the imported payload or its decoded result. StrictMode cleanup also
         // cancels the first attempt before its one-shot payload is consumed.
         queueMicrotask(() => {
             if (cancelled) return;
             try {
-                const guide = guideExamplePayload(window.location.pathname, window.location.search);
-                const payload = guide ?? consumeFromBridge();
+                const payload = consumeFromBridge();
                 if (!payload) return;
-                if (!accepts.includes(payload.kind)) {
-                    if (guide) throw new Error("This tool cannot load this example format. Choose its example from the Debugging guides.");
-                    return;
-                }
-                if (guide) clearBridge();
+                if (!accepts.includes(payload.kind)) return;
                 if (autoApply) onAccept(payload);
                 setImported(payload);
                 if (autoApply) timer = setTimeout(() => setImported(null), 5000);
-            } catch (cause) { setError(cause instanceof Error ? cause.message : "The example could not be loaded. Open its guide and try again."); }
+            } catch (cause) { setError(cause instanceof Error ? cause.message : "Imported data could not be loaded."); }
         });
         return () => { cancelled = true; if (timer) clearTimeout(timer); };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    if (error) return <Alert type="error" showIcon title={t("Example could not be loaded")} description={t(error)} style={{ marginBottom: 12 }} />;
+    if (error) return <Alert type="error" showIcon title={t("Import failed")} description={t(error)} style={{ marginBottom: 12 }} />;
     if (!imported) return null;
 
     return (
@@ -64,12 +58,12 @@ export default function ToolBridgeBanner({ accepts, onAccept, autoApply = true }
             style={{ marginBottom: 12 }}
             title={
                 <Space>
-                    {t(imported.sourceToolId === "guides" ? "Loaded guide example" : "Imported from another tool")}
+                    {t("Imported from another tool")}
                     {imported.sourceToolId && <Tag color="blue"><bdi dir="ltr">{imported.sourceToolId}</bdi></Tag>}
                     <Tag><bdi dir="ltr">{imported.kind}</bdi></Tag>
                 </Space>
             }
-            description={imported.sourceToolId === "guides" ? t(imported.label ?? "") : imported.label}
+            description={imported.label}
             action={
                 !autoApply && (
                     <Button size="small" type="primary" onClick={() => { onAccept(imported); setImported(null); }}>

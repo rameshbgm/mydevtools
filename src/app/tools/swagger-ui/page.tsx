@@ -139,7 +139,7 @@ function SwaggerViewer({ spec, onBack }: { spec: string; onBack: () => void }) {
         <>
             <Button style={{ marginBottom: 16 }} onClick={onBack}>{t("← Back to Editor")}</Button>
             <p>{t("Swagger UI keeps its own interface language. External $refs and Try-it-out can send network requests.")}</p>
-            <Card styles={{ body: { padding: 0, overflow: "hidden", borderRadius: 8 } }}>
+            <Card styles={{ body: { padding: 0, overflow: "hidden", borderRadius: 6 } }}>
                 <div style={{ padding: 8 }}>
                     {parsedSpec ? (
                         <div dir="ltr"><SwaggerUI

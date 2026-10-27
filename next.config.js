@@ -3,6 +3,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  logging: false,
   experimental: {
     useTypeScriptCli: true,
   },
@@ -24,7 +25,13 @@ const nextConfig = {
   },
   async headers() {
     return [
-      { source: "/api/:path*", headers: [{ key: "Cache-Control", value: "no-store, private" }] },
+      { source: "/api/:path*", headers: [
+        { key: "Cache-Control", value: "no-store, private, max-age=0" },
+        { key: "CDN-Cache-Control", value: "no-store" },
+        { key: "Surrogate-Control", value: "no-store" },
+        { key: "Pragma", value: "no-cache" },
+        { key: "Expires", value: "0" },
+      ] },
       {
         source: "/:path*",
         headers: [

@@ -3,7 +3,8 @@
 import { useLanguage } from "./LanguageProvider";
 import React, { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { loader } from "@monaco-editor/react";
+import { loader, type BeforeMount } from "@monaco-editor/react";
+import { SIGNAL_PALETTES } from "@/lib/signal-theme";
 import { useAppStore } from "@/lib/store";
 import { Spin, Button, Tooltip } from "antd";
 import { CopyOutlined, CheckOutlined } from "@ant-design/icons";
@@ -16,6 +17,38 @@ import { copyToClipboard } from "@/lib/clipboard";
 if (typeof window !== "undefined") {
     loader.config({ paths: { vs: "/monaco/vs" } });
 }
+
+const registerSignalEditorThemes: BeforeMount = (monaco) => {
+    for (const [mode, p] of Object.entries(SIGNAL_PALETTES)) {
+        const dark = mode === "dark";
+        monaco.editor.defineTheme(`signal-${mode}`, {
+            base: dark ? "vs-dark" : "vs", inherit: true,
+            rules: [
+                { token: "string", foreground: dark ? "A8D6B5" : "397546" },
+                { token: "string.key.json", foreground: dark ? "A8C6FF" : "2E5BB7" },
+                { token: "number", foreground: dark ? "F5BA8F" : "A04B1A" },
+                { token: "keyword", foreground: p.accent.slice(1) },
+                { token: "comment", foreground: p.secondary.slice(1) },
+            ],
+            colors: {
+                "focusBorder": p.controlBorder,
+                "input.border": p.controlBorder, "inputOption.activeBorder": p.controlBorder, "inputOption.activeBackground": p.inset,
+                "list.focusOutline": p.controlBorder, "list.focusBackground": p.inset, "list.focusForeground": p.text,
+                "list.activeSelectionBackground": p.inset, "list.activeSelectionForeground": p.text,
+                "editor.background": p.surface, "editor.foreground": p.text, "editorGutter.background": p.surface,
+                "editorLineNumber.foreground": p.secondary, "editorLineNumber.activeForeground": p.accent,
+                "editor.selectionBackground": dark ? "#33465E" : "#D7E0EB", "editor.inactiveSelectionBackground": p.inset,
+                "editorCursor.foreground": p.text, "editor.lineHighlightBackground": p.inset,
+                "editorWidget.background": p.inset, "editorWidget.border": p.border,
+                "editorSuggestWidget.background": p.surface, "editorSuggestWidget.border": p.border,
+                "editorSuggestWidget.foreground": p.text, "editorSuggestWidget.selectedBackground": p.selected,
+                "editorHoverWidget.background": p.surface, "editorHoverWidget.foreground": p.text,
+                "editorHoverWidget.border": p.border, "editorIndentGuide.background1": p.border,
+                "scrollbarSlider.background": dark ? "#33465E80" : "#C9D5E280",
+            },
+        });
+    }
+};
 
 function useIsMobile(breakpoint = 768) {
     const [isMobile, setIsMobile] = useState(false);
@@ -88,7 +121,7 @@ export function CodeEditor({
     }, [value, copyLabel]);
 
     return (
-        <div dir="ltr" style={{ position: "relative" }}>
+        <div dir="ltr" className="signal-code-editor" style={{ position: "relative" }}>
             {showCopy && value && (
                 <Tooltip title={copied ? t("Copied!") : t("Copy to clipboard")}>
                     <Button
@@ -113,14 +146,17 @@ export function CodeEditor({
             <Editor
                 height={responsiveHeight}
                 language={language}
-                theme={darkMode ? "vs-dark" : "light"}
+                beforeMount={registerSignalEditorThemes}
+                theme={darkMode ? "signal-dark" : "signal-light"}
                 value={value}
                 onChange={(v) => onChange?.(v ?? "")}
                 loading={<Spin />}
                 options={{
                     ariaLabel: ariaLabel ?? t("Code editor"),
                     minimap: { enabled: false },
-                    fontSize: isMobile ? 13 : 14,
+                    fontSize: 12,
+                    fontFamily: "var(--font-geist-mono), monospace",
+                    lineHeight: 23,
                     lineNumbers: isMobile ? "off" : "on",
                     wordWrap: "on",
                     readOnly,
@@ -179,7 +215,7 @@ export function CodeDiff({
     }, [modified, t]);
 
     return (
-        <div dir="ltr" style={{ position: "relative" }}>
+        <div dir="ltr" className="signal-code-editor" style={{ position: "relative" }}>
             {showCopy && (
                 <div style={{ position: "absolute", top: 8, right: 24, zIndex: 10, display: "flex", gap: 4 }}>
                     <Tooltip title={copiedOrig ? t("Copied!") : t("Copy original")}>
@@ -209,13 +245,16 @@ export function CodeDiff({
             <DiffEditorComponent
                 height={responsiveHeight}
                 language={language}
-                theme={darkMode ? "vs-dark" : "light"}
+                beforeMount={registerSignalEditorThemes}
+                theme={darkMode ? "signal-dark" : "signal-light"}
                 original={original}
                 modified={modified}
                 loading={<Spin />}
                 options={{
                     minimap: { enabled: false },
-                    fontSize: isMobile ? 13 : 14,
+                    fontSize: 12,
+                    fontFamily: "var(--font-geist-mono), monospace",
+                    lineHeight: 23,
                     readOnly: true,
                     scrollBeyondLastLine: false,
                     automaticLayout: true,

@@ -42,7 +42,7 @@ export default function UrlEncoderPage() {
         <ToolPageLayout
             title={t("URL Encode / Decode")}
             description={t("Encode and decode URL components")}
-            icon={<LinkOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
+            icon={<LinkOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#1677ff"
             learnMore={{
                 whatIs: "URL encoding (also called percent-encoding) converts special characters to their percent-encoded equivalents, making them safe for use in URLs. Spaces become %20, special characters become %XX format.",

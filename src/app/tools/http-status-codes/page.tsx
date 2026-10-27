@@ -143,7 +143,7 @@ export default function HttpStatusCodesPage() {
                 tips: [t("Choose response codes according to method and resource semantics; creation and validation responses depend on the operation."), t("429 may include Retry-After. Redirects 307 and 308 preserve the method; 301 and 302 can change POST to GET."), t("104 is temporary with scheduled expiry 2026-11-13 in the IANA snapshot checked 2026-10-21. Recheck the registry before implementing it.")],
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={18}>
                     <Card style={{ marginBottom: 16 }}>
                         <Input

@@ -445,7 +445,7 @@ export default function XsdValidatorPage() {
                 ]
             }}
         >
-            <Row dir={direction} gutter={[16, 16]}>
+            <Row className="signal-working-panes" dir={direction} gutter={[16, 16]}>
                 {/* Left Panel - XSD */}
                 <Col xs={24} lg={12}>
                     <Card
@@ -626,7 +626,7 @@ export default function XsdValidatorPage() {
                                                         <WarningOutlined style={{ color: "#faad14" }} />
                                                     )}
                                                     {err.severity === "info" && (
-                                                        <InfoCircleOutlined style={{ color: "#1890ff" }} />
+                                                        <InfoCircleOutlined style={{ color: "var(--wb-accent)" }} />
                                                     )}
                                                     <div>
                                                         {err.line > 0 && (

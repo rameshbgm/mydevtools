@@ -75,11 +75,11 @@ assert.equal(returnedAlpha.navigations[0].path, "/formatters/json-formatter");
 assert.equal(documentAt("/").api.projectStorage.getItem("wb-sticky-notes-v1"), "Personal notes");
 assert.equal(local.getItem(projectKey("wb-sticky-notes-v1", beta.id)), "Beta notes");
 
-for (const input of ["", "https://evil.example/", "//evil.example/", "/api/proxy", "/_next/static/file", "/not-a-tool/unknown", "javascript:alert(1)"]) {
+for (const input of ["", "https://evil.example/", "//evil.example/", "/api/proxy", "/_next/static/file", "/not-a-tool/unknown", "/guides", "javascript:alert(1)"]) {
     local.setItem(projectKey(PROJECT_LOCATION_KEY, beta.id), input);
     assert.equal(personal.api.projectDestination(beta.id, local), "/text-and-utilities/tool-workbench", input);
 }
-for (const [input, expected] of [["/tools/json-formatter?input=private#fragment", "/formatters/json-formatter"], ["/encoding-and-decoding/base64?data=private", "/encoding-and-decoding/base64"], ["/?q=private", "/"], ["/guides#example", "/guides"]]) {
+for (const [input, expected] of [["/tools/json-formatter?input=private#fragment", "/formatters/json-formatter"], ["/encoding-and-decoding/base64?data=private", "/encoding-and-decoding/base64"], ["/?q=private", "/"], ["/release-notes#release-2.0.0", "/release-notes"]]) {
     personal.api.rememberProjectPath(input, local, beta.id);
     assert.equal(local.getItem(projectKey(PROJECT_LOCATION_KEY, beta.id)), expected, "Only canonical paths persist; user-input parameters never persist");
 }
@@ -88,12 +88,12 @@ const stale = documentAt("/formatters/json-formatter");
 stale.api.activeSessionProjectId();
 local.setItem(ACTIVE_PROJECT_KEY, beta.id);
 stale.api.reloadActiveProject();
-assert.equal(stale.navigations[0].path, "/guides", "A storage-event reload follows the newly active workspace's path");
+assert.equal(stale.navigations[0].path, "/release-notes", "A storage-event reload follows the newly active workspace's path");
 local.setItem(ACTIVE_PROJECT_KEY, alpha.id);
 const frame = documentAt("/encoding-and-decoding/base64", true);
 frame.api.switchProject(beta.id);
 assert.equal(local.getItem(projectKey(PROJECT_LOCATION_KEY, alpha.id)), "/text-and-utilities/tool-workbench", "Embedded panes remember the containing workspace, not an iframe route");
-assert.equal(frame.navigations[0].path, "/guides");
+assert.equal(frame.navigations[0].path, "/release-notes");
 assert.deepEqual(frame.events, ["mydevtools-project-lock", "parent:mydevtools-project-lock"]);
 local.setItem(ACTIVE_PROJECT_KEY, alpha.id);
 const denied = documentAt("/formatters/json-formatter");
@@ -154,9 +154,9 @@ assert.equal(local.getItem(projectKey("mydevtools-tool-tabs-active-v1", alpha.id
 assert.equal(local.getItem("mydevtools-tool-tabs-v1"), JSON.stringify([{ id: "personal-tab", tool: "json-formatter" }]), "Personal tabs survive workspace tab mutations");
 
 // Execute the real first-paint script, including unavailable browser storage:
-// compact is the default, and an explicit full-view preference still wins.
+// Signal opens on the full introduction; explicit compact/full preferences still win.
 const layoutSource = readFileSync("src/app/layout.tsx", "utf8");
-assert.match(layoutSource, /data-workspace-mode="focused"/);
+assert.match(layoutSource, /data-workspace-mode="full"/);
 const layout = ts.createSourceFile("layout.tsx", layoutSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 let bootstrap = "";
 function findBootstrap(node: ts.Node) {
@@ -167,13 +167,13 @@ findBootstrap(layout);
 assert.ok(bootstrap);
 for (const choice of [null, "focused", "full", "invalid", "storage-denied"]) {
     let dark = false;
-    const root = { dataset: { workspaceMode: "focused" }, classList: { toggle: (_name: string, enabled: boolean) => { dark = enabled; } }, style: { colorScheme: "light" } };
+    const root = { dataset: { workspaceMode: "full" }, classList: { toggle: (_name: string, enabled: boolean) => { dark = enabled; } }, style: { colorScheme: "light" } };
     runInNewContext(bootstrap, { document: { documentElement: root }, localStorage: { getItem: (key: string) => {
         if (choice === "storage-denied") throw new Error("Fixture storage denied");
         return key === "mydevtools-workspace-mode" ? choice : '{"state":{"darkMode":true}}';
     } } });
-    assert.equal(root.dataset.workspaceMode, choice === "full" ? "full" : "focused", String(choice));
-    if (choice !== "storage-denied") { assert.equal(dark, true); assert.equal(root.style.colorScheme, "dark", "The compact default preserves the saved theme"); }
+    assert.equal(root.dataset.workspaceMode, choice === "focused" ? "focused" : "full", String(choice));
+    if (choice !== "storage-denied") { assert.equal(dark, true); assert.equal(root.style.colorScheme, "dark", "The Signal default preserves the saved theme"); }
 }
 
-console.log("Workspace switching: per-workspace screen/tab restoration, saved-data isolation, safe navigation, handoff cleanup, write failures and compact first-paint defaults with saved-view/theme preservation passed.");
+console.log("Workspace switching: per-workspace screen/tab restoration, saved-data isolation, safe navigation, handoff cleanup, write failures and full introduction defaults with saved-view/theme preservation passed.");

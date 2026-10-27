@@ -32,7 +32,7 @@ function RingTicks({ size, color }: { size: number; color: string }) {
     const cx = size / 2;
     const r = size / 2 - 8;
     return (
-        <svg width={size} height={size} style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
             {Array.from({ length: 60 }, (_, i) => {
                 const angle = (i / 60) * 2 * Math.PI - Math.PI / 2;
                 const isMajor = i % 5 === 0;
@@ -178,7 +178,7 @@ export default function StopwatchPage() {
         <ToolPageLayout
             title={t("Stopwatch")}
             description={t("High-precision stopwatch with lap splits")}
-            icon={<ClockCircleOutlined style={{ fontSize: 24, color: "#6366f1" }} />}
+            icon={<ClockCircleOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#6366f1"
             learnMore={{
                 whatIs: t("A browser stopwatch with lap and cumulative split times, displayed to hundredths of a second. Browser scheduling affects display updates."),
@@ -191,10 +191,10 @@ export default function StopwatchPage() {
                 .lap-row-worst td { background-color: ${darkMode ? "rgba(251,146,60,0.12) !important" : "rgba(239,68,68,0.1) !important"}; }
             `}</style>
 
-            <Row gutter={[20, 20]}>
+            <Row className="signal-working-panes" gutter={[20, 20]}>
                 {/* Main display */}
                 <Col xs={24} lg={14}>
-                    <Card style={{ textAlign: "center", background: "var(--wb-card-solid-bg)", border: "1px solid var(--wb-card-border)", borderRadius: 16 }}>
+                    <Card style={{ textAlign: "center", background: "var(--wb-card-solid-bg)", border: "1px solid var(--wb-card-border)", borderRadius: 6 }}>
                         {/* Action buttons at top */}
                         <Space size="middle" style={{ marginBottom: 24 }}>
                             <Button
@@ -202,7 +202,7 @@ export default function StopwatchPage() {
                                 size="large"
                                 icon={running ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
                                 onClick={handleStartPause}
-                                style={{ background: running ? "#f59e0b" : "#6366f1", borderColor: running ? "#f59e0b" : "#6366f1", minWidth: 130, fontWeight: 600 }}
+                                style={{ background: running ? "#f59e0b" : "var(--wb-accent-soft)", borderColor: running ? "#f59e0b" : "var(--wb-accent)", minWidth: 130, fontWeight: 600 }}
                             >
                                 {running ? t("Pause") : elapsed > 0 ? t("Resume") : t("Start")}
                             </Button>
@@ -219,7 +219,7 @@ export default function StopwatchPage() {
                         </Space>
 
                         {/* Ring + display */}
-                        <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
+                        <div className="signal-stopwatch-ring" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
                             <Progress
                                 type="circle"
                                 percent={ringPercent}
@@ -237,7 +237,7 @@ export default function StopwatchPage() {
                                         transition={{ duration: 1, repeat: Infinity }}
                                     >
                                         <div style={{
-                                            fontSize: 56, fontFamily: "var(--font-geist-mono), monospace",
+                                            fontSize: "clamp(32px,14cqi,56px)", fontFamily: "var(--font-geist-mono), monospace",
                                             fontWeight: 700, color: displayColor, lineHeight: 1,
                                             letterSpacing: "-1px", userSelect: "none",
                                         }}>
@@ -246,7 +246,7 @@ export default function StopwatchPage() {
                                     </motion.div>
                                 ) : (
                                     <div style={{
-                                        fontSize: 56, fontFamily: "var(--font-geist-mono), monospace",
+                                        fontSize: "clamp(32px,14cqi,56px)", fontFamily: "var(--font-geist-mono), monospace",
                                         fontWeight: 700, color: displayColor, lineHeight: 1,
                                         letterSpacing: "-1px", userSelect: "none",
                                     }}>
@@ -254,7 +254,7 @@ export default function StopwatchPage() {
                                     </div>
                                 )}
                                 {laps.length > 0 && (
-                                    <Text style={{ color: darkMode ? "#737373" : "#9a9a9a", fontSize: 12, display: "block", marginTop: 4 }}>
+                                    <Text style={{ color: darkMode ? "var(--wb-text-body)" : "#9a9a9a", fontSize: 12, display: "block", marginTop: 4 }}>
                                         {t("Lap {number}", { number: laps.length + 1 })}
                                     </Text>
                                 )}
@@ -310,7 +310,7 @@ export default function StopwatchPage() {
                             size="small"
                             title={
                                 <Space>
-                                    <FlagOutlined style={{ color: "#6366f1" }} />
+                                    <FlagOutlined style={{ color: "var(--wb-accent)" }} />
                                     <span>{t("Lap Records")}</span>
                                     <Tag>{laps.length}</Tag>
                                 </Space>

@@ -80,7 +80,7 @@ export default function JsonFormatterPage() {
         <ToolPageLayout
             title={t("JSON Formatter")}
             description={t("Prettify, minify and validate JSON")}
-            icon={<CodeOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
+            icon={<CodeOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#1677ff"
             learnMore={{
                 whatIs: "A JSON Formatter is a tool that transforms raw JSON (JavaScript Object Notation) data into a properly indented, human-readable format. It can also minify JSON by removing all unnecessary whitespace, or validate JSON syntax to ensure it's properly structured.",

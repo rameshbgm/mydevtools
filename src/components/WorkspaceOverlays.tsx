@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Tooltip, Popover } from "antd";
 import { SearchOutlined, StarOutlined } from "@ant-design/icons";
-import { CATEGORY_COLORS, toolsRegistry, type ToolCategory } from "@/lib/tools-registry";
+import { toolsRegistry } from "@/lib/tools-registry";
 import { toolPath } from "@/lib/category-routes";
 import { matchesToolQuery } from "@/lib/tool-search";
 import { useAppStore } from "@/lib/store";
@@ -104,11 +104,11 @@ export function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
         }
     };
 
-    const textPrimary = darkMode ? "#e5e5e5" : "#171717";
-    const textMuted = darkMode ? "#aaaab5" : "#52525b";
-    const activeAccent = darkMode ? "#22d3ee" : "#0891b2";
-    const kbdBg = darkMode ? "#222" : "#f4f4f4";
-    const kbdBorder = darkMode ? "#333" : "#ddd";
+    const textPrimary = "var(--wb-text-heading)";
+    const textMuted = "var(--wb-text-muted)";
+    const activeAccent = darkMode ? "#9bbaff" : "#2458d3";
+    const kbdBg = "var(--signal-inset)";
+    const kbdBorder = "var(--wb-card-border)";
 
     const renderItem = (tool: (typeof toolsRegistry)[0], idx: number) => {
         const isActive = idx === activeIdx;
@@ -126,15 +126,15 @@ export function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                     style={{
                         width: 34,
                         height: 34,
-                        borderRadius: 10,
-                        background: `${tool.color}22`,
+                        borderRadius: 6,
+                        background: "var(--wb-accent-soft)",
                         display: "inline-flex",
                         alignItems: "center",
                         justifyContent: "center",
                         flexShrink: 0,
                     }}
                 >
-                    <Icon style={{ fontSize: 16, color: tool.color }} />
+                    <Icon style={{ fontSize: 16, color: "var(--wb-accent)" }} />
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                     <span
@@ -229,7 +229,7 @@ export function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                                 borderRadius: 6,
                                 border: "none",
                                 cursor: "pointer",
-                                background: darkMode ? "#2a2a2a" : "#efefef",
+                                background: "var(--signal-inset)",
                                 color: textMuted,
                                 display: "flex",
                                 alignItems: "center",
@@ -289,7 +289,7 @@ export function CommandPalette({ onClose, darkMode }: CommandPaletteProps) {
                                         fontWeight: 700,
                                         letterSpacing: "0.08em",
                                         textTransform: "uppercase",
-                                        color: CATEGORY_COLORS[category as ToolCategory] ?? textMuted,
+                                        color: "var(--wb-accent)",
                                         opacity: 0.85,
                                     }}
                                 >
@@ -438,14 +438,14 @@ export function BookmarkButton({ darkMode, currentToolId, onNavigate }: Bookmark
 
     const totalPinned = bookmarks.reduce((sum, m) => sum + m.toolIds.length, 0);
 
-    const accent   = darkMode ? "#22d3ee" : "#0891b2";
-    const bg       = darkMode ? "#1a1a1a" : "#ffffff";
-    const border   = darkMode ? "#303030" : "#e5e7eb";
-    const textPrimary = darkMode ? "#e5e5e5" : "#171717";
-    const textMuted   = darkMode ? "#aaaab5" : "#52525b";
-    const hoverBg  = darkMode ? "rgba(34,211,238,0.08)" : "rgba(8,145,178,0.06)";
-    const inputBg  = darkMode ? "#111" : "#f9fafb";
-    const shadow   = darkMode ? "0 8px 32px rgba(0,0,0,0.55)" : "0 8px 32px rgba(0,0,0,0.12)";
+    const accent = darkMode ? "#9bbaff" : "#2458d3";
+    const bg = "var(--wb-card-bg)";
+    const border = "var(--wb-card-border)";
+    const textPrimary = "var(--wb-text-heading)";
+    const textMuted = "var(--wb-text-muted)";
+    const hoverBg = "var(--wb-accent-soft)";
+    const inputBg = "var(--signal-inset)";
+    const shadow = "var(--elevation-lg)";
 
     const currentToolDef = currentToolId
         ? toolsRegistry.find((t) => t.id === currentToolId) ?? null
@@ -554,7 +554,7 @@ export function BookmarkButton({ darkMode, currentToolId, onNavigate }: Bookmark
                     <button
                         type="button"
                         onClick={() => setNewMenuInput(true)}
-                        style={{ padding: "7px 18px", borderRadius: 8, border: `1px solid ${accent}`, background: `${accent}1a`, color: accent, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}
+                        style={{ padding: "7px 18px", borderRadius: 6, border: `1px solid ${accent}`, background: `${accent}1a`, color: accent, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}
                     >
                         {t("Create first menu")}
                     </button>
@@ -580,7 +580,7 @@ export function BookmarkButton({ darkMode, currentToolId, onNavigate }: Bookmark
                             disabled={activeMenu.toolIds.length >= 10 && !currentInMenu}
                             style={{
                                 display: "flex", alignItems: "center", gap: 8,
-                                width: "100%", padding: "7px 10px", borderRadius: 8,
+                                width: "100%", padding: "7px 10px", borderRadius: 6,
                                 border: `1px solid ${currentInMenu ? accent : border}`,
                                 background: currentInMenu ? `${accent}18` : "transparent",
                                 color: currentInMenu ? accent : textPrimary,
@@ -618,9 +618,9 @@ export function BookmarkButton({ darkMode, currentToolId, onNavigate }: Bookmark
                                 >
                                     <span
                                         onClick={() => { onNavigate(toolPath(tool)); setOpen(false); }}
-                                        style={{ width: 28, height: 28, borderRadius: 7, background: `${tool.color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                                        style={{ width: 28, height: 28, borderRadius: 7, background: "var(--wb-accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                                     >
-                                        <Icon style={{ fontSize: 13, color: tool.color }} />
+                                        <Icon style={{ fontSize: 13, color: "var(--wb-accent)" }} />
                                     </span>
                                     <span
                                         onClick={() => { onNavigate(toolPath(tool)); setOpen(false); }}
@@ -657,7 +657,7 @@ export function BookmarkButton({ darkMode, currentToolId, onNavigate }: Bookmark
                                 style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: `1px solid ${border}`, background: inputBg, color: textPrimary, fontSize: 12, outline: "none", boxSizing: "border-box" }}
                             />
                             {addResults.length > 0 && (
-                                <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: bg, border: `1px solid ${border}`, borderRadius: 8, overflow: "hidden", zIndex: 1000, boxShadow: shadow }}>
+                                <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: bg, border: `1px solid ${border}`, borderRadius: 6, overflow: "hidden", zIndex: 1000, boxShadow: shadow }}>
                                     {addResults.map((tool) => {
                                         const Icon = tool.icon;
                                         return (
@@ -668,8 +668,8 @@ export function BookmarkButton({ darkMode, currentToolId, onNavigate }: Bookmark
                                                 onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
                                                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", cursor: "pointer", transition: "background 0.12s" }}
                                             >
-                                                <span style={{ width: 24, height: 24, borderRadius: 6, background: `${tool.color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                                    <Icon style={{ fontSize: 12, color: tool.color }} />
+                                                <span style={{ width: 24, height: 24, borderRadius: 6, background: "var(--wb-accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                                    <Icon style={{ fontSize: 12, color: "var(--wb-accent)" }} />
                                                 </span>
                                                 <span style={{ flex: 1, fontSize: 12, color: textPrimary, fontWeight: 500 }}>{t(tool.name)}</span>
                                                 <span style={{ fontSize: 10.5, color: textMuted }}>{t(tool.category)}</span>
@@ -710,7 +710,7 @@ export function BookmarkButton({ darkMode, currentToolId, onNavigate }: Bookmark
                                 style={{
                                     fontSize: 17,
                                     color: open || totalPinned > 0
-                                        ? (darkMode ? "#22d3ee" : "#0891b2")
+                                        ? (darkMode ? "var(--wb-accent)" : "var(--wb-accent)")
                                         : undefined,
                                 }}
                             />
@@ -718,9 +718,9 @@ export function BookmarkButton({ darkMode, currentToolId, onNavigate }: Bookmark
                         style={{
                             width: 40,
                             height: 40,
-                            borderRadius: 10,
+                            borderRadius: 6,
                             background: open || totalPinned > 0
-                                ? (darkMode ? "rgba(34,211,238,0.12)" : "rgba(8,145,178,0.1)")
+                                ? (darkMode ? "var(--wb-accent-soft)" : "var(--wb-accent-soft)")
                                 : "transparent",
                             flexShrink: 0,
                         }}

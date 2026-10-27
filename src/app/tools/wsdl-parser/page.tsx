@@ -568,7 +568,7 @@ export default function WsdlParserPage() {
                 tips: [t("The generated SOAP envelope is a starting template, not schema-valid client code; fill in parameters and check the binding version."), t("WSDL imports are listed but not fetched or merged automatically.")],
             }}
         >
-            <Row gutter={[16, 16]}>
+            <Row className="signal-working-panes" gutter={[16, 16]}>
                 {/* Input Panel */}
                 <Col xs={24} lg={12}>
                     <Card
@@ -605,7 +605,7 @@ export default function WsdlParserPage() {
                         </Button>
 
                         {showHeaders && (
-                            <div style={{ marginBottom: 12, padding: 10, border: "1px solid var(--wb-border)", borderRadius: 6 }}>
+                            <div className="signal-kv-list" style={{ marginBottom: 12, padding: 10, border: "1px solid var(--wb-border)", borderRadius: 6 }}>
                                 <div style={{ marginBottom: 8 }}>
                                     <Segmented
                                         size="small"
@@ -617,7 +617,7 @@ export default function WsdlParserPage() {
                                 {headerMode === "form" ? (
                                     <>
                                         {headers.map((h, i) => (
-                                            <Space key={i} style={{ display: "flex", marginBottom: 6 }}>
+                                            <Space className="signal-kv-row signal-kv-row-toggle" key={i} style={{ display: "flex", marginBottom: 6 }}>
                                                 <Switch
                                                     size="small"
                                                     checked={h.enabled}

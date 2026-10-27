@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en" data-concept="orbit" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="dark light">
+  <title>My Dev Tools — 2.1 Design Lab</title>
+  <link rel="stylesheet" href="./preview.css">
+  <link rel="stylesheet" href="./landing.css">
+  <link rel="stylesheet" href="./catalog.css">
+  <script src="./catalog-data.js" defer></script>
+  <script src="./catalog.js" defer></script>
+  <script src="./landing.js" defer></script>
+  <script src="./preview.js" defer></script>
+</head>
+<body>
+<!-- THESIS: Three working, unselected proposals for My Dev Tools 2.1, isolated from the production application. OWN-WORLD: Orbit uses violet spatial navigation; Studio uses peach, plum and a floating instrument dock; Signal uses blue technical panels and a persistent inspector. STORY: Compare layouts, switch themes, and transform real sample data before selecting a direction. FIRST VIEWPORT: Review controls above a complete concept-specific workspace, an interactive data graphic, and a usable tool. FORM: User-requested three-way interactive decision prototype; no production design selected. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header class="review-bar">
+    <a class="lab-brand" href="./index.html"><span class="lab-symbol" aria-hidden="true">m<span>/</span></span><span>Design lab <b>2.1</b></span></a>
+    <div class="review-center"><nav class="concept-switch" aria-label="Design concepts">
+      <button data-concept="orbit" aria-pressed="true"><span class="concept-dot orbit-dot"></span>Orbit</button>
+      <button data-concept="studio" aria-pressed="false"><span class="concept-dot studio-dot"></span>Studio</button>
+      <button data-concept="signal" aria-pressed="false"><span class="concept-dot signal-dot"></span>Signal</button>
+    </nav><nav class="surface-switch" aria-label="Preview page"><button data-surface="home" aria-pressed="true">Home</button><button data-surface="workspace" aria-pressed="false">Workspace</button></nav></div>
+    <div class="review-actions"><button id="compare-button" class="review-button">Compare</button><button id="theme-toggle" class="review-button" aria-label="Switch to light theme"></button></div>
+  </header>
+  <section id="comparison" class="comparison" hidden aria-label="Compare design directions"></section>
+  <div id="app"></div>
+  <footer class="review-footer"><span><strong id="concept-caption">Orbit</strong> <span id="concept-description"></span></span><span>Interactive concept · Sample data · Not a released version</span></footer>
+  <div id="toast" role="status" class="toast"></div>
+  <noscript><p class="no-script">Enable JavaScript to try the three interactive previews.</p></noscript>
+</body>
+</html>

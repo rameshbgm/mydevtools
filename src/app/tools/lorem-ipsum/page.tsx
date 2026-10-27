@@ -106,7 +106,7 @@ export default function LoremIpsumPage() {
                 tips: ["The interface language changes labels, not the Latin placeholder text."],
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={8}>
                     <Card title={t("Options")}>
                         <Space orientation="vertical" style={{ width: "100%" }} size="large">

@@ -21,15 +21,21 @@ export async function readConnectorBody(request: Request, limit = 12 * 1024 * 10
     if (declared && (!/^\d+$/.test(declared) || Number(declared) > limit)) throw new ConnectorHttpError("Connector request body is too large.", 413);
     if (!request.body) throw new ConnectorHttpError("Connector request body is empty.", 400);
     const reader = request.body.getReader(), parts: Uint8Array[] = []; let size = 0;
+    let bytes: Uint8Array | undefined;
     try {
-        while (true) { const { value, done } = await reader.read(); if (done) break; size += value.length; if (size > limit) { await reader.cancel(); throw new ConnectorHttpError("Connector request body is too large.", 413); } parts.push(value); }
-    } finally { reader.releaseLock(); }
-    try {
-        const bytes = new Uint8Array(size); let offset = 0; for (const part of parts) { bytes.set(part, offset); offset += part.length; }
-        const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-        if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error();
-        return value;
-    } catch { throw new ConnectorHttpError("Connector request body must be a JSON object.", 400); }
+        while (true) { const { value, done } = await reader.read(); if (done) break; size += value.length; if (size > limit) { value.fill(0); await reader.cancel(); throw new ConnectorHttpError("Connector request body is too large.", 413); } parts.push(value); }
+        bytes = new Uint8Array(size); let offset = 0; for (const part of parts) { bytes.set(part, offset); offset += part.length; }
+        try {
+            const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+            if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error();
+            return value;
+        } catch { throw new ConnectorHttpError("Connector request body must be a JSON object.", 400); }
+    } finally {
+        reader.releaseLock();
+        bytes?.fill(0);
+        for (const part of parts) part.fill(0);
+        parts.length = 0;
+    }
 }
 let active = 0;
 export async function withConnectorSlot<T>(operation: () => Promise<T>): Promise<T> {

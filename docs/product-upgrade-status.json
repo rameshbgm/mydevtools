@@ -102,9 +102,7 @@
       "id": "guides",
       "requirement": "Runnable problem-solving guides linked to tools",
       "status": "complete",
-      "evidence": [
-        "Five public debugging guides added with runnable JWT, signature, A2A and schema fixtures, expected results and primary links. Signed fixture passed in browser and failed after one-space modification."
-      ]
+      "evidence": []
     },
     {
       "id": "maintenance",

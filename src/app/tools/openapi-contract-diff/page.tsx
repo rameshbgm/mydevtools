@@ -84,7 +84,7 @@ export default function OpenApiContractDiffPage() {
                 <Button icon={<ReloadOutlined />} onClick={() => { setBefore(BEFORE); setAfter(AFTER); setChanges(null); }}>{t("Reset example")}</Button>
                 {changes && <Tag color={breaking ? "error" : "success"}>{breaking ? t("Breaking changes: {count}", { count: breaking.toLocaleString(language) }) : t("No breaking changes found in evaluated rules")}</Tag>}
             </Space>
-            <Row gutter={[16, 16]}>
+            <Row className="signal-working-panes" gutter={[16, 16]}>
                 <Col xs={24} lg={12}><Card title={t("Published baseline")}><TextArea dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left" } }} aria-label={t("Published OpenAPI contract")} value={before} onChange={(event) => setBefore(event.target.value)} autoSize={{ minRows: 18, maxRows: 32 }} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }} /></Card></Col>
                 <Col xs={24} lg={12}><Card title={t("Proposed contract")}><TextArea dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left" } }} aria-label={t("Proposed OpenAPI contract")} value={after} onChange={(event) => setAfter(event.target.value)} autoSize={{ minRows: 18, maxRows: 32 }} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }} /></Card></Col>
             </Row>

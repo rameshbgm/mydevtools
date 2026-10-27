@@ -70,10 +70,6 @@ A row's **Clear** action confirms its data scope. Clearing one encrypted vault r
 
 Persistent storage may be requested from **Browser storage limits and persistence**. A browser grant reduces eviction risk but does not replace backups.
 
-## Debugging guide examples
-
-Guide links use a public `?example=` identifier bound to the matching tool, so they work on direct navigation, reload and a new tab without session storage. Only bundled public fixtures load. Import runs after default/saved settings initialize; JWT decoded claims follow the current input. Loading a fixture does not send a network request. The CORS guide opens the tester and asks for an endpoint you control.
-
 ## Snippet library
 
 Code Snippets stores up to 100 records per project, with a name, language, comma-separated tags and up to 200,000 code characters per record. Search matches names, languages, tags and code. Selecting a saved record opens a read-only syntax-highlighted editor; Edit code enables changes. Save updates that record, and removal has an Undo action while the page remains open. Libraries are unencrypted local records; use the credential vault for secrets.

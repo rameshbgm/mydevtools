@@ -118,7 +118,7 @@ export default function MarkdownTablePage() {
         <ToolPageLayout
             title={t("Markdown Table Generator")}
             description={t("Create markdown tables with a visual editor")}
-            icon={<TableOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
+            icon={<TableOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#1677ff"
             learnMore={{
                 whatIs: "Edit headers, cells and column alignment to generate a Markdown pipe table.",
@@ -127,7 +127,7 @@ export default function MarkdownTablePage() {
                 tips: ["The preview displays cell text. Output escapes pipes and backslashes and turns line breaks into <br>; other inline Markdown stays editable."],
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} xl={14}>
                     <Card
                         title={t("Table Editor")}
@@ -144,7 +144,7 @@ export default function MarkdownTablePage() {
                                 <thead>
                                     <tr>
                                         {table.alignments.map((align, i) => (
-                                            <th key={`align-${i}`} style={{ padding: "8px 4px", borderBottom: "1px solid #eee" }}>
+                                            <th key={`align-${i}`} style={{ padding: "8px 4px", borderBottom: "1px solid var(--wb-card-border)" }}>
                                                 <Space size={4}>
                                                     <Button aria-label={t("Align left")}
                                                         size="small"
@@ -233,8 +233,8 @@ export default function MarkdownTablePage() {
                                 fontFamily: "var(--font-geist-mono)",
                                 fontSize: 13,
                                 padding: 16,
-                                background: "rgba(0,0,0,0.04)",
-                                borderRadius: 8,
+                                background: "var(--signal-inset)",
+                                borderRadius: 6,
                                 overflow: "auto",
                                 whiteSpace: "pre-wrap",
                                 margin: 0,
@@ -272,7 +272,7 @@ export default function MarkdownTablePage() {
                                                     key={`preview-cell-${rowIndex}-${colIndex}`}
                                                     style={{
                                                         padding: "10px 16px",
-                                                        borderBottom: "1px solid #f0f0f0",
+                                                        borderBottom: "1px solid var(--wb-card-border)",
                                                         textAlign: table.alignments[colIndex],
                                                     }}
                                                 >

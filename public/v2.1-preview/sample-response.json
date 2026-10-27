@@ -1,0 +1,10 @@
+{
+  "workspace": "Playground",
+  "version": "2.1-preview",
+  "message": "Your request made it.",
+  "tools": [
+    { "id": "json-formatter", "name": "JSON formatter", "processing": "on-device" },
+    { "id": "api-request", "name": "API request", "processing": "network" }
+  ],
+  "sample": true
+}

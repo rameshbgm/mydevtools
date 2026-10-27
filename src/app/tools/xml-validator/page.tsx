@@ -106,7 +106,7 @@ export default function XmlValidatorPage() {
                 ]
             }}
         >
-            <Row dir={direction} gutter={[24, 24]}>
+            <Row className="signal-working-panes" dir={direction} gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card
                         title={t("XML Input")}

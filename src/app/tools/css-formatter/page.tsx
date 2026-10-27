@@ -91,7 +91,7 @@ export default function CssFormatterPage() {
                 ]
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card
                         title={t("Input CSS")}

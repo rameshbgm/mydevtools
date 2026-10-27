@@ -93,7 +93,7 @@ export default function Magic8BallPage() {
         <ToolPageLayout
             title={t("Magic 8-Ball")}
             description={t("Ask a yes/no question and let the Magic 8-Ball decide your fate")}
-            icon={<QuestionCircleOutlined style={{ fontSize: 24, color: "#6366f1" }} />}
+            icon={<QuestionCircleOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#6366f1"
             learnMore={{
                 whatIs: t("A playful random answer generator with 20 responses: 10 positive, 5 neutral and 5 negative. It does not predict the future."),
@@ -101,7 +101,7 @@ export default function Magic8BallPage() {
                 tips: [t("Questions stay in this tab only. Changing language translates answer wording without selecting a new answer.")],
             }}
         >
-            <Row gutter={[20, 20]}>
+            <Row className="signal-working-panes" gutter={[20, 20]}>
                 {/* Ball */}
                 <Col xs={24} lg={13}>
                     <Card style={{ background: cardBg, textAlign: "center" }}>
@@ -115,10 +115,10 @@ export default function Magic8BallPage() {
                                 style={{
                                     width: "100%",
                                     padding: "10px 16px",
-                                    borderRadius: 8,
+                                    borderRadius: 6,
                                     border: `1px solid ${border}`,
-                                    background: darkMode ? "#141414" : "#f8fafc",
-                                    color: darkMode ? "#e5e7eb" : "#111827",
+                                    background: darkMode ? "var(--wb-card-bg)" : "var(--wb-card-bg)",
+                                    color: darkMode ? "var(--wb-text-body)" : "#111827",
                                     fontSize: 16,
                                     outline: "none",
                                     textAlign: "center",
@@ -128,6 +128,7 @@ export default function Magic8BallPage() {
 
                         {/* The Ball */}
                         <motion.div
+                            className="signal-magic-ball"
                             animate={shaking ? {
                                 x: [0, -18, 18, -14, 14, -8, 8, -4, 4, 0],
                                 rotate: [0, -6, 6, -5, 5, -3, 3, -1, 1, 0],
@@ -226,7 +227,7 @@ export default function Magic8BallPage() {
                                 icon={shaking ? <ReloadOutlined spin /> : <QuestionCircleOutlined />}
                                 onClick={shake}
                                 disabled={shaking}
-                                style={{ background: "#6366f1", borderColor: "#6366f1", minWidth: 160, height: 44 }}
+                                style={{ background: "var(--wb-accent-soft)", borderColor: "var(--wb-accent)", minWidth: 160, height: 44 }}
                             >
                                 {shaking ? t("Shaking…") : t("Ask the 8-Ball")}
                             </Button>
@@ -276,7 +277,7 @@ export default function Magic8BallPage() {
                                             </div>
                                             <div style={{
                                                 height: 8, borderRadius: 4,
-                                                background: darkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+                                                background: darkMode ? "var(--signal-inset)" : "var(--signal-inset)",
                                                 overflow: "hidden",
                                             }}>
                                                 <motion.div

@@ -185,7 +185,7 @@ export default function UnixPermissionsPage() {
                 ]
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     {/* Result Display */}
                     <Card style={{ marginBottom: 24 }}>
@@ -282,8 +282,8 @@ export default function UnixPermissionsPage() {
                             <div
                                 style={{
                                     padding: 12,
-                                    background: "rgba(0,0,0,0.04)",
-                                    borderRadius: 8,
+                                    background: "var(--signal-inset)",
+                                    borderRadius: 6,
                                     fontFamily: "var(--font-geist-mono)",
                                 }}
                             >
@@ -294,8 +294,8 @@ export default function UnixPermissionsPage() {
                             <div
                                 style={{
                                     padding: 12,
-                                    background: "rgba(0,0,0,0.04)",
-                                    borderRadius: 8,
+                                    background: "var(--signal-inset)",
+                                    borderRadius: 6,
                                     fontFamily: "var(--font-geist-mono)",
                                 }}
                             >
@@ -327,10 +327,10 @@ export default function UnixPermissionsPage() {
                                         font: "inherit",
                                         textAlign: "start",
                                         padding: "10px 12px",
-                                        background: octal === p.octal ? "rgba(250, 84, 28, 0.1)" : "rgba(0,0,0,0.02)",
-                                        borderRadius: 8,
+                                        background: octal === p.octal ? "rgba(250, 84, 28, 0.1)" : "var(--signal-inset)",
+                                        borderRadius: 6,
                                         cursor: "pointer",
-                                        border: octal === p.octal ? "1px solid rgba(250, 84, 28, 0.3)" : "1px solid transparent",
+                                        border: octal === p.octal ? "1px solid var(--wb-card-border)" : "1px solid transparent",
                                         transition: "all 0.2s",
                                     }}
                                 >

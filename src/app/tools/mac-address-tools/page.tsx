@@ -908,7 +908,7 @@ export default function MACAddressToolsPage() {
                         key: "analyze",
                         label: <span><SearchOutlined /> {t("Analyze")}</span>,
                         children: (
-                            <Row gutter={[16, 16]}>
+                            <Row className="signal-working-panes" gutter={[16, 16]}>
                                 <Col xs={24} lg={16}>
                                     <Card size="small">
                                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
@@ -1044,7 +1044,7 @@ export default function MACAddressToolsPage() {
                         key: "generate",
                         label: <span><SyncOutlined /> {t("Generate")}</span>,
                         children: (
-                            <Row gutter={[16, 16]}>
+                            <Row className="signal-working-panes" gutter={[16, 16]}>
                                 <Col xs={24} lg={16}>
                                     <Card title={t("Generate MAC Addresses")} size="small">
                                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
@@ -1113,7 +1113,7 @@ export default function MACAddressToolsPage() {
                                                         style={{
                                                             maxHeight: 400,
                                                             overflow: "auto",
-                                                            background: darkMode ? "#141414" : "#f5f5f5",
+                                                            background: darkMode ? "var(--wb-card-bg)" : "var(--signal-inset)",
                                                             padding: 12,
                                                             borderRadius: 6,
                                                             fontFamily: "monospace",

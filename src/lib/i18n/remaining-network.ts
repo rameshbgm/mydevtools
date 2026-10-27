@@ -2522,24 +2522,8 @@ export const REMAINING_NETWORK_TRANSLATIONS: Record<string, TranslationColumns> 
         "复制 URL、配置发送方，然后展开捕获的请求以检查原始正文和请求头。",
         "انسخ URL واضبط المرسل ثم وسع الطلب الملتقط لفحص جسمه ورؤوسه الأصلية."
     ],
-    "The session ID is stored on this device. Captures live in server memory, not durable browser history.": [
-        "सत्र ID इस डिवाइस पर रहता है। कैप्चर सर्वर मेमोरी में हैं, स्थायी ब्राउज़र इतिहास नहीं।",
-        "El ID de sesión se guarda en este dispositivo. Las capturas residen en memoria del servidor, no en historial duradero del navegador.",
-        "L’ID de session est stocké sur cet appareil. Les captures résident en mémoire serveur, pas dans un historique navigateur durable.",
-        "Die Sitzungs-ID liegt auf diesem Gerät. Erfasste Daten liegen im Serverspeicher, nicht dauerhaft im Browserverlauf.",
-        "セッションIDはこの端末に保存します。受信データはサーバーメモリにあり、ブラウザーの永続履歴ではありません。",
-        "会话 ID 存储在此设备上。捕获内容保存在服务器内存中，并非持久的浏览器历史。",
-        "يحفظ معرف الجلسة على هذا الجهاز. توجد اللقطات في ذاكرة الخادم وليست سجلا دائما في المتصفح."
-    ],
-    "The server retains at most 50 requests or 5 MB and expires idle sessions after one hour; restarts and multiple instances can affect availability.": [
-        "सर्वर अधिकतम 50 अनुरोध या 5 MB रखता है और निष्क्रिय सत्र एक घंटे बाद मिटते हैं; पुनः प्रारंभ और कई इंस्टेंस उपलब्धता को प्रभावित कर सकते हैं।",
-        "El servidor conserva hasta 50 solicitudes o 5 MB y caduca sesiones tras una hora inactivas; reinicios y múltiples instancias pueden afectar la disponibilidad.",
-        "Le serveur garde au plus 50 requêtes ou 5 Mo et expire les sessions après une heure d’inactivité ; redémarrages et instances multiples peuvent affecter la disponibilité.",
-        "Der Server speichert höchstens 50 Anfragen oder 5 MB; inaktive Sitzungen verfallen nach einer Stunde. Neustarts und mehrere Instanzen können die Verfügbarkeit beeinflussen.",
-        "最大50件または5 MBを保持し、1時間未使用のセッションは失効します。再起動や複数インスタンスで利用可能性が変わる場合があります。",
-        "服务器最多保留 50 个请求或 5 MB，空闲会话一小时后过期；重启和多实例可能影响可用性。",
-        "يحتفظ الخادم بحد أقصى 50 طلبا أو 5 MB وتنتهي الجلسة بعد ساعة خمول؛ قد تؤثر إعادة التشغيل وتعدد النسخ في التوفر."
-    ],
+    "The session URL stays on this device. Received requests are displayed only in this open page and are cleared on reload.": ["सत्र URL इस डिवाइस पर रहता है। प्राप्त अनुरोध केवल इस खुले पृष्ठ में दिखते हैं और पुनः लोड पर हट जाते हैं।", "La URL de sesión permanece en este dispositivo. Las solicitudes recibidas solo se muestran en esta página abierta y se borran al recargar.", "L’URL de session reste sur cet appareil. Les requêtes reçues ne s’affichent que dans cette page ouverte et sont effacées au rechargement.", "Die Sitzungs-URL bleibt auf diesem Gerät. Empfangene Anfragen erscheinen nur auf dieser offenen Seite und werden beim Neuladen gelöscht.", "セッションURLはこの端末に残ります。受信リクエストは開いているページにのみ表示され、再読み込みで消去されます。", "会话 URL 保留在此设备上。收到的请求仅显示在当前打开的页面中，刷新后清除。", "يبقى رابط الجلسة على هذا الجهاز. تظهر الطلبات المستلمة في هذه الصفحة المفتوحة فقط وتُمسح عند إعادة تحميلها."],
+    "Keep this page listening. The server forwards one request to each pending poll and never queues or replays requests. Senders receive 409 when no browser is waiting; requests during reconnects can be missed.": ["इस पृष्ठ को सुनते रहने दें। सर्वर प्रत्येक प्रतीक्षारत पोल को एक अनुरोध भेजता है और अनुरोध कतार या रिप्ले नहीं रखता। ब्राउज़र प्रतीक्षा न करे तो प्रेषक को 409 मिलता है; दोबारा जुड़ने के बीच अनुरोध छूट सकते हैं।", "Mantén esta página escuchando. El servidor envía una solicitud a cada consulta pendiente, sin colas ni repeticiones. El remitente recibe 409 si ningún navegador espera; pueden perderse solicitudes durante las reconexiones.", "Gardez cette page à l’écoute. Le serveur transmet une requête par interrogation en attente, sans file ni relecture. L’expéditeur reçoit 409 si aucun navigateur n’attend ; des requêtes peuvent être perdues lors des reconnexions.", "Diese Seite muss aktiv lauschen. Der Server übermittelt eine Anfrage pro wartender Abfrage, ohne Warteschlange oder Wiederholung. Ohne wartenden Browser erhält der Absender 409; beim Wiederverbinden können Anfragen verloren gehen.", "このページを待機状態にしてください。サーバーは待機中のポーリングに1件ずつ転送し、キューや再送履歴は保持しません。ブラウザーが待機していない場合は409を返します。再接続中のリクエストは届かないことがあります。", "请保持此页面监听。服务器向每个等待中的轮询转发一个请求，不排队也不重放。没有浏览器等待时，发送方会收到 409；重连期间可能丢失请求。", "أبقِ هذه الصفحة في وضع الاستماع. يرسل الخادم طلبًا واحدًا لكل استقصاء منتظر دون طابور أو إعادة عرض. يتلقى المُرسِل 409 عندما لا ينتظر متصفح؛ وقد تُفقد الطلبات أثناء إعادة الاتصال."],
     "Anyone with the session URL can send requests. Use test data and treat the URL as a secret.": [
         "सत्र URL जानने वाला कोई भी अनुरोध भेज सकता है। परीक्षण डेटा उपयोग करें और URL गोपनीय रखें।",
         "Cualquiera con la URL puede enviar solicitudes. Usa datos de prueba y trata la URL como un secreto.",

@@ -134,7 +134,7 @@ for (const current of LANGUAGES) {
         assert.equal(tree.find((node) => node.type === "li")?.props.children, raw);
         const file = `src/app/api/${route === "webhook" ? "webhook/[sessionId]" : route}/route.ts`;
         assert.equal(tree.find((node) => node.type === "a")?.props.href, `https://github.com/rameshbgm/mydevtools/blob/main/${file}`);
-        const expectedHandling = route === "webhook" ? "captured requests are stored in temporary process memory so this page can display them." : route === "fetch-cert" ? "the server opens a TLS connection to the hostname and returns the certificate chain." : "the server relays this request to your target and returns its response; the target receives the fields above.";
+        const expectedHandling = route === "webhook" ? "webhooks are delivered only to an actively listening browser; the server keeps no request history." : route === "fetch-cert" ? "the server opens a TLS connection to the hostname and returns the certificate chain." : "the server relays this request to your target and returns its response; the target receives the fields above.";
         assert.ok(tree.some((node) => node.type === "Paragraph" && Array.isArray(node.props.children) && node.props.children.includes(translate(language, expectedHandling))), `${route}/${language}: retain handling explanation`);
     }
 }

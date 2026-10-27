@@ -10,18 +10,7 @@ import { useLanguage } from "@/components/LanguageProvider";
 const SAFETY_TIMEOUT_MS = 60_000;
 const MIN_VISIBLE_MS = 250;
 
-const LOADING_MESSAGES = [
-    "Warming up the dev tools…",
-    "Polishing pixels…",
-    "Compiling awesomeness…",
-    "Booting up the lab…",
-    "Sharpening the tools…",
-    "Brewing a fresh batch of bytes…",
-    "Aligning the semicolons…",
-    "Refactoring the cosmos…",
-    "Indenting the universe…",
-    "Spinning up productivity…",
-];
+const LOADING_MESSAGES = ["Loading tool"];
 
 function pickMessage(): string {
     return LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)];
@@ -100,7 +89,7 @@ export default function NavigationLoader() {
         ? toolsRegistry.find((t) => t.id === navTargetId)
         : null;
     const ToolIcon = targetTool?.icon;
-    const accentColor = targetTool?.color ?? "#0891b2";
+    const accentColor = darkMode ? "#9bbaff" : "#2458d3";
 
     return (
         <AnimatePresence>
@@ -153,7 +142,7 @@ export default function NavigationLoader() {
                                 style={{
                                     position: "absolute",
                                     inset: 12,
-                                    borderRadius: 14,
+                                    borderRadius: 6,
                                     background: `${accentColor}1f`,
                                     display: "flex",
                                     alignItems: "center",
@@ -190,7 +179,7 @@ export default function NavigationLoader() {
                                 height: 3,
                                 borderRadius: 999,
                                 overflow: "hidden",
-                                background: darkMode ? "#262626" : "#e5e5e5",
+                                background: darkMode ? "var(--signal-inset)" : "var(--wb-card-bg)",
                             }}
                         >
                             <motion.div

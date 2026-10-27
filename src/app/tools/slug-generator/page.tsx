@@ -109,7 +109,7 @@ export default function SlugGeneratorPage() {
                         style={{
                             padding: 16,
                             background: "rgba(250, 84, 28, 0.08)",
-                            borderRadius: 8,
+                            borderRadius: 6,
                             fontFamily: "var(--font-geist-mono)",
                             fontSize: 16,
                             wordBreak: "break-all",
@@ -122,7 +122,7 @@ export default function SlugGeneratorPage() {
                         <div dir="ltr"
                             style={{
                                 padding: 12,
-                                background: "rgba(0,0,0,0.04)",
+                                background: "var(--signal-inset)",
                                 borderRadius: 6,
                                 fontFamily: "var(--font-geist-mono)",
                                 fontSize: 13,

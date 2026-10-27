@@ -88,7 +88,6 @@ for (const language of LANGUAGES) {
 for (const toolId of toolIds) {
     const html = renderToStaticMarkup(createElement(ReferenceProvenance, { toolId }));
     assert.ok(html.includes("Standards, sources and review dates"));
-    assert.ok(html.includes('<a href="/guides">Runnable debugging guides</a>'));
     for (const source of sources) {
         const link = renderToStaticMarkup(createElement("a", { href: source.url, target: "_blank", rel: "noopener noreferrer" }, createElement("bdi", { dir: "ltr" }, source.label)));
         assert.equal(html.includes(link), source.tools.includes(toolId), `${toolId}/${source.id} selection`);

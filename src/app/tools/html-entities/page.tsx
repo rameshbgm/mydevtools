@@ -168,7 +168,7 @@ export default function HtmlEntitiesPage() {
         >
             <ToolBridgeBanner accepts={["text", "html"]} onAccept={(p) => setInput(p.data)} />
 
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card>
                         <Space style={{ marginBottom: 16 }} wrap>
@@ -229,7 +229,7 @@ export default function HtmlEntitiesPage() {
                                     value={output}
                                     readOnly
                                     rows={10}
-                                    style={{ background: "rgba(250, 84, 28, 0.05)" }}
+                                    style={{ background: "var(--signal-inset)" }}
                                 />
                             </Col>
                         </Row>

@@ -60,7 +60,6 @@ const response = { status: 200, body: rawJson, headers: { "content-type": "appli
 const method = { service: "example.Echo", name: "Chat", path: "/example.Echo/Chat", requestStream: true, responseStream: true, requestType: "example.EchoRequest", responseType: "example.EchoReply", sample: { id: "9223372036854775807", message: rawName } };
 const rpcResult = { status: { code: 0, name: "OK", details: rawName }, messages: [JSON.parse('{"id":"9223372036854775807","message":"日本語 العربية"}')], elapsedMs: 1.234, metadata: { "x-raw": "AAE=" } };
 const mock = { id: "mock-raw", name: rawName, baseUrl: "http://127.0.0.1:4312/m/raw-capability", project: "personal", expiresAt: "2026-10-20T12:30:00Z", routes: [{ method: "GET", path: "/日本語", status: 201, headers: {}, body: rawJson, delayMs: 12 }], requests: 2 };
-const historyRequest = { id: 1, timestamp: "2026-10-20T12:29:00Z", method: "GET", path: "/日本語?q=العربية", status: 201, body: rawJson, headers: { authorization: "Bearer fixture" }, bodyTruncated: false, bytes: 117, matched: true };
 
 function harness(path: string, initial: Record<string, any> = {}, props: Record<string, any> = {}) {
     let language: Language = "en", stateIndex = 0, refIndex = 0;
@@ -75,7 +74,7 @@ function harness(path: string, initial: Record<string, any> = {}, props: Record<
         if (input.service === "request") return response;
         if (input.service === "grpc") return input.operation === "describe" ? { methods: [method] } : rpcResult;
         if (input.operation === "list") return { mocks: [mock] };
-        return { requests: [historyRequest] };
+        return { ok: true };
     };
     const noop = () => null, module = { exports: {} as { default: (props?: any) => Node } };
     const dependencies = (name: string): any => {
@@ -110,7 +109,7 @@ async function main() {
         harness(paths[0], {}, { requests: [request], variables: { token: "fixture", id: "9223372036854775807" }, environmentName: rawName }),
         harness(paths[1], { steps: [step], results: [runnerResult], run: { stopped: "failure", results: [runnerResult], variables: { token: "fixture" } }, notice: "Plan saved in this project. Requests and environment values are managed in the HTTP client.", error: { source: "Saved plan could not be loaded.", detail: "Provider Ω: Plan saved in this project." } }, { requests: [request], variables: { token: "fixture", id: "9223372036854775807" }, environmentName: rawName }),
         harness(paths[2], { methods: [method], method: method.path, result: rpcResult, messages: rawJson, metadata: '{"authorization":"Bearer fixture","trace-bin":"AAE="}', certificates: { serverName: "fixture.local", ca: "CA_LITERAL", certificate: "CERT_LITERAL", privateKey: "KEY_LITERAL" }, notice: 0, error: { source: "RPC failed.", detail: "Provider Ω: RPC failed." } }),
-        harness(paths[3], { configuration: rawJson, mocks: [mock], history: { id: mock.id, requests: [historyRequest] }, loaded: true, notice: "Mock base URL copied.", error: { source: "Mock operation failed.", detail: "Provider Ω: Mock operation failed." } }),
+        harness(paths[3], { configuration: rawJson, mocks: [mock], loaded: true, notice: "Mock base URL copied.", error: { source: "Mock operation failed.", detail: "Provider Ω: Mock operation failed." } }),
     ];
     for (const fixture of fixtures) {
         fixture.render(); const stable = JSON.stringify(fixture.values);
@@ -146,10 +145,9 @@ async function main() {
             assert.ok(content.includes(translate(id, responseStream ? "Responses are collected until stream completion or deadline." : "Returns one response message.")));
             assert.ok(content.includes(translate(id, requestStream ? "Request messages (JSON array)" : "Request message (JSON object)")));
         }
-        const noMocks = harness(paths[3], { loaded: true, history: { id: mock.id, requests: [] } });
+        const noMocks = harness(paths[3], { loaded: true });
         const noMocksText = noMocks.text(noMocks.render(id));
         assert.ok(noMocksText.includes(translate(id, "No mocks are running for this project. Start one above.")));
-        assert.ok(noMocksText.includes(translate(id, "No completed requests yet. Send a request, then refresh this history.")));
         const busyGrpc = harness(paths[2], { busy: true });
         busyGrpc.render(id); assert.equal(busyGrpc.findButton("Working…").props.disabled, true); assert.equal(busyGrpc.findButton("Cancel RPC").props.disabled, false);
         const busyRunner = harness(paths[1], { busy: true }, { requests: [request], variables: {}, environmentName: rawName });
@@ -173,11 +171,8 @@ async function main() {
         const mocks = harness(paths[3]); mocks.render(id); const configuration = mocks.values.configuration;
         await mocks.click("Start local mock"); assert.equal(mocks.calls[0].input.operation, "start"); assert.equal(mocks.calls[0].input.project, "personal"); assert.deepEqual(JSON.parse(JSON.stringify(mocks.calls[0].input.configuration)), JSON.parse(configuration)); assert.equal(mocks.calls[1].input.operation, "list");
         await mocks.click("Copy base URL"); assert.equal(mocks.copies[0], mock.baseUrl);
-        await mocks.click("View requests"); assert.equal(mocks.calls[2].input.operation, "history"); assert.equal(mocks.calls[2].input.id, mock.id);
-        await mocks.click("Export mock history"); assert.equal(mocks.exports[0][1], "mock-requests.json"); assert.equal(JSON.parse(mocks.exports[0][0])[0].body, rawJson);
         const beforeLanguage = mocks.calls.length; mocks.render(id === "ar" ? "en" : "ar"); assert.equal(mocks.calls.length, beforeLanguage, "Locale must not stop or refresh mocks");
-        await mocks.click("Clear request history"); assert.equal(mocks.calls[4].input.operation, "clear-history"); assert.equal(mocks.values.history, null);
-        await mocks.click("Stop mock"); assert.equal(mocks.calls[6].input.operation, "stop"); assert.equal(mocks.calls[6].input.id, mock.id);
+        await mocks.click("Stop mock"); assert.equal(mocks.calls[2].input.operation, "stop"); assert.equal(mocks.calls[2].input.id, mock.id);
     }
     // Cancellation remains wired to the same in-flight abort controller after
     // switching language, and does not create another operation.
@@ -188,6 +183,6 @@ async function main() {
         await fixture.click(path === paths[1] ? "Cancel run" : "Cancel RPC"); assert.equal(fixture.calls.length, 1); assert.equal(fixture.calls[0].signal?.aborted, true); assert.equal(fixture.values.busy, false);
         if (path === paths[2]) assert.equal(fixture.values.error.source, "RPC cancelled."); else assert.equal(fixture.values.run.stopped, "cancelled");
     }
-    console.log("API extension localization: all 8 languages, authored copy/columns, retained drafts/results/credentials, stable options, raw precision, translated notices/errors, runner captures/auth/export, gRPC schema/call/export/cancellation and mock lifecycle/history/copy/export passed.");
+    console.log("API extension localization: all 8 languages, authored copy/columns, retained drafts/results/credentials, stable options, raw precision, translated notices/errors, runner captures/auth/export, gRPC schema/call/export/cancellation and mock lifecycle/copy without server history passed.");
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

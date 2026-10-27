@@ -172,7 +172,7 @@ export default function QRCodeGeneratorPage() {
                 ]
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={14}>
                     <Card title={t("Content")}>
                         <Space wrap style={{ marginBottom: 16 }}>

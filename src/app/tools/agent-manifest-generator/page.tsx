@@ -195,45 +195,18 @@ export default function AgentManifestGeneratorPage() {
                         children: (
                             <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                                 <Card size="small" title={t("Agent details")}>
-                                    <Form layout="vertical">
-                                        <Form.Item label={t("A2A protocol")}><Select value={card.protocolVersion} onChange={(protocolVersion) => setCard({ ...card, protocolVersion })} options={[{ value: "1.0", label: t("1.0 · current") }, { value: "0.3", label: t("0.3 · previous") }]} /></Form.Item>
-                                        <Form.Item label={t("Name")} required>
-                                            <Input value={card.name} onChange={(e) => setCard({ ...card, name: e.target.value })} />
-                                        </Form.Item>
-                                        <Form.Item label={t("Description")}>
-                                            <TextArea rows={2} value={card.description} onChange={(e) => setCard({ ...card, description: e.target.value })} />
-                                        </Form.Item>
-                                        <Form.Item label={t("Agent URL (A2A endpoint)")} required>
-                                            <Input value={card.url} onChange={(e) => setCard({ ...card, url: e.target.value })} placeholder="https://example.com/a2a" />
-                                        </Form.Item>
-                                        <Space size="large" wrap>
-                                            <Form.Item label={t("Version")} required>
-                                                <Input value={card.version} onChange={(e) => setCard({ ...card, version: e.target.value })} style={{ width: 140 }} />
-                                            </Form.Item>
-                                            <Form.Item label={t("Documentation URL")}>
-                                                <Input value={card.documentationUrl} onChange={(e) => setCard({ ...card, documentationUrl: e.target.value })} style={{ width: 260 }} />
-                                            </Form.Item>
-                                        </Space>
-                                        <Space size="large" wrap>
-                                            <Form.Item label={t("Streaming")}><Switch checked={card.streaming} onChange={(v) => setCard({ ...card, streaming: v })} /></Form.Item>
-                                            <Form.Item label={t("Push notifications")}><Switch checked={card.pushNotifications} onChange={(v) => setCard({ ...card, pushNotifications: v })} /></Form.Item>
-                                        </Space>
-                                        <Space size="large" wrap>
-                                            <Form.Item label={t("Input modes (comma-separated)")}>
-                                                <Input value={card.defaultInputModes} onChange={(e) => setCard({ ...card, defaultInputModes: e.target.value })} style={{ width: 220 }} />
-                                            </Form.Item>
-                                            <Form.Item label={t("Output modes (comma-separated)")}>
-                                                <Input value={card.defaultOutputModes} onChange={(e) => setCard({ ...card, defaultOutputModes: e.target.value })} style={{ width: 220 }} />
-                                            </Form.Item>
-                                        </Space>
-                                        <Space size="large" wrap>
-                                            <Form.Item label={t("Provider organization")}>
-                                                <Input value={card.orgName} onChange={(e) => setCard({ ...card, orgName: e.target.value })} style={{ width: 220 }} />
-                                            </Form.Item>
-                                            <Form.Item label={t("Provider URL")}>
-                                                <Input value={card.orgUrl} onChange={(e) => setCard({ ...card, orgUrl: e.target.value })} style={{ width: 220 }} />
-                                            </Form.Item>
-                                        </Space>
+                                    <Form layout="vertical" className="signal-form-grid">
+                                        <Form.Item label={t("A2A protocol")} htmlFor="agent-protocol"><Select id="agent-protocol" value={card.protocolVersion} onChange={protocolVersion => setCard({ ...card, protocolVersion })} options={[{ value: "1.0", label: t("1.0 · current") }, { value: "0.3", label: t("0.3 · previous") }]} /></Form.Item>
+                                        <Form.Item label={t("Name")} htmlFor="agent-name" required><Input id="agent-name" value={card.name} onChange={e => setCard({ ...card, name: e.target.value })} /></Form.Item>
+                                        <Form.Item className="signal-field-wide" label={t("Description")} htmlFor="agent-description"><TextArea id="agent-description" rows={3} value={card.description} onChange={e => setCard({ ...card, description: e.target.value })} /></Form.Item>
+                                        <Form.Item className="signal-field-wide" label={t("Agent URL (A2A endpoint)")} htmlFor="agent-url" required><Input id="agent-url" dir="ltr" value={card.url} onChange={e => setCard({ ...card, url: e.target.value })} placeholder="https://example.com/a2a" /></Form.Item>
+                                        <Form.Item label={t("Version")} htmlFor="agent-version" required><Input id="agent-version" value={card.version} onChange={e => setCard({ ...card, version: e.target.value })} /></Form.Item>
+                                        <Form.Item label={t("Documentation URL")} htmlFor="agent-documentation"><Input id="agent-documentation" dir="ltr" value={card.documentationUrl} onChange={e => setCard({ ...card, documentationUrl: e.target.value })} /></Form.Item>
+                                        <div className="signal-field-wide signal-capability-row"><Form.Item label={t("Streaming")}><Switch aria-label={t("Streaming")} checked={card.streaming} onChange={v => setCard({ ...card, streaming: v })} /></Form.Item><Form.Item label={t("Push notifications")}><Switch aria-label={t("Push notifications")} checked={card.pushNotifications} onChange={v => setCard({ ...card, pushNotifications: v })} /></Form.Item></div>
+                                        <Form.Item label={t("Input modes (comma-separated)")} htmlFor="agent-input-modes"><Input id="agent-input-modes" value={card.defaultInputModes} onChange={e => setCard({ ...card, defaultInputModes: e.target.value })} /></Form.Item>
+                                        <Form.Item label={t("Output modes (comma-separated)")} htmlFor="agent-output-modes"><Input id="agent-output-modes" value={card.defaultOutputModes} onChange={e => setCard({ ...card, defaultOutputModes: e.target.value })} /></Form.Item>
+                                        <Form.Item label={t("Provider organization")} htmlFor="agent-provider"><Input id="agent-provider" value={card.orgName} onChange={e => setCard({ ...card, orgName: e.target.value })} /></Form.Item>
+                                        <Form.Item label={t("Provider URL")} htmlFor="agent-provider-url"><Input id="agent-provider-url" dir="ltr" value={card.orgUrl} onChange={e => setCard({ ...card, orgUrl: e.target.value })} /></Form.Item>
                                     </Form>
                                 </Card>
 
@@ -274,7 +247,7 @@ export default function AgentManifestGeneratorPage() {
                         children: (
                             <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                                 <Card size="small" title={t("Server details")}>
-                                    <Form layout="vertical">
+                                    <Form layout="vertical" className="signal-form-stack">
                                         <Form.Item label={t("Server name (key in mcpServers)")} required>
                                             <Input value={mcp.serverName} onChange={(e) => setMcp({ ...mcp, serverName: e.target.value })} style={{ width: 260 }} />
                                         </Form.Item>
@@ -313,7 +286,7 @@ export default function AgentManifestGeneratorPage() {
                                 >
                                     <Space orientation="vertical" size="small" style={{ width: "100%" }}>
                                         {mcp.env.map((e, i) => (
-                                            <Space key={i} wrap>
+                                            <Space className="signal-kv-row signal-kv-row-fields" key={i} wrap>
                                                 <Input placeholder={t("KEY")} value={e.key} onChange={(ev) => updateEnv(i, { key: ev.target.value })} style={{ width: 200 }} />
                                                 <Input placeholder={t("value")} value={e.value} onChange={(ev) => updateEnv(i, { value: ev.target.value })} style={{ width: 260 }} />
                                                 <Button aria-label={t("Delete")} size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => removeEnv(i)} />

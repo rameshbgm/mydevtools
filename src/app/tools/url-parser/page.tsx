@@ -72,7 +72,7 @@ export default function UrlParserPage() {
         <ToolPageLayout
             title={t("URL Parser")}
             description={t("Parse and analyze URLs into components")}
-            icon={<GlobalOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
+            icon={<GlobalOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#1677ff"
             learnMore={{
                 whatIs: t("Inspect URL components using the browser WHATWG URL parser. Parsing happens locally and does not open the URL."),
@@ -220,7 +220,7 @@ export default function UrlParserPage() {
                                             <span style={{ color: "#8c8c8c" }}>@</span>
                                         </>
                                     )}
-                                    <span style={{ color: "#1677ff" }}>{parsed.hostname}</span>
+                                    <span style={{ color: "var(--wb-accent)" }}>{parsed.hostname}</span>
                                     {parsed.port && (
                                         <>
                                             <span style={{ color: "#8c8c8c" }}>:</span>

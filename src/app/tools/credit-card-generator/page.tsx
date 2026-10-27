@@ -36,13 +36,16 @@ function CardFace({ card, onCopy }: Readonly<{ card: GeneratedCard; onCopy: (v: 
     const { t } = useLanguage();
     return (
         <div
+            className="signal-test-card"
             style={{
                 position: "relative",
+                width: "100%",
+                minWidth: 0,
                 aspectRatio: "1.586 / 1",
                 minHeight: 200,
-                borderRadius: 16,
+                borderRadius: 6,
                 padding: 22,
-                color: "#fff",
+                color: "var(--wb-text-heading)",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",
@@ -58,7 +61,7 @@ function CardFace({ card, onCopy }: Readonly<{ card: GeneratedCard; onCopy: (v: 
                     position: "absolute",
                     inset: 0,
                     background:
-                        "radial-gradient(circle at 82% 12%, rgba(255,255,255,0.28), transparent 45%), radial-gradient(circle at 10% 95%, rgba(255,255,255,0.14), transparent 40%)",
+                        "var(--wb-card-bg)",
                     pointerEvents: "none",
                 }}
             />
@@ -71,7 +74,7 @@ function CardFace({ card, onCopy }: Readonly<{ card: GeneratedCard; onCopy: (v: 
                         width: 42,
                         height: 32,
                         borderRadius: 6,
-                        background: "linear-gradient(135deg, #f6d365 0%, #d4af37 55%, #b8860b 100%)",
+                        background: "var(--wb-card-bg)",
                         boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
                     }}
                 />
@@ -87,16 +90,15 @@ function CardFace({ card, onCopy }: Readonly<{ card: GeneratedCard; onCopy: (v: 
                     background: "none",
                     border: "none",
                     padding: 0,
-                    color: "#fff",
+                    color: "var(--wb-text-heading)",
                     cursor: "pointer",
                     textAlign: "left",
                     fontFamily: "var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace",
                     // ponytail: scale the type to the digit count so 19-digit
                     // numbers (Visa/Maestro/UnionPay) stay on one line like a real card.
-                    fontSize: card.length > 16 ? "clamp(12px, 1.6vw, 15px)" : "clamp(14px, 2vw, 19px)",
+                    fontSize: card.length > 16 ? "clamp(11px, 4.8cqi, 15px)" : "clamp(12px, 6cqi, 19px)",
                     letterSpacing: card.length > 16 ? 0.6 : 1.4,
                     fontWeight: 600,
-                    textShadow: "0 1px 2px rgba(0,0,0,0.35)",
                     whiteSpace: "nowrap",
                     width: "100%",
                 }}

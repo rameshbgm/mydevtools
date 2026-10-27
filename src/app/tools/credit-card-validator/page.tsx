@@ -54,7 +54,7 @@ export default function CreditCardValidatorPage() {
         <ToolPageLayout
             title={t("Credit Card Validator & Generator")}
             description={t("Validate card numbers and generate test cards using Luhn algorithm")}
-            icon={<CreditCardOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
+            icon={<CreditCardOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#1677ff"
             learnMore={{
                 whatIs: t("Check number length and the Luhn checksum, with a brand hint from the listed prefix patterns. Generate synthetic numbers for local form tests; no account lookup is performed."),
@@ -199,7 +199,7 @@ export default function CreditCardValidatorPage() {
                                                         justifyContent: "space-between",
                                                         alignItems: "center",
                                                         padding: "8px 12px",
-                                                        background: "rgba(0,0,0,0.02)",
+                                                        background: "var(--signal-inset)",
                                                         borderRadius: 6,
                                                     }}
                                                 >

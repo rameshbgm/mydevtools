@@ -114,7 +114,7 @@ export default function ColorPaletteExtractorPage() {
                     </Dragger>
                 </Card>
             ) : (
-                <Row gutter={[16, 16]}>
+                <Row className="signal-working-panes" gutter={[16, 16]}>
                     <Col xs={24} md={10}>
                         <Card size="small">
                             <img src={img.src} alt={t("Source image")} style={{ width: "100%", display: "block", borderRadius: 4 }} />

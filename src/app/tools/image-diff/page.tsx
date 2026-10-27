@@ -143,7 +143,7 @@ export default function ImageDiffPage() {
                 ],
             }}
         >
-            <Row gutter={[16, 16]}>
+            <Row className="signal-working-panes" gutter={[16, 16]}>
                 <Col xs={24} md={12}>
                     <Card size="small" title={<Space><Text strong>{t("Left")}</Text>{left && <Tag><bdi dir="ltr">{left.w}×{left.h}</bdi></Tag>}</Space>}>
                         {left ? (

@@ -85,13 +85,13 @@ interface ResponseCookie {
 // ─── Constants ───────────────────────────────────────────────────────
 
 const HTTP_METHODS = [
-    { value: "GET", color: "#52c41a" },
-    { value: "POST", color: "#1677ff" },
-    { value: "PUT", color: "#faad14" },
-    { value: "PATCH", color: "#722ed1" },
-    { value: "DELETE", color: "#f5222d" },
-    { value: "HEAD", color: "#13c2c2" },
-    { value: "OPTIONS", color: "#eb2f96" },
+    { value: "GET", color: "var(--signal-success)" },
+    { value: "POST", color: "var(--wb-accent)" },
+    { value: "PUT", color: "var(--signal-warning)" },
+    { value: "PATCH", color: "var(--signal-code-key)" },
+    { value: "DELETE", color: "var(--signal-error)" },
+    { value: "HEAD", color: "var(--wb-text-body)" },
+    { value: "OPTIONS", color: "var(--wb-text-body)" },
 ];
 
 const COMMON_HEADERS = [
@@ -1050,7 +1050,7 @@ System.out.println(response.body());`;
                     ],
                     extra: (
                         <Text style={{ fontSize: 12 }}>
-                            {t("Request credentials and payloads are not written to application logs. Saved HTTP requests, history, environments and collection plans use browser storage. RPC inputs/results remain in page memory. Mock configuration and recent requests remain in the localhost runtime's memory until stopped, expired or restarted.")}
+                            {t("Saved HTTP requests, history, environments and collection plans use browser storage. RPC results remain in page memory. Local mocks retain only active response configuration and a request count, never incoming headers or bodies.")}
                         </Text>
                     ),
                 },
@@ -1064,10 +1064,10 @@ System.out.println(response.body());`;
             <>
             <p><a href="#api-client-extensions">{t("Collection runner, gRPC and local mocks")}</a></p>
             <div className="wb-workbench" style={{ marginBlockEnd: 16 }}><label>{t("HTTP transport")}<Select aria-label={t("HTTP transport")} value={transport} onChange={setTransport} options={[{ value: "managed", label: t("Managed proxy · public endpoints") }, { value: "native", label: t("Local connector · private / localhost") }]} style={{ maxWidth: "100%", width: 360 }} /></label>{transport === "native" && <p>{t("Enable connector access below. Native requests verify TLS, support custom CA / client certificates, and are limited to 1 MiB request, 2 MiB response and 15 seconds.")}</p>}</div>
-            <Row gutter={[16, 16]}>
+            <Row className="signal-working-panes" gutter={[16, 16]}>
                 {/* ── Left: Request ── */}
                 <Col xs={24} xl={14}>
-                    <Card size="small">
+                    <Card size="small" className="signal-api-request-card">
                         {/* Environment + Import bar */}
                         <Space wrap style={{ marginBottom: 12, width: "100%", justifyContent: "space-between" }}>
                             <Space wrap>
@@ -1108,8 +1108,8 @@ System.out.println(response.body());`;
                         </Space>
 
                         {/* URL Bar */}
-                        <Space.Compact style={{ width: "100%", marginBottom: 16 }}>
-                            <Select value={method} onChange={setMethod} aria-label={t("HTTP method")} style={{ minWidth: 120 }} size="large">
+                        <Space.Compact className="signal-request-bar" style={{ width: "100%", marginBottom: 16 }}>
+                            <Select value={method} onChange={setMethod} aria-label={t("HTTP method")} listHeight={HTTP_METHODS.length * 40} classNames={{ popup: { root: "signal-http-method-menu" } }} style={{ width: 112 }} size="large">
                                 {HTTP_METHODS.map((m) => (
                                     <Select.Option key={m.value} value={m.value}>
                                         <span dir="ltr" style={{ color: m.color, fontWeight: 600 }}>{m.value}</span>
@@ -1140,7 +1140,7 @@ System.out.println(response.body());`;
 
                         {/* Live URL preview after substitution */}
                         {url && (
-                            <div style={{ marginBottom: 12, padding: "6px 10px", background: "rgba(0,0,0,0.03)", borderRadius: 4, fontSize: 11, fontFamily: "var(--font-geist-mono)", wordBreak: "break-all" }}>
+                            <div style={{ marginBottom: 12, padding: "6px 10px", background: "var(--signal-inset)", borderRadius: 4, fontSize: 11, fontFamily: "var(--font-geist-mono)", wordBreak: "break-all" }}>
                                 <Text type="secondary" style={{ fontSize: 11 }}>→ </Text>
                                 <Text dir="ltr" style={{ fontSize: 11 }}>{buildUrl()}</Text>
                             </div>
@@ -1214,9 +1214,9 @@ System.out.println(response.body());`;
                                                 </Row>
                                             )}
                                             {(bodyType === "x-www-form-urlencoded" || bodyType === "form-data") && (
-                                                <div>
+                                                <div className="signal-kv-list">
                                                     {formData.map((f) => (
-                                                        <Space key={f.id} style={{ width: "100%", marginBottom: 8 }}>
+                                                        <Space className="signal-kv-row signal-kv-row-toggle" key={f.id} style={{ width: "100%", marginBottom: 8 }}>
                                                             <Switch aria-label={t("Enable form field")} checked={f.enabled} onChange={(v) => updateItem(setFormData, f.id, "enabled", v)} size="small" />
                                                             <Input dir="ltr" value={f.key} onChange={(e) => updateItem(setFormData, f.id, "key", e.target.value)} placeholder={t("Key")} style={{ width: 150 }} />
                                                             <Input dir="ltr" value={f.value} onChange={(e) => updateItem(setFormData, f.id, "value", e.target.value)} placeholder={t("Value")} style={{ flex: 1 }} />
@@ -1233,7 +1233,7 @@ System.out.println(response.body());`;
                                     key: "headers",
                                     label: <><FormOutlined /> {t("Headers")} ({headers.filter((h) => h.enabled).length})</>,
                                     children: (
-                                        <div>
+                                        <div className="signal-kv-list">
                                             <div style={{ marginBottom: 12 }}>
                                                 <Segmented
                                                     size="small"
@@ -1248,7 +1248,7 @@ System.out.println(response.body());`;
                                             {headerMode === "form" ? (
                                                 <>
                                                     {headers.map((h) => (
-                                                        <Space key={h.id} style={{ width: "100%", marginBottom: 8 }} wrap>
+                                                        <Space className="signal-kv-row signal-kv-row-toggle" key={h.id} style={{ width: "100%", marginBottom: 8 }} wrap>
                                                             <Switch aria-label={t("Enable header")} checked={h.enabled} onChange={(v) => updateItem(setHeaders, h.id, "enabled", v)} size="small" />
                                                             <Select
                                                                 value={h.key || undefined}
@@ -1291,9 +1291,9 @@ System.out.println(response.body());`;
                                     key: "params",
                                     label: <>{t("Query")} ({queryParams.filter((p) => p.enabled).length})</>,
                                     children: (
-                                        <div>
+                                        <div className="signal-kv-list">
                                             {queryParams.map((p) => (
-                                                <Space key={p.id} style={{ width: "100%", marginBottom: 8 }}>
+                                                <Space className="signal-kv-row signal-kv-row-toggle" key={p.id} style={{ width: "100%", marginBottom: 8 }}>
                                                     <Switch aria-label={t("Enable query parameter")} checked={p.enabled} onChange={(v) => updateItem(setQueryParams, p.id, "enabled", v)} size="small" />
                                                     <Input dir="ltr" value={p.key} onChange={(e) => updateItem(setQueryParams, p.id, "key", e.target.value)} placeholder={t("Key")} style={{ width: 150 }} />
                                                     <Input dir="ltr" value={p.value} onChange={(e) => updateItem(setQueryParams, p.id, "value", e.target.value)} placeholder={t("Value")} style={{ flex: 1 }} />
@@ -1358,9 +1358,9 @@ System.out.println(response.body());`;
                                     key: "cookies",
                                     label: <>{t("Cookies")} ({cookies.filter((c) => c.enabled).length})</>,
                                     children: (
-                                        <div>
+                                        <div className="signal-kv-list">
                                             {cookies.map((c) => (
-                                                <Space key={c.id} style={{ width: "100%", marginBottom: 8 }}>
+                                                <Space className="signal-kv-row signal-kv-row-toggle" key={c.id} style={{ width: "100%", marginBottom: 8 }}>
                                                     <Switch aria-label={t("Enable cookie")} checked={c.enabled} onChange={(v) => updateItem(setCookies, c.id, "enabled", v)} size="small" />
                                                     <Input dir="ltr" value={c.key} onChange={(e) => updateItem(setCookies, c.id, "key", e.target.value)} placeholder={t("Name")} style={{ width: 150 }} />
                                                     <Input dir="ltr" value={c.value} onChange={(e) => updateItem(setCookies, c.id, "value", e.target.value)} placeholder={t("Value")} style={{ flex: 1 }} />
@@ -1475,6 +1475,7 @@ System.out.println(response.body());`;
                 {/* ── Right: Response & sidebar ── */}
                 <Col xs={24} xl={10}>
                     <Card
+                        className="signal-api-response-card"
                         size="small"
                         title={
                             <Space wrap>
@@ -1547,6 +1548,7 @@ System.out.println(response.body());`;
                                                 language={responseKind === "json" ? "json" : responseKind === "xml" || responseKind === "html" ? "xml" : "plaintext"}
                                                 height={300}
                                                 readOnly
+                                                showCopy={false}
                                             />
                                         ),
                                     },
@@ -1559,12 +1561,12 @@ System.out.println(response.body());`;
                                                     <iframe
                                                         srcDoc={response}
                                                         sandbox=""
-                                                        style={{ width: "100%", height: 320, border: "1px solid rgba(0,0,0,0.1)", borderRadius: 4, background: "#fff" }}
+                                                        style={{ width: "100%", height: 320, border: "1px solid var(--wb-card-border)", borderRadius: 4, background: "var(--wb-card-bg)" }}
                                                         title={t("HTML preview")}
                                                     />
                                                 ) : responseKind === "image" && responseDataUrl ? (
                                                     // eslint-disable-next-line @next/next/no-img-element
-                                                    <img src={responseDataUrl} alt={t("response")} style={{ maxWidth: "100%", maxHeight: 320, display: "block", margin: "0 auto", background: "rgba(0,0,0,0.04)", borderRadius: 4 }} />
+                                                    <img src={responseDataUrl} alt={t("response")} style={{ maxWidth: "100%", maxHeight: 320, display: "block", margin: "0 auto", background: "var(--signal-inset)", borderRadius: 4 }} />
                                                 ) : (
                                                     <Empty description={t("No special preview for {type}", { type: responseHeaders["content-type"] || t("this content type") })} />
                                                 )}
@@ -1806,9 +1808,9 @@ System.out.println(response.body());`;
                             />
                         </Form.Item>
                         <Form.Item label={t("Variables")}>
-                            <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                            <div className="signal-kv-list" style={{ maxHeight: 320, overflowY: "auto" }}>
                                 {editingEnv.variables.map((v, idx) => (
-                                    <Space key={idx} style={{ width: "100%", marginBottom: 6 }}>
+                                    <Space className="signal-kv-row signal-kv-row-toggle" key={idx} style={{ width: "100%", marginBottom: 6 }}>
                                         <Switch aria-label={t("Enable variable")}
                                             checked={v.enabled} size="small"
                                             onChange={(checked) => setEditingEnv({

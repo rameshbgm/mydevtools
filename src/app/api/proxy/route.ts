@@ -13,9 +13,7 @@
 // Only request *failures* may be returned to the caller, and even then only
 // the error message (which we generated ourselves) goes back — never the
 // upstream payload. This guarantee is surfaced in the tool UI via
-// ServerProxyNotice. If you find yourself wanting to console.log() something
-// from this file, add it behind a build-time DEBUG flag and route only
-// non-sensitive context (status codes, byte counts) through it.
+// ServerProxyNotice. No debug logging exception is permitted.
 
 import http from "http";
 import https from "https";

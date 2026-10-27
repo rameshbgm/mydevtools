@@ -86,7 +86,7 @@ export default function MarkdownPreviewPage() {
         <ToolPageLayout
             title={t("Markdown Preview")}
             description={t("Write Markdown and see a live rendered preview")}
-            icon={<FileMarkdownOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
+            icon={<FileMarkdownOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#1677ff"
             learnMore={{
                 whatIs: "Write Markdown locally with tables, task lists and fenced code blocks.",

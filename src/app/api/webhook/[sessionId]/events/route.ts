@@ -1,9 +1,6 @@
-// Polling endpoint for the webhook-receiver UI. Returns captured requests
-// newer than `since` (defaults to 0). Long-poll up to `wait` ms so idle tabs
-// don't hammer.
-
+// Live browser poll; no server replay buffer.
 import { NextRequest, NextResponse } from "next/server";
-import { getRequestsSince, clearSession, isValidWebhookSessionId } from "@/lib/webhook-store";
+import { waitForRequest, clearSession, isValidWebhookSessionId } from "@/lib/webhook-store";
 import { consumeManagedRouteQuota, managedRoutesEnabled } from "@/lib/server-network-policy";
 
 export const runtime = "nodejs";
@@ -15,18 +12,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ sessionId: 
     const { sessionId } = await ctx.params;
     if (!isValidWebhookSessionId(sessionId)) return NextResponse.json({ error: "invalid session id" }, { status: 400 });
     const url = new URL(req.url);
-    const since = parseInt(url.searchParams.get("since") || "0", 10) || 0;
-    const waitMs = Math.min(parseInt(url.searchParams.get("wait") || "0", 10) || 0, 25000);
-
-    let rows = getRequestsSince(sessionId, since);
-    if (rows.length === 0 && waitMs > 0) {
-        const deadline = Date.now() + waitMs;
-        while (Date.now() < deadline) {
-            await new Promise((r) => setTimeout(r, 500));
-            rows = getRequestsSince(sessionId, since);
-            if (rows.length > 0) break;
-        }
-    }
+    const waitMs = Math.max(0, Math.min(parseInt(url.searchParams.get("wait") || "0", 10) || 0, 25000));
+    const rows = await waitForRequest(sessionId, waitMs, req.signal);
     return NextResponse.json({ requests: rows });
 }
 

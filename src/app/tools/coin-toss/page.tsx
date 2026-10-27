@@ -182,7 +182,7 @@ export default function CoinTossPage() {
                 tips: [t("Heads and tails counters, percentages and recent results stay in this tab until reset or reload.")],
             }}
         >
-            <Row gutter={[20, 20]}>
+            <Row className="signal-working-panes" gutter={[20, 20]}>
                 {/* Coin display */}
                 <Col xs={24} lg={14}>
                     <Card style={{ background: cardBg, textAlign: "center" }}>

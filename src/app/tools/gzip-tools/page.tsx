@@ -174,7 +174,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit.`);
                 ]
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card>
                         <Space style={{ marginBottom: 16 }}>

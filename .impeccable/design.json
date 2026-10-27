@@ -1,470 +1,673 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-19T18:51:48.219206+00:00",
-  "title": "Design System: My Dev Tools — Introduction",
+  "generatedAt": "2026-10-27T15:05:46.010097+00:00",
+  "title": "Design System: My Dev Tools — Signal",
   "extensions": {
     "colorMeta": {
-      "landing-ground": {
+      "light-ground": {
         "role": "neutral",
-        "displayName": "Landing Ground",
+        "displayName": "Light Ground",
         "tonalRamp": [
-          "oklch(15% 0.0057 264.53)",
-          "oklch(26.43% 0.0057 264.53)",
-          "oklch(37.86% 0.0057 264.53)",
-          "oklch(49.29% 0.0057 264.53)",
-          "oklch(60.71% 0.0057 264.53)",
-          "oklch(72.14% 0.0057 264.53)",
-          "oklch(83.57% 0.0057 264.53)",
-          "oklch(95% 0.0057 264.53)"
+          "oklch(15.00% 0.01145 252.09)",
+          "oklch(26.43% 0.01145 252.09)",
+          "oklch(37.86% 0.01145 252.09)",
+          "oklch(49.29% 0.01145 252.09)",
+          "oklch(60.71% 0.01145 252.09)",
+          "oklch(72.14% 0.01145 252.09)",
+          "oklch(83.57% 0.01145 252.09)",
+          "oklch(95.00% 0.01145 252.09)"
         ]
       },
-      "landing-paper": {
+      "light-surface": {
         "role": "neutral",
-        "displayName": "Landing Paper",
+        "displayName": "Light Surface",
         "tonalRamp": [
-          "oklch(15% 0.0000 89.88)",
-          "oklch(26.43% 0.0000 89.88)",
-          "oklch(37.86% 0.0000 89.88)",
-          "oklch(49.29% 0.0000 89.88)",
-          "oklch(60.71% 0.0000 89.88)",
-          "oklch(72.14% 0.0000 89.88)",
-          "oklch(83.57% 0.0000 89.88)",
-          "oklch(95% 0.0000 89.88)"
+          "oklch(15.00% 0.00000 0.00)",
+          "oklch(26.43% 0.00000 0.00)",
+          "oklch(37.86% 0.00000 0.00)",
+          "oklch(49.29% 0.00000 0.00)",
+          "oklch(60.71% 0.00000 0.00)",
+          "oklch(72.14% 0.00000 0.00)",
+          "oklch(83.57% 0.00000 0.00)",
+          "oklch(95.00% 0.00000 0.00)"
         ]
       },
-      "landing-ink": {
+      "light-inset": {
         "role": "neutral",
-        "displayName": "Landing Ink",
+        "displayName": "Light Inset",
         "tonalRamp": [
-          "oklch(15% 0.0528 248.44)",
-          "oklch(26.43% 0.0528 248.44)",
-          "oklch(37.86% 0.0528 248.44)",
-          "oklch(49.29% 0.0528 248.44)",
-          "oklch(60.71% 0.0528 248.44)",
-          "oklch(72.14% 0.0528 248.44)",
-          "oklch(83.57% 0.0528 248.44)",
-          "oklch(95% 0.0528 248.44)"
+          "oklch(15.00% 0.00686 247.90)",
+          "oklch(26.43% 0.00686 247.90)",
+          "oklch(37.86% 0.00686 247.90)",
+          "oklch(49.29% 0.00686 247.90)",
+          "oklch(60.71% 0.00686 247.90)",
+          "oklch(72.14% 0.00686 247.90)",
+          "oklch(83.57% 0.00686 247.90)",
+          "oklch(95.00% 0.00686 247.90)"
         ]
       },
-      "landing-muted": {
+      "light-text": {
         "role": "neutral",
-        "displayName": "Landing Muted",
+        "displayName": "Light Text",
         "tonalRamp": [
-          "oklch(15% 0.0376 249.98)",
-          "oklch(26.43% 0.0376 249.98)",
-          "oklch(37.86% 0.0376 249.98)",
-          "oklch(49.29% 0.0376 249.98)",
-          "oklch(60.71% 0.0376 249.98)",
-          "oklch(72.14% 0.0376 249.98)",
-          "oklch(83.57% 0.0376 249.98)",
-          "oklch(95% 0.0376 249.98)"
+          "oklch(15.00% 0.04544 254.38)",
+          "oklch(26.43% 0.04544 254.38)",
+          "oklch(37.86% 0.04544 254.38)",
+          "oklch(49.29% 0.04544 254.38)",
+          "oklch(60.71% 0.04544 254.38)",
+          "oklch(72.14% 0.04544 254.38)",
+          "oklch(83.57% 0.04544 254.38)",
+          "oklch(95.00% 0.04544 254.38)"
         ]
       },
-      "landing-teal": {
+      "light-secondary": {
+        "role": "neutral",
+        "displayName": "Light Secondary",
+        "tonalRamp": [
+          "oklch(15.00% 0.04269 251.10)",
+          "oklch(26.43% 0.04269 251.10)",
+          "oklch(37.86% 0.04269 251.10)",
+          "oklch(49.29% 0.04269 251.10)",
+          "oklch(60.71% 0.04269 251.10)",
+          "oklch(72.14% 0.04269 251.10)",
+          "oklch(83.57% 0.04269 251.10)",
+          "oklch(95.00% 0.04269 251.10)"
+        ]
+      },
+      "light-border": {
+        "role": "neutral",
+        "displayName": "Light Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.02223 250.24)",
+          "oklch(26.43% 0.02223 250.24)",
+          "oklch(37.86% 0.02223 250.24)",
+          "oklch(49.29% 0.02223 250.24)",
+          "oklch(60.71% 0.02223 250.24)",
+          "oklch(72.14% 0.02223 250.24)",
+          "oklch(83.57% 0.02223 250.24)",
+          "oklch(95.00% 0.02223 250.24)"
+        ]
+      },
+      "light-control-border": {
+        "role": "neutral",
+        "displayName": "Light Control Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.04352 255.37)",
+          "oklch(26.43% 0.04352 255.37)",
+          "oklch(37.86% 0.04352 255.37)",
+          "oklch(49.29% 0.04352 255.37)",
+          "oklch(60.71% 0.04352 255.37)",
+          "oklch(72.14% 0.04352 255.37)",
+          "oklch(83.57% 0.04352 255.37)",
+          "oklch(95.00% 0.04352 255.37)"
+        ]
+      },
+      "light-accent": {
         "role": "primary",
-        "displayName": "Landing Teal",
+        "displayName": "Light Accent",
         "tonalRamp": [
-          "oklch(15% 0.0838 210.41)",
-          "oklch(26.43% 0.0838 210.41)",
-          "oklch(37.86% 0.0838 210.41)",
-          "oklch(49.29% 0.0838 210.41)",
-          "oklch(60.71% 0.0838 210.41)",
-          "oklch(72.14% 0.0838 210.41)",
-          "oklch(83.57% 0.0838 210.41)",
-          "oklch(95% 0.0838 210.41)"
+          "oklch(15.00% 0.19775 263.53)",
+          "oklch(26.43% 0.19775 263.53)",
+          "oklch(37.86% 0.19775 263.53)",
+          "oklch(49.29% 0.19775 263.53)",
+          "oklch(60.71% 0.19775 263.53)",
+          "oklch(72.14% 0.19775 263.53)",
+          "oklch(83.57% 0.19775 263.53)",
+          "oklch(95.00% 0.19775 263.53)"
         ]
       },
-      "landing-indigo": {
+      "light-action-ink": {
         "role": "primary",
-        "displayName": "Landing Indigo",
+        "displayName": "Light Action Ink",
         "tonalRamp": [
-          "oklch(15% 0.1968 267.64)",
-          "oklch(26.43% 0.1968 267.64)",
-          "oklch(37.86% 0.1968 267.64)",
-          "oklch(49.29% 0.1968 267.64)",
-          "oklch(60.71% 0.1968 267.64)",
-          "oklch(72.14% 0.1968 267.64)",
-          "oklch(83.57% 0.1968 267.64)",
-          "oklch(95% 0.1968 267.64)"
+          "oklch(15.00% 0.00000 0.00)",
+          "oklch(26.43% 0.00000 0.00)",
+          "oklch(37.86% 0.00000 0.00)",
+          "oklch(49.29% 0.00000 0.00)",
+          "oklch(60.71% 0.00000 0.00)",
+          "oklch(72.14% 0.00000 0.00)",
+          "oklch(83.57% 0.00000 0.00)",
+          "oklch(95.00% 0.00000 0.00)"
         ]
       },
-      "landing-line": {
-        "role": "neutral",
-        "displayName": "Landing Line",
+      "light-selected": {
+        "role": "primary",
+        "displayName": "Light Selected",
         "tonalRamp": [
-          "oklch(15% 0.0200 245.66)",
-          "oklch(26.43% 0.0200 245.66)",
-          "oklch(37.86% 0.0200 245.66)",
-          "oklch(49.29% 0.0200 245.66)",
-          "oklch(60.71% 0.0200 245.66)",
-          "oklch(72.14% 0.0200 245.66)",
-          "oklch(83.57% 0.0200 245.66)",
-          "oklch(95% 0.0200 245.66)"
+          "oklch(15.00% 0.02971 269.13)",
+          "oklch(26.43% 0.02971 269.13)",
+          "oklch(37.86% 0.02971 269.13)",
+          "oklch(49.29% 0.02971 269.13)",
+          "oklch(60.71% 0.02971 269.13)",
+          "oklch(72.14% 0.02971 269.13)",
+          "oklch(83.57% 0.02971 269.13)",
+          "oklch(95.00% 0.02971 269.13)"
         ]
       },
-      "landing-tint": {
-        "role": "neutral",
-        "displayName": "Landing Tint",
+      "light-success": {
+        "role": "secondary",
+        "displayName": "Light Success",
         "tonalRamp": [
-          "oklch(15% 0.0120 209.80)",
-          "oklch(26.43% 0.0120 209.80)",
-          "oklch(37.86% 0.0120 209.80)",
-          "oklch(49.29% 0.0120 209.80)",
-          "oklch(60.71% 0.0120 209.80)",
-          "oklch(72.14% 0.0120 209.80)",
-          "oklch(83.57% 0.0120 209.80)",
-          "oklch(95% 0.0120 209.80)"
+          "oklch(15.00% 0.08446 164.80)",
+          "oklch(26.43% 0.08446 164.80)",
+          "oklch(37.86% 0.08446 164.80)",
+          "oklch(49.29% 0.08446 164.80)",
+          "oklch(60.71% 0.08446 164.80)",
+          "oklch(72.14% 0.08446 164.80)",
+          "oklch(83.57% 0.08446 164.80)",
+          "oklch(95.00% 0.08446 164.80)"
         ]
       },
-      "landing-code": {
-        "role": "neutral",
-        "displayName": "Landing Code",
+      "light-warning": {
+        "role": "secondary",
+        "displayName": "Light Warning",
         "tonalRamp": [
-          "oklch(15% 0.0093 242.84)",
-          "oklch(26.43% 0.0093 242.84)",
-          "oklch(37.86% 0.0093 242.84)",
-          "oklch(49.29% 0.0093 242.84)",
-          "oklch(60.71% 0.0093 242.84)",
-          "oklch(72.14% 0.0093 242.84)",
-          "oklch(83.57% 0.0093 242.84)",
-          "oklch(95% 0.0093 242.84)"
+          "oklch(15.00% 0.11448 65.12)",
+          "oklch(26.43% 0.11448 65.12)",
+          "oklch(37.86% 0.11448 65.12)",
+          "oklch(49.29% 0.11448 65.12)",
+          "oklch(60.71% 0.11448 65.12)",
+          "oklch(72.14% 0.11448 65.12)",
+          "oklch(83.57% 0.11448 65.12)",
+          "oklch(95.00% 0.11448 65.12)"
+        ]
+      },
+      "light-error": {
+        "role": "secondary",
+        "displayName": "Light Error",
+        "tonalRamp": [
+          "oklch(15.00% 0.17477 15.09)",
+          "oklch(26.43% 0.17477 15.09)",
+          "oklch(37.86% 0.17477 15.09)",
+          "oklch(49.29% 0.17477 15.09)",
+          "oklch(60.71% 0.17477 15.09)",
+          "oklch(72.14% 0.17477 15.09)",
+          "oklch(83.57% 0.17477 15.09)",
+          "oklch(95.00% 0.17477 15.09)"
+        ]
+      },
+      "light-code-key": {
+        "role": "secondary",
+        "displayName": "Light Code Key",
+        "tonalRamp": [
+          "oklch(15.00% 0.15421 262.56)",
+          "oklch(26.43% 0.15421 262.56)",
+          "oklch(37.86% 0.15421 262.56)",
+          "oklch(49.29% 0.15421 262.56)",
+          "oklch(60.71% 0.15421 262.56)",
+          "oklch(72.14% 0.15421 262.56)",
+          "oklch(83.57% 0.15421 262.56)",
+          "oklch(95.00% 0.15421 262.56)"
+        ]
+      },
+      "light-code-string": {
+        "role": "secondary",
+        "displayName": "Light Code String",
+        "tonalRamp": [
+          "oklch(15.00% 0.09710 149.00)",
+          "oklch(26.43% 0.09710 149.00)",
+          "oklch(37.86% 0.09710 149.00)",
+          "oklch(49.29% 0.09710 149.00)",
+          "oklch(60.71% 0.09710 149.00)",
+          "oklch(72.14% 0.09710 149.00)",
+          "oklch(83.57% 0.09710 149.00)",
+          "oklch(95.00% 0.09710 149.00)"
+        ]
+      },
+      "light-code-number": {
+        "role": "secondary",
+        "displayName": "Light Code Number",
+        "tonalRamp": [
+          "oklch(15.00% 0.12758 46.55)",
+          "oklch(26.43% 0.12758 46.55)",
+          "oklch(37.86% 0.12758 46.55)",
+          "oklch(49.29% 0.12758 46.55)",
+          "oklch(60.71% 0.12758 46.55)",
+          "oklch(72.14% 0.12758 46.55)",
+          "oklch(83.57% 0.12758 46.55)",
+          "oklch(95.00% 0.12758 46.55)"
         ]
       },
       "dark-ground": {
         "role": "neutral",
         "displayName": "Dark Ground",
         "tonalRamp": [
-          "oklch(15% 0.0341 254.54)",
-          "oklch(26.43% 0.0341 254.54)",
-          "oklch(37.86% 0.0341 254.54)",
-          "oklch(49.29% 0.0341 254.54)",
-          "oklch(60.71% 0.0341 254.54)",
-          "oklch(72.14% 0.0341 254.54)",
-          "oklch(83.57% 0.0341 254.54)",
-          "oklch(95% 0.0341 254.54)"
+          "oklch(15.00% 0.02797 253.50)",
+          "oklch(26.43% 0.02797 253.50)",
+          "oklch(37.86% 0.02797 253.50)",
+          "oklch(49.29% 0.02797 253.50)",
+          "oklch(60.71% 0.02797 253.50)",
+          "oklch(72.14% 0.02797 253.50)",
+          "oklch(83.57% 0.02797 253.50)",
+          "oklch(95.00% 0.02797 253.50)"
         ]
       },
-      "dark-paper": {
+      "dark-surface": {
         "role": "neutral",
-        "displayName": "Dark Paper",
+        "displayName": "Dark Surface",
         "tonalRamp": [
-          "oklch(15% 0.0407 250.85)",
-          "oklch(26.43% 0.0407 250.85)",
-          "oklch(37.86% 0.0407 250.85)",
-          "oklch(49.29% 0.0407 250.85)",
-          "oklch(60.71% 0.0407 250.85)",
-          "oklch(72.14% 0.0407 250.85)",
-          "oklch(83.57% 0.0407 250.85)",
-          "oklch(95% 0.0407 250.85)"
+          "oklch(15.00% 0.03594 252.46)",
+          "oklch(26.43% 0.03594 252.46)",
+          "oklch(37.86% 0.03594 252.46)",
+          "oklch(49.29% 0.03594 252.46)",
+          "oklch(60.71% 0.03594 252.46)",
+          "oklch(72.14% 0.03594 252.46)",
+          "oklch(83.57% 0.03594 252.46)",
+          "oklch(95.00% 0.03594 252.46)"
         ]
       },
-      "dark-ink": {
+      "dark-inset": {
         "role": "neutral",
-        "displayName": "Dark Ink",
+        "displayName": "Dark Inset",
         "tonalRamp": [
-          "oklch(15% 0.0131 251.56)",
-          "oklch(26.43% 0.0131 251.56)",
-          "oklch(37.86% 0.0131 251.56)",
-          "oklch(49.29% 0.0131 251.56)",
-          "oklch(60.71% 0.0131 251.56)",
-          "oklch(72.14% 0.0131 251.56)",
-          "oklch(83.57% 0.0131 251.56)",
-          "oklch(95% 0.0131 251.56)"
+          "oklch(15.00% 0.03414 252.69)",
+          "oklch(26.43% 0.03414 252.69)",
+          "oklch(37.86% 0.03414 252.69)",
+          "oklch(49.29% 0.03414 252.69)",
+          "oklch(60.71% 0.03414 252.69)",
+          "oklch(72.14% 0.03414 252.69)",
+          "oklch(83.57% 0.03414 252.69)",
+          "oklch(95.00% 0.03414 252.69)"
         ]
       },
-      "dark-muted": {
+      "dark-text": {
         "role": "neutral",
-        "displayName": "Dark Muted",
+        "displayName": "Dark Text",
         "tonalRamp": [
-          "oklch(15% 0.0329 246.77)",
-          "oklch(26.43% 0.0329 246.77)",
-          "oklch(37.86% 0.0329 246.77)",
-          "oklch(49.29% 0.0329 246.77)",
-          "oklch(60.71% 0.0329 246.77)",
-          "oklch(72.14% 0.0329 246.77)",
-          "oklch(83.57% 0.0329 246.77)",
-          "oklch(95% 0.0329 246.77)"
+          "oklch(15.00% 0.01830 258.35)",
+          "oklch(26.43% 0.01830 258.35)",
+          "oklch(37.86% 0.01830 258.35)",
+          "oklch(49.29% 0.01830 258.35)",
+          "oklch(60.71% 0.01830 258.35)",
+          "oklch(72.14% 0.01830 258.35)",
+          "oklch(83.57% 0.01830 258.35)",
+          "oklch(95.00% 0.01830 258.35)"
         ]
       },
-      "dark-teal": {
+      "dark-secondary": {
+        "role": "neutral",
+        "displayName": "Dark Secondary",
+        "tonalRamp": [
+          "oklch(15.00% 0.03719 253.50)",
+          "oklch(26.43% 0.03719 253.50)",
+          "oklch(37.86% 0.03719 253.50)",
+          "oklch(49.29% 0.03719 253.50)",
+          "oklch(60.71% 0.03719 253.50)",
+          "oklch(72.14% 0.03719 253.50)",
+          "oklch(83.57% 0.03719 253.50)",
+          "oklch(95.00% 0.03719 253.50)"
+        ]
+      },
+      "dark-border": {
+        "role": "neutral",
+        "displayName": "Dark Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.04768 254.61)",
+          "oklch(26.43% 0.04768 254.61)",
+          "oklch(37.86% 0.04768 254.61)",
+          "oklch(49.29% 0.04768 254.61)",
+          "oklch(60.71% 0.04768 254.61)",
+          "oklch(72.14% 0.04768 254.61)",
+          "oklch(83.57% 0.04768 254.61)",
+          "oklch(95.00% 0.04768 254.61)"
+        ]
+      },
+      "dark-control-border": {
+        "role": "neutral",
+        "displayName": "Dark Control Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.05054 251.69)",
+          "oklch(26.43% 0.05054 251.69)",
+          "oklch(37.86% 0.05054 251.69)",
+          "oklch(49.29% 0.05054 251.69)",
+          "oklch(60.71% 0.05054 251.69)",
+          "oklch(72.14% 0.05054 251.69)",
+          "oklch(83.57% 0.05054 251.69)",
+          "oklch(95.00% 0.05054 251.69)"
+        ]
+      },
+      "dark-accent": {
         "role": "primary",
-        "displayName": "Dark Teal",
+        "displayName": "Dark Accent",
         "tonalRamp": [
-          "oklch(15% 0.0913 200.82)",
-          "oklch(26.43% 0.0913 200.82)",
-          "oklch(37.86% 0.0913 200.82)",
-          "oklch(49.29% 0.0913 200.82)",
-          "oklch(60.71% 0.0913 200.82)",
-          "oklch(72.14% 0.0913 200.82)",
-          "oklch(83.57% 0.0913 200.82)",
-          "oklch(95% 0.0913 200.82)"
+          "oklch(15.00% 0.10448 265.47)",
+          "oklch(26.43% 0.10448 265.47)",
+          "oklch(37.86% 0.10448 265.47)",
+          "oklch(49.29% 0.10448 265.47)",
+          "oklch(60.71% 0.10448 265.47)",
+          "oklch(72.14% 0.10448 265.47)",
+          "oklch(83.57% 0.10448 265.47)",
+          "oklch(95.00% 0.10448 265.47)"
         ]
       },
-      "dark-indigo": {
+      "dark-action-ink": {
         "role": "primary",
-        "displayName": "Dark Indigo",
+        "displayName": "Dark Action Ink",
         "tonalRamp": [
-          "oklch(15% 0.0911 272.58)",
-          "oklch(26.43% 0.0911 272.58)",
-          "oklch(37.86% 0.0911 272.58)",
-          "oklch(49.29% 0.0911 272.58)",
-          "oklch(60.71% 0.0911 272.58)",
-          "oklch(72.14% 0.0911 272.58)",
-          "oklch(83.57% 0.0911 272.58)",
-          "oklch(95% 0.0911 272.58)"
+          "oklch(15.00% 0.08707 261.57)",
+          "oklch(26.43% 0.08707 261.57)",
+          "oklch(37.86% 0.08707 261.57)",
+          "oklch(49.29% 0.08707 261.57)",
+          "oklch(60.71% 0.08707 261.57)",
+          "oklch(72.14% 0.08707 261.57)",
+          "oklch(83.57% 0.08707 261.57)",
+          "oklch(95.00% 0.08707 261.57)"
         ]
       },
-      "dark-line": {
-        "role": "neutral",
-        "displayName": "Dark Line",
+      "dark-selected": {
+        "role": "primary",
+        "displayName": "Dark Selected",
         "tonalRamp": [
-          "oklch(15% 0.0511 250.10)",
-          "oklch(26.43% 0.0511 250.10)",
-          "oklch(37.86% 0.0511 250.10)",
-          "oklch(49.29% 0.0511 250.10)",
-          "oklch(60.71% 0.0511 250.10)",
-          "oklch(72.14% 0.0511 250.10)",
-          "oklch(83.57% 0.0511 250.10)",
-          "oklch(95% 0.0511 250.10)"
+          "oklch(15.00% 0.07600 256.98)",
+          "oklch(26.43% 0.07600 256.98)",
+          "oklch(37.86% 0.07600 256.98)",
+          "oklch(49.29% 0.07600 256.98)",
+          "oklch(60.71% 0.07600 256.98)",
+          "oklch(72.14% 0.07600 256.98)",
+          "oklch(83.57% 0.07600 256.98)",
+          "oklch(95.00% 0.07600 256.98)"
         ]
       },
-      "dark-tint": {
-        "role": "neutral",
-        "displayName": "Dark Tint",
+      "dark-success": {
+        "role": "secondary",
+        "displayName": "Dark Success",
         "tonalRamp": [
-          "oklch(15% 0.0427 230.70)",
-          "oklch(26.43% 0.0427 230.70)",
-          "oklch(37.86% 0.0427 230.70)",
-          "oklch(49.29% 0.0427 230.70)",
-          "oklch(60.71% 0.0427 230.70)",
-          "oklch(72.14% 0.0427 230.70)",
-          "oklch(83.57% 0.0427 230.70)",
-          "oklch(95% 0.0427 230.70)"
+          "oklch(15.00% 0.09373 164.74)",
+          "oklch(26.43% 0.09373 164.74)",
+          "oklch(37.86% 0.09373 164.74)",
+          "oklch(49.29% 0.09373 164.74)",
+          "oklch(60.71% 0.09373 164.74)",
+          "oklch(72.14% 0.09373 164.74)",
+          "oklch(83.57% 0.09373 164.74)",
+          "oklch(95.00% 0.09373 164.74)"
         ]
       },
-      "dark-code": {
-        "role": "neutral",
-        "displayName": "Dark Code",
+      "dark-warning": {
+        "role": "secondary",
+        "displayName": "Dark Warning",
         "tonalRamp": [
-          "oklch(15% 0.0424 253.59)",
-          "oklch(26.43% 0.0424 253.59)",
-          "oklch(37.86% 0.0424 253.59)",
-          "oklch(49.29% 0.0424 253.59)",
-          "oklch(60.71% 0.0424 253.59)",
-          "oklch(72.14% 0.0424 253.59)",
-          "oklch(83.57% 0.0424 253.59)",
-          "oklch(95% 0.0424 253.59)"
+          "oklch(15.00% 0.10386 76.53)",
+          "oklch(26.43% 0.10386 76.53)",
+          "oklch(37.86% 0.10386 76.53)",
+          "oklch(49.29% 0.10386 76.53)",
+          "oklch(60.71% 0.10386 76.53)",
+          "oklch(72.14% 0.10386 76.53)",
+          "oklch(83.57% 0.10386 76.53)",
+          "oklch(95.00% 0.10386 76.53)"
         ]
       },
       "dark-error": {
-        "role": "neutral",
+        "role": "secondary",
         "displayName": "Dark Error",
         "tonalRamp": [
-          "oklch(15% 0.0918 11.62)",
-          "oklch(26.43% 0.0918 11.62)",
-          "oklch(37.86% 0.0918 11.62)",
-          "oklch(49.29% 0.0918 11.62)",
-          "oklch(60.71% 0.0918 11.62)",
-          "oklch(72.14% 0.0918 11.62)",
-          "oklch(83.57% 0.0918 11.62)",
-          "oklch(95% 0.0918 11.62)"
+          "oklch(15.00% 0.12547 5.93)",
+          "oklch(26.43% 0.12547 5.93)",
+          "oklch(37.86% 0.12547 5.93)",
+          "oklch(49.29% 0.12547 5.93)",
+          "oklch(60.71% 0.12547 5.93)",
+          "oklch(72.14% 0.12547 5.93)",
+          "oklch(83.57% 0.12547 5.93)",
+          "oklch(95.00% 0.12547 5.93)"
+        ]
+      },
+      "dark-code-key": {
+        "role": "secondary",
+        "displayName": "Dark Code Key",
+        "tonalRamp": [
+          "oklch(15.00% 0.08708 262.99)",
+          "oklch(26.43% 0.08708 262.99)",
+          "oklch(37.86% 0.08708 262.99)",
+          "oklch(49.29% 0.08708 262.99)",
+          "oklch(60.71% 0.08708 262.99)",
+          "oklch(72.14% 0.08708 262.99)",
+          "oklch(83.57% 0.08708 262.99)",
+          "oklch(95.00% 0.08708 262.99)"
+        ]
+      },
+      "dark-code-string": {
+        "role": "secondary",
+        "displayName": "Dark Code String",
+        "tonalRamp": [
+          "oklch(15.00% 0.06650 153.60)",
+          "oklch(26.43% 0.06650 153.60)",
+          "oklch(37.86% 0.06650 153.60)",
+          "oklch(49.29% 0.06650 153.60)",
+          "oklch(60.71% 0.06650 153.60)",
+          "oklch(72.14% 0.06650 153.60)",
+          "oklch(83.57% 0.06650 153.60)",
+          "oklch(95.00% 0.06650 153.60)"
+        ]
+      },
+      "dark-code-number": {
+        "role": "secondary",
+        "displayName": "Dark Code Number",
+        "tonalRamp": [
+          "oklch(15.00% 0.08893 57.24)",
+          "oklch(26.43% 0.08893 57.24)",
+          "oklch(37.86% 0.08893 57.24)",
+          "oklch(49.29% 0.08893 57.24)",
+          "oklch(60.71% 0.08893 57.24)",
+          "oklch(72.14% 0.08893 57.24)",
+          "oklch(83.57% 0.08893 57.24)",
+          "oklch(95.00% 0.08893 57.24)"
         ]
       }
     },
     "typographyMeta": {
       "display": {
-        "displayName": "Sora Display",
-        "purpose": "Introduction hero headline; French/German and Hindi/Arabic have source-specific size/spacing overrides; Japanese/Chinese fragments omit inserted whitespace."
-      },
-      "headline": {
-        "displayName": "Sora Headline",
-        "purpose": "Introduction section headings."
+        "displayName": "Sora display",
+        "purpose": "Compact home headline."
       },
       "body": {
-        "displayName": "Geist Body",
-        "purpose": "Explanations and story descriptions."
-      },
-      "label": {
-        "displayName": "Geist Label",
-        "purpose": "Navigation and text actions."
+        "displayName": "Shared UI",
+        "purpose": "Body, forms, dropdowns, buttons and navigation."
       },
       "data": {
-        "displayName": "Geist Mono Data",
-        "purpose": "Actual editable input and output remain left-to-right; narrow-container textarea uses 16px while output remains 12px."
+        "displayName": "Technical data",
+        "purpose": "Code and structured data; preserve LTR direction in RTL interfaces."
       }
     },
     "shadows": [
       {
-        "name": "project-preview",
-        "value": "0 16px 42px -18px rgb(18 43 66 / 24%)",
-        "purpose": "Illustrative project work surface."
+        "name": "working-surface",
+        "value": "none",
+        "purpose": "Default cards, tools and buttons."
+      },
+      {
+        "name": "elevated-layer",
+        "value": "0 12px 32px -12px rgb(0 0 0 / 24%)",
+        "purpose": "Dialogs and command/navigation overlays."
       }
     ],
     "motion": [
       {
-        "name": "project-story",
-        "value": "280ms cubic-bezier(0.16, 1, 0.3, 1)",
-        "purpose": "Bounded project-story transition; duration zero under reduced motion."
+        "name": "component-mid",
+        "value": "0.16s",
+        "purpose": "Border and focus state changes."
       },
       {
-        "name": "control-transition",
-        "value": "160ms",
-        "purpose": "Primary action background/lift and trailing task arrow; CSS transitions removed under reduced motion."
+        "name": "component-slow",
+        "value": "0.2s",
+        "purpose": "Ant Design slow motion token."
+      },
+      {
+        "name": "carousel-reveal",
+        "value": ".3s cubic-bezier(.16,1,.3,1)",
+        "purpose": "Subtle slide reveal; reduced motion minimizes it."
+      },
+      {
+        "name": "carousel-interval",
+        "value": "4000ms",
+        "purpose": "Random registry discovery, subject to pause/visibility/focus guards."
       }
     ],
     "breakpoints": [
       {
-        "name": "landing-mid-container-max",
-        "value": "929px"
+        "name": "desktop-sidebar",
+        "value": "992px"
       },
       {
-        "name": "landing-narrow-container-max",
-        "value": "650px"
+        "name": "connection-grid",
+        "value": "1100px"
       },
       {
-        "name": "landing-compact-container-max",
-        "value": "360px"
+        "name": "split-pane",
+        "value": "1050px"
       },
       {
-        "name": "story-auto-selection-element-min",
-        "value": "850px"
+        "name": "home-categories-and-forms",
+        "value": "700px"
+      },
+      {
+        "name": "landing-container-mobile",
+        "value": "620px"
+      },
+      {
+        "name": "phone-header",
+        "value": "540px"
+      },
+      {
+        "name": "tool-workspace-container",
+        "value": "960px"
+      },
+      {
+        "name": "key-value-list-container",
+        "value": "480px"
       }
-    ],
-    "scope": {
-      "paths": [
-        "src/components/LandingMarketing.tsx",
-        "src/app/globals.css:978 onward (landing introduction rules)"
-      ],
-      "excludes": [
-        "src/app/workspace.css",
-        "sidebar",
-        "app header",
-        "tool wrappers"
-      ],
-      "authority": "Built source and rendered review captures; no approved comp.",
-      "rampNote": "Tonal ramps are synthesized OKLCH inspection aids; source semantic colors remain the normative frontmatter primitives.",
-      "localization": "The complete introduction has authored English, Hindi, Spanish, French, German, Japanese, Chinese and Arabic copy; full-product localization remains in progress."
-    },
-    "localization": {
-      "languages": [
-        "en",
-        "hi",
-        "es",
-        "fr",
-        "de",
-        "ja",
-        "zh",
-        "ar"
-      ],
-      "scope": "Marketing introduction only.",
-      "direction": "Root lang/dir follow selection; Arabic mirrors interface flow and action arrows. Structured previews, query tables and technical filenames remain LTR.",
-      "state": "Navigation, actions, task descriptions, project previews and supporting copy follow the selected language; technical example data remains unchanged.",
-      "typeOverrides": [
-        {
-          "languages": [
-            "fr",
-            "de"
-          ],
-          "fontSize": "clamp(36px, 4.3cqi, 56px)",
-          "maxWidth": "24ch"
-        },
-        {
-          "languages": [
-            "hi",
-            "ar"
-          ],
-          "fontSize": "clamp(35px, 4.5cqi, 58px)",
-          "lineHeight": 1.25,
-          "letterSpacing": "normal",
-          "maxWidth": "100%"
-        }
-      ],
-      "cjkHeadline": "Japanese and Chinese concatenate translated fragments without an added space.",
-      "mobile": "Hero description uses16px at container widths up to650px; the introduction has no editable inputs."
-    }
+    ]
   },
   "components": [
     {
-      "name": "Primary catalog action",
+      "name": "Primary action",
       "kind": "button",
-      "description": "Solid ink action with teal hover and bounded lift.",
-      "html": "<a class=\"ds-primary\" href=\"#catalog\">Explore 147 tools <svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" aria-hidden=\"true\"><path d=\"M4 12h16m-6-6 6 6-6 6\"/></svg></a>",
-      "css": ".ds-primary{font-family:var(--font-geist-sans,Geist),sans-serif;color:var(--landing-ink,#122b42);display:inline-flex;align-items:center;justify-content:center;gap:14px;min-height:48px;padding:12px 20px;border:1px solid transparent;border-radius:9px;background:var(--landing-ink,#122b42);color:var(--landing-paper,#ffffff);text-decoration:none;font-size:14px;font-weight:650;transition:background 160ms,transform 160ms}.ds-primary:hover{background:var(--landing-teal,#006b79);transform:translateY(-2px)}.ds-primary:focus-visible{outline:3px solid var(--landing-indigo,#3859d7);outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}.ds-primary:hover{transform:none}}.ds-primary:dir(rtl)>svg{transform:scaleX(-1)}",
-      "refersTo": "button-primary"
+      "refersTo": "button-primary",
+      "description": "Normal tool action; semantic colors adapt to the current theme.",
+      "html": "<button class=\"ds-primary\">Format JSON</button>",
+      "css": ".ds-primary{font-family:var(--font-geist-sans),sans-serif;font-size:12px;line-height:1.65;min-height:40px;padding:8px 17px;border:1px solid var(--wb-accent);border-radius:5px;background:var(--wb-accent);color:var(--signal-action-ink);font-weight:550;cursor:pointer;box-shadow:none;transition:border-color .16s,box-shadow .16s}.ds-primary:hover{border-color:var(--wb-accent);box-shadow:none}.ds-primary:active{background:var(--wb-accent);color:var(--signal-action-ink)}.ds-primary:focus-visible{outline:1px solid var(--wb-focus-ring);outline-offset:3px}"
     },
     {
-      "name": "Text action",
+      "name": "Secondary action",
       "kind": "button",
-      "description": "Inline secondary navigation, underlined on hover.",
-      "html": "<a class=\"ds-text-action\" href=\"#catalog\">Search all tools</a>",
-      "css": ".ds-text-action{font-family:var(--font-geist-sans,Geist),sans-serif;color:var(--landing-ink,#122b42);display:inline-flex;align-items:center;min-height:36px;font-size:13px;font-weight:600;text-decoration:none;text-underline-offset:4px}.ds-text-action:hover{text-decoration:underline}.ds-text-action:focus-visible{outline:3px solid var(--landing-indigo,#3859d7);outline-offset:4px;}"
+      "refersTo": "button-secondary",
+      "description": "Border-led secondary tool action.",
+      "html": "<button class=\"ds-secondary\">Load sample</button>",
+      "css": ".ds-secondary{font-family:var(--font-geist-sans),sans-serif;font-size:12px;line-height:1.65;min-height:40px;padding:8px 17px;border:1px solid var(--wb-card-border);border-radius:5px;background:var(--wb-card-bg);color:var(--wb-text-heading);font-weight:550;cursor:pointer}.ds-secondary:hover{border-color:var(--signal-control-border);color:var(--wb-text-heading)}.ds-secondary:active{border-color:var(--signal-secondary);color:var(--wb-text-heading)}.ds-secondary:focus-visible{outline:1px solid var(--wb-focus-ring);outline-offset:3px}"
     },
     {
-      "name": "Introduction section navigation",
+      "name": "Labeled field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Single-line tool input with a neutral active border and one thin neutral keyboard outline; text selection follows the neutral selection token.",
+      "html": "<label class=\"ds-field\">Endpoint<input class=\"ds-input\" value=\"https://api.example.com\" /></label>",
+      "css": ".ds-field{font-family:var(--font-geist-sans),sans-serif;font-size:12px;line-height:1.65;display:flex;flex-direction:column;gap:8px;color:var(--wb-text-heading);font-weight:550}.ds-input{font-family:var(--font-geist-sans),sans-serif;font-size:12px;line-height:1.65;height:40px;padding:8px 12px;line-height:22px;box-sizing:border-box;min-width:0;width:100%;border:1px solid var(--signal-control-border);border-radius:5px;background:var(--wb-card-bg);color:var(--wb-text-heading);font-weight:400}.ds-input:hover{border-color:var(--signal-control-border)}.ds-input:focus{border-color:var(--signal-secondary);box-shadow:none}.ds-input::selection{background:var(--selection-bg);color:var(--wb-text-heading)}.ds-input:focus-visible{outline:1px solid var(--wb-focus-ring);outline-offset:3px}"
+    },
+    {
+      "name": "Selected category",
       "kind": "nav",
-      "description": "Compact section links with document-scroll positioning in the page.",
-      "html": "<nav class=\"ds-section-nav\" aria-label=\"Introduction sections\"><a href=\"#workspace\">Workspace</a><a href=\"#data\">Your data</a><a href=\"#catalog\">All tools <svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" aria-hidden=\"true\"><path d=\"M12 4v16m-6-6 6 6 6-6\"/></svg></a></nav>",
-      "css": ".ds-section-nav{font-family:var(--font-geist-sans,Geist),sans-serif;color:var(--landing-ink,#122b42);display:flex;align-items:center;gap:24px;background:var(--landing-ground,#f5f7fb);padding:17px 0;border-bottom:1px solid var(--landing-line,#cdd9e4);font-size:13px;font-weight:600}.ds-section-nav a{display:inline-flex;align-items:center;min-height:28px;gap:8px;white-space:nowrap;color:inherit;text-decoration:none}.ds-section-nav a:last-child{margin-inline-start:auto;color:var(--landing-teal,#006b79)}.ds-section-nav a:hover{color:var(--landing-teal,#006b79)}.ds-section-nav a:focus-visible{outline:3px solid var(--landing-indigo,#3859d7);outline-offset:4px;}@media(max-width:420px){.ds-section-nav{gap:10px;font-size:10px}}"
+      "refersTo": "navigation-selected",
+      "description": "Regular 12px sidebar and landing category labels share one navigation token. Selected navigation retains cobalt; collapsed sidebar popups are 300px, wrap labels and close on navigation.",
+      "html": "<nav aria-label=\"Tool categories\"><button class=\"ds-category\" aria-pressed=\"true\"><span>Formatters</span><span>Browse</span></button></nav>",
+      "css": ".ds-category{font-family:var(--font-geist-sans),sans-serif;font-size:var(--signal-nav-size,12px);line-height:1.65;display:flex;align-items:center;justify-content:space-between;gap:9px;width:100%;min-height:37px;padding:10px 9px;border:0;border-radius:4px;text-align:start;background:var(--wb-accent-soft);color:var(--wb-accent);font-weight:400;cursor:pointer}.ds-category:hover,.ds-category:active{background:var(--wb-accent-soft)}.ds-category:focus-visible{outline:1px solid var(--wb-focus-ring);outline-offset:3px}"
     },
     {
-      "name": "Project preview surface",
+      "name": "Technical tag",
+      "kind": "chip",
+      "refersTo": "tag",
+      "description": "Noninteractive technical metadata from the discovery illustration.",
+      "html": "<code class=\"ds-tag\">JSON</code>",
+      "css": ".ds-tag{font-family:var(--font-geist-mono),monospace;font-size:11px;display:inline-block;padding:5px 9px;border:1px solid var(--wb-card-border);border-radius:4px;color:var(--wb-text-body);background:var(--wb-card-bg);overflow-wrap:anywhere}"
+    },
+    {
+      "name": "Working panel",
       "kind": "card",
-      "description": "Paper work surface with an explicit illustrative-project label.",
-      "html": "<figure class=\"ds-preview\"><div class=\"ds-preview-bar\"><strong><bdi dir=\"ltr\">checkout-api</bdi></strong><span>Example project</span></div><div class=\"ds-preview-content\"><h4>Ready for the next release</h4><p>Validate the API response</p><p>Compare the schema changes</p></div><figcaption>Illustrative workspace. Your saved projects stay separate.</figcaption></figure>",
-      "css": ".ds-preview{font-family:var(--font-geist-sans,Geist),sans-serif;color:var(--landing-ink,#122b42);margin:0;background:var(--landing-paper,#fff);border-radius:12px;overflow:clip;box-shadow:0 16px 42px -18px rgb(18 43 66 / 24%)}.ds-preview-bar{padding:16px 18px;display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--landing-line,#cdd9e4);font-size:12px}.ds-preview-bar span{font-size:10px;color:var(--landing-muted,#526477)}.ds-preview-content{padding:24px 22px;min-height:180px}.ds-preview-content h4{font-size:17px;font-weight:650;line-height:1.4;margin:0 0 20px}.ds-preview-content p{font-size:12px;margin:0 0 13px}.ds-preview figcaption{padding:10px 18px;background:var(--landing-tint,#e7f2f4);color:var(--landing-teal,#006b79);font-size:11px}",
-      "refersTo": "preview"
+      "refersTo": "panel",
+      "description": "Flat mixed-content panel with an inset heading and 18px content gutter. Only a sole direct code-editor child removes the body gutter.",
+      "html": "<section class=\"ds-panel\"><h3>Response</h3><div>Run the tool to inspect its output.</div></section>",
+      "css": ".ds-panel{font-family:var(--font-geist-sans),sans-serif;font-size:12px;line-height:1.65;border:1px solid var(--wb-card-border);border-radius:7px;color:var(--wb-text-heading);background:var(--wb-card-bg);box-shadow:none;overflow:hidden}.ds-panel h3{font:550 12px/1.65 var(--font-geist-sans),sans-serif;margin:0;min-height:48px;display:flex;align-items:center;padding:0 18px;background:var(--signal-inset);border-bottom:1px solid var(--wb-card-border)}.ds-panel>div{padding:18px;color:var(--wb-text-body)}"
     },
     {
-      "name": "Task link",
+      "name": "Catalog tool row",
       "kind": "custom",
-      "description": "Flat tool-discovery row with a title and concrete task.",
-      "html": "<a class=\"ds-task\" href=\"#json\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" aria-hidden=\"true\"><path d=\"M8 7 3 12l5 5m8-10 5 5-5 5m-3-13-2 20\"/></svg><span><strong>JSON Formatter</strong><small>Make a payload readable</small></span><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" aria-hidden=\"true\"><path d=\"M4 12h16m-6-6 6 6-6 6\"/></svg></a>",
-      "css": ".ds-task{font-family:var(--font-geist-sans,Geist),sans-serif;color:var(--landing-ink,#122b42);display:flex;align-items:center;gap:12px;padding:18px 0;border-bottom:1px solid var(--landing-line,#cdd9e4);text-decoration:none}.ds-task>svg:first-child{color:var(--landing-teal,#006b79)}.ds-task>span{display:grid;gap:3px}.ds-task strong{font-size:13px;font-weight:600}.ds-task small{font-size:12px;color:var(--landing-muted,#526477)}.ds-task>svg:last-child{margin-inline-start:auto;color:var(--landing-muted,#526477);transition:transform 160ms}.ds-task:hover strong{color:var(--landing-teal,#006b79)}.ds-task:hover>svg:last-child{transform:translateX(3px)}.ds-task:focus-visible{outline:3px solid var(--landing-indigo,#3859d7);outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-task>svg:last-child{transition:none}.ds-task:hover>svg:last-child{transform:none}}.ds-task:dir(rtl)>svg:last-child{scale:-1 1}.ds-task:dir(rtl):hover>svg:last-child{transform:translateX(-3px)}@media(prefers-reduced-motion:reduce){.ds-task:dir(rtl):hover>svg:last-child{transform:none}}"
+      "refersTo": "catalog-row",
+      "description": "Direct canonical link into a real tool, with a processing boundary.",
+      "html": "<a class=\"ds-row\" href=\"/formatters/json-formatter\"><span class=\"ds-copy\"><strong>JSON Formatter</strong><span>Format and inspect JSON data.</span></span><small>On device</small><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" aria-hidden=\"true\"><path d=\"M5 12h14m-5-5 5 5-5 5\"/></svg></a>",
+      "css": ".ds-row{font-family:var(--font-geist-sans),sans-serif;font-size:12px;line-height:1.65;display:flex;align-items:center;gap:16px;padding:19px 10px;border-bottom:1px solid var(--wb-card-border);background:transparent;color:var(--wb-text-heading);text-decoration:none}.ds-copy{display:grid;grid-template-columns:175px minmax(0,1fr);gap:20px;flex:1;min-width:0}.ds-copy strong{font-size:12px;font-weight:550;overflow-wrap:anywhere}.ds-copy>span{font-size:12px;color:var(--wb-text-body)}.ds-row small{font-size:9px;color:var(--wb-text-muted)}.ds-row:hover{background:var(--signal-inset)}.ds-row:active{color:var(--wb-accent)}.ds-row:focus-visible{outline:1px solid var(--wb-focus-ring);outline-offset:3px}@media(max-width:700px){.ds-copy{display:block}.ds-copy>span{display:block;margin-top:5px}.ds-row{gap:12px}}"
+    },
+    {
+      "name": "Carousel next control",
+      "kind": "button",
+      "refersTo": "carousel-control",
+      "description": "Circular discovery control; navigation behavior remains in the component.",
+      "html": "<button class=\"ds-next\" aria-label=\"Next tool\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" aria-hidden=\"true\"><path d=\"M5 12h14m-5-5 5 5-5 5\"/></svg></button>",
+      "css": ".ds-next{display:grid;place-items:center;width:36px;height:36px;padding:0;border:1px solid var(--signal-control-border);border-radius:50%;background:var(--wb-card-bg);color:var(--wb-accent);cursor:pointer}.ds-next:hover:not(:disabled),.ds-next:active{background:var(--wb-accent);border-color:var(--wb-accent);color:var(--signal-action-ink)}.ds-next:disabled{color:var(--wb-text-muted);opacity:.4;cursor:not-allowed}.ds-next:focus-visible{outline:1px solid var(--wb-focus-ring);outline-offset:3px}@media(max-width:620px){.ds-next{width:30px;height:30px}}"
+    },
+    {
+      "name": "Labeled toolbar",
+      "kind": "custom",
+      "refersTo": "labeled-toolbar",
+      "description": "Labels above controls; 40px controls and actions share a baseline, with a full-width primary action and equal secondary columns on mobile.",
+      "html": "<div class=\"ds-toolbar\"><label class=\"ds-toolbar-field\">Algorithm<select class=\"ds-toolbar-select\"><option>SHA-256</option><option>SHA-512</option></select></label><div class=\"ds-toolbar-field\"><span id=\"ds-format-label\">Output Format</span><div class=\"ds-toolbar-segmented\" role=\"group\" aria-labelledby=\"ds-format-label\"><label><input type=\"radio\" name=\"ds-output-format\" checked /><span>Hexadecimal</span></label><label><input type=\"radio\" name=\"ds-output-format\" /><span>Base64</span></label></div></div><div class=\"ds-toolbar-actions\"><button class=\"ds-toolbar-primary\">Generate HMAC</button><button>Share</button><button>Send</button></div></div>",
+      "css": ".ds-toolbar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:16px;font:12px/1.65 var(--font-geist-sans),sans-serif;color:var(--wb-text-heading)}.ds-toolbar>.ds-toolbar-field{display:flex;flex-direction:column;gap:8px;flex:0 1 auto;min-width:160px;font-weight:550}.ds-toolbar-select{font:inherit;font-weight:400;box-sizing:border-box;width:100%;height:40px;padding:8px 12px;border:1px solid var(--signal-control-border);border-radius:5px;background:var(--wb-card-bg);color:var(--wb-text-heading)}.ds-toolbar-select:hover{border-color:var(--signal-control-border)}.ds-toolbar-select:focus{border-color:var(--signal-secondary);box-shadow:none}.ds-toolbar-segmented{display:inline-flex;align-items:stretch;box-sizing:border-box;height:40px;padding:3px;border-radius:5px;background:var(--signal-inset)}.ds-toolbar-segmented label{position:relative;display:flex;cursor:pointer;font-weight:400}.ds-toolbar-segmented input{position:absolute;opacity:0;width:100%;height:100%;margin:0}.ds-toolbar-segmented span{display:flex;align-items:center;min-height:34px;line-height:22px;padding-inline:12px;border-radius:4px;color:var(--wb-text-body)}.ds-toolbar-segmented input:checked+span{background:var(--wb-card-bg);color:var(--wb-text-heading)}.ds-toolbar-segmented label:hover span{color:var(--wb-text-heading)}.ds-toolbar-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.ds-toolbar-actions>button{font:550 12px/22px var(--font-geist-sans),sans-serif;box-sizing:border-box;min-height:40px;padding:8px 17px;border:1px solid var(--wb-card-border);border-radius:5px;background:var(--wb-card-bg);color:var(--wb-text-heading);cursor:pointer}.ds-toolbar-actions>.ds-toolbar-primary{background:var(--wb-accent);border-color:var(--wb-accent);color:var(--signal-action-ink)}.ds-toolbar-actions>button:hover{border-color:var(--signal-control-border)}.ds-toolbar-actions>button:not(.ds-toolbar-primary):hover{color:var(--wb-text-heading)}.ds-toolbar :is(select,button):focus-visible,.ds-toolbar-segmented input:focus-visible+span{outline:1px solid var(--wb-focus-ring);outline-offset:3px}@media(max-width:700px){.ds-toolbar>.ds-toolbar-field{flex:1 1 160px}.ds-toolbar-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex-basis:100%}.ds-toolbar-actions>button{width:100%}.ds-toolbar-actions>button:first-child{grid-column:1/-1}}"
+    },
+    {
+      "name": "Footer",
+      "kind": "custom",
+      "description": "One wrapping summary row holds copyright, What’s new, count, processing note and optional installation; colorful resource icons and links wrap on the following row. Snapshot shows the available-install state; release preference and runtime visibility remain component behavior.",
+      "html": "<footer class=\"ds-footer\"><div class=\"ds-footer-summary\"><span>© 2026 My Dev Tools</span><a href=\"/release-notes\">What’s new</a><span>147 tools</span><span>Client-side by default · see each tool for details</span><button>Install app</button></div><nav aria-label=\"Resources\"><a class=\"ds-footer-releases\" href=\"/release-notes\"><svg viewBox=\"64 64 896 896\" aria-hidden=\"true\" fill=\"currentColor\"><path d=\"M880 310H732.4c13.6-21.4 21.6-46.8 21.6-74 0-76.1-61.9-138-138-138-41.4 0-78.7 18.4-104 47.4-25.3-29-62.6-47.4-104-47.4-76.1 0-138 61.9-138 138 0 27.2 7.9 52.6 21.6 74H144c-17.7 0-32 14.3-32 32v200c0 4.4 3.6 8 8 8h40v344c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V550h40c4.4 0 8-3.6 8-8V342c0-17.7-14.3-32-32-32zm-334-74c0-38.6 31.4-70 70-70s70 31.4 70 70-31.4 70-70 70h-70v-70zm-138-70c38.6 0 70 31.4 70 70v70h-70c-38.6 0-70-31.4-70-70s31.4-70 70-70zM180 482V378h298v104H180zm48 68h250v308H228V550zm568 308H546V550h250v308zm48-376H546V378h298v104z\"/></svg>Release notes · 2.1.0</a><a class=\"ds-footer-author\" href=\"https://rameshsnotebook.com/\"><svg viewBox=\"64 64 896 896\" aria-hidden=\"true\" fill=\"currentColor\"><path d=\"M858.5 763.6a374 374 0 00-80.6-119.5 375.63 375.63 0 00-119.5-80.6c-.4-.2-.8-.3-1.2-.5C719.5 518 760 444.7 760 362c0-137-111-248-248-248S264 225 264 362c0 82.7 40.5 156 102.8 201.1-.4.2-.8.3-1.2.5-44.8 18.9-85 46-119.5 80.6a375.63 375.63 0 00-80.6 119.5A371.7 371.7 0 00136 901.8a8 8 0 008 8.2h60c4.4 0 7.9-3.5 8-7.8 2-77.2 33-149.5 87.8-204.3 56.7-56.7 132-87.9 212.2-87.9s155.5 31.2 212.2 87.9C779 752.7 810 825 812 902.2c.1 4.4 3.6 7.8 8 7.8h60a8 8 0 008-8.2c-1-47.8-10.9-94.3-29.5-138.2zM512 534c-45.9 0-89.1-17.9-121.6-50.4S340 407.9 340 362c0-45.9 17.9-89.1 50.4-121.6S466.1 190 512 190s89.1 17.9 121.6 50.4S684 316.1 684 362c0 45.9-17.9 89.1-50.4 121.6S557.9 534 512 534z\"/></svg>Ramesh Maharaddi</a><a class=\"ds-footer-social ds-footer-github\" href=\"https://github.com/rameshbgm/mydevtools\" aria-label=\"GitHub profile\"><svg viewBox=\"64 64 896 896\" aria-hidden=\"true\" fill=\"currentColor\"><path d=\"M511.6 76.3C264.3 76.2 64 276.4 64 523.5 64 718.9 189.3 885 363.8 946c23.5 5.9 19.9-10.8 19.9-22.2v-77.5c-135.7 15.9-141.2-73.9-150.3-88.9C215 726 171.5 718 184.5 703c30.9-15.9 62.4 4 98.9 57.9 26.4 39.1 77.9 32.5 104 26 5.7-23.5 17.9-44.5 34.7-60.8-140.6-25.2-199.2-111-199.2-213 0-49.5 16.3-95 48.3-131.7-20.4-60.5 1.9-112.3 4.9-120 58.1-5.2 118.5 41.6 123.2 45.3 33-8.9 70.7-13.6 112.9-13.6 42.4 0 80.2 4.9 113.5 13.9 11.3-8.6 67.3-48.8 121.3-43.9 2.9 7.7 24.7 58.3 5.5 118 32.4 36.8 48.9 82.7 48.9 132.3 0 102.2-59 188.1-200 212.9a127.5 127.5 0 0138.1 91v112.5c.8 9 0 17.9 15 17.9 177.1-59.7 304.6-227 304.6-424.1 0-247.2-200.4-447.3-447.5-447.3z\"/></svg></a><a class=\"ds-footer-social ds-footer-linkedin\" href=\"https://www.linkedin.com/in/rameshbgm/\" aria-label=\"LinkedIn profile\"><svg viewBox=\"64 64 896 896\" aria-hidden=\"true\" fill=\"currentColor\"><path d=\"M847.7 112H176.3c-35.5 0-64.3 28.8-64.3 64.3v671.4c0 35.5 28.8 64.3 64.3 64.3h671.4c35.5 0 64.3-28.8 64.3-64.3V176.3c0-35.5-28.8-64.3-64.3-64.3zm0 736c-447.8-.1-671.7-.2-671.7-.3.1-447.8.2-671.7.3-671.7 447.8.1 671.7.2 671.7.3-.1 447.8-.2 671.7-.3 671.7zM230.6 411.9h118.7v381.8H230.6zm59.4-52.2c37.9 0 68.8-30.8 68.8-68.8a68.8 68.8 0 10-137.6 0c-.1 38 30.7 68.8 68.8 68.8zm252.3 245.1c0-49.8 9.5-98 71.2-98 60.8 0 61.7 56.9 61.7 101.2v185.7h118.6V584.3c0-102.8-22.2-181.9-142.3-181.9-57.7 0-96.4 31.7-112.3 61.7h-1.6v-52.2H423.7v381.8h118.6V604.8z\"/></svg></a></nav></footer>",
+      "css": ".ds-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 24px;font:12px/1.65 var(--font-geist-sans),sans-serif;color:var(--wb-text-body)}.ds-footer-summary,.ds-footer nav{display:flex;align-items:center;flex-wrap:wrap;gap:12px 16px}.ds-footer a{color:var(--wb-text-body);text-decoration:none}.ds-footer a:hover{color:var(--wb-accent);text-decoration:underline}.ds-footer nav{margin-inline-start:auto;justify-content:flex-end}.ds-footer nav a{display:inline-flex;align-items:center;gap:8px;min-height:32px;font-weight:500}.ds-footer svg{width:16px;height:16px;flex-shrink:0}.ds-footer button{height:32px;padding:4px 12px;border:1px solid var(--wb-card-border);border-radius:5px;background:var(--wb-card-bg);color:var(--wb-text-heading);font:inherit;cursor:pointer}.ds-footer button:hover{border-color:var(--signal-control-border)}.ds-footer button:active{border-color:var(--signal-secondary)}.ds-footer :is(a,button):focus-visible{outline:1px solid var(--wb-focus-ring);outline-offset:3px}.ds-footer .ds-footer-releases{color:var(--signal-code-number)}.ds-footer .ds-footer-author{color:var(--signal-code-string)}.ds-footer .ds-footer-social{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:6px;background:var(--signal-surface)}.ds-footer-social svg{width:19px;height:19px}.ds-footer .ds-footer-github{color:#7352c7}.ds-footer .ds-footer-linkedin{color:#0a66c2}:host-context(.dark) .ds-footer .ds-footer-github{color:#c5a3ff}:host-context(.dark) .ds-footer .ds-footer-linkedin{color:#80bbff}@media(max-width:700px){.ds-footer nav{margin-inline-start:0;justify-content:flex-start}}"
     }
   ],
   "narrative": {
-    "northStar": "Active Developer Workbench",
-    "overview": "The introduction explains the developer workspace, leads directly to the catalog and illustrates project organization. The user-requested simplification removes the live demo and its entry points, leaving a single-column hero with one primary catalog action. Scope remains LandingMarketing.tsx and its landing-* rules; app workspace styles are independent.",
+    "northStar": "Signal",
+    "overview": "Signal is the user-approved visual direction for the entire application: home, catalog, tool pages, workspaces, supporting pages and shared overlays. It replaces the former introduction-only identity. Pale slate and navy surfaces, blue actions, compact typography and ruled layouts keep real developer work prominent.\n\nThe reference preview remains a historical decision artifact. Production groups a centered Developer tools / Open by design headline, privacy explanation covering sensitive-data risks, local processing, disclosed network connections and inspectable MIT-licensed code, paired explore/source actions, a ruled trust strip, randomized tool carousel and workspace links in one hero frame above the integrated catalog. These design documents record the implemented redesign; they do not announce publication of a 2.1 release.",
     "keyCharacteristics": [
-      "Direct tool discovery and labeled illustrative project workspaces.",
-      "Sora display, Geist reading text and mono data.",
-      "Paired light/dark surfaces with visible separation.",
-      "Container-responsive layouts and bounded, meaningful motion.",
-      "Eight authored introduction languages with direction-aware chrome and left-to-right data."
+      "A coherent paired light/dark semantic palette across custom CSS and Ant Design.",
+      "Compact 12px UI copy, aligned controls and larger purposeful headings.",
+      "Full-width home with integrated category navigation; working controls lead tool pages.",
+      "Real registry-driven discovery, canonical tool links and explicit data boundaries.",
+      "Keyboard operation, reduced-motion behavior and eight-language/RTL support are preserved."
     ],
     "rules": [
       {
         "name": "The Paired Surface Rule",
-        "body": "Switch the complete semantic color set with the introduction's dark state; preserve the relationships between ground, paper, code well, text and dividers.",
+        "body": "Change the complete semantic set together; preserve text, action-foreground, control-border and status relationships in both themes.",
+        "section": "colors"
+      },
+      {
+        "name": "The Neutral Focus Rule",
+        "body": "Show keyboard focus with one thin neutral outline; do not add cobalt halos or a second frame to editable controls.",
         "section": "colors"
       },
       {
         "name": "The Data Face Rule",
-        "body": "Use the mono face for payloads and filenames; use Geist for explanations and controls, and Sora for the principal heading hierarchy.",
+        "body": "Use mono for actual technical data; keep labels and explanatory UI in Geist and the landing display in Sora.",
         "section": "typography"
       },
       {
         "name": "The Working Surface Rule",
-        "body": "Reserve broad ambient elevation for the illustrative project preview; organize supporting links and explanations with alignment, spacing and dividers.",
+        "body": "Keep normal tools and catalog surfaces flat; reserve elevation for layers above the current working context.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "**Do** keep these rules bounded to the introduction and preserve the workspace's independent styling contract.",
-      "**Do** switch light/dark semantic colors together and retain visible keyboard focus.",
-      "**Do** use canonical links to the actual tools when extending discovery.",
-      "**Do** keep catalog counts derived from the registry; the verified build has 147 tools across 15 categories.",
-      "**Do** state the processing boundary: local browser transformations, explicitly triggered network calls to the shown services, and desktop/local runtime for native database/storage access.",
-      "**Do** keep illustrative projects labeled and separate from saved browser-local user work.",
-      "**Do** provide immediate reduced-motion state changes and keyboard-operable selections.",
-      "**Do** localize the complete introduction, preserve technical example data on language changes and keep data direction independent of interface direction.",
-      "**Do** allow translated labels to wrap and preserve script-specific heading rhythm."
+      "Do use Signal across all application pages while retaining the marketing/workspace source split.",
+      "Do use semantic foreground/background pairs and stronger control borders in both themes.",
+      "Do keep body, form and navigation text at the shared 12px scale; preserve heading and numerical hierarchy.",
+      "Do align normal form controls at 40px, allow long labels to wrap, and collapse grids before fields overlap.",
+      "Do use one neutral 1px keyboard outline and neutral editable selection states while retaining cobalt brand actions and navigation.",
+      "Do keep the 18px gutter in mixed-content cards; remove it only for a sole direct editor child.",
+      "Do keep footer summary items in one wrapping row and colorful resource links on the following row.",
+      "Do keep tool controls above guidance and reference material, with compact network disclosures still available.",
+      "Do derive discovery from the real registry and navigate with toolPath or toolPathFromId.",
+      "Do preserve existing tools, saved data, bookmark menus, projects and all eight locale choices with RTL support.",
+      "Do retain clear pause, focus and reduced-motion behavior for automatic discovery."
     ],
     "donts": [
-      "**Don't** claim JWT decoding verifies signatures, or imply every tool is offline or network-free.",
-      "**Don't** turn introduction-specific panel spacing, composition or motion into workspace-wide rules.",
-      "**Don't** reintroduce the removed live demo or add fake terminal activity or invented customer claims.",
-      "**Don't** infer full-product multilingual coverage from the eight-language introduction; global localization remains in progress."
+      "Don't restore duplicate outer home sidebars, an unbounded sticky category list or the removed fixed API call-to-action.",
+      "Don't introduce gradients, glass, decorative shadows or fabricated live tool output into Signal discovery.",
+      "Don't make network requests or access saved payloads merely to animate a carousel illustration.",
+      "Don't mistake the historical three-demo preview for the production tool catalog or its persistence behavior.",
+      "Don't describe this implementation or review as a published 2.1 release or comprehensive functional certification of every tool."
     ]
   }
 }

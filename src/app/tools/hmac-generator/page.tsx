@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Card, Input, Typography, Row, Col, Select, Button, Space, message, Segmented, Divider, Alert } from "antd";
-import { SafetyOutlined, CopyOutlined, SwapOutlined, LockOutlined } from "@ant-design/icons";
+import { Card, Input, Typography, Row, Col, Select, Button, Space, message, Segmented } from "antd";
+import { SafetyOutlined, CopyOutlined, LockOutlined } from "@ant-design/icons";
 import ToolPageLayout from "@/components/ToolPageLayout";
 import { useLanguage } from "@/components/LanguageProvider";
 import { CRYPTO_UTILITY_HELP } from "@/lib/i18n/crypto-utilities";
@@ -116,7 +116,7 @@ export default function HmacGeneratorPage() {
         >
             <ToolBridgeBanner accepts={["text"]} onAccept={(p) => setInputText(p.data)} />
 
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card title={t("Input")}>
                         <div style={{ marginBottom: 16 }}>
@@ -150,20 +150,21 @@ export default function HmacGeneratorPage() {
                             </Space.Compact>
                         </div>
 
-                        <Space wrap style={{ marginBottom: 16 }}>
-                            <div>
-                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>{t("Algorithm")}</Text>
+                        <div className="signal-control-toolbar">
+                            <div className="signal-field">
+                                <label htmlFor="hmac-algorithm">{t("Algorithm")}</label>
                                 <Select
+                                    id="hmac-algorithm"
                                     value={algorithm}
                                     onChange={setAlgorithm}
                                     aria-label={t("Algorithm")}
-                                    style={{ minWidth: 160 }}
                                     options={ALGORITHMS.map((a) => ({ value: a.value, label: <bdi dir="ltr">{a.label}</bdi> }))}
                                 />
                             </div>
-                            <div>
-                                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>{t("Output Format")}</Text>
+                            <div className="signal-field">
+                                <label id="hmac-output-label">{t("Output Format")}</label>
                                 <Segmented
+                                    aria-labelledby="hmac-output-label"
                                     aria-label={t("Output Format")}
                                     value={outputFormat}
                                     onChange={(v) => setOutputFormat(v as OutputFormat)}
@@ -173,22 +174,20 @@ export default function HmacGeneratorPage() {
                                     ]}
                                 />
                             </div>
-                        </Space>
-
-                        <Space wrap>
-                            <Button
-                                type="primary"
-                                size="large"
-                                icon={<SafetyOutlined />}
-                                onClick={generateHash}
-                                loading={loading}
-                                style={{ background: "#f5222d", borderColor: "#f5222d" }}
-                            >
-                                {t("Generate HMAC")}
-                            </Button>
-                            <ShareButton schema={SHARE_SCHEMA} getState={() => ({ inputText })} sensitiveFieldHint={t("The secret key is never included in share links — only the message text.")} size="middle" />
-                            <SendToButton data={inputText} kind="text" sourceToolId="hmac-generator" size="middle" />
-                        </Space>
+                            <div className="signal-control-toolbar-actions">
+                                <Button
+                                    type="primary"
+                                    size="large"
+                                    icon={<SafetyOutlined />}
+                                    onClick={generateHash}
+                                    loading={loading}
+                                >
+                                    {t("Generate HMAC")}
+                                </Button>
+                                <ShareButton schema={SHARE_SCHEMA} getState={() => ({ inputText })} sensitiveFieldHint={t("The secret key is never included in share links — only the message text.")} size="middle" />
+                                <SendToButton data={inputText} kind="text" sourceToolId="hmac-generator" size="middle" />
+                            </div>
+                        </div>
                     </Card>
 
                     <Card
@@ -206,8 +205,8 @@ export default function HmacGeneratorPage() {
                                 style={{
                                     padding: 16,
                                     background: "rgba(245, 34, 45, 0.05)",
-                                    borderRadius: 8,
-                                    border: "1px solid rgba(245, 34, 45, 0.2)",
+                                    borderRadius: 6,
+                                    border: "1px solid var(--wb-card-border)",
                                     fontFamily: "monospace",
                                     fontSize: 14,
                                     wordBreak: "break-all",
@@ -248,7 +247,7 @@ export default function HmacGeneratorPage() {
                                     key={alg.value}
                                     style={{
                                         padding: "8px 12px",
-                                        background: algorithm === alg.value ? "rgba(245, 34, 45, 0.1)" : "rgba(0,0,0,0.02)",
+                                        background: algorithm === alg.value ? "rgba(245, 34, 45, 0.1)" : "var(--signal-inset)",
                                         borderRadius: 6,
                                         border: algorithm === alg.value ? "1px solid #f5222d" : "1px solid transparent",
                                         cursor: "pointer",

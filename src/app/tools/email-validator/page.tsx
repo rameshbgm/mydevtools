@@ -131,7 +131,7 @@ export default function EmailValidatorPage() {
         <ToolPageLayout
             title={t("Email Validator")}
             description={t("Check email syntax, common disposable/role patterns and optional public DNS mail records")}
-            icon={<MailOutlined style={{ fontSize: 24, color: "#1677ff" }} />}
+            icon={<MailOutlined style={{ fontSize: 24, color: "var(--wb-accent)" }} />}
             color="#1677ff"
             learnMore={{
                 whatIs:

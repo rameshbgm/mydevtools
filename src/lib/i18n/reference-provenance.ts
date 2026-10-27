@@ -9,7 +9,6 @@ export const REFERENCE_PROVENANCE_TRANSLATIONS: Record<string, TranslationColumn
     "Standards, sources and review dates": ["मानक, स्रोत और समीक्षा तिथियाँ", "Normas, fuentes y fechas de revisión", "Normes, sources et dates de vérification", "Standards, Quellen und Prüfdaten", "標準・出典・確認日", "标准、来源与核查日期", "المعايير والمصادر وتواريخ المراجعة"],
     "Reviewed": ["समीक्षित", "Revisado", "Vérifié le", "Geprüft am", "確認日", "核查日期", "تاريخ المراجعة"],
     "Review interval: {days} days.": ["समीक्षा अंतराल: {days} दिन।", "Intervalo de revisión: {days} días.", "Intervalle de vérification : {days} jours.", "Prüfintervall: {days} Tage.", "確認間隔：{days}日。", "核查间隔：{days} 天。", "الفاصل بين المراجعات: {days} يومًا."],
-    "Runnable debugging guides": ["चलाकर जाँचने योग्य डिबगिंग गाइड", "Guías de depuración con ejemplos ejecutables", "Guides de débogage avec exemples exécutables", "Fehlersuchanleitungen mit ausführbaren Beispielen", "実行して確認できるデバッグガイド", "附可运行示例的调试指南", "أدلة تصحيح الأخطاء بأمثلة قابلة للتشغيل"],
     "HTTP JSON-RPC discovery, tool listing/calls; legacy initialize lifecycle. Not a full conformance suite.": [
         "HTTP JSON-RPC डिस्कवरी, टूल सूची/कॉल; पुराना initialize जीवनचक्र। यह पूर्ण अनुरूपता परीक्षण सूट नहीं है।",
         "Descubrimiento HTTP JSON-RPC, listado y llamadas de herramientas; ciclo initialize heredado. No es una suite completa de conformidad.",

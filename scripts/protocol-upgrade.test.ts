@@ -3,8 +3,6 @@ import { connectMcp, makeMcpRequest, mcpProtocolHeaders, McpHttpError, MCP_CURRE
 import { a2aEndpoint, a2aMessage, a2aPart, normalizeA2aResult, A2aStreamAccumulator, A2A_METHODS } from "../src/lib/a2a-protocol";
 import { SseDataParser, firstSseRpcResult } from "../src/lib/sse";
 import { providerTokenRequest, countProviderTokens } from "../src/lib/provider-token-count";
-import { DEBUGGING_GUIDES } from "../src/lib/debugging-guides";
-import { guideExampleHref, guideExamplePayload } from "../src/lib/guide-examples";
 import { verifyWebhookSignature } from "../src/lib/webhook-signatures";
 import { validateJsonSchema } from "../src/lib/json-schema-workbench";
 
@@ -81,23 +79,12 @@ async function main() {
         assert.equal(value, 7);
     }
     await assert.rejects(() => countProviderTokens({ provider: "OpenAI", apiModelId: "model" }, "hi", "key", (async () => new Response('{"input_tokens":-1}')) as typeof fetch), /valid token count/);
-    const webhook = JSON.parse(DEBUGGING_GUIDES.find((guide) => guide.id === "webhook")!.example);
-    // A public example must survive direct navigation/new tabs without session
-    // storage and must never be applied to a different tool or arbitrary URL.
-    for (const guide of DEBUGGING_GUIDES) {
-        const url = new URL(guideExampleHref(guide), "https://tools.example");
-        const payload = guideExamplePayload(url.pathname, url.search);
-        if (guide.id === "cors") { assert.equal(payload, null); assert.equal(url.search, ""); }
-        else { assert.equal(payload?.data, guide.example); assert.equal(payload?.kind, guide.kind); assert.equal(payload?.sourceToolId, "guides"); }
-    }
-    assert.throws(() => guideExamplePayload("/cryptography/jwt-decoder", "?example=schema"), /does not match/);
-    assert.throws(() => guideExamplePayload("/cryptography/jwt-decoder", "?example=https://untrusted.example"), /does not match/);
-    assert.throws(() => guideExamplePayload("/cryptography/jwt-decoder", "?example=missing"), /does not match/);
+    const webhook = { provider: "github" as const, secret: "demo-secret", body: '{"event":"example"}', signature: "sha256=c5ea8a78bece62e8827a681f3d9aac74ab23d3a77774927524e4335b9f152e57" };
     assert.equal((await verifyWebhookSignature(webhook)).verified, true);
     assert.equal((await verifyWebhookSignature({ ...webhook, body: webhook.body + " " })).verified, false);
-    const schema = JSON.parse(DEBUGGING_GUIDES.find((guide) => guide.id === "schema")!.example);
+    const schema = { schema: { $schema: "https://json-schema.org/draft/2020-12/schema", oneOf: [{ type: "string" }, { type: "integer", minimum: 10 }] }, instance: 5 };
     assert.ok(validateJsonSchema(schema.instance, schema.schema).length);
     assert.equal(validateJsonSchema(10, schema.schema).length, 0);
-    console.log("✓ Modern/legacy MCP, A2A 1.0/0.3, stream framing/artifact replacement, provider count contracts and runnable guide fixtures");
+    console.log("✓ Modern/legacy MCP, A2A 1.0/0.3, stream framing/artifact replacement, provider count contracts and independent signature/schema fixtures");
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

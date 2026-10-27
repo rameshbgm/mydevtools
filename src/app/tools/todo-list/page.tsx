@@ -1008,7 +1008,7 @@ export default function TodoListPage() {
                     <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
                         <Col xs={12} sm={8} md={4} lg={3}>
                             <Card size="small" style={{ textAlign: "center" }}>
-                                <Statistic title={t("Active")} value={stats.active} styles={{ content: { color: "#1677ff" } }} />
+                                <Statistic title={t("Active")} value={stats.active} styles={{ content: { color: "var(--wb-accent)" } }} />
                             </Card>
                         </Col>
                         <Col xs={12} sm={8} md={4} lg={3}>
@@ -1018,7 +1018,7 @@ export default function TodoListPage() {
                         </Col>
                         <Col xs={12} sm={8} md={4} lg={3}>
                             <Card size="small" style={{ textAlign: "center" }}>
-                                <Statistic title={t("In Progress")} value={stats.inProgress} styles={{ content: { color: "#1677ff" } }} />
+                                <Statistic title={t("In Progress")} value={stats.inProgress} styles={{ content: { color: "var(--wb-accent)" } }} />
                             </Card>
                         </Col>
                         <Col xs={12} sm={8} md={4} lg={3}>
@@ -1579,7 +1579,7 @@ export default function TodoListPage() {
                             overflowY: "auto",
                             padding: 8,
                             backgroundColor: "var(--ant-color-bg-container-disabled)",
-                            borderRadius: 8
+                            borderRadius: 6
                         }}>
                             {(emojiSearchText
                                 ? ALL_EMOJIS.filter(e => e.includes(emojiSearchText))
