@@ -25,10 +25,10 @@ async function main() {
         create(Class.UNIVERSAL, Type.OCTETSTRING, false, digest.toString("binary")),
     ]);
     clean.signature = privateEncrypt({ key: pair.privateKey, padding: constants.RSA_PKCS1_PADDING }, Buffer.from(toDer(digestInfo).getBytes(), "binary")).toString("binary");
-    assert.equal(publicKey.verify(digest.toString("binary"), clean.signature), true, "Fixture exercises the vulnerable upstream verifier");
+    assert.throws(() => publicKey.verify(digest.toString("binary"), clean.signature), /DigestInfo/, "Patched upstream verifier must reject the malformed signature");
     const result = await validateChain([forge.pki.certificateToPem(clean), rootPem]);
     assert.equal(result.valid, false, "Platform verifier must reject a noncanonical DigestInfo");
     assert.ok(result.issues.some((issue) => issue.includes("signature failed")));
-    console.log("✓ Certificate signatures: valid RSA chain, tampering, and malformed nested DigestAlgorithm rejected by platform verification");
+    console.log("✓ Certificate signatures: valid RSA chain, tampering, and malformed nested DigestAlgorithm rejected by patched upstream and platform verification");
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

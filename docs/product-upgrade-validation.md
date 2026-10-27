@@ -2,13 +2,13 @@
 
 Validated locally on 19 October 2026. Changes are uncommitted and unpushed.
 
-The catalog contains **125 tools**. Four additions are Saved Workflows, HAR & Log Redactor, Webhook Signature Debugger and Trace Context Inspector. UUID generation now includes v7. JSON Schema validation, selected OpenAPI comparisons, protocol adapters, privacy boundaries, references, guides, PWA behavior and container delivery were updated.
+The catalog contains **125 tools**. Four additions are Saved Workflows, HAR & Log Redactor, Webhook Signature Debugger and Trace Context Inspector. UUID generation now includes v7. JSON Schema validation, selected OpenAPI comparisons, protocol adapters, privacy boundaries, references, PWA behavior and container delivery were updated.
 
 ## Build and checks
 
 - A fresh dependency install from the lockfile passed. A clean production build after deleting `.next` passed, with 143 prerendered pages and no build warnings or errors.
 - All 11 test suites and TypeScript checking passed. ESLint reports 0 errors and 207 warnings that remain in the source tree.
-- All 139 checked public paths returned HTTP 200, covering canonical tools, allowlisted legacy stubs, guides, release notes, manifest and icons. The legacy UUID URL returns 308 to its canonical route.
+- All 139 checked public paths returned HTTP 200, covering canonical tools, allowlisted legacy stubs, release notes, manifest and icons. The legacy UUID URL returns 308 to its canonical route.
 - The managed proxy rejects private/loopback targets and returns `Cache-Control: no-store, private`.
 - The Dockerfile built successfully on Node 24. Its runtime user is `app` (uid 1001), the healthcheck is healthy, and homepage/manifest/icon responses are 200. With managed routes disabled, a proxy request returns 503 with an explicit disabled message.
 
@@ -40,7 +40,7 @@ These localhost lab scores are **not directly comparable** to the user's hosted 
 - **OpenAPI:** request narrowing, response widening, media changes, local references and required fields are evaluated directionally. Composition, callbacks/webhooks, streaming semantics and full compatibility remain manual review areas.
 - **MCP/A2A:** modern and legacy adapter fixtures passed. A real browser connected to a localhost MCP fixture using 2026-07-28 metadata, listed and called a tool. A2A 1.0 discovery, one-shot replies and CRLF-framed streamed artifact assembly worked. Browser inspection is scoped to HTTP JSON-RPC; native stdio, deprecated separate GET/SSE transports and full conformance are not verified.
 - **Workflows:** a browser decoded Base64, extracted JSONPath, saved and pinned a fixture, reloaded and reproduced the result. Draft saving is opt-in.
-- **Signatures:** GitHub, Stripe, Slack and raw HMAC fixtures passed. Exact-byte tampering and expired timestamps fail. The public guide fixture passed in the browser, then failed after a one-space change.
+- **Signatures:** GitHub, Stripe, Slack and raw HMAC fixtures passed. Exact-byte tampering and expired timestamps fail.
 - **Redaction:** header rows, URL credentials, nested JSON strings, custom fields, environment-prefixed secrets, mTLS private keys and PEM private-key blocks are covered. Redaction remains a best effort; free text and unknown identifiers require review before sharing.
 - **Certificates:** Web Crypto accepts a valid RSA chain and rejects tampering and malformed nested DigestAlgorithm data accepted by the affected upstream node-forge verifier. Chain checks do not reproduce full PKIX validation, revocation or browser root trust.
 - **Privacy/PWA:** a single manifest and working icons are served; APIs, authenticated requests and RSC data are excluded from service-worker persistence. The update/reload flow worked. With the origin stopped, the previously visited trace tool reloaded and computed results. Uncached assets, browser eviction, model downloads and network operations limit offline availability.

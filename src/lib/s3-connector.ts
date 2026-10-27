@@ -87,20 +87,27 @@ export async function runS3(config: S3Connection, operation: string, input: Reco
             const response = await client.send(new GetObjectCommand({Bucket:bucket,Key:key}),request);
             if (!response.Body || !(Symbol.asyncIterator in response.Body)) throw new Error("StorageBodyUnavailable");
             let size = 0; const parts: Buffer[] = [];
-            for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {size += chunk.length;if(size>MAX_FILE)throw new ConnectorHttpError("Object exceeds the 8 MiB download limit.",413);parts.push(Buffer.from(chunk));}
-            return {info:objectInfo(key,response),base64:Buffer.concat(parts,size).toString("base64"),bytes:size} satisfies S3Download;
+            try {
+                for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {size += chunk.length;if(size>MAX_FILE)throw new ConnectorHttpError("Object exceeds the 8 MiB download limit.",413);parts.push(Buffer.from(chunk));}
+                const bytes = Buffer.concat(parts,size);
+                try { return {info:objectInfo(key,response),base64:bytes.toString("base64"),bytes:size} satisfies S3Download; }
+                finally { bytes.fill(0); }
+            } finally { for (const part of parts) part.fill(0); parts.length = 0; }
         }
         if (operation === "upload") {
             const base64 = connectorText(input.base64,"file data",Math.ceil(MAX_FILE/3)*4);
             if (base64.length % 4 || /[^A-Za-z0-9+/=]/.test(base64)) throw new ConnectorHttpError("Upload data must use canonical Base64.",400);
-            const bytes = Buffer.from(base64,"base64");if(bytes.length>MAX_FILE||bytes.toString("base64")!==base64)throw new ConnectorHttpError("File data must be canonical Base64 up to 8 MiB.",413);
-            const contentType = connectorText(input.contentType ?? "application/octet-stream","content type",200,false);
-            if (!/^[\x20-\x7e]+$/.test(contentType)) throw new ConnectorHttpError("Use a printable ASCII content type.",400);
-            if (input.overwrite !== true) {
-                try {await client.send(new HeadObjectCommand({Bucket:bucket,Key:key}),request);throw new ConnectorHttpError("An object already exists at this key. Enable overwrite explicitly or choose another key.",409);} catch(cause) { if (!(cause && typeof cause === "object" && "$metadata" in cause && (cause as {$metadata?:{httpStatusCode?:number}}).$metadata?.httpStatusCode === 404)) throw cause; }
-            }
-            const response = await client.send(new PutObjectCommand({Bucket:bucket,Key:key,Body:bytes,ContentLength:bytes.length,ContentType:contentType,ContentMD5:createHash("md5").update(bytes).digest("base64"),...(input.overwrite === true ? {} : {IfNoneMatch:"*"})}),request);
-            return {key,bytes:bytes.length,etag:response.ETag ?? "",versionId:response.VersionId ?? "",createdOnly:input.overwrite !== true};
+            const bytes = Buffer.from(base64,"base64");
+            try {
+                if(bytes.length>MAX_FILE||bytes.toString("base64")!==base64)throw new ConnectorHttpError("File data must be canonical Base64 up to 8 MiB.",413);
+                const contentType = connectorText(input.contentType ?? "application/octet-stream","content type",200,false);
+                if (!/^[\x20-\x7e]+$/.test(contentType)) throw new ConnectorHttpError("Use a printable ASCII content type.",400);
+                if (input.overwrite !== true) {
+                    try {await client.send(new HeadObjectCommand({Bucket:bucket,Key:key}),request);throw new ConnectorHttpError("An object already exists at this key. Enable overwrite explicitly or choose another key.",409);} catch(cause) { if (!(cause && typeof cause === "object" && "$metadata" in cause && (cause as {$metadata?:{httpStatusCode?:number}}).$metadata?.httpStatusCode === 404)) throw cause; }
+                }
+                const response = await client.send(new PutObjectCommand({Bucket:bucket,Key:key,Body:bytes,ContentLength:bytes.length,ContentType:contentType,ContentMD5:createHash("md5").update(bytes).digest("base64"),...(input.overwrite === true ? {} : {IfNoneMatch:"*"})}),request);
+                return {key,bytes:bytes.length,etag:response.ETag ?? "",versionId:response.VersionId ?? "",createdOnly:input.overwrite !== true};
+            } finally { bytes.fill(0); }
         }
         const response = await client.send(new DeleteObjectCommand({Bucket:bucket,Key:key}),request);
         return {key,deleteMarker:response.DeleteMarker ?? false,versionId:response.VersionId ?? "",deleted:true};

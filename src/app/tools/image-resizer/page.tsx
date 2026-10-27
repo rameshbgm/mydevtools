@@ -305,7 +305,7 @@ export default function ImageResizerPage() {
                     </Dragger>
                 </Card>
             ) : (
-                <Row gutter={[16, 16]}>
+                <Row className="signal-working-panes" gutter={[16, 16]}>
                     <Col xs={24} lg={8}>
                         <Card size="small" title={t("Source")}>
                             <Space orientation="vertical" style={{ width: "100%" }}>

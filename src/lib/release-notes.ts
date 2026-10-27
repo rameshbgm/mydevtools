@@ -66,6 +66,43 @@ export interface ReleaseNote {
  */
 const ENTRIES: ReleaseNote[] = [
     {
+        "date": "2026-10-28",
+        "version": "2.1.0",
+        "kind": "ui",
+        "title": "V2.1 — clearer discovery, consistent controls and server privacy",
+        "summary": "Refines the 147-tool workspace with a unified introduction, compact navigation and explicit data-handling boundaries.",
+        "sections": [
+            {
+                "label": "Workspace and discovery",
+                "bullets": [
+                    "Unify the privacy-focused introduction and tool carousel, with random discovery every 4 seconds, circular navigation and subtle developer/security artwork.",
+                    "Keep catalog categories independently scrollable and fit the desktop introduction into one screen."
+                ]
+            },
+            {
+                "label": "Forms and navigation",
+                "bullets": [
+                    "Align forms, buttons, dropdowns and tool panes; give native file inputs a distinct upload appearance in both themes.",
+                    "Use consistent sidebar typography, bold expanded categories and readable collapsed tool names; move release links and colored resources into one responsive footer row."
+                ]
+            },
+            {
+                "label": "Server privacy",
+                "bullets": [
+                    "Disable runtime logs, tracing exports and API caching; avoid upload files, clear transient file buffers and remove mock request history.",
+                    "Deliver webhooks only to an actively waiting browser without replay; explain third-party retention and hosting-level logging limits."
+                ]
+            },
+            {
+                "label": "Dependencies and delivery",
+                "bullets": [
+                    "Patch Electron, fast-uri and node-forge and refresh compatible dependencies while retaining validated major versions.",
+                    "Verify clean production and desktop builds, regression tests, private file relays and canonical tool routes; keep existing browser-saved data."
+                ]
+            }
+        ]
+    },
+    {
         date: "2026-10-19", version: "2.0.0", kind: "feature",
         title: "V2.0 — project workspaces, private vaults and connected data tools",
         summary: "Expands the catalog to 147 tools with project isolation, encrypted storage, database clients and deeper capabilities in existing tools.",
@@ -138,7 +175,7 @@ const ENTRIES: ReleaseNote[] = [
             { label: "Delivery and scope", bullets: [
                 "Choose English, Hindi, Spanish, French, German, Japanese, Chinese or Arabic, including RTL navigation. Translate authored interface guidance, reference explanations, catalog descriptions and release notes while preserving code, identifiers and user data.",
                 "Bundle the production runtime and local assets in the desktop edition with a separate persistent profile and automatic native access. Current package validation covers macOS Apple Silicon with local ad-hoc signing; other platform targets and public signing need separate validation.",
-                "Publish a current canonical tool catalog, Markdown debugging guides and release notes, llms.txt and a custom read-only agent catalog; include a generated social preview and accurate structured counts.",
+                "Publish a current canonical tool catalog, Markdown release notes, llms.txt and a custom read-only agent catalog; include a generated social preview and accurate structured counts.",
                 "Rename workspace tabs by double-clicking their names or pressing F2; use the top-corner close icon to confirm permanent deletion of the workspace and its saved content. Keep Personal protected and limit active workspaces to ten.",
                 "Default to the compact workspace while respecting saved view choices; keep Show introduction available and remove the old live demo, recent/pinned block and paste-to-find section.",
                 "Use Node.js 24 or newer for the full connector runtime and precision-preserving JSON support; keep native connector access on localhost with a separate access key.",

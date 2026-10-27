@@ -140,14 +140,12 @@
       "publicDiscoveryIntegration": "passed",
       "canonicalToolPages": 147,
       "additionalCanonicalPages": [
-        "/guides",
         "/release-notes"
       ],
       "textDiscoveryResources": [
         "/llms.txt",
         "/llms-full.txt",
         "/tool-catalog.md",
-        "/guides.md",
         "/release-notes.md"
       ],
       "disabledAPIs": {

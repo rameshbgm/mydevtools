@@ -158,7 +158,7 @@ export default function XPathTesterPage() {
                 ]
             }}
         >
-            <Row dir={direction} gutter={[24, 24]}>
+            <Row className="signal-working-panes" dir={direction} gutter={[24, 24]}>
                 <Col xs={24} lg={14}>
                     <Card
                         title={t("XML Document")}

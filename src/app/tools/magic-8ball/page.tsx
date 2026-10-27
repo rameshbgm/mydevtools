@@ -101,7 +101,7 @@ export default function Magic8BallPage() {
                 tips: [t("Questions stay in this tab only. Changing language translates answer wording without selecting a new answer.")],
             }}
         >
-            <Row gutter={[20, 20]}>
+            <Row className="signal-working-panes" gutter={[20, 20]}>
                 {/* Ball */}
                 <Col xs={24} lg={13}>
                     <Card style={{ background: cardBg, textAlign: "center" }}>
@@ -128,6 +128,7 @@ export default function Magic8BallPage() {
 
                         {/* The Ball */}
                         <motion.div
+                            className="signal-magic-ball"
                             animate={shaking ? {
                                 x: [0, -18, 18, -14, 14, -8, 8, -4, 4, 0],
                                 rotate: [0, -6, 6, -5, 5, -3, 3, -1, 1, 0],

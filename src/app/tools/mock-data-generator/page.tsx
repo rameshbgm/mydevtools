@@ -195,7 +195,7 @@ export default function MockDataGeneratorPage() {
             }}
         >
             {generated.error && <Alert type="error" showIcon role="alert" message={t("Field names must be unique. Rename duplicate fields to generate data.")} style={{ marginBottom: 16 }} />}
-            <Row gutter={[16, 16]}>
+            <Row className="signal-working-panes" gutter={[16, 16]}>
                 <Col xs={24} lg={10}>
                     <Card title={t("Schema")} size="small" extra={
                         <Button size="small" icon={<PlusOutlined />} onClick={addField}>{t("Add field")}</Button>

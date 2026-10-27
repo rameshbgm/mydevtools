@@ -286,7 +286,7 @@ export default function AgentManifestGeneratorPage() {
                                 >
                                     <Space orientation="vertical" size="small" style={{ width: "100%" }}>
                                         {mcp.env.map((e, i) => (
-                                            <Space key={i} wrap>
+                                            <Space className="signal-kv-row signal-kv-row-fields" key={i} wrap>
                                                 <Input placeholder={t("KEY")} value={e.key} onChange={(ev) => updateEnv(i, { key: ev.target.value })} style={{ width: 200 }} />
                                                 <Input placeholder={t("value")} value={e.value} onChange={(ev) => updateEnv(i, { value: ev.target.value })} style={{ width: 260 }} />
                                                 <Button aria-label={t("Delete")} size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => removeEnv(i)} />

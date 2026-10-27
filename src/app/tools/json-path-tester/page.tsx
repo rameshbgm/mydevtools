@@ -102,7 +102,7 @@ export default function JsonPathTesterPage() {
                 <p>{t(preserveNumbers ? "Affected input numbers become strings. Numeric filters and functions no longer receive numbers. Use quoted text equality; string sorting is lexical." : "Input numbers that cannot round-trip through JavaScript numbers are rejected instead of silently changed.")}</p>
                 <p>{t("Numeric functions use IEEE 754 arithmetic and may round. JMESPath JSON literals follow the input precision setting.")}</p>
             </div>
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card title={t("JSON Input")} style={{ marginBottom: 16 }}>
                         <CodeEditor

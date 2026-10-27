@@ -1,0 +1,1 @@
+require("../desktop/privacy.cjs")();

@@ -300,7 +300,7 @@ export default function ToonConverterPage() {
             </Card>
 
             {direction === "decode" && <Space style={{ marginTop: 12 }}><Switch checked={legacyDataRootArray} onChange={setLegacyDataRootArray} aria-label={t("Legacy root array")} /><Text>{t("Legacy root array: unwrap a single data array from older exports")}</Text></Space>}
-            <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+            <Row className="signal-working-panes" gutter={[16, 16]} style={{ marginTop: 16 }}>
                 <Col xs={24} md={12}>
                     <Card size="small" title={<Space><Text strong>{t("Input")}</Text><Tag color="blue">{from.toUpperCase()}</Tag></Space>}>
                         <TextArea

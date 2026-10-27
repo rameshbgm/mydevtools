@@ -137,7 +137,7 @@ export default function JsonToTypescriptPage() {
                 </div>
             )}
 
-            <Row gutter={16}>
+            <Row className="signal-working-panes" gutter={16}>
                 <Col xs={24} lg={12}>
                     <Card size="small" title={t("JSON Input")} styles={{ body: { padding: 0 } }}>
                         <CodeEditor ariaLabel={t("JSON Input")}

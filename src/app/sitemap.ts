@@ -21,5 +21,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
         }] : [];
     });
 
-    return [homepage, { url: `${SITE_URL}/guides`, changeFrequency: "monthly", priority: 0.7 }, { url: `${SITE_URL}/release-notes`, changeFrequency: "monthly", priority: 0.6 }, ...toolPages];
+    return [homepage, { url: `${SITE_URL}/release-notes`, changeFrequency: "monthly", priority: 0.6 }, ...toolPages];
 }

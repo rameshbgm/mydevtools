@@ -195,7 +195,7 @@ export default function DiceRollPage() {
                 tips: [t("Results use Math.random, not a cryptographic generator. History keeps the last 20 rolls in this tab.")],
             }}
         >
-            <Row gutter={[20, 20]}>
+            <Row className="signal-working-panes" gutter={[20, 20]}>
                 {/* Config + Roll */}
                 <Col xs={24} lg={14}>
                     <Card style={{ background: cardBg }}>

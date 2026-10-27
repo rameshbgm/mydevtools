@@ -631,7 +631,7 @@ export default function IPAddressToolsPage() {
                         key: "analyze",
                         label: <span><SearchOutlined /> {t("Analyze")}</span>,
                         children: (
-                            <Row gutter={[16, 16]}>
+                            <Row className="signal-working-panes" gutter={[16, 16]}>
                                 <Col xs={24} lg={16}>
                                     <Card size="small">
                                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
@@ -813,7 +813,7 @@ export default function IPAddressToolsPage() {
                         key: "subnet",
                         label: <span><CalculatorOutlined /> {t("Subnet Calculator")}</span>,
                         children: (
-                            <Row gutter={[16, 16]}>
+                            <Row className="signal-working-panes" gutter={[16, 16]}>
                                 <Col xs={24} lg={16}>
                                     <Card size="small">
                                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">

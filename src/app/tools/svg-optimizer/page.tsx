@@ -91,7 +91,7 @@ export default function SvgOptimizerPage() {
                 ],
             }}
         >
-            <Row gutter={[16, 16]}>
+            <Row className="signal-working-panes" gutter={[16, 16]}>
                 <Col xs={24} lg={16}>
                     <Card size="small" title={<><Text strong>{t("Input")}</Text> <Tag style={{ marginLeft: 8 }}>{formatBytes(inSize)}</Tag></>}>
                         <TextArea aria-label={t("Input SVG markup")}

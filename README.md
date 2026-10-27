@@ -28,11 +28,17 @@ A privacy-first developer tools portal — **147 utilities** across **15 categor
 
 ---
 
-## v2.0.0 release
+Server privacy: request/response payloads and uploads are processed without server logs, tracing exports, upload files or replay history. Webhooks require an actively listening page; local mocks do not capture requests. External services control their own retention. See the [server privacy contract](docs/server-privacy.md) for runtime controls and hosting requirements.
+
+## v2.1.0 release
+
+Version **2.1.0** introduces the Signal discovery workspace, consistent forms and navigation, clearer file upload controls and server privacy controls. The carousel changes randomly every four seconds; network tools explain third-party retention. Runtime request logs, tracing exports, server upload files and request replay stores are disabled. Browser-saved projects and data remain available. See [release notes](https://mydevtools.com/release-notes#release-2.1.0) and the [privacy contract](docs/server-privacy.md).
+
+## v2.0.0 capability release
 
 See the [2.0.0 capability list and release guide](docs/v2.0.md) for the additions, expanded functions, references and verification scope.
 
-The application version is now **2.0.0**, with **147 registered tools** across 15 categories. Project Workspaces, encrypted credential/file vaults, snippets, bookmarks, tool tabs, database/storage clients and deeper data/image utilities are implemented. The release notes and [2.0 guide](docs/v2.0.md) describe the implemented capabilities, reference updates and correctness repairs. Verification evidence and remaining operational limits are tracked in [the capability ledger](docs/capability-expansion-status.json).
+The **2.0.0** capability release expanded the catalog to **147 registered tools** across 15 categories. Project Workspaces, encrypted credential/file vaults, snippets, bookmarks, tool tabs, database/storage clients and deeper data/image utilities are implemented. The release notes and [2.0 guide](docs/v2.0.md) describe the implemented capabilities, reference updates and correctness repairs. Verification evidence and remaining operational limits are tracked in [the capability ledger](docs/capability-expansion-status.json).
 
 Project actions use aligned controls and adapt to narrow layouts. Delete moves a custom project to **Deleted projects**, removes it from the selector, and retains its local records and encrypted vaults for **Restore**. Personal cannot be deleted. Deletion does not free browser storage. **Delete permanently** is available in Deleted projects and requires the project name to confirm. Deleting the active project returns the workspace to Personal and locks open vaults.
 
@@ -60,7 +66,7 @@ See the historical [v1.6 validation report](docs/product-upgrade-validation.md) 
 - JSON Schema uses Ajv in a worker with a five-second deadline and explicit dialect/reference errors. OpenAPI diff evaluates selected request/response constraints and marks unsupported semantics for review; it is not a full compatibility proof.
 - MCP supports 2026-07-28 stateless metadata/discovery and selectable legacy initialization. A2A supports the 1.0 JSONRPC binding plus labeled 0.3 and older draft modes. Fixtures exercise current and previous formats; these inspectors are not conformance suites.
 - Selected current model metadata and prices carry review dates, tier/expiry notes and primary sources. Historical records are unverified. Local token counts cover an encoding or rough heuristic, and optional provider counting sends text and a page-memory key directly to the chosen provider.
-- [Debugging guides](/guides) include public JWT, signature, protocol and schema fixtures. Shared source records live in `src/lib/reference-sources.json`; the weekly read-only review workflow uploads a report for human comparison without rewriting datasets or review dates.
+- Shared source records live in `src/lib/reference-sources.json`; the weekly read-only review workflow uploads a report for human comparison without rewriting datasets or review dates.
 - The catalog uses native canonical links and reserves sidebar space before hydration. Marketing no longer waits for entrance animation. Fonts are self-hosted with their licenses, and command/bookmark/shortcut dialogs load on demand.
 - PWA caching excludes APIs, authorization-bearing requests and RSC payloads. Open public pages online once before using them offline; uncached tools, network features and optional model downloads need connectivity. Browser storage eviction can remove offline availability. Updates offer an explicit reload action.
 
@@ -315,18 +321,18 @@ Use the checked-in [Dockerfile](Dockerfile) and [Compose configuration](compose.
 
 The site serves dedicated tool titles/descriptions, canonical category/tool URLs, social metadata and per-tool SoftwareApplication structured data. Homepage catalog markup uses the registered tool count; FAQ markup is emitted for tool FAQs that are visible in their help section. The generated 1200×630 social preview follows the current version and catalog counts.
 
-Public discovery resources are generated from the same registry, guide fixtures and release notes. Prebuild extracts literal public fields into `public-tool-catalog.json` without executing UI icon imports; the consistency test rejects a stale snapshot. Edit `tools-registry.ts`, then run `npm run generate:public-catalog` when testing before a build. Do not edit the generated JSON by hand.
+Public discovery resources are generated from the same registry and release notes. Prebuild extracts literal public fields into `public-tool-catalog.json` without executing UI icon imports; the consistency test rejects a stale snapshot. Edit `tools-registry.ts`, then run `npm run generate:public-catalog` when testing before a build. Do not edit the generated JSON by hand.
 
 The public resources are:
 
 | Resource | Content |
 | --- | --- |
-| `/sitemap.xml` | Homepage, guides, release notes and every registered canonical tool; redirect aliases are excluded |
+| `/sitemap.xml` | Homepage, release notes and every registered canonical tool; redirect aliases are excluded |
 | `/robots.txt` | Public crawling allowed; API routes excluded from crawling |
 | `/llms.txt` | Concise product and processing context, with documentation links |
-| `/llms-full.txt` | Combined catalog, guides and current release |
+| `/llms-full.txt` | Combined catalog and current release |
 | `/tool-catalog.md` | Every tool URL, description, category and processing boundary |
-| `/guides.md`, `/release-notes.md` | Markdown equivalents of guides and the current release |
+| `/release-notes.md` | Markdown version of the current release |
 | `/agents.json` | Custom read-only public catalog; not an A2A card, MCP endpoint or execution API |
 
 These files contain public documentation only, never saved projects, credentials, tool input or runtime access keys. Memory & Storage is marked noindex. Robots directives are crawl guidance, not access controls. Interactive tool execution needs JavaScript; initial HTML includes metadata and tool content for crawlers.

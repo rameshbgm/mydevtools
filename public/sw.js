@@ -1,9 +1,9 @@
 // Only public app documents and hashed assets are persisted. User/API data is excluded.
-const VERSION = "2.0.0";
+const VERSION = "2.1.0";
 const SHELL = `mydevtools-shell-${VERSION}`;
 const ASSETS = `mydevtools-assets-${VERSION}`;
 const categories = "artificial-intelligence|diff-and-compare|api-and-web-services|encoding-and-decoding|certificates-and-keys|cryptography|data-converters|formatters|fun-and-games|generators|image-and-media|network|text-and-utilities|validators|reference";
-const publicPage = (path) => ["/", "/guides", "/release-notes"].includes(path) || new RegExp(`^/(?:${categories})/[a-z0-9-]+$`).test(path);
+const publicPage = (path) => ["/", "/release-notes"].includes(path) || new RegExp(`^/(?:${categories})/[a-z0-9-]+$`).test(path);
 const safeAsset = (url) => url.origin === self.location.origin && (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || url.pathname.startsWith("/monaco/vs/") || /^\/sqlite\/sql-wasm\.(?:js|wasm)$/.test(url.pathname));
 async function storeAsset(url) {
     const cache = await caches.open(ASSETS);

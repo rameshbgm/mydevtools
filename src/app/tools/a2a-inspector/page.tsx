@@ -1293,7 +1293,7 @@ export default function A2aInspectorPage() {
                             </Space>
                         ),
                         children: agentCard ? (
-                            <Row gutter={[16, 16]}>
+                            <Row className="signal-working-panes" gutter={[16, 16]}>
                                 <Col xs={24} lg={12}>
                                     <Card size="small" title={<><RobotOutlined style={{ color: "var(--wb-accent)" }} /> {agentCard.name}</>}>
                                         {agentCard.description && (
@@ -1459,7 +1459,7 @@ export default function A2aInspectorPage() {
                         ) : !agentCard.skills?.length ? (
                             <Card><Empty description={t("This agent declares no skills")} /></Card>
                         ) : (
-                            <Row gutter={[16, 16]}>
+                            <Row className="signal-working-panes" gutter={[16, 16]}>
                                 <Col xs={24} lg={10}>
                                     <Card size="small" title={t("Choose skill")}>
                                         <div>
@@ -1900,7 +1900,7 @@ function HeadersPanel({ headers, mode, json, onModeChange, onAdd, onUpdate, onRe
                         <Text type="secondary" style={{ fontSize: 12 }}>{t("No custom headers configured.")}</Text>
                     )}
                     {headers.map(h => (
-                        <Space key={h.id} style={{ display: "flex", width: "100%" }}>
+                        <Space className="signal-kv-row signal-kv-row-toggle" key={h.id} style={{ display: "flex", width: "100%" }}>
                             <Switch checked={h.enabled} onChange={(v) => onUpdate(h.id, { enabled: v })} size="small" />
                             <Input styles={{ input: { direction: "ltr", textAlign: "left", fontSize: 16 } }}
                                 placeholder={t("Header name")}

@@ -185,7 +185,7 @@ export default function UnixPermissionsPage() {
                 ]
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     {/* Result Display */}
                     <Card style={{ marginBottom: 24 }}>

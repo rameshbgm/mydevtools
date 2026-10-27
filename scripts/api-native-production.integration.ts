@@ -21,9 +21,9 @@ async function main() {
         const rpc = await call({ service: "grpc", operation: "call", files, method: "/fixture.Echo/Say", connection: { host: "127.0.0.1", port, tls: false }, messages: '{"text":"public 日本語 fixture"}' }); assert.equal(rpc.status, 200, JSON.stringify(rpc.value)); assert.equal(rpc.value.status.code, 0); assert.equal(rpc.value.messages[0].text, "public 日本語 fixture");
         const created = await call({ service: "mock", operation: "start", project: "personal", configuration: { name: "Production public fixture", routes: [{ method: "POST", path: "/echo", status: 201, headers: { "content-type": "application/json" }, body: '{"ok":true}', delayMs: 0 }], origins: [] } }); assert.equal(created.status, 200, JSON.stringify(created.value)); mockId = created.value.id;
         const sent = await call({ service: "request", url: created.value.baseUrl + "/echo", method: "POST", body: "public 日本語 body", timeout: 2000 }); assert.equal(sent.status, 200); assert.equal(sent.value.status, 201); assert.equal(sent.value.body, '{"ok":true}');
-        const history = await call({ service: "mock", operation: "history", project: "personal", id: mockId }); assert.equal(history.value.requests[0].body, "public 日本語 body");
+        const history = await call({ service: "mock", operation: "history", project: "personal", id: mockId }); assert.equal(history.status, 400); assert.equal(history.value.requests, undefined);
         assert.equal((await call({ service: "request", url: "http://169.254.169.254/" })).status, 400);
-        console.log("Production native route: advertised services, per-service token/origin rejection, proto description and actual RPC, mock start + HTTP request + exact history, and metadata-host rejection passed.");
+        console.log("Production native route: advertised services, per-service token/origin rejection, proto description and actual RPC, mock start + HTTP request + history rejection, and metadata-host rejection passed.");
     } finally {
         if (mockId) assert.equal((await call({ service: "mock", operation: "stop", project: "personal", id: mockId })).status, 200);
         server.forceShutdown();

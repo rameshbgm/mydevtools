@@ -165,7 +165,7 @@ export default function UnicodeConverterPage() {
             }}
         >
             {error !== null && <Alert type="error" showIcon title={t("Invalid Unicode input. Check the selected format and code point range, then try again.")} description={error && <pre dir="ltr" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{error}</pre>} style={{ marginBottom: 16 }} />}
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card>
                         <Space wrap style={{ marginBottom: 16 }}>

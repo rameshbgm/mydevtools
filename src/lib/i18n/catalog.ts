@@ -43,7 +43,6 @@ import { SHARED_DIALOG_TRANSLATIONS } from "./shared-dialogs";
 import { MEMORY_TRANSLATIONS } from "./memory";
 import { TOOL_BRIDGE_TRANSLATIONS } from "./tool-bridge";
 import { REFERENCE_PROVENANCE_TRANSLATIONS } from "./reference-provenance";
-import { DEBUGGING_GUIDE_TRANSLATIONS } from "./debugging-guides";
 import { JSON_TOOL_TRANSLATIONS } from "./json-tools";
 import { JSON_NUMBER_TRANSLATIONS } from "./json-numbers";
 import { SNIPPET_TRANSLATIONS } from "./snippets";
@@ -112,7 +111,6 @@ export const SHARED_TRANSLATIONS: Record<string, TranslationColumns> = {
     ...JSON_NUMBER_TRANSLATIONS,
     ...JSON_TOOL_TRANSLATIONS,
     ...TOOL_BRIDGE_TRANSLATIONS,
-    ...DEBUGGING_GUIDE_TRANSLATIONS,
     ...REFERENCE_PROVENANCE_TRANSLATIONS,
     "Copied!": ["कॉपी हो गया!", "¡Copiado!", "Copié !", "Kopiert!", "コピーしました！", "已复制！", "تم النسخ!"],
     "Copy failed — please copy manually": ["कॉपी नहीं हुआ — कृपया स्वयं कॉपी करें", "No se pudo copiar — copia el texto manualmente", "Échec de la copie — copiez le texte manuellement", "Kopieren fehlgeschlagen — bitte manuell kopieren", "コピーできませんでした。手動でコピーしてください", "复制失败，请手动复制", "تعذر النسخ — يرجى النسخ يدويًا"],
@@ -154,7 +152,6 @@ export const SHARED_TRANSLATIONS: Record<string, TranslationColumns> = {
     "Open tool tabs": ["टूल टैब खोलें", "Abrir pestañas de herramientas", "Ouvrir les onglets d’outils", "Werkzeugtabs öffnen", "ツールタブを開く", "打开工具标签页", "فتح تبويبات الأدوات"],
     "What’s new": ["नया क्या है", "Novedades", "Nouveautés", "Neuigkeiten", "新機能", "新功能", "ما الجديد"],
     "What's new in version {version} — release notes": ["संस्करण {version} में नया क्या है — रिलीज़ नोट्स", "Novedades de la versión {version} — notas de la versión", "Nouveautés de la version {version} — notes de version", "Neu in Version {version} — Versionshinweise", "バージョン {version} の新機能 — リリースノート", "版本 {version} 的新功能 — 发行说明", "ما الجديد في الإصدار {version} — ملاحظات الإصدار"],
-    "Debugging guides": ["डिबगिंग गाइड", "Guías de depuración", "Guides de débogage", "Anleitungen zur Fehlersuche", "デバッグガイド", "调试指南", "أدلة تصحيح الأخطاء"],
     "Use compact workspace": ["कॉम्पैक्ट कार्यक्षेत्र चुनें", "Usar espacio compacto", "Utiliser l’espace compact", "Kompakte Ansicht verwenden", "コンパクト表示にする", "使用紧凑工作区", "استخدام مساحة عمل مضغوطة"],
     "Show introduction": ["परिचय दिखाएँ", "Mostrar introducción", "Afficher l’introduction", "Einführung anzeigen", "紹介を表示", "显示介绍", "إظهار المقدمة"],
     "Learn More About This Tool": ["इस टूल के बारे में जानें", "Más información sobre esta herramienta", "En savoir plus sur cet outil", "Mehr über dieses Werkzeug", "このツールについて", "了解此工具", "المزيد عن هذه الأداة"],

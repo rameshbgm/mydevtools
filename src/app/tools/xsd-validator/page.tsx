@@ -445,7 +445,7 @@ export default function XsdValidatorPage() {
                 ]
             }}
         >
-            <Row dir={direction} gutter={[16, 16]}>
+            <Row className="signal-working-panes" dir={direction} gutter={[16, 16]}>
                 {/* Left Panel - XSD */}
                 <Col xs={24} lg={12}>
                     <Card

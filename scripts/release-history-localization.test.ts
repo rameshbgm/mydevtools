@@ -18,8 +18,12 @@ const tr = (language: Language, source: string, values: Record<string, string | 
     for (const [key, item] of Object.entries(values)) value = value.replaceAll(`{${key}}`, String(item));
     return value;
 };
-assert.equal(RELEASE_NOTES.length, 10);
-assert.equal(prose.length, 339);
+assert.equal(RELEASE_NOTES.length, 11);
+assert.equal(RELEASE_NOTES[0].version, "2.1.0");
+assert.equal(APP_VERSION, RELEASE_NOTES[0].version);
+for (const file of ["package.json", "desktop/package.json"]) assert.equal(JSON.parse(readFileSync(file, "utf8")).version, APP_VERSION);
+assert.ok(readFileSync("public/sw.js", "utf8").includes(`const VERSION = "${APP_VERSION}"`));
+assert.equal(prose.length, 353);
 for (const source of prose) assert.ok(rows[source], `Release prose absent: ${source}`);
 for (const source of Object.values(KIND_LABEL)) assert.ok(rows[source] || SHARED_TRANSLATIONS[source], source);
 for (const [source, columns] of Object.entries(rows)) {

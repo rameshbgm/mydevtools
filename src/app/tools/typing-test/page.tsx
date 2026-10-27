@@ -182,7 +182,7 @@ export default function TypingTestPage() {
                 tips: [t("The interface language does not change the English practice passage or reset a running test. The last five results stay in this tab.")],
             }}
         >
-            <Row gutter={[20, 20]}>
+            <Row className="signal-working-panes" gutter={[20, 20]}>
                 {/* Main test area */}
                 <Col xs={24} lg={16}>
                     <Card style={{ background: cardBg }}>

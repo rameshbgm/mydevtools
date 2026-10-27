@@ -1369,7 +1369,7 @@ export default function McpInspectorPage() {
                             </Space>
                         ),
                         children: (
-                            <Row gutter={[16, 16]}>
+                            <Row className="signal-working-panes" gutter={[16, 16]}>
                                 <Col xs={24} lg={8}>
                                     <Card
                                         size="small"

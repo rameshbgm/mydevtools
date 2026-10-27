@@ -9,8 +9,6 @@ import { SEO_CONTENT } from "../src/lib/seo-content";
 import { formatJsonText } from "../src/lib/json-formatting";
 import { parseStructuredData } from "../src/lib/structured-data";
 import { validateJsonSchema } from "../src/lib/json-schema-workbench";
-import { DEBUGGING_GUIDES } from "../src/lib/debugging-guides";
-import { guideExampleHref, guideExamplePayload } from "../src/lib/guide-examples";
 
 const ids = ["json-formatter", "json-validator", "json-schema-workbench"] as const;
 type ToolId = typeof ids[number];
@@ -173,8 +171,7 @@ for (const language of LANGUAGES) {
     for (const issue of expected) assert.ok(schemaView.nodes.some((node) => node.type === "pre" && node.props.dir === "ltr" && node.props.children === issue.message));
     assert.ok(schemaView.text.includes(translate(language.id, "Instance issue. Check the value at this path."))); localeInvariant(schema);
     schemaView = schema.render(language.id);
-    const guide = DEBUGGING_GUIDES.find((guide) => guide.id === "schema")!; const url = new URL(guideExampleHref(guide), "https://example.invalid");
-    const payload = guideExamplePayload(url.pathname, url.search)!; assert.equal(payload.data, guide.example);
+    const payload = { data: JSON.stringify({ schema: { $schema: "https://json-schema.org/draft/2020-12/schema", oneOf: [{ type: "string" }, { type: "integer", minimum: 10 }] }, instance: 5 }) };
     schemaView.bridge()(payload); schemaView = schema.render(language.id); const fixtureState = schema.state(); localeInvariant(schema);
     schemaView = schema.render(language.id); await schemaView.button("Validate instance")(); schemaView = schema.render(language.id);
     assert.deepEqual(schema.posted.at(-1), { instance: parseStructuredData(String(fixtureState.instance)), schema: parseStructuredData(String(fixtureState.schema)) });
@@ -212,7 +209,7 @@ for (const language of LANGUAGES) {
         assert.equal(failed.state().issues, null); assert.equal(failed.state().validating, false); assert.ok(failed.notice().text.includes(translate(language.id, source))); localeInvariant(failed);
     }
 }
-console.log("JSON validation localization: eight languages, three pages, help/FAQ coverage, exact numeric formatter output and clipboard, stable mode/share/bridge/guide data, actual schema-worker handler and engine payloads, raw diagnostics, LTR technical content, and locale-invariant state/parser/worker counts pass.");
+console.log("JSON validation localization: eight languages, three pages, help/FAQ coverage, exact numeric formatter output and clipboard, stable mode/share/bridge data, actual schema-worker handler and engine payloads, raw diagnostics, LTR technical content, and locale-invariant state/parser/worker counts pass.");
 
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -201,7 +201,7 @@ export default function TimerPage() {
                 tips: [t("Background tabs and device sleep can delay the completion chime. Browser audio policies may block sound. Reloading clears the timer.")],
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={14}>
                     <AnimatePresence mode="wait">
                         {isComplete ? (

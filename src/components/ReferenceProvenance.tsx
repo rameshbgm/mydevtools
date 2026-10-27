@@ -20,7 +20,6 @@ export default function ReferenceProvenance({ toolId }: { toolId?: string | null
                     </li>
                 ))}
             </ul>
-            <a href="/guides">{t("Runnable debugging guides")}</a>
         </details>
     );
 }

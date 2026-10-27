@@ -98,7 +98,7 @@ export default function TomlConverterPage() {
             </Card>
 
             <div className="wb-workbench" style={{ marginTop: 18 }}>{to === "xml" && <label>{t("XML root wrapper name")}<input dir="ltr" value={rootName} maxLength={100} onChange={(event) => setRootName(event.target.value)} /></label>}<p>{t("One named XML root is retained; otherwise the chosen root wraps the output. Conversion omits comments and formatting. Review the mapping notes before use.")}</p><button disabled={!!error || !output} onClick={() => downloadText(output, `converted.${to}`, to === "xml" ? "application/xml" : "text/plain")}>{t("Download {format}", { format: to.toUpperCase() })}</button></div>
-            <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+            <Row className="signal-working-panes" gutter={[16, 16]} style={{ marginTop: 16 }}>
                 <Col xs={24} md={12}>
                     <Card size="small" title={<Space><Text strong>{t("Input")}</Text><Tag color="blue">{from.toUpperCase()}</Tag></Space>}>
                         <TextArea

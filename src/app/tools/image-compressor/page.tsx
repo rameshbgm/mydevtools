@@ -189,7 +189,7 @@ export default function ImageCompressorPage() {
                         </Space>
                     </Card>
 
-                    <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+                    <Row className="signal-working-panes" gutter={[16, 16]} style={{ marginTop: 16 }}>
                         <Col xs={24} md={12}>
                             <Card size="small" title={<Space><Text strong>{t("Original")}</Text><Tag>{formatBytes(origSize)}</Tag></Space>}>
                                 <img src={original.img.src} alt={t("original")} style={{ width: "100%", display: "block", borderRadius: 4 }} />

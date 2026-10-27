@@ -125,7 +125,7 @@ export default function CaseConverterPage() {
                 <SendToButton data={mainOutput} kind="text" sourceToolId="case-converter" size="middle" />
             </Space>
 
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={12}>
                     <Card title={t("Input")}>
                         <TextArea aria-label={t("Input text")} dir="ltr" styles={{ textarea: { direction: "ltr", textAlign: "left", fontSize: 16 } }}

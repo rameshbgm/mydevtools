@@ -114,7 +114,7 @@ export default function CorsTesterPage() {
                 tips: [t("The browser may hide CORS response headers. Use browser developer tools and server logs for the exact failure."), t("A readable HTTP error response passed browser access checks even when its status is not successful.")],
             }}
         >
-            <Row gutter={[16, 16]}>
+            <Row className="signal-working-panes" gutter={[16, 16]}>
                 <Col xs={24} lg={10}>
                     <Card size="small" title={t("Request")}>
                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">

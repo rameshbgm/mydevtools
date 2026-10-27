@@ -144,7 +144,7 @@ export async function POST(request: Request) {
         headers.set(k, Array.isArray(v) ? v.join(", ") : String(v));
     }
     // Always advertise no caching for streamed proxy responses.
-    if (!headers.has("cache-control")) headers.set("cache-control", "no-cache, no-transform");
+    headers.set("cache-control", "no-store, private, no-transform");
     headers.set("x-proxy-source", "mydevtools-stream-proxy");
 
     const stream = new ReadableStream<Uint8Array>({

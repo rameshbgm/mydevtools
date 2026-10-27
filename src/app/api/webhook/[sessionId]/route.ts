@@ -1,9 +1,6 @@
-// Catch-all webhook capture endpoint. Any method, any body — recorded into
-// the in-memory store keyed by `sessionId`. Returns 200 OK with a tiny JSON
-// receipt so curl/Postman/upstream test harnesses see success.
-
+// Deliver only to a browser currently waiting; no request capture store.
 import { NextRequest, NextResponse } from "next/server";
-import { isValidWebhookSessionId, recordRequest } from "@/lib/webhook-store";
+import { isValidWebhookSessionId, hasWebhookListener, deliverRequest } from "@/lib/webhook-store";
 import { consumeManagedRouteQuota, managedRoutesEnabled } from "@/lib/server-network-policy";
 
 export const runtime = "nodejs";
@@ -19,6 +16,12 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ sessionId: stri
     const { sessionId } = await ctx.params;
     if (!isValidWebhookSessionId(sessionId)) {
         return NextResponse.json({ error: "invalid session id" }, { status: 400 });
+    }
+
+    // Reject before reading a payload when no browser can receive it.
+    if (!hasWebhookListener(sessionId)) {
+        await req.body?.cancel();
+        return NextResponse.json({ error: "No browser is listening. Requests are never saved for later delivery." }, { status: 409 });
     }
 
     const url = new URL(req.url);
@@ -37,21 +40,34 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ sessionId: stri
     const query: Record<string, string> = {};
     url.searchParams.forEach((v, k) => { query[k] = v; });
 
-    // The store is process-local memory (200 requests × N sessions), so an
-    // uncapped body is the one input that can push this node over. Truncate
-    // rather than reject — a debugging tool should still show you the headers
-    // and the start of an oversized payload.
     const MAX_BODY_BYTES = 256 * 1024;
 
     let bodyText = "";
     let bodyBase64: string | undefined;
     let truncated = false;
     try {
-        let buf = await req.arrayBuffer();
-        if (buf.byteLength > MAX_BODY_BYTES) {
-            truncated = true;
-            buf = buf.slice(0, MAX_BODY_BYTES);
-        }
+        // Bound the actual stream, including chunked requests, before decoding.
+        const reader = req.body?.getReader();
+        const chunks: Uint8Array[] = [];
+        let size = 0;
+        try {
+            while (reader) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                const remaining = MAX_BODY_BYTES - size;
+                chunks.push(value.subarray(0, remaining));
+                size += Math.min(value.byteLength, remaining);
+                if (value.byteLength > remaining || size === MAX_BODY_BYTES) {
+                    truncated = true;
+                    await reader.cancel();
+                    break;
+                }
+            }
+        } finally { reader?.releaseLock(); }
+        const buf = new Uint8Array(size);
+        let offset = 0;
+        for (const chunk of chunks) { buf.set(chunk, offset); offset += chunk.byteLength; }
+        chunks.length = 0;
         if (buf.byteLength > 0) {
             // Non-fatal decode: a truncated multi-byte char at the cut point
             // must not misclassify otherwise-valid UTF-8 as binary.
@@ -70,19 +86,18 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ sessionId: stri
         // body unreadable; leave empty
     }
 
-    const remoteIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || undefined;
-
-    const captured = recordRequest(sessionId, {
+    const deliveryId = deliverRequest(sessionId, {
         method: req.method,
         path: url.pathname,
         query,
         headers,
         bodyText,
         bodyBase64,
-        remoteIp,
     });
 
-    return NextResponse.json({ ok: true, id: captured.id }, { status: 200 });
+    return deliveryId === null
+        ? NextResponse.json({ error: "The browser disconnected. This request was discarded." }, { status: 409 })
+        : NextResponse.json({ ok: true, id: deliveryId }, { status: 200 });
 }
 
 export { handle as GET, handle as POST, handle as PUT, handle as PATCH, handle as DELETE, handle as OPTIONS, handle as HEAD };

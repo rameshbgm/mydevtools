@@ -127,7 +127,7 @@ export default function MarkdownTablePage() {
                 tips: ["The preview displays cell text. Output escapes pipes and backslashes and turns line breaks into <br>; other inline Markdown stays editable."],
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} xl={14}>
                     <Card
                         title={t("Table Editor")}

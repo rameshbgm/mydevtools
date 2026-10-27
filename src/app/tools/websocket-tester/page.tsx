@@ -102,7 +102,7 @@ export default function WebsocketTesterPage() {
                 useCases: [t("Reproduce a failing message or inspect application heartbeat traffic. Browser clients cannot send protocol-level ping frames.")],
             }}
         >
-            <Row gutter={[16, 16]}>
+            <Row className="signal-working-panes" gutter={[16, 16]}>
                 <Col xs={24} lg={10}>
                     <Card size="small" title={t("Connection")}>
                         <Space orientation="vertical" style={{ width: "100%" }} size="middle">

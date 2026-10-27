@@ -186,7 +186,7 @@ export default function CsvDiffPage() {
         >
             <ToolBridgeBanner accepts={["csv", "text"]} onAccept={(p) => setLeftText(p.data)} />
 
-            <Row gutter={[16, 16]}>
+            <Row className="signal-working-panes" gutter={[16, 16]}>
                 <Col xs={24} md={12}>
                     <Card size="small" title={<><Text strong>{t("Left")}</Text> <Tag style={{ marginInlineStart: 8 }}>{t("Rows: {count}", { count: parsedLeft.rows.length.toLocaleString(language) })}</Tag></>}>
                         <TextArea

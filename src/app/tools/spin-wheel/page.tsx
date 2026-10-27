@@ -141,11 +141,11 @@ export default function SpinWheelPage() {
                 tips: [t("Options are saved in the current workspace. Sample labels and your own labels keep their original text when you change language.")],
             }}
         >
-            <Row gutter={[20, 20]}>
+            <Row className="signal-working-panes" gutter={[20, 20]}>
                 {/* Wheel */}
                 <Col xs={24} lg={14}>
                     <Card style={{ background: cardBg, textAlign: "center" }}>
-                        <div style={{ position: "relative", display: "inline-block" }}>
+                        <div className="signal-spin-wheel" style={{ position: "relative", display: "inline-block" }}>
                             {/* Pointer */}
                             <div style={{
                                 position: "absolute", top: -16, left: "50%", transform: "translateX(-50%)",
@@ -158,7 +158,7 @@ export default function SpinWheelPage() {
 
                             {/* Wheel SVG */}
                             <motion.div
-                                style={{ display: "inline-block", transformOrigin: "center" }}
+                                style={{ display: "block", width: "100%", transformOrigin: "center" }}
                                 animate={{ rotate: rotation }}
                                 transition={{ duration: 4, ease: [0.17, 0.67, 0.12, 1.0] }}
                             >

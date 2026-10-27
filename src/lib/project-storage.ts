@@ -136,7 +136,7 @@ export async function purgeDeletedProject(id: string, storage: Storage = window.
 export function normalizeProjectPath(pathname: string): string | null {
     if (!pathname.startsWith("/") || pathname.startsWith("//")) return null;
     const path = pathname.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
-    if (["/", "/memory", "/guides", "/release-notes"].includes(path)) return path;
+    if (["/", "/memory", "/release-notes"].includes(path)) return path;
     const toolId = getToolIdFromPublicPath(path);
     return toolId ? toolPathFromId(toolId) : null;
 }

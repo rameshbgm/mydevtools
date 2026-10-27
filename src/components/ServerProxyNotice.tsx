@@ -71,10 +71,14 @@ export default function ServerProxyNotice({ route, purpose, sentFields, extra, t
                         <Paragraph style={{ fontSize: 12, marginBottom: 0 }}>
                             <Text strong>{t("Data handling:")}</Text>{" "}
                             {handling ? t(handling) : route === "webhook"
-                                ? t("captured requests are stored in temporary process memory so this page can display them.")
+                                ? t("webhooks are delivered only to an actively listening browser; the server keeps no request history.")
                                 : route === "fetch-cert"
                                     ? t("the server opens a TLS connection to the hostname and returns the certificate chain.")
                                     : t("the server relays this request to your target and returns its response; the target receives the fields above.")}
+                        </Paragraph>
+
+                        <Paragraph style={{ fontSize: 12, marginBottom: 0 }}>
+                            {t("This app does not log, trace or save request/response payloads or uploaded files on its server. External APIs and storage providers apply their own retention policies; this app cannot delete their copies.")}
                         </Paragraph>
 
                         {extra}

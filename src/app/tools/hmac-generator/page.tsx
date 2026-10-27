@@ -116,7 +116,7 @@ export default function HmacGeneratorPage() {
         >
             <ToolBridgeBanner accepts={["text"]} onAccept={(p) => setInputText(p.data)} />
 
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <Card title={t("Input")}>
                         <div style={{ marginBottom: 16 }}>

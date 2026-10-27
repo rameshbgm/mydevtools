@@ -1,6 +1,7 @@
 // Start the same integrated Next server as the generated standalone launcher.
 // Unlike a custom HTTP server, this preserves Next's router/upgrade handling.
 // The pinned Next build is staged with its traced dependencies and config.
+require("./privacy.cjs")();
 const { createRequire } = require("node:module");
 const { join, resolve } = require("node:path");
 const { readFileSync } = require("node:fs");

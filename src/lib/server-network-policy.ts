@@ -159,19 +159,13 @@ const rateLimits: Map<string, RateWindow> =
     (globalThis as unknown as Record<string, Map<string, RateWindow>>)[RATE_LIMIT_KEY] ?? new Map();
 (globalThis as unknown as Record<string, Map<string, RateWindow>>)[RATE_LIMIT_KEY] = rateLimits;
 
-function clientKey(request: Request): string {
-    return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-        || request.headers.get("x-real-ip")
-        || "unknown";
-}
-
-/** Lightweight process-local abuse guard. Production still needs gateway-level quotas. */
-export function consumeManagedRouteQuota(request: Request, scope: string, limit = 60): boolean {
+/** Aggregate process-local abuse guard; no IP addresses or user identifiers retained. */
+export function consumeManagedRouteQuota(_request: Request, scope: string, limit = 60): boolean {
     const now = Date.now();
     for (const [key, window] of rateLimits) {
         if (window.resetAt <= now) rateLimits.delete(key);
     }
-    const key = `${scope}:${clientKey(request)}`;
+    const key = scope;
     const window = rateLimits.get(key);
     if (!window || window.resetAt <= now) {
         rateLimits.set(key, { count: 1, resetAt: now + 60_000 });

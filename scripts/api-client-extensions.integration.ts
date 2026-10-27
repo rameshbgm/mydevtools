@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import https from "node:https";
 import forge from "node-forge";
-import { startLocalMock, manageLocalMock, type MockRequest, type MockSummary } from "../src/lib/local-mock-server";
+import { startLocalMock, manageLocalMock, type MockSummary } from "../src/lib/local-mock-server";
 import { runLocalHttp } from "../src/lib/local-http-client";
 import { runCollection, type CollectionStep } from "../src/lib/api-builder/collection-runner";
 import { compileSavedRequest, type ApiSavedRequest } from "../src/lib/api-builder/request-model";
 const owner = "http://127.0.0.1:3100", project = "personal";
 const routes = [
-    { method: "POST", path: "/login", status: 200, headers: { "content-type": "application/json" }, body: '{"session":{"token":"public-fixture-token"},"id":9223372036854775807}', delayMs: 0 },
-    { method: "GET", path: "/item/9223372036854775807", status: 200, headers: { "content-type": "application/json" }, body: '{"ok":true}', delayMs: 0 },
+    { method: "POST", path: "/login", status: 200, headers: { "content-type": "application/json", "cache-control": "public, max-age=600" }, body: '{"session":{"token":"public-fixture-token"},"id":9223372036854775807}', delayMs: 0 },
+    { method: "GET", path: "/item/9223372036854775807", status: 200, headers: { "content-type": "application/json", "cache-control": "public, max-age=600" }, body: '{"ok":true}', delayMs: 0 },
 ];
 async function listen(server: http.Server) { await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", () => resolve()); }); return (server.address() as { port: number }).port; }
 async function close(server: http.Server) { server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve())); }
@@ -40,19 +40,17 @@ async function main() {
         ];
         const run = await runCollection({ steps, requests: [request("login"), request("item")], variables: { baseUrl: mock.baseUrl }, iterations: 2, stopOnFailure: true, transport: (input, signal) => runLocalHttp({ ...input }, signal) });
         assert.equal(run.results.length, 4); assert.ok(run.results.every((result) => result.passed));
-        const history = await manageLocalMock({ operation: "history", project, id: mock.id }, owner) as { requests: MockRequest[] };
-        assert.equal(history.requests.length, 4); assert.equal(history.requests[1].headers.authorization, "Bearer public-fixture-token"); assert.equal(history.requests[0].body, '{"iteration":1}'); assert.equal(history.requests[2].body, '{"iteration":2}');
-        assert.equal(Object.keys(history.requests[1].headers).includes("x-mydevtools-local-token"), false);
-        await manageLocalMock({ operation: "clear-history", project, id: mock.id }, owner);
-        assert.equal((await manageLocalMock({ operation: "history", project, id: mock.id }, owner) as { requests: unknown[] }).requests.length, 0);
+        assert.ok(run.results.every((result) => result.response?.headers["cache-control"] === "no-store"), "Mock response settings cannot enable payload caching");
+        await assert.rejects(() => manageLocalMock({ operation: "history", project, id: mock.id }, owner), /supported/);
+        await assert.rejects(() => manageLocalMock({ operation: "clear-history", project, id: mock.id }, owner), /supported/);
         await Promise.all(Array.from({ length: 6 }, () => runLocalHttp({ url: mock.baseUrl + "/login", method: "POST", body: "public" })));
-        const parallel = await manageLocalMock({ operation: "history", project, id: mock.id }, owner) as { requests: MockRequest[] };
-        assert.equal(new Set(parallel.requests.map((request) => request.id)).size, 6);
-        await manageLocalMock({ operation: "clear-history", project, id: mock.id }, owner);
-        assert.equal((await manageLocalMock({ operation: "list", project }, owner) as { mocks: MockSummary[] }).mocks[0].requests, 10);
+        const listed = (await manageLocalMock({ operation: "list", project }, owner) as { mocks: MockSummary[] }).mocks[0];
+        assert.equal(listed.requests, 10);
+        assert.equal(JSON.stringify(listed).includes('"iteration"'), false);
+        assert.equal(Object.hasOwn(listed, "history"), false);
         const concurrent = await Promise.allSettled([startLocalMock({ name: "Limit fixture one", routes, origins: [] }, project, owner), startLocalMock({ name: "Limit fixture two", routes, origins: [] }, project, owner)]);
         const started = concurrent.filter((result): result is PromiseFulfilledResult<MockSummary> => result.status === "fulfilled"); mocks.push(...started.map((result) => result.value)); assert.equal(started.length, 1); assert.equal(concurrent.filter((result) => result.status === "rejected").length, 1);
-        console.log("Local mock + collection: scoped management, CORS/opaque-origin rejection, capability paths, two-step token capture/iterations, history/clear and concurrent server cap passed.");
+        console.log("Local mock + collection: scoped management, CORS/opaque-origin rejection, capability paths, two-step token capture/iterations, no request history and concurrent server cap passed.");
         let redirectedHeaders: http.IncomingHttpHeaders = {}, redirectMethod = "", redirectBody = "";
         const destination = http.createServer((req, res) => { redirectedHeaders = req.headers; redirectMethod = req.method!; req.on("data", (chunk) => { redirectBody += chunk; }); req.on("end", () => res.end("redirected")); }); servers.push(destination); const destinationPort = await listen(destination);
         let lastBytes = Buffer.alloc(0), lastContentType = "";

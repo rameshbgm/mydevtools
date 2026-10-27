@@ -353,7 +353,7 @@ export default function JsonlValidatorPage() {
                 <Select
                     value={schema}
                     onChange={(v) => { setSchema(v); setText(SAMPLES[v]); setFileName(""); }}
-                    style={{ width: 340 }}
+                    style={{ width: 340, maxWidth: "100%" }}
                     options={SCHEMA_OPTIONS.map((option) => ({ ...option, label: t(option.label) }))}
                 />
                 <Segmented

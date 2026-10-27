@@ -269,7 +269,7 @@ Usable Hosts: ${subnetInfo.usableHosts.toLocaleString()}`;
                 useCases: [t("Plan subnets for routers, cloud networks and local environments.")],
             }}
         >
-            <Row gutter={[16, 16]}>
+            <Row className="signal-working-panes" gutter={[16, 16]}>
                 {/* Input Section */}
                 <Col xs={24} lg={10}>
                     <Card

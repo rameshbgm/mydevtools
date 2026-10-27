@@ -37,9 +37,9 @@ colors:
 typography:
   display:
     fontFamily: Sora, sans-serif
-    fontSize: clamp(34px, 3.6cqi, 52px)
+    fontSize: clamp(32px, 3.4cqi, 44px)
     fontWeight: 550
-    lineHeight: 1.08
+    lineHeight: 1.12
     letterSpacing: -.04em
   page-heading:
     fontFamily: Geist, sans-serif
@@ -142,7 +142,7 @@ components:
 
 Signal is the user-approved visual direction for the entire application: home, catalog, tool pages, workspaces, supporting pages and shared overlays. It replaces the former introduction-only identity. Pale slate and navy surfaces, blue actions, compact typography and ruled layouts keep real developer work prominent.
 
-The reference preview remains a historical decision artifact. Production follows the later approved headline, feature links, randomized tool carousel and integrated catalog. These design documents record the implemented redesign; they do not announce publication of a 2.1 release.
+The reference preview remains a historical decision artifact. Production groups a centered Developer tools / Open by design headline, privacy explanation covering sensitive-data risks, local processing, disclosed network connections and inspectable MIT-licensed code, paired explore/source actions, a ruled trust strip, randomized tool carousel and workspace links in one hero frame above the integrated catalog. These design documents record the implemented redesign; they do not announce publication of a 2.1 release.
 
 **Key Characteristics:**
 
@@ -158,7 +158,7 @@ The authoritative implementation is [`signal-theme.ts`](src/lib/signal-theme.ts)
 
 ### Primary
 
-**Cobalt / pale blue accent** drives actions, links, selected navigation, focus and tool iconography. Its dedicated action foreground changes with the theme. Selected surfaces use the corresponding soft blue token; do not reuse pale dark-theme action text on a light action.
+**Cobalt / pale blue accent** drives primary actions, links, selected navigation and tool iconography. Its dedicated action foreground changes with the theme. Navigation keeps its soft blue selected surface; editable focus, selected dropdown options and text selection use neutral treatments. Do not reuse pale dark-theme action text on a light action.
 
 ### Secondary
 
@@ -166,19 +166,21 @@ The authoritative implementation is [`signal-theme.ts`](src/lib/signal-theme.ts)
 
 ### Neutral
 
-**Slate ground, paper or navy surface, and inset panels** separate page, working area and secondary detail. Primary text and secondary text remain distinct from decorative borders. **Control border** is deliberately stronger than the divider border, keeping editable fields identifiable in both themes.
+**Slate ground, paper or navy surface, and inset panels** separate page, working area and secondary detail. Primary text and secondary text remain distinct from decorative borders. **Control border** is deliberately stronger than the divider border, keeping editable fields identifiable in both themes. Keyboard outlines use the neutral text palette: primary text for shared CSS and secondary text for Ant Design’s library outline. Ant Design selected dropdown options use the neutral inset background and primary text; text selection uses the paired slate selection background, including Monaco. These interaction states do not inherit the navigation accent.
 
 Frontmatter records the actual `--signal-*` primitives from workspace.css. Existing `--wb-*`, background/foreground and primary aliases map to these same values. The `.dark` class switches the palette; AppShell also sets browser `color-scheme`. `SIGNAL_PALETTES` supplies matching Ant Design roles. Component frontmatter describes the light default and named dark variants; sidecar examples bind to live CSS variables.
 
 **The Paired Surface Rule.** Change the complete semantic set together; preserve text, action-foreground, control-border and status relationships in both themes.
 
+**The Neutral Focus Rule.** Show keyboard focus with one thin neutral outline; do not add cobalt halos or a second frame to editable controls.
+
 ## Typography
 
 Locally bundled **Sora** carries the landing display; **Geist** carries navigation, body text, labels and controls; **Geist Mono** carries code, requests and structured data. They load through `next/font/local` with `display: swap`. Preserve font licenses and explicit LTR isolation for code even in RTL interfaces.
 
-The shared interface scale is **12px**, including form labels and values, dropdown items, buttons, catalog tool names/descriptions and navigation. Tool input line height is 22px; ordinary body rhythm is 1.65. Larger headings and numerical visualizations retain hierarchy rather than inheriting the control scale. Small metadata and badges remain source-specific secondary roles.
+The shared interface scale is **12px**, including form labels and values, dropdown items, buttons, catalog tool names/descriptions and sidebar navigation. The landing header’s All tools / Your data menu uses 15px, with weight 650 and an underline for the active section. Sidebar labels and landing catalog category labels share the navigation-size token, derived from the UI-size token. Expanded category headings and selected tools use weight 650 for identification; unselected tool labels keep their regular weight, including collapsed popup labels. Tool input line height is 22px; ordinary body rhythm is 1.65. Larger headings and numerical visualizations retain hierarchy rather than inheriting the control scale. Small metadata and badges remain source-specific secondary roles.
 
-The desktop landing display uses the frontmatter clamp. At landing-container widths up to 620px it becomes `clamp(28px,8.5cqi,36px)` with line height 1.12. Tool headings use 26px, reducing to 23px on narrow phones. Standard Ant Design heading sizes are 28, 23, 20, 17 and 15px. Carousel headings use `clamp(23px,2.2cqi,30px)` and 23px on mobile. Do not revive earlier 14–16px form overrides: the final shared UI rules establish the current 12px contract.
+The desktop landing display uses the frontmatter clamp. At landing-container widths up to 620px it becomes `clamp(28px,8cqi,34px)` with line height 1.12. Tool headings use 26px, reducing to 23px on narrow phones. Standard Ant Design heading sizes are 28, 23, 20, 17 and 15px. Carousel headings use `clamp(23px,2.2cqi,30px)` and 23px on mobile. Do not revive earlier 14–16px form overrides: the final shared UI rules establish the current 12px contract.
 
 **The Data Face Rule.** Use mono for actual technical data; keep labels and explanatory UI in Geist and the landing display in Sora.
 
@@ -186,13 +188,15 @@ The desktop landing display uses the frontmatter clamp. At landing-container wid
 
 Home spans the available page width with no outer application sidebar. Its centered content caps at 1600px and uses 5% horizontal inset, reducing to 20px on narrow phones. The home header is 76px, reducing to 66px at 540px. It contains branding, discovery navigation and global actions; less critical navigation condenses as available space decreases.
 
-The compact hero pairs the headline “Build. Inspect. Debug.” / “Keep your flow.” with a useful developer description and real links to Project Workspaces, Tool Tabs, Saved Workflows and the catalog. A bounded carousel follows. Its desktop slide is `clamp(260px,38svh,340px)` high with two equal columns; at a 620px landing container it becomes a 258px copy-only slide and hides the illustrative panel. The final composition was reviewed at 1440×900 and 390×844 so the hero fits a normal first screen.
+The unified hero centers “Developer tools.” / “Open by design.” above a privacy explanation covering sensitive-data risks, local processing, disclosed network connections and inspectable MIT-licensed code and paired 40px Explore tools / Audit the source code actions. A ruled trust strip names on-device tools, disclosed connections and MIT open source. The source action links directly to the repository for inspection. The introduction, bounded carousel and workspace links share one bordered frame. The carousel keeps its two equal columns and existing graphics, with a desktop slide height of `clamp(240px,34svh,300px)`. At a 620px landing container it becomes a 258px copy-only slide and hides the illustrative panel. Mobile stacks the headline, uses two action columns and three compact trust columns; the complete hero was checked at 1440×900 and 390×844. The [centered-hero captures](.impeccable/review/centered-hero/) retain desktop, mobile and mobile dark-theme evidence.
+
+The hero header’s side margins carry six decorative SVG icon watermarks for security, code, credentials, open source, auditing and API tools. They use semantic green, blue, amber and purple at 7.5% opacity in light mode and 9% in dark mode. The layer is hidden from assistive technology, ignores pointer input and hides at landing-container widths of 620px and below. Foreground content stays above it.
 
 Home categories live **inside the catalog**, in a 205px rail beside a flexible results column with a 28px gap. The rail sticks at 98px and is capped at `calc(100dvh - 122px)`. Its focusable navigation scrolls independently with contained overscroll, keeping all categories reachable on short screens. At 700px the rail becomes a labeled full-width select. Do not add a second category sidebar outside this section.
 
-Other application pages use a fixed 248px sidebar, 64px when collapsed, and a 60px sticky header. Below the 992px desktop breakpoint, the sidebar becomes a direction-aware drawer and content loses its reserved margin. Content and tool wrappers use available width. Supporting guides, release notes, memory and error pages share the same ruled structure and palette.
+Other application pages use a fixed 248px sidebar, 64px when collapsed, and a 60px sticky header. Below the 992px desktop breakpoint, the sidebar becomes a direction-aware drawer and content loses its reserved margin. Content and tool wrappers use available width. Release notes, memory and error pages share the same ruled structure and palette.
 
-Tool split panes use two flexible columns with an 18px gap and stack at 1050px. Standard form grids use two columns with 22px row and 24px column gaps; connection grids use a wider endpoint column and two smaller fields, reduce at 1100px and stack at 700px. Fields have `min-width: 0`; labels sit 8px above controls. Tables scroll inside their content wrapper, tab navigation stays bounded, and segmented controls scroll horizontally instead of widening the page. Mobile project tabs and actions reflow into a two-column control row.
+Tool split panes use two flexible columns with an 18px gap. Named working panes and split panes stack when their tool-workspace container is at most 960px wide, accounting for the expanded sidebar; split panes also retain the 1050px viewport fallback. Key/value lists have their own container: at most 480px wide, key and value stack while toggle/delete actions remain in a separate action column. Standard form grids use two columns with 22px row and 24px column gaps; connection grids use a wider endpoint column and two smaller fields, reduce at 1100px and stack at 700px. Fields have `min-width: 0`; labels sit 8px above controls. Tables scroll inside their content wrapper, tab navigation stays bounded, and segmented controls scroll horizontally instead of widening the page. Mobile project tabs and actions reflow into a two-column control row.
 
 ## Elevation & Depth
 
@@ -210,17 +214,21 @@ Corners are restrained: 4px for small details, 5px for controls, 6px for interme
 
 Primary actions use the accent/action-foreground pair, weight 550 and no button shadow. Secondary actions use a surface with a line border. Normal single-line tool inputs, selects, request-bar controls and action buttons align at 40px; small and icon controls retain compact source sizes. Controls can grow vertically when translated labels wrap. Textareas start at 110px, resize vertically and preserve their data face. Composite controls own their border and padding; their internal typing input must not add another control box.
 
-Hover and active borders use the accent. Input focus can add a 2px selected-color halo. Global keyboard focus is a 2px accent outline with a 3px offset; catalog search shows its ring around the containing field. Native labels, Ant Design accessible controls, visible status copy and paired error colors remain part of each tool's interaction contract.
+Editable hover borders use the neutral control border and active borders use secondary text. Focus shadows are disabled. Global keyboard focus is a 1px neutral outline with a 3px offset; Ant Design links, buttons and menus also use a neutral 1px library outline; composite fields and menu items use an inset 1px outline with a −2px offset. Catalog search places a single neutral inset indicator around its containing field. Pointer focus does not add a keyboard outline. Selected dropdown options use neutral inset fill and primary text, and Monaco suggestions and text selections follow the neutral interaction palette. Native labels, Ant Design accessible controls, visible status copy and paired error colors remain part of each tool's interaction contract.
 
 **Labeled toolbar.** Shared toolbar controls place labels above fields and align actions with the control baseline, not the label row. The toolbar wraps with `align-items: flex-end` and a 16px gap; each field has a 160px minimum width. Its action group uses an 8px gap. Selects, segmented choices and normal actions align at 40px; segmented controls have 3px inset and 34px inner labels. At 700px and below, fields flex across the available width and actions form a two-column grid: the primary action spans the first row, with secondary actions equally sized beneath. HMAC uses this pattern for Algorithm, Output Format, Generate HMAC, Share and Send; labels and segmented-group accessible names remain associated with their controls.
 
 ### Navigation and catalog
+
+Sidebar and landing category navigation share regular 12px labels. A collapsed sidebar opens a labeled 300px popup, capped at the available viewport width; labels wrap and the menu scrolls within the viewport. Selecting a destination or changing the route closes the popup. Brand navigation selection retains its cobalt/pale-blue treatment.
 
 The production catalog derives **147 tools across 15 categories** from the real registry. Default list rows show name, task description, icon and processing boundary; Grid is an alternative. The unfiltered overview shows three entries per category with Show all/Show fewer; category selection and search reveal the full matching sets. Search uses the shared locale-aware matching helper; name/category order uses the active language. Query `q` and category hashes can open discovery at a relevant result set.
 
 Bookmarks read existing saved bookmark menus; this is not the preview's in-memory star system. The header manages bookmark menus, and the catalog filters their tool IDs. All rows link to actual canonical tool URLs using `toolPath`, with recents recorded on activation. Empty states explain search or bookmark results and provide a reset. Selected controls expose `aria-pressed`; result counts use status announcements. The command palette remains available through Command/Ctrl+K; the skip link goes to main content.
 
 ### Tool pages and supporting content
+
+Mixed-content tool card bodies retain the shared 18px gutter. Only a card body whose sole direct child is the code editor loses body padding; do not remove padding from cards that also contain fields, controls, help or output summaries. Editor chrome and content remain within the card’s restrained corner shape.
 
 A compact breadcrumb and ruled tool title lead the page. A relevant collapsed network disclosure can precede the tool; **working controls precede Learn More, reference provenance, FAQs and related tools**. Guidance remains available below rather than occupying the initial working area. Preserve each tool's existing validations, outputs, data disclosures and storage behavior; the visual redesign does not redefine capabilities.
 
@@ -232,6 +240,14 @@ Pause/Resume and Shuffle remain explicit. Circular Previous/Next buttons navigat
 
 Autoplay pauses during pointer hover, focus anywhere within the carousel, offscreen visibility and a hidden document. Reduced-motion users start paused; opting to resume remains available. Slides announce politely only while manually paused or keyboard-focused, avoiding automatic live-region chatter. The visual reveal lasts 0.3s with `cubic-bezier(.16,1,.3,1)`; normal component changes use 0.16–0.2s. Reduced-motion CSS minimizes animations/transitions and removes smooth scrolling.
 
+Visible native file inputs share a dashed upload surface with an inset background, a distinct styled file-selection button and the browser filename area. Normal text-field heights do not apply to file inputs. Hidden inputs behind custom upload buttons stay hidden, and disabled file controls retain their native disabled behavior.
+
+Landing section links mark their selected location with bold text and a 2px underline, reflecting clicks, URL hashes and history navigation. The current release link exposes page state in the sidebar. What’s new remains in the footer and is hidden in a collapsed sidebar.
+
+### Footer
+
+The wide footer uses one row: copyright, What’s new, registry tool count, processing note and the supported installation control form the left group; release notes, author and social links align on the right. The groups wrap when space is limited, with resources aligned to the start on narrow phones. Release/number and author/string color roles provide restrained color; GitHub and LinkedIn retain distinct theme-aware colors. Preserve readable icons and links in both themes.
+
 ### Localization, data and installation
 
 Preserve English, Hindi, Spanish, French, German, Japanese, Chinese and Arabic choices and their existing translations. Arabic uses RTL shell/drawer/navigation flow; code remains LTR and directional arrows mirror. New visible and accessible copy goes through the language layer. This design record does not imply every legacy string has been independently audited in every locale.
@@ -242,12 +258,17 @@ Existing saved projects, notes, snippets, bookmarks, workflows and settings rema
 
 The [Signal review packet](.impeccable/review/signal/review-packet.md) records the direction, rejected layouts, source checks and capture scope. Final reviewer disposition was **ship** after both material fixes were resolved. Final home, Agent Manifest and A2A production captures include desktop and mobile, with paired themes where listed; broad initial-state scans covered all 147 tool routes. These checks establish the reviewed visual implementation, not every possible data-dependent tool state or a new published release. No raster assets were introduced.
 
+The [focus and alignment review evidence](.impeccable/review/focus-alignment/) records the later neutral-focus, card-gutter, responsive-pane, sidebar and footer corrections. Initial-state layout checks covered all 147 tool pages at four viewport widths, with focused follow-up captures and fixes recorded separately. These changes concern styling and grouping; they do not add tool capabilities. The prepared release version is 2.1.0; publication follows the release PR.
+
 ## Do's and Don'ts
 
 - Do use Signal across all application pages while retaining the marketing/workspace source split.
 - Do use semantic foreground/background pairs and stronger control borders in both themes.
-- Do keep body, form and navigation text at the shared 12px scale; preserve heading and numerical hierarchy.
+- Do keep body, form and sidebar navigation text at the shared 12px scale, with 15px landing-header menu links; preserve heading and numerical hierarchy.
 - Do align normal form controls at 40px, allow long labels to wrap, and collapse grids before fields overlap.
+- Do use one neutral 1px keyboard outline and neutral editable selection states while retaining cobalt brand actions and navigation.
+- Do keep the 18px gutter in mixed-content cards; remove it only for a sole direct editor child.
+- Do keep footer summary details on the left and colorful resource links on the right of the same wide row, allowing responsive wrapping.
 - Do keep tool controls above guidance and reference material, with compact network disclosures still available.
 - Do derive discovery from the real registry and navigate with toolPath or toolPathFromId.
 - Do preserve existing tools, saved data, bookmark menus, projects and all eight locale choices with RTL support.

@@ -5,9 +5,8 @@ import { connectorObject } from "./connector-config";
 
 export interface MockRoute { method: string; path: string; status: number; headers: Record<string, string>; body: string; delayMs: number }
 export interface MockConfiguration { name: string; routes: MockRoute[]; origins: string[] }
-export interface MockRequest { id: number; timestamp: string; method: string; path: string; headers: Record<string, string | string[]>; body: string; bodyTruncated: boolean; bytes: number; matched: boolean; status: number }
 export interface MockSummary { id: string; name: string; project: string; baseUrl: string; expiresAt: string; routes: MockRoute[]; requests: number }
-interface RunningMock { summary: MockSummary; server: http.Server; history: MockRequest[]; ttl: ReturnType<typeof setTimeout>; delays: Set<ReturnType<typeof setTimeout>> }
+interface RunningMock { summary: MockSummary; server: http.Server; ttl: ReturnType<typeof setTimeout>; delays: Set<ReturnType<typeof setTimeout>> }
 interface MockState { servers: Map<string, RunningMock>; creating: number }
 const key = Symbol.for("mydevtools.local-mocks.v1");
 const globalState = globalThis as typeof globalThis & { [key]?: MockState };
@@ -52,7 +51,7 @@ export function parseMockConfiguration(value: unknown): MockConfiguration {
 function projectId(value: unknown): string { if (typeof value !== "string" || !/^(?:personal|[a-f0-9-]{36})$/.test(value)) invalid("Choose a valid project for the mock server."); return value; }
 async function shutdown(id: string): Promise<void> {
     const mock = state.servers.get(id); if (!mock) return;
-    state.servers.delete(id); clearTimeout(mock.ttl); mock.delays.forEach(clearTimeout); mock.history.length = 0;
+    state.servers.delete(id); clearTimeout(mock.ttl); mock.delays.forEach(clearTimeout);
     mock.server.closeAllConnections(); await new Promise<void>((resolve) => mock.server.close(() => resolve()));
 }
 export async function startLocalMock(value: unknown, projectValue: unknown, ownerOrigin: string): Promise<MockSummary> {
@@ -62,7 +61,7 @@ export async function startLocalMock(value: unknown, projectValue: unknown, owne
     if (state.servers.size + state.creating >= 2) throw new ConnectorHttpError("At most two local mocks may run at once. Stop a mock or wait for its expiry.", 429);
     state.creating++;
     const id = randomBytes(24).toString("hex"), capability = randomBytes(24).toString("hex"), prefix = `/m/${capability}`;
-    const origins = new Set([owner.origin, ...configuration.origins]), history: MockRequest[] = [], delays = new Set<ReturnType<typeof setTimeout>>();
+    const origins = new Set([owner.origin, ...configuration.origins]), delays = new Set<ReturnType<typeof setTimeout>>();
     let count = 0, port = 0;
     const server = http.createServer({ maxHeaderSize: 32 * 1024 }, (request, response) => {
         const sendError = (status: number, message: string) => { response.writeHead(status, { "content-type": "application/json", "cache-control": "no-store" }); response.end(JSON.stringify({ error: message })); };
@@ -79,27 +78,23 @@ export async function startLocalMock(value: unknown, projectValue: unknown, owne
             response.writeHead(204, { "access-control-allow-methods": "GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS", "access-control-allow-headers": allowedHeaders }); response.end(); request.resume(); return;
         }
         if (count >= 1000) { sendError(429, "This mock has reached its 1000-request limit."); request.resume(); return; }
-        const requestId = ++count;
+        ++count;
         const running = state.servers.get(id); if (running) running.summary.requests = count;
         const routePath = target.pathname.slice(prefix.length) || "/", route = configuration.routes.find((entry) => entry.path === routePath && entry.method === request.method) ?? configuration.routes.find((entry) => entry.path === routePath && entry.method === "*");
-        let bytes = 0, kept = 0, rejected = false; const chunks: Buffer[] = [];
+        // Drain the body without retaining headers, payloads or request history.
+        let bytes = 0, rejected = false;
         request.on("error", () => { rejected = true; });
         request.on("data", (chunk: Buffer) => {
             if (rejected) return;
             bytes += chunk.length;
             if (bytes > 1024 * 1024) { rejected = true; sendError(413, "Mock request exceeds 1 MiB."); request.destroy(); return; }
-            if (kept < 32 * 1024) { const part = chunk.subarray(0, 32 * 1024 - kept); chunks.push(part); kept += part.length; }
         });
         request.on("end", () => {
             if (rejected || response.destroyed) return;
-            const headers: MockRequest["headers"] = Object.create(null);
-            for (const [name, value] of Object.entries(request.headers)) if (value !== undefined) headers[name] = name === "x-mydevtools-local-token" ? "[REDACTED]" : value;
-            history.push({ id: requestId, timestamp: new Date().toISOString(), method: request.method ?? "GET", path: routePath + target.search, headers, body: Buffer.concat(chunks).toString("utf8"), bodyTruncated: bytes > kept, bytes, matched: !!route, status: route?.status ?? 404 });
-            if (history.length > 50) history.shift();
             const send = () => {
                 if (response.destroyed || response.writableEnded) return;
                 if (!route) { sendError(404, "No configured route matches this method and path."); return; }
-                response.writeHead(route.status, { "content-type": "text/plain; charset=utf-8", ...route.headers });
+                response.writeHead(route.status, { "content-type": "text/plain; charset=utf-8", ...route.headers, "cache-control": "no-store" });
                 response.end(request.method === "HEAD" || [204, 304].includes(route.status) ? undefined : route.body);
             };
             if (route?.delayMs) { const timer = setTimeout(() => { delays.delete(timer); send(); }, route.delayMs); delays.add(timer); timer.unref(); }
@@ -112,7 +107,7 @@ export async function startLocalMock(value: unknown, projectValue: unknown, owne
         port = (server.address() as { port: number }).port;
         const summary: MockSummary = { id, name: configuration.name, project, baseUrl: `http://127.0.0.1:${port}${prefix}`, expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(), routes: configuration.routes, requests: 0 };
         const ttl = setTimeout(() => { void shutdown(id); }, 10 * 60_000); ttl.unref(); server.unref();
-        state.servers.set(id, { server, summary, history, ttl, delays });
+        state.servers.set(id, { server, summary, ttl, delays });
         return summary;
     } catch (cause) { server.closeAllConnections(); server.close(); throw cause; }
     finally { state.creating--; }
@@ -124,7 +119,5 @@ export async function manageLocalMock(input: Record<string, unknown>, ownerOrigi
     const mock = typeof input.id === "string" ? state.servers.get(input.id) : undefined;
     if (!mock || mock.summary.project !== project) throw new ConnectorHttpError("This mock is stopped, expired or belongs to another project.", 404);
     if (input.operation === "stop") { await shutdown(mock.summary.id); return { stopped: true }; }
-    if (input.operation === "history") return { requests: mock.history, expiresAt: mock.summary.expiresAt };
-    if (input.operation === "clear-history") { mock.history.length = 0; return { cleared: true }; }
     throw new ConnectorHttpError("Choose a supported mock-server operation.", 400);
 }

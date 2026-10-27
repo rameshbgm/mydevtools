@@ -105,7 +105,7 @@ export default function PasswordGeneratorPage() {
                 ]
             }}
         >
-            <Row gutter={[24, 24]}>
+            <Row className="signal-working-panes" gutter={[24, 24]}>
                 <Col xs={24} lg={14}>
                     <Card>
                         {/* Generated Password Display */}
